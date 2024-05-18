@@ -8,7 +8,7 @@ SQLFrame implements the PySpark DataFrame API in order to enable running transfo
 
 ![SQLFrame Diagram](docs/images/sqlframe_diagram.png)
 
-SQLFrame currently supports the following engines:
+SQLFrame currently supports the following engines (many more in development):
 
 * [BigQuery](docs/bigquery.md)
 * [DuckDB](docs/duckdb.md)
@@ -72,9 +72,7 @@ df = (
 )
 ```
 ```python
-df.sql()
-```
-```sql
+>>> df.sql()
 WITH `t94228` AS (
   SELECT
     `natality`.`year` AS `year`,
@@ -101,9 +99,7 @@ ORDER BY
 LIMIT 5
 ```
 ```python
-df.show()
-```
-```
+>>> df.show()
 +------+-------------------------------------+----------------+
 | year | number of new families single child | percent change |
 +------+-------------------------------------+----------------+
