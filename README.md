@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="400"/>
+  <img src="https://sqlframe.readthedocs.io/en/latest/docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="400"/>
 </div>
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -8,12 +8,12 @@ SQLFrame implements the PySpark DataFrame API in order to enable running transfo
 
 SQLFrame currently supports the following engines (many more in development):
 
-* [BigQuery](docs/bigquery.md)
-* [DuckDB](docs/duckdb.md)
-* [Postgres](docs/postgres.md)
+* [BigQuery](https://sqlframe.readthedocs.io/en/latest/bigquery/)
+* [DuckDB](https://sqlframe.readthedocs.io/en/latest/duckdb.md)
+* [Postgres](https://sqlframe.readthedocs.io/en/latest/postgres.md)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
-* [Standalone](docs/standalone.md)
+* [Standalone](https://sqlframe.readthedocs.io/en/latest/standalone.md)
 
 SQLFrame is great for:
 
