@@ -11,9 +11,10 @@ from sqlframe.bigquery.readwriter import (
 )
 
 if t.TYPE_CHECKING:
-    from google.cloud import bigquery
+    from google.cloud.bigquery.client import Client as BigQueryClient
     from google.cloud.bigquery.dbapi.connection import Connection as BigQueryConnection
 else:
+    BigQueryClient = t.Any
     BigQueryConnection = t.Any
 
 
@@ -48,7 +49,7 @@ class BigQuerySession(
             self.default_dataset = default_dataset
 
     @property
-    def _client(self) -> bigquery.client.Client:
+    def _client(self) -> BigQueryClient:
         assert self._connection
         return self._connection._client
 

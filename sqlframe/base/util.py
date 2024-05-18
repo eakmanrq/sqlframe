@@ -9,6 +9,7 @@ from sqlglot.dialects.dialect import Dialect, DialectType
 from sqlglot.schema import ensure_column_mapping as sqlglot_ensure_column_mapping
 
 if t.TYPE_CHECKING:
+    from pandas.core.frame import DataFrame as PandasDataFrame
     from pyspark.sql.dataframe import SparkSession as PySparkSession
 
     from sqlframe.base import types
@@ -97,7 +98,7 @@ def get_tables_from_expression_with_join(expression: exp.Select) -> t.List[exp.T
     return [left_table] + other_tables
 
 
-def to_csv(options: t.Dict[str, OptionalPrimitiveType], equality_char: str = "="):
+def to_csv(options: t.Dict[str, OptionalPrimitiveType], equality_char: str = "=") -> str:
     return ", ".join(
         [f"{k}{equality_char}{v}" for k, v in (options or {}).items() if v is not None]
     )
@@ -116,7 +117,7 @@ def ensure_column_mapping(schema: t.Union[str, StructType]) -> t.Dict:
 
 
 # SO: https://stackoverflow.com/questions/37513355/converting-pandas-dataframe-into-spark-dataframe-error
-def get_equivalent_spark_type(pandas_type):
+def get_equivalent_spark_type(pandas_type) -> types.DataType:
     """
     This method will retrieve the corresponding spark type given a pandas
     type.
@@ -139,7 +140,7 @@ def get_equivalent_spark_type(pandas_type):
     return type_map.get(str(pandas_type).lower(), types.StringType())
 
 
-def pandas_to_spark_schema(pandas_df):
+def pandas_to_spark_schema(pandas_df: PandasDataFrame) -> types.StructType:
     """
     This method will return a spark dataframe schema given a pandas dataframe.
 

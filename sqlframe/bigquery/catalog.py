@@ -3,7 +3,6 @@ from __future__ import annotations
 import fnmatch
 import typing as t
 
-from google.cloud.bigquery import StandardSqlDataType
 from sqlglot import exp
 
 from sqlframe.base.catalog import CatalogMetadata, Column, Function
@@ -16,8 +15,10 @@ from sqlframe.base.mixins.catalog_mixins import (
 from sqlframe.base.util import schema_, to_schema
 
 if t.TYPE_CHECKING:
-    from sqlframe.bigquery.session import BigQuerySession  # noqa
+    from google.cloud.bigquery import StandardSqlDataType
+
     from sqlframe.bigquery.dataframe import BigQueryDataFrame  # noqa
+    from sqlframe.bigquery.session import BigQuerySession  # noqa
 
 
 class BigQueryCatalog(

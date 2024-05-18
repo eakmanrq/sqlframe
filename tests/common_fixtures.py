@@ -19,7 +19,9 @@ from sqlframe.standalone.dataframe import StandaloneDataFrame
 from sqlframe.standalone.session import StandaloneSession
 
 if t.TYPE_CHECKING:
-    from google.cloud.bigquery.dbapi.connection import Connection as BigQueryConnection
+    from google.cloud.bigquery.dbapi.connection import (
+        Connection as BigQueryConnection,
+    )
     from redshift_connector.core import Connection as RedshiftConnection
     from snowflake.connector import SnowflakeConnection
 
@@ -36,6 +38,7 @@ def pyspark_session(tmp_path_factory) -> PySparkSession:
         .config("spark.sql.warehouse.dir", data_dir)
         .config("spark.driver.extraJavaOptions", f"-Dderby.system.home={derby_dir}")
         .config("spark.sql.shuffle.partitions", 1)
+        .config("spark.sql.session.timeZone", "America/Los_Angeles")
         .master("local[1]")
         .appName("Unit-tests")
         .getOrCreate()
@@ -60,11 +63,11 @@ def spark_session(pyspark_session: PySparkSession) -> SparkSession:
 
 
 @pytest.fixture(scope="function")
-def duckdb_session(monkeypatch: pytest.MonkeyPatch) -> DuckDBSession:
-    import duckdb
+def duckdb_session() -> DuckDBSession:
+    from duckdb import connect
 
     # https://github.com/duckdb/duckdb/issues/11404
-    connection = duckdb.connect()
+    connection = connect()
     connection.sql("set TimeZone = 'UTC'")
     return DuckDBSession(conn=connection)
 
@@ -74,12 +77,12 @@ def function_scoped_postgres(postgresql_proc):
     import psycopg2
 
     janitor = DatabaseJanitor(
-        postgresql_proc.user,
-        postgresql_proc.host,
-        postgresql_proc.port,
-        postgresql_proc.dbname,
-        postgresql_proc.version,
-        postgresql_proc.password,
+        user=postgresql_proc.user,
+        host=postgresql_proc.host,
+        port=postgresql_proc.port,
+        dbname=postgresql_proc.dbname,
+        version=postgresql_proc.version,
+        password=postgresql_proc.password,
     )
     with janitor:
         conn = psycopg2.connect(

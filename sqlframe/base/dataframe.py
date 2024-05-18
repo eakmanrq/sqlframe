@@ -662,7 +662,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         | 16|  Bob|    85|
         +---+-----+------+
         """
-        return self.join.__wrapped__(self, other, how="cross")
+        return self.join.__wrapped__(self, other, how="cross")  # type: ignore
 
     @operation(Operation.FROM)
     def join(
@@ -769,7 +769,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         new_df = self.copy(expression=join_expression)
         new_df.pending_join_hints.extend(self.pending_join_hints)
         new_df.pending_hints.extend(other_df.pending_hints)
-        new_df = new_df.select.__wrapped__(new_df, *select_column_names)
+        new_df = new_df.select.__wrapped__(new_df, *select_column_names)  # type: ignore
         return new_df
 
     @operation(Operation.ORDER_BY)
