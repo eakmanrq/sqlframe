@@ -60,27 +60,34 @@ print(session.catalog.listColumns(table_path))
     .where(F.col("ever_born") == 1)
     .groupBy("year")
     .agg(F.count("*").alias("num_single_child_families"))
-    .withColumn("last_year_num_single_child_families", F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year")))
-    .withColumn("percent_change", (F.col("num_single_child_families") - F.col("last_year_num_single_child_families")) / F.col("last_year_num_single_child_families"))
+    .withColumn(
+      "last_year_num_single_child_families", 
+      F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year"))
+    )
+    .withColumn(
+      "percent_change", 
+      (F.col("num_single_child_families") - F.col("last_year_num_single_child_families")) 
+      / F.col("last_year_num_single_child_families")
+    )
     .orderBy(F.abs(F.col("percent_change")).desc())
     .select(
-        F.col("year").alias("Year"),
-        F.format_number("num_single_child_families", 0).alias("number of new families single child"),
+        F.col("year").alias("year"),
+        F.format_number("num_single_child_families", 0).alias("new families single child"),
         F.format_number(F.col("percent_change") * 100, 2).alias("percent change"),
     )
     .limit(5)
     .show()
 )
 """
-+------+-------------------------------------+----------------+
-| year | number of new families single child | percent change |
-+------+-------------------------------------+----------------+
-| 1989 |              1,650,246              |     25.02      |
-| 1974 |               783,448               |     14.49      |
-| 1977 |              1,057,379              |     11.38      |
-| 1985 |              1,308,476              |     11.15      |
-| 1975 |               868,985               |     10.92      |
-+------+-------------------------------------+----------------+
++------+---------------------------+----------------+
+| year | new families single child | percent change |
++------+---------------------------+----------------+
+| 1989 |         1,650,246         |     25.02      |
+| 1974 |          783,448          |     14.49      |
+| 1977 |         1,057,379         |     11.38      |
+| 1985 |         1,308,476         |     11.15      |
+| 1975 |          868,985          |     10.92      |
++------+---------------------------+----------------+
 """
 ```
 

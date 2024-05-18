@@ -47,7 +47,7 @@ from sqlframe.bigquery import Window
 
 session = BigQuerySession()
 table_path = "bigquery-public-data.samples.natality"
-# Get the top 5 years with the greatest year-over-year % change in new families with a single child
+# Top 5 years with the greatest year-over-year % change in new families with single child
 df = (
     session.table(table_path)
     .where(F.col("ever_born") == 1)
@@ -64,8 +64,8 @@ df = (
     )
     .orderBy(F.abs(F.col("percent_change")).desc())
     .select(
-        F.col("year").alias("Year"),
-        F.format_number("num_single_child_families", 0).alias("number of new families single child"),
+        F.col("year").alias("year"),
+        F.format_number("num_single_child_families", 0).alias("new families single child"),
         F.format_number(F.col("percent_change") * 100, 2).alias("percent change"),
     )
     .limit(5)
@@ -91,7 +91,7 @@ WITH `t94228` AS (
 )
 SELECT
   `t39093`.`year` AS `year`,
-  FORMAT('%\'.0f', ROUND(CAST(`t39093`.`num_single_child_families` AS FLOAT64), 0)) AS `number of new families single child`,
+  FORMAT('%\'.0f', ROUND(CAST(`t39093`.`num_single_child_families` AS FLOAT64), 0)) AS `new families single child`,
   FORMAT('%\'.2f', ROUND(CAST((((`t39093`.`num_single_child_families` - `t39093`.`last_year_num_single_child_families`) / `t39093`.`last_year_num_single_child_families`) * 100) AS FLOAT64), 2)) AS `percent change`
 FROM `t39093` AS `t39093`
 ORDER BY
@@ -100,13 +100,13 @@ LIMIT 5
 ```
 ```python
 >>> df.show()
-+------+-------------------------------------+----------------+
-| year | number of new families single child | percent change |
-+------+-------------------------------------+----------------+
-| 1989 |              1,650,246              |     25.02      |
-| 1974 |               783,448               |     14.49      |
-| 1977 |              1,057,379              |     11.38      |
-| 1985 |              1,308,476              |     11.15      |
-| 1975 |               868,985               |     10.92      |
-+------+-------------------------------------+----------------+
++------+---------------------------+----------------+
+| year | new families single child | percent change |
++------+---------------------------+----------------+
+| 1989 |         1,650,246         |     25.02      |
+| 1974 |          783,448          |     14.49      |
+| 1977 |         1,057,379         |     11.38      |
+| 1985 |         1,308,476         |     11.15      |
+| 1975 |          868,985          |     10.92      |
++------+---------------------------+----------------+
 ```
