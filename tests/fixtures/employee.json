@@ -1,0 +1,5 @@
+{"employee_id":1, "fname":"Jack", "lname":"Shephard", "age":37, "store_id":1}
+{"employee_id":2, "fname":"John", "lname":"Locke", "age":65, "store_id":1}
+{"employee_id":3, "fname":"Kate", "lname":"Austen", "age":37, "store_id":2}
+{"employee_id":4, "fname":"Claire", "lname": "Littleton", "age":27, "store_id":2}
+{"employee_id":5, "fname":"Hugo", "lname":"Reyes", "age":29, "store_id":100}

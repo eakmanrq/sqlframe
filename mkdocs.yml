@@ -1,0 +1,50 @@
+site_name: SQLFrame
+repo_url: https://github.com/eakmanrq/sqlframe
+repo_name: eakmanrq/sqlframe
+nav:
+  - "Overview": index.md
+  - "BigQuery": bigquery.md
+  - "DuckDB": duckdb.md
+  - "Postgres": postgres.md
+  - "Standalone": standalone.md
+theme:
+  name: material
+  logo: images/SF.png
+  favicon: images/SF.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: #091c79
+      accent: #cce8fe
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: #cce8fe
+      accent: #091c79
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - content.tabs.link
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+plugins:
+  - include-markdown
+  - search
+markdown_extensions:
+  - tables
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+extra_css:
+  - stylesheets/extra.css
