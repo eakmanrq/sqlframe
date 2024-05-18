@@ -45,18 +45,23 @@ from sqlframe.bigquery import BigQuerySession
 from sqlframe.bigquery import functions as F
 from sqlframe.bigquery import Window
 
-session = BigQuerySession(default_dataset="sqlframe.db1")
+session = BigQuerySession()
 table_path = "bigquery-public-data.samples.natality"
-# Get columns in the table
-print(session.catalog.listColumns(table_path))
 # Get the top 5 years with the greatest year-over-year % change in new families with a single child
-(
+df = (
     session.table(table_path)
     .where(F.col("ever_born") == 1)
     .groupBy("year")
     .agg(F.count("*").alias("num_single_child_families"))
-    .withColumn("last_year_num_single_child_families", F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year")))
-    .withColumn("percent_change", (F.col("num_single_child_families") - F.col("last_year_num_single_child_families")) / F.col("last_year_num_single_child_families"))
+    .withColumn(
+        "last_year_num_single_child_families", 
+        F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year"))
+    )
+    .withColumn(
+        "percent_change", 
+        (F.col("num_single_child_families") - F.col("last_year_num_single_child_families")) 
+        / F.col("last_year_num_single_child_families")
+    )
     .orderBy(F.abs(F.col("percent_change")).desc())
     .select(
         F.col("year").alias("Year"),
@@ -64,9 +69,41 @@ print(session.catalog.listColumns(table_path))
         F.format_number(F.col("percent_change") * 100, 2).alias("percent change"),
     )
     .limit(5)
-    .show()
 )
-"""
+```
+```python
+df.sql()
+```
+```sql
+WITH `t94228` AS (
+  SELECT
+    `natality`.`year` AS `year`,
+    COUNT(*) AS `num_single_child_families`
+  FROM `bigquery-public-data`.`samples`.`natality` AS `natality`
+  WHERE
+    `natality`.`ever_born` = 1
+  GROUP BY
+    `natality`.`year`
+), `t39093` AS (
+  SELECT
+    `t94228`.`year` AS `year`,
+    `t94228`.`num_single_child_families` AS `num_single_child_families`,
+    LAG(`t94228`.`num_single_child_families`, 1) OVER (ORDER BY `t94228`.`year`) AS `last_year_num_single_child_families`
+  FROM `t94228` AS `t94228`
+)
+SELECT
+  `t39093`.`year` AS `year`,
+  FORMAT('%\'.0f', ROUND(CAST(`t39093`.`num_single_child_families` AS FLOAT64), 0)) AS `number of new families single child`,
+  FORMAT('%\'.2f', ROUND(CAST((((`t39093`.`num_single_child_families` - `t39093`.`last_year_num_single_child_families`) / `t39093`.`last_year_num_single_child_families`) * 100) AS FLOAT64), 2)) AS `percent change`
+FROM `t39093` AS `t39093`
+ORDER BY
+  ABS(`percent_change`) DESC
+LIMIT 5
+```
+```python
+df.show()
+```
+```
 +------+-------------------------------------+----------------+
 | year | number of new families single child | percent change |
 +------+-------------------------------------+----------------+
@@ -76,5 +113,4 @@ print(session.catalog.listColumns(table_path))
 | 1985 |              1,308,476              |     11.15      |
 | 1975 |               868,985               |     10.92      |
 +------+-------------------------------------+----------------+
-"""
 ```
