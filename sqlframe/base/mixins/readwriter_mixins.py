@@ -108,6 +108,9 @@ class PandasWriterMixin(_BaseDataFrameWriter, t.Generic[SESSION, DF]):
                 raise NotImplementedError("Append mode is not supported for parquet.")
             pandas_df.to_parquet(path, **kwargs)
         elif format == "json":
+            # Pandas versions are inconsistent on how to handle True/False index so we just remove it
+            # since in all versions it will not result in an index column in the output.
+            del kwargs["index"]
             kwargs["mode"] = mode
             kwargs["orient"] = "records"
             pandas_df.to_json(path, lines=True, **kwargs)

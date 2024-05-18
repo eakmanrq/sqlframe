@@ -26,16 +26,13 @@ setup(
         "bigquery": [
             "google-cloud-bigquery[pandas]",
             "google-cloud-bigquery-storage",
+            "pandas",
         ],
         "dev": [
             "duckdb",
-            "mkdocs==1.4.2",
-            "mkdocs-include-markdown-plugin==4.0.3",
-            "mkdocs-material==9.0.5",
-            "mkdocs-material-extensions==1.1.1",
             "mypy",
             "pandas",
-            "pymdown-extensions",
+            "pandas-stubs",
             "psycopg",
             "pyarrow",
             "pyspark",
@@ -47,17 +44,27 @@ setup(
             "typing_extensions",
             "types-psycopg2",
         ],
+        "docs": [
+            "mkdocs==1.4.2",
+            "mkdocs-include-markdown-plugin==4.0.3",
+            "mkdocs-material==9.0.5",
+            "mkdocs-material-extensions==1.1.1",
+            "pymdown-extensions",
+        ],
         "duckdb": [
             "duckdb",
             "pandas",
         ],
         "postgres": [
+            "pandas",
             "psycopg2",
         ],
         "redshift": [
+            "pandas",
             "redshift_connector",
         ],
         "snowflake": [
+            "pandas",
             "snowflake-connector-python[pandas,secure-local-storage]",
         ],
         "spark": [

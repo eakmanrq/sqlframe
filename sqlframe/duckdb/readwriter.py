@@ -87,7 +87,7 @@ class DuckDBDataFrameWriter(_BaseDataFrameWriter["DuckDBSession", "DuckDBDataFra
             return
         if mode == "append":
             raise NotImplementedError("Append mode not supported")
-        options = to_csv(options, equality_char=" ")
+        options = to_csv(options, equality_char=" ")  # type: ignore
         sqls = self._df.sql(pretty=False, optimize=False, as_list=True)
         for i, sql in enumerate(sqls):
             if i < len(sqls) - 1:

@@ -11,9 +11,9 @@ from collections import defaultdict
 from functools import cached_property
 
 import sqlglot
-from more_itertools import take
 from sqlglot import Dialect, exp
 from sqlglot.expressions import parse_identifier
+from sqlglot.helper import seq_get
 from sqlglot.optimizer import optimize
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify_columns import (
@@ -211,10 +211,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
                     row_types.append((row_name, default_type))
                 return "struct<" + ", ".join(f"{k}: {v}" for (k, v) in row_types) + ">"
             elif isinstance(value, dict):
-                sample_row = take(1, value.items())
+                sample_row = seq_get(list(value.items()), 0)
                 if not sample_row:
                     return None
-                key, value = sample_row[0]
+                key, value = sample_row
                 default_key = get_default_data_type(key)
                 default_value = get_default_data_type(value)
                 if not default_key or not default_value:

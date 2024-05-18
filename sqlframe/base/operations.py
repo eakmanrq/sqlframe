@@ -23,7 +23,7 @@ class Operation(IntEnum):
     LIMIT = 7
 
 
-def operation(op: Operation):
+def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
     """
     Decorator used around DataFrame methods to indicate what type of operation is being performed from the
     ordered Operation enums. This is used to determine which operations should be performed on a CTE vs.
@@ -35,9 +35,9 @@ def operation(op: Operation):
     in cases where there is overlap in names.
     """
 
-    def decorator(func: t.Callable):
+    def decorator(func: t.Callable) -> t.Callable:
         @functools.wraps(func)
-        def wrapper(self: _BaseDataFrame, *args, **kwargs):
+        def wrapper(self: _BaseDataFrame, *args, **kwargs) -> _BaseDataFrame:
             if self.last_op == Operation.INIT:
                 self = self._convert_leaf_to_cte()
                 self.last_op = Operation.NO_OP
@@ -47,7 +47,7 @@ def operation(op: Operation):
                 self = self._convert_leaf_to_cte()
             df: t.Union[_BaseDataFrame, _BaseGroupedData] = func(self, *args, **kwargs)
             df.last_op = new_op  # type: ignore
-            return df
+            return df  # type: ignore
 
         wrapper.__wrapped__ = func  # type: ignore
         return wrapper
@@ -55,7 +55,7 @@ def operation(op: Operation):
     return decorator
 
 
-def group_operation(op: Operation):
+def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
     """
     Decorator used around DataFrame methods to indicate what type of operation is being performed from the
     ordered Operation enums. This is used to determine which operations should be performed on a CTE vs.
@@ -67,9 +67,9 @@ def group_operation(op: Operation):
     in cases where there is overlap in names.
     """
 
-    def decorator(func: t.Callable):
+    def decorator(func: t.Callable) -> t.Callable:
         @functools.wraps(func)
-        def wrapper(self: _BaseGroupedData, *args, **kwargs):
+        def wrapper(self: _BaseGroupedData, *args, **kwargs) -> _BaseDataFrame:
             if self._df.last_op == Operation.INIT:
                 self._df = self._df._convert_leaf_to_cte()
                 self._df.last_op = Operation.NO_OP

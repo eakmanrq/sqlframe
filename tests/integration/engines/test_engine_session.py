@@ -29,8 +29,8 @@ def test_session(cleanup_session: _BaseSession):
         cola_type = exp.DataType.build("DECIMAL", dialect=session.output_dialect)
     else:
         cola_type = exp.DataType.build("INT", dialect=session.output_dialect)
-    cola_name = "COLA" if session.output_dialect == "snowflake" else "cola"
-    colb_name = "COLB" if session.output_dialect == "snowflake" else "colb"
+    cola_name = '"COLA"' if session.output_dialect == "snowflake" else '"cola"'
+    colb_name = '"COLB"' if session.output_dialect == "snowflake" else '"colb"'
     assert columns == {
         cola_name: cola_type,
         colb_name: exp.DataType.build("VARCHAR", dialect=session.output_dialect)
