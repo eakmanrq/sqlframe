@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="sqlframe",
-    description="PySpark Dataframe API Compatible SQL Generator",
+    description="PySpark without Spark by converting to SQL",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/eakmanrq/sqlframe",

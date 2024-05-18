@@ -6,8 +6,6 @@
 
 SQLFrame implements the PySpark DataFrame API in order to enable running transformation pipelines directly on database engines - no Spark clusters or dependencies required.
 
-![SQLFrame Diagram](docs/images/sqlframe_diagram.png)
-
 SQLFrame currently supports the following engines (many more in development):
 
 * [BigQuery](docs/bigquery.md)
