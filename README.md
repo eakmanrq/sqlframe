@@ -2,8 +2,6 @@
   <img src="https://sqlframe.readthedocs.io/en/latest/docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="400"/>
 </div>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-
 SQLFrame implements the PySpark DataFrame API in order to enable running transformation pipelines directly on database engines - no Spark clusters or dependencies required.
 
 SQLFrame currently supports the following engines (many more in development):
