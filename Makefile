@@ -8,10 +8,10 @@ slow-test:
 	pytest -n auto tests
 
 fast-test:
-	pytest -n auto tests/unit
+	pytest -n auto -m "fast"
 
 local-test:
-	pytest -n auto -m "local"
+	pytest -n auto -m "fast or local"
 
 bigquery-test:
 	pytest -n auto -m "bigquery"
