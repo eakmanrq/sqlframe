@@ -14,6 +14,6 @@ def test_session_from_config(function_scoped_postgres):
     ).getOrCreate()
     columns = session.catalog.get_columns("test_table")
     assert columns == {
-        "cola": exp.DataType.build("INT", dialect=session.output_dialect),
-        "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
+        '"cola"': exp.DataType.build("INT", dialect=session.output_dialect),
+        '"colb"': exp.DataType.build("STRING", dialect=session.output_dialect),
     }
