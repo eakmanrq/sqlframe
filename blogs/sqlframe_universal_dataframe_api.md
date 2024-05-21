@@ -9,7 +9,8 @@ SQL is the universal language that unites all data professionals, and it enables
 Despite its strengths, SQL often seems ill-suited for maintaining data pipelines.
 The language lacks support for abstracting common operations or unit testing specific segments of code, leading many to use Jinja as a makeshift solution. 
 Jinja SQL is to SQL what Pig Latin is to English - can be fun in small doses but impossible to understand at scale. 
-Moreover, SQL's repetitive nature, requiring columns to be repeated across operations, leads to fatigue and many data practitioners responding to the siren song of `SELECT *` and later found drowning in the sea of non-determinism.
+Furthermore, the repetitive nature of SQL, where columns must be specified repeatedly across operations, often leads to fatigue among data professionals. 
+This results in data professionals responding to the siren song of `SELECT *`, only to be later found drowning in the sea of non-determinism.
 
 This has put data professionals in a tough spot: Do you write your pipelines in SQL to favor accessibility or Python to favor maintainability? 
 Well, starting today, you no longer have to choose. 
@@ -25,7 +26,7 @@ You can finally have your cake and eat it too.
   <img src="../docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="800"/>
 </div>
 
-SQLFrame revolutionizes how data professionals interact with SQL and PySpark DataFrames. 
+[SQLFrame](https://github.com/eakmanrq/sqlframe) revolutionizes how data professionals interact with SQL and PySpark DataFrames. 
 Unlike traditional PySpark, SQLFrame converts DataFrame operations directly into SQL, enabling real-time SQL script generation during development. 
 Here's how it works:
 
@@ -133,7 +134,7 @@ Therefore not only does SQLFrame make your DataFrame pipeline more accessible, i
   <img src="images/you_get_pyspark_api.gif" alt="There is more" width="800"/>
 </div>
 
-SQLFrame currently supports BigQuery, DuckDB, and PostgreSQL, with Redshift, Snowflake, Spark, and Trino in development. 
-For those interested in experimenting with SQL generation for other engines, the "StandaloneSession" provides a flexible testing ground.
+SQLFrame currently supports [BigQuery](https://sqlframe.readthedocs.io/en/stable/bigquery/), [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb/), and [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres/), with Redshift, Snowflake, Spark, and Trino in development. 
+For those interested in experimenting with SQL generation for other engines, the [StandaloneSession](https://sqlframe.readthedocs.io/en/stable/standalone/) provides a flexible testing ground.
 
-Follow the simple setup guide to begin integrating SQLFrame into your projects today!
+Checkout the [README](https://github.com/eakmanrq/sqlframe) for more information on how to get started with SQLFrame!
