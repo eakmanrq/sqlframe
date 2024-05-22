@@ -110,7 +110,7 @@ def test_sql_with_aggs(standalone_session: StandaloneSession, compare_sql: t.Cal
     df = standalone_session.sql(query).groupBy(F.col("cola")).agg(F.sum("colb"))
     compare_sql(
         df,
-        "WITH t26614 AS (SELECT `table`.`cola` AS `cola`, `table`.`colb` AS `colb` FROM `table` AS `table`), t23454 AS (SELECT cola, colb FROM t26614) SELECT cola, SUM(colb) FROM t23454 GROUP BY cola",
+        "WITH t26614157 AS (SELECT `table`.`cola` AS `cola`, `table`.`colb` AS `colb` FROM `table` AS `table`), t38889420 AS (SELECT cola, colb FROM t26614157) SELECT cola, SUM(colb) FROM t38889420 GROUP BY cola",
         pretty=False,
         optimize=False,
     )
