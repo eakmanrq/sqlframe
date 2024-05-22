@@ -606,8 +606,11 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return df._convert_leaf_to_cte(sequence_id=new_sequence_id)
 
     @operation(Operation.WHERE)
-    def where(self, column: t.Union[Column, bool], **kwargs) -> Self:
-        col = self._ensure_and_normalize_col(column)
+    def where(self, column: t.Union[Column, str, bool], **kwargs) -> Self:
+        if isinstance(column, str):
+            col = sqlglot.parse_one(column, dialect=self.session.input_dialect)
+        else:
+            col = self._ensure_and_normalize_col(column)
         return self.copy(expression=self.expression.where(col.expression))
 
     filter = where

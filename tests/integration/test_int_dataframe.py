@@ -302,6 +302,17 @@ def test_where_multiple_chained(
     compare_frames(df_employee, dfs_employee)
 
 
+def test_where_sql_expr(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df_employee = pyspark_employee.where("age = 37 AND fname = 'Jack'")
+    dfs_employee = employee.where("age = 37 AND fname = 'Jack'")
+    compare_frames(df_employee, dfs_employee)
+
+
 def test_operators(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
