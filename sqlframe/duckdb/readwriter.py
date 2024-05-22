@@ -5,6 +5,9 @@ from __future__ import annotations
 import logging
 import typing as t
 
+from sqlglot import exp
+from sqlglot.helper import ensure_list
+
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 from sqlframe.base.util import ensure_column_mapping, to_csv
 
@@ -69,13 +72,22 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
         |100|NULL|
         +---+----+
         """
-        if format:
-            sql = f"SELECT * FROM read_{format}('{path}', {to_csv(options)})"
-        else:
-            sql = f"select * from '{path}'"
-        df = self.session.sql(sql)
         if schema:
-            df = df.select(*self._to_casted_columns(ensure_column_mapping(schema)))
+            column_mapping = ensure_column_mapping(schema)
+            select_columns = [x.expression for x in self._to_casted_columns(column_mapping)]
+            if format == "csv":
+                duckdb_columns = ", ".join(
+                    [f"'{column}': '{dtype}'" for column, dtype in column_mapping.items()]
+                )
+                options["columns"] = "{" + duckdb_columns + "}"
+        else:
+            select_columns = [exp.Star()]
+        if format:
+            paths = ",".join([f"'{path}'" for path in ensure_list(path)])
+            from_clause = f"read_{format}([{paths}], {to_csv(options)})"
+        else:
+            from_clause = f"'{path}'"
+        df = self.session.sql(exp.select(*select_columns).from_(from_clause), optimize=False)
         self.session._last_loaded_file = path  # type: ignore
         return df
 
