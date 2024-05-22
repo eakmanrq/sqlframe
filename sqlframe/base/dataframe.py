@@ -1097,7 +1097,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         )
         if existing_col_index:
             expression = self.expression.copy()
-            expression.expressions[existing_col_index] = col.expression
+            expression.expressions[existing_col_index] = col.alias(colName).expression
             return self.copy(expression=expression)
         return self.copy().select(col.alias(colName), append=True)
 
