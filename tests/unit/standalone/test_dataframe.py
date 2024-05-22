@@ -2,6 +2,7 @@ import typing as t
 
 from sqlglot import expressions as exp
 
+from sqlframe.standalone import functions as F
 from sqlframe.standalone.dataframe import StandaloneDataFrame
 
 pytest_plugins = ["tests.common_fixtures", "tests.unit.standalone.fixtures"]
@@ -44,3 +45,13 @@ def test_persist_storagelevel(standalone_employee: StandaloneDataFrame, compare_
         "SELECT `t31563`.`fname` AS `fname` FROM `t31563` AS `t31563`",
     ]
     compare_sql(df, expected_statements)
+
+
+def test_with_column_duplicate_alias(standalone_employee: StandaloneDataFrame):
+    df = standalone_employee.withColumn("fname", F.col("age").cast("string"))
+    assert df.columns == ["employee_id", "fname", "lname", "age", "store_id"]
+    # Make sure that the new columns is added with an alias to `fname`
+    assert (
+        df.sql(pretty=False)
+        == "SELECT `a1`.`employee_id` AS `employee_id`, CAST(`a1`.`age` AS STRING) AS `fname`, CAST(`a1`.`lname` AS STRING) AS `lname`, `a1`.`age` AS `age`, `a1`.`store_id` AS `store_id` FROM VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100) AS `a1`(`employee_id`, `fname`, `lname`, `age`, `store_id`)"
+    )
