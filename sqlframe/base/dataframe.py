@@ -417,7 +417,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         from sqlframe.base.session import _BaseSession
 
         value = expression.sql(dialect=_BaseSession().input_dialect).encode("utf-8")
-        hash = f"t{zlib.crc32(value)}"[:6]
+        hash = f"t{zlib.crc32(value)}"[:9]
         return self.session._normalize_string(hash)
 
     def _get_select_expressions(
