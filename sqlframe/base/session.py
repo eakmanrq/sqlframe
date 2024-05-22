@@ -313,24 +313,16 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         sel_expression = exp.Select(**select_kwargs)
         if empty_df:
             sel_expression = sel_expression.where(exp.false())
-        # if empty_df:
-        #     if not column_mapping:
-        #         # If we don't have rows or columns then we just return a null with a false expression
-        #         sel_expression = (
-        #             exp.Select().select("null").from_("VALUES (NULL)").where(exp.false())
-        #         )
-        #     else:
-        #         # Ensure no results are returned if the dataframe is expected to be empty instead of
-        #         # a row of null values
-        #         sel_expression = sel_expression.where(exp.false())
         return self._create_df(sel_expression)
 
-    def sql(self, sqlQuery: t.Union[str, exp.Expression]) -> DF:
-        expression = self._optimize(
+    def sql(self, sqlQuery: t.Union[str, exp.Expression], optimize: bool = True) -> DF:
+        expression = (
             sqlglot.parse_one(sqlQuery, read=self.input_dialect)
             if isinstance(sqlQuery, str)
             else sqlQuery
         )
+        if optimize:
+            expression = self._optimize(expression)
         if self.temp_views:
             replacement_mapping = {}
             for table in expression.find_all(exp.Table):
