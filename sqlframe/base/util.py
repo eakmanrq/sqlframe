@@ -113,6 +113,8 @@ def ensure_column_mapping(schema: t.Union[str, StructType]) -> t.Dict:
         }
     # TODO: Make a protocol with a `simpleString` attribute as what it looks for instead of the actual
     # `StructType` object.
+    elif hasattr(schema, "simpleString"):
+        return {struct_field.name: struct_field.dataType.simpleString() for struct_field in schema}
     return sqlglot_ensure_column_mapping(schema)  # type: ignore
 
 

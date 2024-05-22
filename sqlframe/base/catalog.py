@@ -8,7 +8,7 @@ from sqlglot import MappingSchema, exp
 
 from sqlframe.base.decorators import normalize
 from sqlframe.base.exceptions import TableSchemaError
-from sqlframe.base.util import to_schema
+from sqlframe.base.util import ensure_column_mapping, to_schema
 
 if t.TYPE_CHECKING:
     from sqlglot.schema import ColumnMapping
@@ -82,6 +82,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
                 raise TableSchemaError(
                     "This session does not have access to a catalog that can lookup column information. See docs for explicitly defining columns or using a session that can automatically determine this."
                 )
+        column_mapping = ensure_column_mapping(column_mapping)  # type: ignore
         self._schema.add_table(table, column_mapping, dialect=self.session.input_dialect)
 
     @normalize(["dbName"])
