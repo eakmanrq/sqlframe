@@ -1,4 +1,4 @@
-# This code is based on code from Apache Spark under the license found in the LICENSE file located in the 'dataframe' folder.
+# This code is based on code from Apache Spark under the license found in the LICENSE file located in the 'sqlframe' folder.
 
 import typing as t
 
