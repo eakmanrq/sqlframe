@@ -74,7 +74,10 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
         """
         if schema:
             column_mapping = ensure_column_mapping(schema)
-            select_columns = [x.expression for x in self._to_casted_columns(column_mapping)]
+            select_column_mapping = column_mapping.copy()
+            if options.get("filename"):
+                select_column_mapping["filename"] = "VARCHAR"
+            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
             if format == "csv":
                 duckdb_columns = ", ".join(
                     [f"'{column}': '{dtype}'" for column, dtype in column_mapping.items()]
