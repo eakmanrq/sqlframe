@@ -47,7 +47,7 @@ setup(
         ],
         "docs": [
             "mkdocs==1.4.2",
-            "mkdocs-include-markdown-plugin==4.0.3",
+            "mkdocs-include-markdown-plugin==6.0.6",
             "mkdocs-material==9.0.5",
             "mkdocs-material-extensions==1.1.1",
             "pymdown-extensions",

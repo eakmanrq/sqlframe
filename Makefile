@@ -1,5 +1,5 @@
 install-dev:
-	pip install -e ".[dev,duckdb,postgres,redshift,bigquery,snowflake,spark]"
+	pip install -e ".[dev,docs,duckdb,postgres,redshift,bigquery,snowflake,spark]"
 
 install-pre-commit:
 	pre-commit install

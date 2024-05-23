@@ -24,6 +24,24 @@ from sqlframe.standalone import StandaloneSession
 session = StandaloneSession.builder.config(map={"sqlframe.input.dialect": 'duckdb', "sqlframe.output.dialect": 'bigquery'}).getOrCreate()
 ```
 
+## Imports
+
+If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.standalone`.
+In addition, many classes will have a `Standalone` prefix. 
+For example, `StandaloneDataFrame` instead of `DataFrame`.
+
+
+```python
+# PySpark import
+# from pyspark.sql import SparkSession
+# from pyspark.sql import functions as F
+# from pyspark.sql.dataframe import DataFrame
+# SQLFrame import
+from sqlframe.standalone import StandaloneSession
+from sqlframe.standalone import functions as F
+from sqlframe.standalone import StandaloneDataFrame
+```
+
 ## Accessing Tables
 
 PySpark DataFrame API, and currently SQLFrame, requires that a table can be access to get it's schema information.
