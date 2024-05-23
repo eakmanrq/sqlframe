@@ -30,7 +30,23 @@ By default, SQLFrame will create a connection to an in-memory database.
     conn = duckdb.connect(database=":memory:")
     session = DuckDBSession(conn=conn)
     ```
+## Imports
 
+If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.duckdb`.
+In addition, many classes will have a `DuckDB` prefix. 
+For example, `DuckDBDataFrame` instead of `DataFrame`.
+
+
+```python
+# PySpark import
+# from pyspark.sql import SparkSession
+# from pyspark.sql import functions as F
+# from pyspark.sql.dataframe import DataFrame
+# SQLFrame import
+from sqlframe.duckdb import DuckDBSession
+from sqlframe.duckdb import functions as F
+from sqlframe.duckdb import DuckDBDataFrame
+```
 
 ## Example Usage
 

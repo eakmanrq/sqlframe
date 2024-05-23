@@ -43,6 +43,25 @@ Regardless of approach, it is recommended to configure `default_dataset` in the 
     session = BigQuerySession(conn=conn, default_dataset="sqlframe.db1")
     ```
 
+## Imports
+
+If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.bigquery`.
+In addition, many classes will have a `BigQuery` prefix. 
+For example, `BigQueryDataFrame` instead of `DataFrame`.
+
+
+```python
+# PySpark import
+# from pyspark.sql import SparkSession
+# from pyspark.sql import functions as F
+# from pyspark.sql.dataframe import DataFrame
+# SQLFrame import
+from sqlframe.bigquery import BigQuerySession
+from sqlframe.bigquery import functions as F
+from sqlframe.bigquery import BigQueryDataFrame
+```
+
+
 ## Example Usage
 
 ```python

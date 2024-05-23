@@ -25,6 +25,24 @@ conn = connect(
 session = PostgresSession(conn=conn)
 ```
 
+## Imports
+
+If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.postgres`.
+In addition, many classes will have a `Postgres` prefix. 
+For example, `PostgresDataFrame` instead of `DataFrame`.
+
+
+```python
+# PySpark import
+# from pyspark.sql import SparkSession
+# from pyspark.sql import functions as F
+# from pyspark.sql.dataframe import DataFrame
+# SQLFrame import
+from sqlframe.postgres import PostgresSession
+from sqlframe.postgres import functions as F
+from sqlframe.postgres import PostgresDataFrame
+```
+
 ## Example Usage
 
 ```python
