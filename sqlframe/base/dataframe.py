@@ -608,7 +608,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.WHERE)
     def where(self, column: t.Union[Column, str, bool], **kwargs) -> Self:
         if isinstance(column, str):
-            col = sqlglot.parse_one(column, dialect=self.session.input_dialect)
+            col = self._ensure_and_normalize_col(
+                sqlglot.parse_one(column, dialect=self.session.input_dialect)
+            )
         else:
             col = self._ensure_and_normalize_col(column)
         return self.copy(expression=self.expression.where(col.expression))
