@@ -1102,7 +1102,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             expression = self.expression.copy()
             expression.expressions[existing_col_index] = col.alias(col_name).expression
             return self.copy(expression=expression)
-        return self.copy().select(col.alias(col_name), append=True)
+        return self.select.__wrapped__(self, col.alias(col_name), append=True)  # type: ignore
 
     @operation(Operation.SELECT)
     def withColumnRenamed(self, existing: str, new: str) -> Self:

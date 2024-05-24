@@ -20,7 +20,6 @@ def normalize(session: SESSION, expression_context: exp.Select, expr: t.List[NOR
     expr = ensure_list(expr)
     expressions = _ensure_expressions(expr)
     for expression in expressions:
-        # normalize_identifiers(expression, session.input_dialect)
         identifiers = expression.find_all(exp.Identifier)
         for identifier in identifiers:
             identifier.transform(session.input_dialect.normalize_identifier)
