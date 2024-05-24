@@ -1093,15 +1093,16 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.SELECT)
     def withColumn(self, colName: str, col: Column) -> Self:
         col = self._ensure_and_normalize_col(col)
+        col_name = self._ensure_and_normalize_col(colName).alias_or_name
         existing_col_names = self.expression.named_selects
         existing_col_index = (
-            existing_col_names.index(colName) if colName in existing_col_names else None
+            existing_col_names.index(col_name) if col_name in existing_col_names else None
         )
         if existing_col_index:
             expression = self.expression.copy()
-            expression.expressions[existing_col_index] = col.alias(colName).expression
+            expression.expressions[existing_col_index] = col.alias(col_name).expression
             return self.copy(expression=expression)
-        return self.copy().select(col.alias(colName), append=True)
+        return self.copy().select(col.alias(col_name), append=True)
 
     @operation(Operation.SELECT)
     def withColumnRenamed(self, existing: str, new: str) -> Self:

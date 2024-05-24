@@ -48,7 +48,7 @@ def test_persist_storagelevel(standalone_employee: StandaloneDataFrame, compare_
 
 
 def test_with_column_duplicate_alias(standalone_employee: StandaloneDataFrame):
-    df = standalone_employee.withColumn("fname", F.col("age").cast("string"))
+    df = standalone_employee.withColumn("fName", F.col("age").cast("string"))
     assert df.columns == ["employee_id", "fname", "lname", "age", "store_id"]
     # Make sure that the new columns is added with an alias to `fname`
     assert (
