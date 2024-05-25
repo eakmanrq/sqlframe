@@ -9,6 +9,7 @@ from sqlframe.base.dataframe import (
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
+from sqlframe.base.mixins.dataframe_mixins import PrintSchemaFromTempObjectsMixin
 from sqlframe.duckdb.group import DuckDBGroupedData
 
 if sys.version_info >= (3, 11):
@@ -34,13 +35,14 @@ class DuckDBDataFrameStatFunctions(_BaseDataFrameStatFunctions["DuckDBDataFrame"
 
 
 class DuckDBDataFrame(
+    PrintSchemaFromTempObjectsMixin,
     _BaseDataFrame[
         "DuckDBSession",
         "DuckDBDataFrameWriter",
         "DuckDBDataFrameNaFunctions",
         "DuckDBDataFrameStatFunctions",
         "DuckDBGroupedData",
-    ]
+    ],
 ):
     _na = DuckDBDataFrameNaFunctions
     _stat = DuckDBDataFrameStatFunctions

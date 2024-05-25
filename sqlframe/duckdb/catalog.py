@@ -36,6 +36,8 @@ class DuckDBCatalog(
     ListColumnsFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame"],
     _BaseCatalog["DuckDBSession", "DuckDBDataFrame"],
 ):
+    TEMP_CATALOG_FILTER = exp.column("table_catalog").eq("temp")
+
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
     ) -> t.List[Function]:

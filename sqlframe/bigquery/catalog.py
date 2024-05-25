@@ -46,7 +46,9 @@ class BigQueryCatalog(
         return to_schema(self.session.default_dataset).db
 
     @normalize(["tableName", "dbName"])
-    def listColumns(self, tableName: str, dbName: t.Optional[str] = None) -> t.List[Column]:
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
         """Returns a t.List of columns for the given table/view in the specified database.
 
         .. versionadded:: 2.0.0

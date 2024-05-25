@@ -6,7 +6,6 @@ import typing as t
 from collections import Counter
 
 import pytest
-from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession as PySparkSession
 from sqlglot import exp
 
@@ -175,7 +174,6 @@ def test_col(get_session_and_func, arg):
 )
 def test_typeof(get_session_and_func, get_types, arg, expected):
     session, typeof = get_session_and_func("typeof")
-    types = get_types(session)
     # If we just pass a struct in for values then Spark will automatically explode the struct into columns
     # it won't do this though if there is another column so that is why we include an ignore column
     df = session.createDataFrame([(1, arg)], schema=["ignore_col", "col"])
