@@ -24,7 +24,10 @@ from sqlglot.schema import MappingSchema
 from sqlframe.base.catalog import _BaseCatalog
 from sqlframe.base.dataframe import _BaseDataFrame
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
-from sqlframe.base.util import get_column_mapping_from_schema_input
+from sqlframe.base.util import (
+    get_column_mapping_from_schema_input,
+    verify_pandas_installed,
+)
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -464,6 +467,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     def _fetchdf(
         self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
     ) -> pd.DataFrame:
+        verify_pandas_installed()
         from pandas.io.sql import read_sql_query
 
         return read_sql_query(self._to_sql(sql, quote_identifiers=quote_identifiers), self._conn)

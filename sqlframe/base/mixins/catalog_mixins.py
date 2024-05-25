@@ -13,7 +13,7 @@ from sqlframe.base.catalog import (
     _BaseCatalog,
 )
 from sqlframe.base.decorators import normalize
-from sqlframe.base.util import decoded_str, schema_, to_schema
+from sqlframe.base.util import schema_, to_schema
 
 
 class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):

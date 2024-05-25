@@ -240,3 +240,12 @@ def soundex(s):
 
     result += "0" * (4 - count)
     return "".join(result)
+
+
+def verify_pandas_installed():
+    try:
+        import pandas  # noqa
+    except ImportError:
+        raise ImportError(
+            """Pandas is required for this functionality. `pip install "sqlframe[pandas]"` (also include your engine if needed) to install pandas."""
+        )

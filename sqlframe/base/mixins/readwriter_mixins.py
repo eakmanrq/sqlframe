@@ -3,8 +3,6 @@ from __future__ import annotations
 import pathlib
 import typing as t
 
-import pandas as pd
-
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.readerwriter import (
     DF,
@@ -13,7 +11,7 @@ from sqlframe.base.readerwriter import (
     _BaseDataFrameWriter,
     _infer_format,
 )
-from sqlframe.base.util import pandas_to_spark_schema
+from sqlframe.base.util import pandas_to_spark_schema, verify_pandas_installed
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import OptionalPrimitiveType, PathOrPaths
@@ -72,6 +70,9 @@ class PandasLoaderMixin(_BaseDataFrameReader, t.Generic[SESSION, DF]):
         |100|NULL|
         +---+----+
         """
+        verify_pandas_installed()
+        import pandas as pd
+
         assert path is not None, "path is required"
         assert isinstance(path, str), "path must be a string"
         format = format or _infer_format(path)
