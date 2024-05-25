@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing as t
 import warnings
 
-import pandas as pd
 from sqlglot import exp
 
 from sqlframe.base.session import _BaseSession
@@ -14,6 +13,9 @@ from sqlframe.spark.readwriter import (
     SparkDataFrameWriter,
 )
 from sqlframe.spark.types import Row
+
+if t.TYPE_CHECKING:
+    import pandas as pd
 
 
 class SparkSession(

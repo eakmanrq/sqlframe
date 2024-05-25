@@ -26,7 +26,6 @@ setup(
         "bigquery": [
             "google-cloud-bigquery[pandas]>=3,<4",
             "google-cloud-bigquery-storage>=2,<3",
-            "pandas>=2,<3",
         ],
         "dev": [
             "duckdb>=0.9,<0.11",
@@ -56,17 +55,17 @@ setup(
             "duckdb>=0.9,<0.11",
             "pandas>=2,<3",
         ],
-        "postgres": [
+        "pandas": [
             "pandas>=2,<3",
+        ],
+        "postgres": [
             "psycopg2>=2.8,<3",
         ],
         "redshift": [
-            "pandas>=2,<3",
             "redshift_connector>=2.1.1,<2.2.0",
         ],
         "snowflake": [
-            "pandas>=2,<3",
-            "snowflake-connector-python[pandas,secure-local-storage]>=3.10.0,<3.11",
+            "snowflake-connector-python[secure-local-storage]>=3.10.0,<3.11",
         ],
         "spark": [
             "pyspark>=2,<3.6",
