@@ -315,7 +315,9 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
 
 class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
     @normalize(["tableName", "dbName"])
-    def listColumns(self, tableName: str, dbName: t.Optional[str] = None) -> t.List[Column]:
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
         """Returns a t.List of columns for the given table/view in the specified database.
 
         .. versionadded:: 2.0.0
@@ -385,12 +387,6 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
                     "catalog",
                     exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
                 )
-        # if self.QUALIFY_INFO_SCHEMA_WITH_DATABASE:
-        #     if not table.db:
-        #         raise ValueError("dbName must be specified when listing columns from INFORMATION_SCHEMA")
-        #     source_table = f"{table.db}.INFORMATION_SCHEMA.COLUMNS"
-        # else:
-        #     source_table = "INFORMATION_SCHEMA.COLUMNS"
         source_table = self._get_info_schema_table("columns", database=table.db)
         select = (
             exp.select(
@@ -402,9 +398,15 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
             .where(exp.column("table_name").eq(table.name))
         )
         if table.db:
-            select = select.where(exp.column("table_schema").eq(table.db))
+            schema_filter: exp.Expression = exp.column("table_schema").eq(table.db)
+            if include_temp and self.TEMP_SCHEMA_FILTER:
+                schema_filter = exp.Or(this=schema_filter, expression=self.TEMP_SCHEMA_FILTER)
+            select = select.where(schema_filter)
         if table.catalog:
-            select = select.where(exp.column("table_catalog").eq(table.catalog))
+            catalog_filter: exp.Expression = exp.column("table_catalog").eq(table.catalog)
+            if include_temp and self.TEMP_CATALOG_FILTER:
+                catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
+            select = select.where(catalog_filter)
         results = self.session._fetch_rows(select)
         return [
             Column(

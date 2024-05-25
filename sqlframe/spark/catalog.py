@@ -468,7 +468,9 @@ class SparkCatalog(
                 )
         return [Table(*x) for x in self._spark_catalog.listTables(dbName, pattern)]
 
-    def listColumns(self, tableName: str, dbName: t.Optional[str] = None) -> t.List[Column]:
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
         """Returns a t.List of columns for the given table/view in the specified database.
 
         .. versionadded:: 2.0.0

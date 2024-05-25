@@ -34,6 +34,7 @@ class PostgresCatalog(
     _BaseCatalog["PostgresSession", "PostgresDataFrame"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.column("current_catalog")
+    TEMP_SCHEMA_FILTER = exp.column("table_schema").like("pg_temp_%")
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None

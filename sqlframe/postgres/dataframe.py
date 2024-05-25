@@ -9,6 +9,7 @@ from sqlframe.base.dataframe import (
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
+from sqlframe.base.mixins.dataframe_mixins import PrintSchemaFromTempObjectsMixin
 from sqlframe.postgres.group import PostgresGroupedData
 
 if sys.version_info >= (3, 11):
@@ -33,13 +34,14 @@ class PostgresDataFrameStatFunctions(_BaseDataFrameStatFunctions["PostgresDataFr
 
 
 class PostgresDataFrame(
+    PrintSchemaFromTempObjectsMixin,
     _BaseDataFrame[
         "PostgresSession",
         "PostgresDataFrameWriter",
         "PostgresDataFrameNaFunctions",
         "PostgresDataFrameStatFunctions",
         "PostgresGroupedData",
-    ]
+    ],
 ):
     _na = PostgresDataFrameNaFunctions
     _stat = PostgresDataFrameStatFunctions

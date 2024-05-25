@@ -26,6 +26,9 @@ else:
 class _BaseCatalog(t.Generic[SESSION, DF]):
     """User-facing catalog API, accessible through `SparkSession.catalog`."""
 
+    TEMP_CATALOG_FILTER: t.Optional[exp.Expression] = None
+    TEMP_SCHEMA_FILTER: t.Optional[exp.Expression] = None
+
     def __init__(self, sparkSession: SESSION, schema: t.Optional[MappingSchema] = None) -> None:
         """Create a new Catalog that wraps the underlying JVM object."""
         self.session = sparkSession
@@ -569,7 +572,9 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         """
         raise NotImplementedError
 
-    def listColumns(self, tableName: str, dbName: t.Optional[str] = None) -> t.List[Column]:
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
         """Returns a t.List of columns for the given table/view in the specified database.
 
         .. versionadded:: 2.0.0
