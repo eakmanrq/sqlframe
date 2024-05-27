@@ -154,7 +154,12 @@ def pandas_to_spark_schema(pandas_df: PandasDataFrame) -> types.StructType:
     """
     from sqlframe.base import types
 
-    columns = list([x.replace("?column?", "unknown_column") for x in pandas_df.columns])
+    columns = list(
+        [
+            x.replace("?column?", f"unknown_column_{i}").replace("NULL", f"unknown_column_{i}")
+            for i, x in enumerate(pandas_df.columns)
+        ]
+    )
     d_types = list(pandas_df.dtypes)
     p_schema = types.StructType(
         [
@@ -249,3 +254,17 @@ def verify_pandas_installed():
         raise ImportError(
             """Pandas is required for this functionality. `pip install "sqlframe[pandas]"` (also include your engine if needed) to install pandas."""
         )
+
+
+def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
+    from sqlframe.base.session import _BaseSession
+
+    if isinstance(col, exp.Alias):
+        col = col.args["alias"]
+    if isinstance(col, exp.Column):
+        col = col.copy()
+        col.set("table", None)
+    if isinstance(col, (exp.Identifier, exp.Column)):
+        return col.sql(dialect=_BaseSession().input_dialect)
+    # We may get things like `Null()` expression or maybe literals so we just return the alias or name in those cases
+    return col.alias_or_name

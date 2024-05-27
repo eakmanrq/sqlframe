@@ -17,11 +17,13 @@ from sqlglot import expressions as exp
 from sqlglot.helper import ensure_list, object_to_dict, seq_get
 from sqlglot.optimizer.qualify_columns import quote_identifiers
 
+from sqlframe.base.decorators import normalize
 from sqlframe.base.operations import Operation, operation
 from sqlframe.base.transforms import replace_id_value
 from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
+    quote_preserving_alias_or_name,
 )
 
 if sys.version_info >= (3, 11):
@@ -410,7 +412,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         outer_select = item.find(exp.Select)
         if outer_select:
-            return [col(x.alias_or_name) for x in outer_select.expressions]
+            return [col(quote_preserving_alias_or_name(x)) for x in outer_select.expressions]
         return []
 
     def _create_hash_from_expression(self, expression: exp.Expression) -> str:
@@ -505,7 +507,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 self.session.catalog.add_table(
                     cache_table_name,
                     {
-                        expression.alias_or_name: expression.type.sql(dialect=dialect)
+                        quote_preserving_alias_or_name(expression): expression.type.sql(
+                            dialect=dialect
+                        )
                         if expression.type
                         else "UNKNOWN"
                         for expression in select_expression.expressions
@@ -688,7 +692,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         join_expression = self._add_ctes_to_expression(join_expression, other_df.expression.ctes)
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
-        join_columns = self._ensure_list_of_columns(on)
+        join_columns = self._ensure_and_normalize_cols(on)
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
         if how != "cross":
@@ -1324,6 +1328,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         assert sqls[-1] is not None
         return self.session._fetchdf(sqls[-1])
 
+    @normalize("name")
     def createOrReplaceTempView(self, name: str) -> None:
         self.session.temp_views[name] = self.copy()._convert_leaf_to_cte()
 

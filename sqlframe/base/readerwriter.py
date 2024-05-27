@@ -11,6 +11,8 @@ from functools import reduce
 from sqlglot import exp
 from sqlglot.helper import object_to_dict
 
+from sqlframe.base.decorators import normalize
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
@@ -39,6 +41,7 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
     def session(self) -> SESSION:
         return self._session
 
+    @normalize("tableName")
     def table(self, tableName: str) -> DF:
         if df := self.session.temp_views.get(tableName):
             return df

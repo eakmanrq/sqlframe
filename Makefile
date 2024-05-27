@@ -8,7 +8,7 @@ slow-test:
 	pytest -n auto tests
 
 fast-test:
-	pytest -n auto -m "fast"
+	pytest -n auto tests/unit
 
 local-test:
 	pytest -n auto -m "fast or local"

@@ -9,9 +9,11 @@ import typing as t
 import sqlglot
 from sqlglot import expressions as exp
 from sqlglot.helper import flatten, is_iterable
+from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
+from sqlframe.base.decorators import normalize
 from sqlframe.base.types import DataType
-from sqlframe.base.util import get_func_from_session
+from sqlframe.base.util import get_func_from_session, quote_preserving_alias_or_name
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import ColumnOrLiteral, ColumnOrName
@@ -237,7 +239,7 @@ class Column:
 
     @property
     def alias_or_name(self) -> str:
-        return self.expression.alias_or_name
+        return quote_preserving_alias_or_name(self.expression)  # type: ignore
 
     @classmethod
     def ensure_literal(cls, value) -> Column:
@@ -266,7 +268,9 @@ class Column:
         from sqlframe.base.session import _BaseSession
 
         dialect = _BaseSession().input_dialect
-        alias: exp.Expression = exp.parse_identifier(name, dialect=dialect)
+        alias: exp.Expression = normalize_identifiers(
+            exp.parse_identifier(name, dialect=dialect), dialect=dialect
+        )
         new_expression = exp.Alias(
             this=self.column_expression,
             alias=alias.this if isinstance(alias, exp.Column) else alias,
