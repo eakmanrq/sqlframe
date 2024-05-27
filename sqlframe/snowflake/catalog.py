@@ -127,7 +127,9 @@ class SnowflakeCatalog(
         sql = f"SHOW COLUMNS IN TABLE {table.sql(dialect=self.session.input_dialect)}"
         results = self.session._fetch_rows(sql)
         return {
-            row["column_name"]: exp.DataType.build(
+            exp.column(row["column_name"], quoted=True).sql(
+                dialect=self.session.input_dialect
+            ): exp.DataType.build(
                 json.loads(row["data_type"])["type"], dialect=self.session.input_dialect, udt=True
             )
             for row in results
