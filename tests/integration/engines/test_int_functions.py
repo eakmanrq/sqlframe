@@ -18,6 +18,7 @@ from sqlframe.base.util import (
 from sqlframe.bigquery import BigQuerySession
 from sqlframe.duckdb import DuckDBSession
 from sqlframe.postgres import PostgresDataFrame, PostgresSession
+from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark.session import SparkSession
 
 if t.TYPE_CHECKING:
@@ -138,6 +139,9 @@ def test_lit(get_session_and_func, arg, expected):
     if isinstance(session, SparkSession):
         if isinstance(arg, datetime.datetime) and arg.tzinfo is not None:
             pytest.skip("Spark doesn't preserve timezone information in datetime literals")
+    if isinstance(session, SnowflakeSession):
+        if isinstance(arg, Row):
+            pytest.skip("Snowflake doesn't support literal row types")
     assert session.range(1).select(lit(arg).alias("test")).collect() == [Row(test=expected)]
 
 

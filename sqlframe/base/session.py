@@ -450,14 +450,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     def _fetch_rows(
         self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
     ) -> t.List[Row]:
-        from sqlframe.base.types import Row
-
-        def _dict_to_row(row: t.Dict[str, t.Any]) -> Row:
-            for key, value in row.items():
-                if isinstance(value, dict):
-                    row[key] = _dict_to_row(value)
-            return Row(**row)
-
         self._execute(sql, quote_identifiers=quote_identifiers)
         result = self._cur.fetchall()
         if not self._cur.description:
