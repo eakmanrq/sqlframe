@@ -183,3 +183,47 @@ The dialect of the generated SQL will be based on the session's dialect. However
 # create session and `df` like normal
 df.sql(dialect="bigquery")
 ```
+
+### OpenAI Enriched
+
+OpenAI's models can be used to enrich the generated SQL to make it more human-like. 
+This is useful when you want to generate SQL that is more readable for humans.
+You must have `OPENAI_API_KEY` set in your environment variables to use this feature.
+
+```python
+# create session and `df` like normal
+# The model to use defaults to `gpt-4o` but can be changed by passing a string to the `openai_model` parameter.
+>>> df.sql(optimize=False, use_openai=True)
+WITH natality_data AS (
+  SELECT
+    year,
+    ever_born
+  FROM `bigquery-public-data`.`samples`.`natality`
+), single_child_families AS (
+  SELECT
+    year,
+    COUNT(*) AS num_single_child_families
+  FROM natality_data
+  WHERE ever_born = 1
+  GROUP BY year
+), lagged_families AS (
+  SELECT
+    year,
+    num_single_child_families,
+    LAG(num_single_child_families, 1) OVER (ORDER BY year) AS last_year_num_single_child_families
+  FROM single_child_families
+), percent_change_families AS (
+  SELECT
+    year,
+    num_single_child_families,
+    ((num_single_child_families - last_year_num_single_child_families) / last_year_num_single_child_families) AS percent_change
+  FROM lagged_families
+  ORDER BY ABS(percent_change) DESC
+)
+SELECT
+  year,
+  FORMAT('%\'.0f', ROUND(CAST(num_single_child_families AS FLOAT64), 0)) AS `new families single child`,
+  FORMAT('%\'.2f', ROUND(CAST((percent_change * 100) AS FLOAT64), 2)) AS `percent change`
+FROM percent_change_families
+LIMIT 5
+```
