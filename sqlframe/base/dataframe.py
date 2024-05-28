@@ -15,6 +15,8 @@ from prettytable import PrettyTable
 from sqlglot import Dialect
 from sqlglot import expressions as exp
 from sqlglot.helper import ensure_list, object_to_dict, seq_get
+from sqlglot.optimizer.pushdown_projections import pushdown_projections
+from sqlglot.optimizer.qualify import qualify
 from sqlglot.optimizer.qualify_columns import quote_identifiers
 
 from sqlframe.base.decorators import normalize
@@ -24,6 +26,7 @@ from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
     quote_preserving_alias_or_name,
+    verify_openai_installed,
 )
 
 if sys.version_info >= (3, 11):
@@ -473,6 +476,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         dialect: DialectType = None,
         optimize: bool = True,
         pretty: bool = True,
+        use_openai: bool = False,
+        openai_model: str = "gpt-4o",
         as_list: bool = False,
         **kwargs,
     ) -> t.Union[str, t.List[str]]:
@@ -492,6 +497,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 select_expression = t.cast(
                     exp.Select, self.session._optimize(select_expression, dialect=dialect)
                 )
+            elif use_openai:
+                qualify(select_expression, dialect=dialect, schema=self.session.catalog._schema)
+                pushdown_projections(select_expression, schema=self.session.catalog._schema)
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
 
@@ -545,10 +553,40 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
             output_expressions.append(expression)
 
-        results = [
-            expression.sql(dialect=dialect, pretty=pretty, **kwargs)
-            for expression in output_expressions
-        ]
+        results = []
+        for expression in output_expressions:
+            sql = expression.sql(dialect=dialect, pretty=pretty, **kwargs)
+            if use_openai:
+                verify_openai_installed()
+                from openai import OpenAI
+
+                client = OpenAI()
+                prompt = f"""
+                You are a backend tool that converts correct {dialect} SQL to simplified and more human readable version.
+                You respond without code block with rewritten {dialect} SQL.
+                You don't change any column names in the final select because the user expects those to remain the same.
+                You make unique CTE alias names match what a human would write and in snake case.
+                You improve formatting with spacing and line-breaks.
+                You remove redundant parenthesis and aliases.
+                When remove extra quotes, make sure to keep quotes around words that could be reserved words
+                """
+                chat_completed = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": sql,
+                        },
+                    ],
+                    model=openai_model,
+                )
+                assert chat_completed.choices[0].message.content is not None
+                sql = chat_completed.choices[0].message.content
+            results.append(sql)
+
         if as_list:
             return results
         return ";\n".join(results)

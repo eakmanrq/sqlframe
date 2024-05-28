@@ -256,6 +256,15 @@ def verify_pandas_installed():
         )
 
 
+def verify_openai_installed():
+    try:
+        import openai  # noqa
+    except ImportError:
+        raise ImportError(
+            """OpenAI is required for this functionality. `pip install "sqlframe[openai]"` (also include your engine if needed) to install openai."""
+        )
+
+
 def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
     from sqlframe.base.session import _BaseSession
 
