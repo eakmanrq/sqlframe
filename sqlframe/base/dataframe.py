@@ -531,7 +531,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         replacement_mapping: t.Dict[exp.Identifier, exp.Identifier] = {}
         openai_config = (
             OpenAIConfig.from_dict(openai_config)
-            if openai_config and isinstance(openai_config, dict)
+            if openai_config is not None and isinstance(openai_config, dict)
             else openai_config
         )
 
