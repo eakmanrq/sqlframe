@@ -1,17 +1,17 @@
 <div align="center">
-  <img src="https://sqlframe.readthedocs.io/en/latest/docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="400"/>
+  <img src="https://sqlframe.readthedocs.io/en/stable/docs/images/sqlframe_logo.png" alt="SQLFrame Logo" width="400"/>
 </div>
 
 SQLFrame implements the PySpark DataFrame API in order to enable running transformation pipelines directly on database engines - no Spark clusters or dependencies required.
 
 SQLFrame currently supports the following engines (many more in development):
 
-* [BigQuery](https://sqlframe.readthedocs.io/en/latest/bigquery/)
-* [DuckDB](https://sqlframe.readthedocs.io/en/latest/duckdb)
-* [Postgres](https://sqlframe.readthedocs.io/en/latest/postgres)
+* [BigQuery](https://sqlframe.readthedocs.io/en/stable/bigquery/)
+* [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb)
+* [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
-* [Standalone](https://sqlframe.readthedocs.io/en/latest/standalone)
+* [Standalone](https://sqlframe.readthedocs.io/en/stable/standalone)
 
 SQLFrame is great for:
 
@@ -33,6 +33,12 @@ pip install sqlframe
 ```
 
 See specific engine documentation for additional setup instructions.
+
+## Configuration
+
+SQLFrame generates consistently accurate yet complex SQL for engine execution. 
+However, when using df.sql(), it produces more human-readable SQL. 
+For details on how to configure this output and leverage OpenAI to enhance the SQL, see [Generated SQL Configuration](https://sqlframe.readthedocs.io/en/stable/configuration/#generated-sql).
 
 ## Example Usage
 
