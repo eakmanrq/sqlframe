@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import enum
 import functools
 import itertools
+import json
 import logging
 import sys
 import typing as t
 import zlib
 from copy import copy
+from dataclasses import dataclass
 
 import sqlglot
 from prettytable import PrettyTable
@@ -73,6 +76,46 @@ JOIN_HINTS = {
 
 
 DF = t.TypeVar("DF", bound="_BaseDataFrame")
+
+
+class OpenAIMode(enum.Enum):
+    CTE_ONLY = "cte_only"
+    FULL = "full"
+
+    @property
+    def is_cte_only(self) -> bool:
+        return self == OpenAIMode.CTE_ONLY
+
+    @property
+    def is_full(self) -> bool:
+        return self == OpenAIMode.FULL
+
+
+@dataclass
+class OpenAIConfig:
+    mode: OpenAIMode = OpenAIMode.CTE_ONLY
+    model: str = "gpt-4o"
+    prompt_override: t.Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, config: t.Dict[str, t.Any]) -> OpenAIConfig:
+        if "mode" in config:
+            config["mode"] = OpenAIMode(config["mode"].lower())
+        return cls(**config)
+
+    def get_prompt(self, dialect: Dialect) -> str:
+        if self.prompt_override:
+            return self.prompt_override
+        if self.mode.is_cte_only:
+            return f"You are a backend tool that creates unique CTE alias names match what a human would write and in snake case. You respond without code blocks and only a json payload with the key being the CTE name that is being replaced and the value being the new CTE human readable name."
+        return f"""
+        You are a backend tool that converts correct {dialect} SQL to simplified and more human readable version.
+        You respond without code block with rewritten {dialect} SQL.
+        You don't change any column names in the final select because the user expects those to remain the same.
+        You make unique CTE alias names match what a human would write and in snake case.
+        You improve formatting with spacing and line-breaks.
+        You remove redundant parenthesis and aliases.
+        When remove extra quotes, make sure to keep quotes around words that could be reserved words"""
 
 
 class _BaseDataFrameNaFunctions(t.Generic[DF]):
@@ -476,8 +519,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         dialect: DialectType = None,
         optimize: bool = True,
         pretty: bool = True,
-        use_openai: bool = False,
-        openai_model: str = "gpt-4o",
+        openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
         as_list: bool = False,
         **kwargs,
     ) -> t.Union[str, t.List[str]]:
@@ -487,6 +529,11 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         select_expressions = df._get_select_expressions()
         output_expressions: t.List[t.Union[exp.Select, exp.Cache, exp.Drop]] = []
         replacement_mapping: t.Dict[exp.Identifier, exp.Identifier] = {}
+        openai_config = (
+            OpenAIConfig.from_dict(openai_config)
+            if openai_config and isinstance(openai_config, dict)
+            else openai_config
+        )
 
         for expression_type, select_expression in select_expressions:
             select_expression = select_expression.transform(
@@ -497,7 +544,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 select_expression = t.cast(
                     exp.Select, self.session._optimize(select_expression, dialect=dialect)
                 )
-            elif use_openai:
+            elif openai_config:
                 qualify(select_expression, dialect=dialect, schema=self.session.catalog._schema)
                 pushdown_projections(select_expression, schema=self.session.catalog._schema)
 
@@ -556,35 +603,32 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         results = []
         for expression in output_expressions:
             sql = expression.sql(dialect=dialect, pretty=pretty, **kwargs)
-            if use_openai:
+            if openai_config:
+                assert isinstance(openai_config, OpenAIConfig)
                 verify_openai_installed()
                 from openai import OpenAI
 
                 client = OpenAI()
-                prompt = f"""
-                You are a backend tool that converts correct {dialect} SQL to simplified and more human readable version.
-                You respond without code block with rewritten {dialect} SQL.
-                You don't change any column names in the final select because the user expects those to remain the same.
-                You make unique CTE alias names match what a human would write and in snake case.
-                You improve formatting with spacing and line-breaks.
-                You remove redundant parenthesis and aliases.
-                When remove extra quotes, make sure to keep quotes around words that could be reserved words
-                """
                 chat_completed = client.chat.completions.create(
                     messages=[
-                        {
+                        {  # type: ignore
                             "role": "system",
-                            "content": prompt,
+                            "content": openai_config.get_prompt(dialect),
                         },
                         {
                             "role": "user",
                             "content": sql,
                         },
                     ],
-                    model=openai_model,
+                    model=openai_config.model,
                 )
                 assert chat_completed.choices[0].message.content is not None
-                sql = chat_completed.choices[0].message.content
+                if openai_config.mode.is_cte_only:
+                    cte_replacement_mapping = json.loads(chat_completed.choices[0].message.content)
+                    for old_name, new_name in cte_replacement_mapping.items():
+                        sql = sql.replace(old_name, new_name)
+                else:
+                    sql = chat_completed.choices[0].message.content
             results.append(sql)
 
         if as_list:

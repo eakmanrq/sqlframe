@@ -184,46 +184,59 @@ The dialect of the generated SQL will be based on the session's dialect. However
 df.sql(dialect="bigquery")
 ```
 
-### OpenAI Enriched
+### OpenAI Enrichment
 
-OpenAI's models can be used to enrich the generated SQL to make it more human-like. 
-This is useful when you want to generate SQL that is more readable for humans.
-You must have `OPENAI_API_KEY` set in your environment variables to use this feature.
+OpenAI's models can be used to enrich the generated SQL to make it more human-like.
+You can have it just provide more readable CTE names or you can have it try to make the whole SQL statement more readable.
+
+#### Example
 
 ```python
 # create session and `df` like normal
 # The model to use defaults to `gpt-4o` but can be changed by passing a string to the `openai_model` parameter.
->>> df.sql(optimize=False, use_openai=True)
-WITH natality_data AS (
+>>> df.sql(openai_config={"mode": "cte_only", "model": "gpt-3.5-turbo"})
+WITH `single_child_families_by_year` AS (
   SELECT
-    year,
-    ever_born
-  FROM `bigquery-public-data`.`samples`.`natality`
-), single_child_families AS (
+    `natality`.`year` AS `year`,
+    COUNT(*) AS `num_single_child_families`
+  FROM `bigquery-public-data`.`samples`.`natality` AS `natality`
+  WHERE
+    `natality`.`ever_born` = 1
+  GROUP BY
+    `natality`.`year`
+), `families_with_percent_change` AS (
   SELECT
-    year,
-    COUNT(*) AS num_single_child_families
-  FROM natality_data
-  WHERE ever_born = 1
-  GROUP BY year
-), lagged_families AS (
-  SELECT
-    year,
-    num_single_child_families,
-    LAG(num_single_child_families, 1) OVER (ORDER BY year) AS last_year_num_single_child_families
-  FROM single_child_families
-), percent_change_families AS (
-  SELECT
-    year,
-    num_single_child_families,
-    ((num_single_child_families - last_year_num_single_child_families) / last_year_num_single_child_families) AS percent_change
-  FROM lagged_families
-  ORDER BY ABS(percent_change) DESC
+    `single_child_families_by_year`.`year` AS `year`,
+    `single_child_families_by_year`.`num_single_child_families` AS `num_single_child_families`,
+    LAG(`single_child_families_by_year`.`num_single_child_families`, 1) OVER (ORDER BY `single_child_families_by_year`.`year`) AS `last_year_num_single_child_families`
+  FROM `single_child_families_by_year` AS `single_child_families_by_year`
 )
 SELECT
-  year,
-  FORMAT('%\'.0f', ROUND(CAST(num_single_child_families AS FLOAT64), 0)) AS `new families single child`,
-  FORMAT('%\'.2f', ROUND(CAST((percent_change * 100) AS FLOAT64), 2)) AS `percent change`
-FROM percent_change_families
+  `families_with_percent_change`.`year` AS `year`,
+  FORMAT('%\'.0f', ROUND(CAST(`families_with_percent_change`.`num_single_child_families` AS FLOAT64), 0)) AS `new families single child`,
+  FORMAT(
+    '%\'.2f',
+    ROUND(
+      CAST((
+        (
+          (
+            `families_with_percent_change`.`num_single_child_families` - `families_with_percent_change`.`last_year_num_single_child_families`
+          ) / `families_with_percent_change`.`last_year_num_single_child_families`
+        ) * 100
+      ) AS FLOAT64),
+      2
+    )
+  ) AS `percent change`
+FROM `families_with_percent_change` AS `families_with_percent_change`
+ORDER BY
+  ABS(`percent_change`) DESC
 LIMIT 5
 ```
+
+#### Parameters
+
+| Parameter         | Description                                                           | Default    |
+|-------------------|-----------------------------------------------------------------------|------------|
+| `mode`            | The mode to use. Can be `cte_only` or `full`.                         | `cte_only` |
+| `model`           | The OpenAI model to use. Note: The default may change in new releases | `gpt-4o`   |
+| `prompt_override` | A string to use to override the default prompt.                       | None       |
