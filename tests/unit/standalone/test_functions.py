@@ -2790,3 +2790,7 @@ def test_map_zip_with():
         SF.map_zip_with("base", "ratio", lambda k, v1, v2: SF.round(v1 * v2, 2)).sql()
         == "MAP_ZIP_WITH(base, ratio, (k, v1, v2) -> ROUND((v1 * v2), 2))"
     )
+
+
+def test_nullif():
+    assert SF.nullif("cola", "colb").sql() == "NULLIF(cola, colb)"

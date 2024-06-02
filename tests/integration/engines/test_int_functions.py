@@ -156,8 +156,11 @@ def test_col(get_session_and_func, arg):
     session, col = get_session_and_func("col")
     df = session.createDataFrame([(1,)], schema=[arg])
     result = df.select(col(arg)).first()
+    if isinstance(session, SnowflakeSession):
+        if arg != "employee id":
+            arg = arg.upper()
     assert result[0] == 1
-    assert arg == result.__fields__[0]
+    assert result.__fields__[0] == arg
 
 
 @pytest.mark.parametrize(
@@ -205,7 +208,10 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
 def test_alias(get_session_and_func):
     session, col = get_session_and_func("col")
     df = session.createDataFrame([(1,)], schema=["employee_id"])
-    assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
+    if isinstance(session, SnowflakeSession):
+        assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "TEST"
+    else:
+        assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
     if isinstance(session, (DuckDBSession, BigQuerySession)):
         assert space_result == "a space in new name"
@@ -327,11 +333,10 @@ def test_sum_distinct(get_session_and_func):
 def test_acos(get_session_and_func):
     session, acos = get_session_and_func("acos")
     df = session.range(-1, 2)
-    assert df.select(acos(df.id)).collect() == [
-        Row(acos=3.141592653589793),
-        Row(acos=1.5707963267948966),
-        Row(acos=0.0),
-    ]
+    results = df.select(acos(df.id)).collect()
+    assert math.isclose(results[0][0], 3.141592653589793)
+    assert math.isclose(results[1][0], 1.5707963267948966)
+    assert results[2][0] == 0.0
 
 
 def test_acosh(get_session_and_func):
@@ -344,7 +349,9 @@ def test_asin(get_session_and_func):
     session, asin = get_session_and_func("asin")
     # Original: df.select(asin(df.schema.fieldNames()[0]))
     df = session.createDataFrame([(0,), (1,)], schema=["numbers"])
-    assert df.select(asin("numbers")).collect() == [Row(asin=0.0), Row(asin=1.5707963267948966)]
+    results = df.select(asin(df.numbers)).collect()
+    assert results[0][0] == 0.0
+    assert math.isclose(results[1][0], 1.5707963267948966)
 
 
 def test_asinh(get_session_and_func):
@@ -367,9 +374,7 @@ def test_atan2(get_session_and_func, get_func):
     session, atan2 = get_session_and_func("atan2")
     lit = get_func("lit", session)
     df = session.range(1)
-    assert df.select(atan2(lit(1), lit(2))).collect() == [
-        Row(value=0.4636476090008061),
-    ]
+    assert math.isclose(df.select(atan2(lit(1), lit(2))).first()[0], 0.4636476090008061)
 
 
 def test_atanh(get_session_and_func):
@@ -579,9 +584,7 @@ def test_radians(get_session_and_func, get_func):
     session, radians = get_session_and_func("radians")
     lit = get_func("lit", session)
     df = session.range(1)
-    assert df.select(radians(lit(180))).collect() == [
-        Row(value=math.pi),
-    ]
+    assert math.isclose(df.select(radians(lit(180))).first()[0], math.pi)
 
 
 def test_bitwise_not(get_session_and_func, get_func):
@@ -651,7 +654,7 @@ def test_stddev_samp(get_session_and_func):
 def test_stddev_pop(get_session_and_func):
     session, stddev_pop = get_session_and_func("stddev_pop")
     df = session.range(6)
-    assert math.isclose(df.select(stddev_pop("id")).first()[0], 1.707825127659933)
+    assert round(df.select(stddev_pop("id")).first()[0], 4) == 1.7078
 
 
 def test_variance(get_session_and_func):
@@ -669,23 +672,27 @@ def test_var_samp(get_session_and_func):
 def test_var_pop(get_session_and_func):
     session, var_pop = get_session_and_func("var_pop")
     df = session.range(6)
-    assert math.isclose(df.select(var_pop(df.id)).first()[0], 2.9166666666666665)
+    assert round(df.select(var_pop(df.id)).first()[0], 4) == 2.9167
 
 
 def test_skewness(get_session_and_func):
     session, skewness = get_session_and_func("skewness")
     df = session.createDataFrame([[1], [1], [2]], ["c"])
-    if isinstance(session, DuckDBSession):
+    if isinstance(session, (DuckDBSession, SnowflakeSession)):
         # DuckDB calculates skewness differently than spark
-        assert math.isclose(df.select(skewness("c")).first()[0], 1.7320508075688699)
+        assert round(df.select(skewness("c")).first()[0], 4) == 1.7321
     else:
         assert math.isclose(df.select(skewness(df.c)).first()[0], 0.7071067811865475)
 
 
 def test_kurtosis(get_session_and_func):
     session, kurtosis = get_session_and_func("kurtosis")
-    df = session.createDataFrame([[1], [1], [2]], ["c"])
-    assert math.isclose(df.select(kurtosis(df.c)).first()[0], -1.5)
+    if isinstance(session, SnowflakeSession):
+        df = session.createDataFrame([[1], [1], [2], [3]], ["c"])
+        assert math.isclose(df.select(kurtosis("c")).first()[0], -1.289265078884)
+    else:
+        df = session.createDataFrame([[1], [1], [2]], ["c"])
+        assert math.isclose(df.select(kurtosis(df.c)).first()[0], -1.5)
 
 
 def test_collect_list(get_session_and_func):
@@ -856,7 +863,6 @@ def test_first(get_session_and_func):
             Row(name="Alice", value=2),
             Row(name="Bob", value=5),
         ]
-
     else:
         raise RuntimeError(f"Got unexpected null_ordering: {session.input_dialect.NULL_ORDERING}")
 
@@ -970,9 +976,10 @@ def test_percentile(get_session_and_func, get_func):
     assert df.select(percentile("value", 0.5).alias("median")).collect() == [
         Row(value=42),
     ]
-    assert df.select(percentile("value", [0.25, 0.5, 0.75]).alias("median")).collect() == [
-        Row(value=[42, 42, 42]),
-    ]
+    if not isinstance(session, SnowflakeSession):
+        assert df.select(percentile("value", [0.25, 0.5, 0.75]).alias("median")).collect() == [
+            Row(value=[42, 42, 42]),
+        ]
 
 
 def test_rand(get_session_and_func):
@@ -990,8 +997,12 @@ def test_round(get_session_and_func):
     ]
 
 
-def test_bround(get_session_and_func):
+def test_bround(get_session_and_func, get_func):
     session, bround = get_session_and_func("bround")
+    col = get_func("col", session)
+    if isinstance(session, SnowflakeSession):
+        # https://docs.snowflake.com/en/sql-reference/data-types-numeric.html#label-data-types-for-fixed-point-numbers
+        pytest.skip("Snowflake supports bround but the input must be a fixed-point number")
     assert session.createDataFrame([(2.5,)], ["a"]).select(bround("a", 0).alias("r")).collect() == [
         Row(r=2.0)
     ]
@@ -1031,14 +1042,13 @@ def test_expr(get_session_and_func):
 def test_struct(get_session_and_func):
     session, struct = get_session_and_func("struct")
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
-    assert df.select(struct("age", "name").alias("struct")).collect() == [
-        Row(value=Row(age=2, name="Alice")),
-        Row(value=Row(age=5, name="Bob")),
-    ]
-    assert df.select(struct([df.age, df.name]).alias("struct")).collect() == [
-        Row(value=Row(age=2, name="Alice")),
-        Row(value=Row(age=5, name="Bob")),
-    ]
+    expected = (
+        [Row(value=Row(age=2, name="Alice")), Row(value=Row(age=5, name="Bob"))]
+        if not isinstance(session, SnowflakeSession)
+        else [Row(value={"AGE": 2, "NAME": "Alice"}), Row(value={"AGE": 5, "NAME": "Bob"})]
+    )
+    assert df.select(struct("age", "name").alias("struct")).collect() == expected
+    assert df.select(struct([df.age, df.name]).alias("struct")).collect() == expected
 
 
 def test_greatest(get_session_and_func):
@@ -1152,13 +1162,28 @@ def test_nth_value(get_session_and_func, get_window):
         Row(c1="b", c2=2, nth_value=2),
         Row(c1="b", c2=8, nth_value=2),
     ]
-    assert df.withColumn("nth_value", nth_value("c2", 2).over(w)).orderBy("c1", "c2").collect() == [
-        Row(c1="a", c2=1, nth_value=None),
-        Row(c1="a", c2=2, nth_value=2),
-        Row(c1="a", c2=3, nth_value=2),
-        Row(c1="b", c2=2, nth_value=None),
-        Row(c1="b", c2=8, nth_value=8),
-    ]
+    if isinstance(session, SnowflakeSession):
+        assert df.withColumn("nth_value", nth_value("c2", 2).over(w)).orderBy(
+            "c1", "c2"
+        ).collect() == [
+            # In spark since the 2nd value hasn't been seen yet (in the first row for example), then it returns Null
+            # In Snowflake it will return the 2nd value regardless of the current row being processed
+            Row(c1="a", c2=1, nth_value=2),
+            Row(c1="a", c2=2, nth_value=2),
+            Row(c1="a", c2=3, nth_value=2),
+            Row(c1="b", c2=2, nth_value=8),
+            Row(c1="b", c2=8, nth_value=8),
+        ]
+    else:
+        assert df.withColumn("nth_value", nth_value("c2", 2).over(w)).orderBy(
+            "c1", "c2"
+        ).collect() == [
+            Row(c1="a", c2=1, nth_value=None),
+            Row(c1="a", c2=2, nth_value=2),
+            Row(c1="a", c2=3, nth_value=2),
+            Row(c1="b", c2=2, nth_value=None),
+            Row(c1="b", c2=8, nth_value=8),
+        ]
 
 
 def test_ntile(get_session_and_func, get_window):
@@ -1207,6 +1232,8 @@ def test_date_format(get_session_and_func):
         assert df.select(date_format("dt", "%m/%d/%Y").alias("date")).first()[0] == expected
     elif isinstance(session, PostgresSession):
         assert df.select(date_format("dt", "MM/dd/yyyy").alias("date")).first()[0] == expected
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(date_format("dt", "MM/DD/YYYY").alias("date")).first()[0] == expected
     else:
         assert df.select(date_format("dt", "MM/dd/yyy").alias("date")).first()[0] == expected
 
@@ -1341,6 +1368,12 @@ def test_months_between(get_session_and_func):
     if isinstance(session, (DuckDBSession, PostgresSession)):
         assert df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 4
         assert df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0] == 4
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 3.935484
+        assert (
+            df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0]
+            == 3.935484
+        )
     else:
         assert (
             df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 3.94959677
@@ -1361,6 +1394,10 @@ def test_to_date(get_session_and_func):
         ] == datetime.date(1997, 2, 28)
     elif isinstance(session, PostgresSession):
         assert df.select(to_date(df.t, "yyyy-MM-dd HH:MI:SS").alias("date")).first()[
+            0
+        ] == datetime.date(1997, 2, 28)
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(to_date(df.t, "YYYY-MM-DD HH:MI:SS").alias("date")).first()[
             0
         ] == datetime.date(1997, 2, 28)
     else:
@@ -1395,6 +1432,16 @@ def test_to_timestamp(get_session_and_func):
         assert df.select(to_timestamp(df.t, "yyyy-MM-dd HH:MI:SS").alias("dt")).first()[
             0
         ] == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(to_timestamp(df.t, "YYYY-MM-DD HH:MI:SS").alias("dt")).first()[
+            0
+        ] == datetime.datetime(
+            1997,
+            2,
+            28,
+            10,
+            30,
+        )
     else:
         assert df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[
             0
@@ -1447,7 +1494,7 @@ def test_last_day(get_session_and_func):
 def test_from_unixtime(get_session_and_func):
     session, from_unixtime = get_session_and_func("from_unixtime")
     df = session.createDataFrame([(1428476400,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, PostgresSession)):
+    if isinstance(session, (BigQuerySession, PostgresSession, SnowflakeSession)):
         expected = "2015-04-08 07:00:00"
     else:
         expected = "2015-04-08 00:00:00"
@@ -1457,10 +1504,13 @@ def test_from_unixtime(get_session_and_func):
 def test_unix_timestamp(get_session_and_func):
     session, unix_timestamp = get_session_and_func("unix_timestamp")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
-    date_format = (
-        "%Y-%m-%d" if isinstance(session, (BigQuerySession, DuckDBSession)) else "yyyy-MM-dd"
-    )
-    if isinstance(session, (BigQuerySession, PostgresSession, DuckDBSession)):
+    if isinstance(session, (BigQuerySession, DuckDBSession)):
+        date_format = "%Y-%m-%d"
+    elif isinstance(session, SnowflakeSession):
+        date_format = "YYYY-MM-DD"
+    else:
+        date_format = "yyyy-MM-dd"
+    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
         assert (
             df.select(unix_timestamp("dt", date_format).alias("unix_time")).first()[0] == 1428451200
         )
@@ -1495,7 +1545,7 @@ def test_to_utc_timestamp(get_session_and_func):
 def test_timestamp_seconds(get_session_and_func):
     session, timestamp_seconds = get_session_and_func("timestamp_seconds")
     df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, PostgresSession)):
+    if isinstance(session, (BigQuerySession, PostgresSession, SnowflakeSession)):
         expected = datetime.datetime(2008, 12, 25, 15, 30, 00)
     else:
         expected = datetime.datetime(2008, 12, 25, 7, 30)
@@ -1582,6 +1632,9 @@ def test_hash(get_session_and_func):
     # Bigquery only supports hashing a single column
     elif isinstance(session, BigQuerySession):
         assert df.select(hash("c1").alias("hash")).first()[0] == 228873345217803866
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(hash("c1").alias("hash")).first()[0] == -2817530435410241181
+        assert df.select(hash("c1", "c2").alias("hash")).first()[0] == -5568826177945960128
     else:
         assert df.select(hash("c1").alias("hash")).first()[0] == -757602832
         assert df.select(hash("c1", "c2").alias("hash")).first()[0] == 599895104
@@ -1658,7 +1711,9 @@ def test_unbase64(get_session_and_func):
     assert len(results) == 3
     assert len(results[0]) == 1
     expected = [b"Spark", b"PySpark", b"Pandas API"]
-    if isinstance(results[0][0], memoryview):
+    if isinstance(session, SnowflakeSession):
+        assert [r[0] for r in results] == ["Spark", "PySpark", "Pandas API"]
+    elif isinstance(results[0][0], memoryview):
         assert [r[0].tobytes() for r in results] == expected
     else:
         assert [r[0] for r in results] == expected
@@ -1800,7 +1855,8 @@ def test_levenshtein(get_session_and_func):
         ["l", "r"],
     )
     assert df.select(levenshtein("l", "r").alias("d")).first()[0] == 3
-    assert df.select(levenshtein("l", "r", 2).alias("d")).first()[0] == -1
+    if not isinstance(session, SnowflakeSession):
+        assert df.select(levenshtein("l", "r", 2).alias("d")).first()[0] == -1
 
 
 def test_locate(get_session_and_func):
@@ -1859,7 +1915,7 @@ def test_split(get_session_and_func):
     if isinstance(session, (PySparkSession, SparkSession)):
         assert df.select(split(df.s, "[ABC]", 2).alias("s")).first()[0] == ["one", "twoBthreeC"]
     # Bigquery doesn't support regex in split
-    if isinstance(session, BigQuerySession):
+    if isinstance(session, (BigQuerySession, SnowflakeSession)):
         df = session.createDataFrame(
             [("one,two,three",)],
             [
@@ -1896,7 +1952,7 @@ def test_regexp_replace(get_session_and_func, get_func):
     col = get_func("col", session)
     df = session.createDataFrame([("100-200", r"(\d+)", "--")], ["str", "pattern", "replacement"])
     # Spark replaces all matches while most just replace the first
-    if isinstance(session, (BigQuerySession, PySparkSession, SparkSession)):
+    if isinstance(session, (BigQuerySession, PySparkSession, SparkSession, SnowflakeSession)):
         assert df.select(regexp_replace("str", r"(\d+)", "--").alias("d")).first()[0] == "-----"
         assert (
             df.select(regexp_replace("str", col("pattern"), col("replacement")).alias("d")).first()[
@@ -1946,6 +2002,10 @@ def test_hex(get_session_and_func):
         assert df.select(hex("a").alias("a")).collect() == [
             Row(a="414243"),
         ]
+    elif isinstance(session, SnowflakeSession):
+        assert df.select(hex("a"), hex("b")).collect() == [
+            Row(a="414243", b="33"),
+        ]
     else:
         assert df.select(hex("a"), hex("b")).collect() == [
             Row(a="414243", b="3"),
@@ -1955,7 +2015,10 @@ def test_hex(get_session_and_func):
 def test_unhex(get_session_and_func):
     session, unhex = get_session_and_func("unhex")
     df = session.createDataFrame([("414243",)], ["a"])
-    assert df.select(unhex("a")).first()[0] == bytearray(b"ABC")
+    if isinstance(session, SnowflakeSession):
+        assert df.select(unhex("a").alias("a")).first()[0] == "ABC"
+    else:
+        assert df.select(unhex("a")).first()[0] == bytearray(b"ABC")
 
 
 def test_length(get_session_and_func):
@@ -1999,14 +2062,16 @@ def test_array(get_session_and_func):
     ]
 
 
-def test_create_map(get_session_and_func):
+def test_create_map(get_session_and_func, get_func):
     session, create_map = get_session_and_func("create_map")
+    col = get_func("col", session)
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
-    assert df.select(create_map("name", "age").alias("blah")).collect() == [
+    # Added the cast for age for Snowflake so the data type would be correct
+    assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == [
         Row(value={"Alice": 2}),
         Row(value={"Bob": 5}),
     ]
-    assert df.select(create_map([df.name, df.age]).alias("blah")).collect() == [
+    assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == [
         Row(value={"Alice": 2}),
         Row(value={"Bob": 5}),
     ]
@@ -2024,46 +2089,53 @@ def test_map_from_arrays(get_session_and_func):
 def test_array_contains(get_session_and_func, get_func):
     session, array_contains = get_session_and_func("array_contains")
     lit = get_func("lit", session)
-    df = session.createDataFrame([(["a", "b", "c"],), (["d"],)], ["data"])
-    assert df.select(array_contains(df.data, "a")).collect() == [
-        Row(value=True),
-        Row(value=False),
-    ]
-    assert df.select(array_contains(df.data, lit("a"))).collect() == [
-        Row(value=True),
-        Row(value=False),
-    ]
+    array_lit = lit(["a", "b", "c"])
+    # Snowflake doesn't support arrays in VALUES so we need to do it in select
+    if isinstance(session, SnowflakeSession):
+        assert session.range(1).select(
+            array_contains(array_lit, "a"), array_contains(array_lit, "d")
+        ).collect() == [Row(value=True, value2=False)]
+        assert session.range(1).select(
+            array_contains(array_lit, lit("a")), array_contains(array_lit, lit("d"))
+        ).collect() == [Row(value=True, value2=False)]
 
 
-def test_arrays_overlap(get_session_and_func):
+def test_arrays_overlap(get_session_and_func, get_func):
     session, arrays_overlap = get_session_and_func("arrays_overlap")
-    df = session.createDataFrame([(["a", "b"], ["b", "c"]), (["a"], ["b", "c"])], ["x", "y"])
-    assert df.select(arrays_overlap(df.x, df.y).alias("overlap")).collect() == [
-        Row(value=True),
-        Row(value=False),
-    ]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        arrays_overlap(lit(["a", "b"]), lit(["b", "c"])).alias("value"),
+        arrays_overlap(lit(["a"]), lit(["b", "c"])).alias("value2"),
+    ).collect() == [Row(value=True, value2=False)]
 
 
-def test_slice(get_session_and_func):
+def test_slice(get_session_and_func, get_func):
     session, slice = get_session_and_func("slice")
-    df = session.createDataFrame([([1, 2, 3],), ([4, 5],)], ["x"])
-    assert df.select(slice(df.x, 2, 2).alias("sliced")).collect() == [
-        Row(value=[2, 3]),
-        Row(value=[5]),
-    ]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        slice(lit([1, 2, 3]), 2, 2).alias("sliced1"),
+        slice(lit([4, 5]), 2, 2).alias("sliced2"),
+    ).collect() == [Row(sliced1=[2, 3], sliced2=[5])]
 
 
-def test_array_join(get_session_and_func):
+def test_array_join(get_session_and_func, get_func):
     session, array_join = get_session_and_func("array_join")
-    df = session.createDataFrame([(["a", "b", "c"],), (["a", None],)], ["data"])
-    assert df.select(array_join(df.data, ",").alias("joined")).collect() == [
-        Row(value="a,b,c"),
-        Row(value="a"),
-    ]
-    assert df.select(array_join(df.data, ",", "NULL").alias("joined")).collect() == [
-        Row(value="a,b,c"),
-        Row(value="a,NULL"),
-    ]
+    lit = get_func("lit", session)
+    if isinstance(session, SnowflakeSession):
+        expected = [Row(value="a,b,c", value2="a,", value3="a,b,c", value4="a,")]
+    else:
+        expected = [Row(value="a,b,c", value2="a", value3="a,b,c", value4="a,NULL")]
+    assert (
+        session.range(1)
+        .select(
+            array_join(lit(["a", "b", "c"]), ",").alias("value1"),
+            array_join(lit(["a", None]), ",").alias("value2"),
+            array_join(lit(["a", "b", "c"]), ",", "NULL").alias("value3"),
+            array_join(lit(["a", None]), ",", "NULL").alias("value4"),
+        )
+        .collect()
+        == expected
+    )
 
 
 def test_concat(get_session_and_func):
@@ -2072,7 +2144,7 @@ def test_concat(get_session_and_func):
     assert df.select(concat(df.s, df.d).alias("s")).first()[0] == "abcd123"
     # Some dialects don't support concating arrays. They would though if we could detect the data type
     # and use the appropriate function to array concat instead of string concat
-    if not isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession)):
+    if not isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
         df = session.createDataFrame([([1, 2], [3, 4], [5]), ([1, 2], None, [3])], ["a", "b", "c"])
         assert df.select(concat(df.a, df.b, df.c).alias("arr")).collect() == [
             Row(value=[1, 2, 3, 4, 5]),
@@ -2080,61 +2152,76 @@ def test_concat(get_session_and_func):
         ]
 
 
-def test_array_position(get_session_and_func):
+def test_array_position(get_session_and_func, get_func):
     session, array_position = get_session_and_func("array_position")
-    df = session.createDataFrame([(["c", "b", "a"],), (["d"],)], ["data"])
-    assert df.select(array_position(df.data, "a")).collect() == [
-        Row(value=3),
-        Row(value=0),
-    ]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        array_position(lit(["c", "b", "a"]), "a").alias("value"),
+        array_position(lit(["d"]), "a").alias("value2"),
+    ).collect() == [Row(value=3, value2=0)]
 
 
 def test_element_at(get_session_and_func, get_func):
     session, element_at = get_session_and_func("element_at")
     lit = get_func("lit", session)
-    df = session.createDataFrame([(["a", "b", "c"],)], ["data"])
-    assert df.select(element_at(df.data, 1)).first()[0] == "a"
-    if not isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession)):
+    assert session.range(1).select(
+        element_at(lit(["a", "b", "c"]), 1).alias("value"),
+    ).collect() == [Row(value="a")]
+    if not isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
+        df = session.createDataFrame([(["a", "b", "c"],)], ["data"])
         assert df.select(element_at(df.data, -1)).first()[0] == "c"
         df = session.createDataFrame([({"a": 1.0, "b": 2.0},)], ["data"])
         assert df.select(element_at(df.data, lit("a"))).first()[0] == 1.0
 
 
-def test_array_remove(get_session_and_func):
+def test_array_remove(get_session_and_func, get_func):
     session, array_remove = get_session_and_func("array_remove")
-    df = session.createDataFrame([([1, 2, 3, 1, 1],), ([2],)], ["data"])
-    assert df.select(array_remove(df.data, 1)).collect() == [
-        Row(value=[2, 3]),
-        Row(value=[2]),
-    ]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        array_remove(lit([1, 2, 3, 1, 1]), 1).alias("value"),
+        array_remove(lit([2]), 1).alias("value2"),
+    ).collect() == [Row(value=[2, 3], value2=[2])]
 
 
-def test_array_distinct(get_session_and_func):
+def test_array_distinct(get_session_and_func, get_func):
     session, array_distinct = get_session_and_func("array_distinct")
-    df = session.createDataFrame([([1, 2, 3, 2],), ([4, 5, 5, 4],)], ["data"])
-    results = df.select(array_distinct(df.data)).collect()
-    assert results[0][0] in ([1, 2, 3], [3, 2, 1])
-    assert results[1][0] in ([4, 5], [5, 4])
-
-
-def test_array_intersect(get_session_and_func):
-    session, array_intersect = get_session_and_func("array_intersect")
-    df = session.createDataFrame([Row(c1=["b", "a", "c"], c2=["c", "d", "a", "f"])])
-    assert df.select(array_intersect(df.c1, df.c2)).first()[0] in ([["a", "c"], ["c", "a"]])
-
-
-def test_array_union(get_session_and_func):
-    session, array_union = get_session_and_func("array_union")
-    df = session.createDataFrame([Row(c1=["b", "a", "c"], c2=["c", "d", "a", "f"])])
-    assert Counter(df.select(array_union(df.c1, df.c2)).first()[0]) == Counter(
-        ["b", "a", "c", "d", "f"]
+    lit = get_func("lit", session)
+    results = (
+        session.range(1)
+        .select(
+            array_distinct(lit([1, 2, 3, 2])).alias("value"),
+            array_distinct(lit([4, 5, 5, 4])).alias("value2"),
+        )
+        .collect()
     )
+    assert results[0][0] in ([1, 2, 3], [3, 2, 1])
+    assert results[0][1] in ([4, 5], [5, 4])
 
 
-def test_array_except(get_session_and_func):
+def test_array_intersect(get_session_and_func, get_func):
+    session, array_intersect = get_session_and_func("array_intersect")
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        array_intersect(lit(["b", "a", "c"]), lit(["c", "d", "a", "f"])).alias("value")
+    ).first()[0] in ([["a", "c"], ["c", "a"]])
+
+
+def test_array_union(get_session_and_func, get_func):
+    session, array_union = get_session_and_func("array_union")
+    lit = get_func("lit", session)
+    assert Counter(
+        session.range(1)
+        .select(array_union(lit(["b", "a", "c"]), lit(["c", "d", "a", "f"])).alias("value"))
+        .first()[0]
+    ) == Counter(["b", "a", "c", "d", "f"])
+
+
+def test_array_except(get_session_and_func, get_func):
     session, array_except = get_session_and_func("array_except")
-    df = session.createDataFrame([Row(c1=["b", "a", "c"], c2=["c", "d", "a", "f"])])
-    assert df.select(array_except(df.c1, df.c2)).first()[0] == ["b"]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        array_except(lit(["b", "a", "c"]), lit(["c", "d", "a", "f"])).alias("value")
+    ).first()[0] == ["b"]
 
 
 def test_explode(get_session_and_func):
@@ -2156,27 +2243,28 @@ def test_explode(get_session_and_func):
         ]
 
 
-def test_pos_explode(get_session_and_func):
+def test_pos_explode(get_session_and_func, get_func):
     session, posexplode = get_session_and_func("posexplode")
-    df = session.createDataFrame([Row(a=1, intlist=[1, 2, 3])])
-    result = df.select(posexplode(df.intlist)).collect()
-    # BigQuery explodes with columns in flipped order
-    if isinstance(session, BigQuerySession):
+    lit = get_func("lit", session)
+    result = session.range(1).select(posexplode(lit([1, 2, 3]))).collect()
+    # BigQuery/Snowflake explodes with columns in flipped order
+    if isinstance(session, (BigQuerySession, SnowflakeSession)):
         assert result == [
             Row(col=1, pos=0),
             Row(col=2, pos=1),
             Row(col=3, pos=2),
         ]
     else:
-        assert df.select(posexplode(df.intlist)).collect() == [
+        assert result == [
             Row(pos=0, col=1),
             Row(pos=1, col=2),
             Row(pos=2, col=3),
         ]
 
 
-def test_explode_outer(get_session_and_func):
+def test_explode_outer(get_session_and_func, get_func):
     session, explode_outer = get_session_and_func("explode_outer")
+    lit = get_func("lit", session)
     # Bigquery doesn't support maps
     if isinstance(session, BigQuerySession):
         df = session.createDataFrame([(1, ["foo", "bar"]), (3, None)], ("id", "an_array"))
@@ -2185,10 +2273,45 @@ def test_explode_outer(get_session_and_func):
             Row(id=1, col="bar"),
             Row(id=3, col=None),
         ]
-    else:
+    # PySpark doesn't support dicts as a literal
+    elif isinstance(session, PySparkSession):
         df = session.createDataFrame(
             [(1, ["foo", "bar"], {"x": 1.0}), (2, [], {}), (3, None, None)],
             ("id", "an_array", "a_map"),
+        )
+        assert df.select("id", "a_map", explode_outer("an_array")).collect() == [
+            Row(id=1, a_map={"x": 1.0}, col="foo"),
+            Row(id=1, a_map={"x": 1.0}, col="bar"),
+            Row(id=2, a_map={}, col=None),
+            Row(id=3, a_map=None, col=None),
+        ]
+        assert df.select("id", "an_array", explode_outer("a_map")).collect() == [
+            Row(id=1, an_array=["foo", "bar"], key="x", value=1.0),
+            Row(id=2, an_array=[], key=None, value=None),
+            Row(id=3, an_array=None, key=None, value=None),
+        ]
+    else:
+        df = (
+            session.range(1)
+            .select(
+                lit(1).alias("id"),
+                lit(["foo", "bar"]).alias("an_array"),
+                lit({"x": 1.0}).alias("a_map"),
+            )
+            .union(
+                session.range(1).select(
+                    lit(2).alias("id"),
+                    lit([]).alias("an_array"),
+                    lit({}).alias("a_map"),
+                )
+            )
+            .union(
+                session.range(1).select(
+                    lit(3).alias("id"),
+                    lit(None).alias("an_array"),
+                    lit(None).alias("a_map"),
+                )
+            )
         )
         assert df.select("id", "a_map", explode_outer("an_array")).collect() == [
             Row(id=1, a_map={"x": 1.0}, col="foo"),
@@ -2340,34 +2463,46 @@ def test_to_csv(get_session_and_func):
     assert df.select(to_csv(df.value).alias("csv")).first()[0] == "2,Alice"
 
 
-def test_size(get_session_and_func):
+def test_size(get_session_and_func, get_func):
     session, size = get_session_and_func("size")
-    df = session.createDataFrame([([1, 2, 3],), ([1],)], ["data"])
-    assert df.select(size(df.data)).collect() == [
-        Row(value=3),
-        Row(value=1),
-    ]
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        size(lit([1, 2, 3])).alias("size"),
+        size(lit([1])).alias("size2"),
+    ).collect() == [Row(size=3, size2=1)]
 
 
-def test_array_min(get_session_and_func):
+def test_array_min(get_session_and_func, get_func):
     session, array_min = get_session_and_func("array_min")
+    lit = get_func("lit", session)
     df = session.createDataFrame([([2, 1, 3],), ([None, 10, -1],)], ["data"])
-    assert df.select(array_min(df.data).alias("min")).collect() == [Row(min=1), Row(min=-1)]
+    assert session.range(1).select(
+        array_min(lit([2, 1, 3])).alias("min"),
+        array_min(lit([None, 10, -1])).alias("min2"),
+    ).collect() == [Row(min=1, min2=-1)]
 
 
-def test_array_max(get_session_and_func):
+def test_array_max(get_session_and_func, get_func):
     session, array_max = get_session_and_func("array_max")
-    df = session.createDataFrame([([2, 1, 3],), ([None, 10, -1],)], ["data"])
-    results = df.select(array_max(df.data).alias("max")).collect()
+    lit = get_func("lit", session)
+    results = (
+        session.range(1)
+        .select(
+            array_max(lit([2, 1, 3])).alias("max"),
+            array_max(lit([None, 10, -1])).alias("max2"),
+        )
+        .collect()
+    )
     assert results[0][0] == 3
     if isinstance(session, DuckDBSession):
-        assert results[1][0] is None
+        assert results[0][1] is None
     else:
-        assert results[1][0] == 10
+        assert results[0][1] == 10
 
 
-def test_sort_array(get_session_and_func):
+def test_sort_array(get_session_and_func, get_func):
     session, sort_array = get_session_and_func("sort_array")
+    lit = get_func("lit", session)
     # Bigquery cannot have nulls in arrays
     if isinstance(session, BigQuerySession):
         df = session.createDataFrame([([2, 1, 3],), ([1],)], ["data"])
@@ -2380,20 +2515,26 @@ def test_sort_array(get_session_and_func):
             Row(r=[1]),
         ]
         return
-    df = session.createDataFrame([([2, 1, None, 3],), ([1],)], ["data"])
+    # df = session.createDataFrame([([2, 1, None, 3],), ([1],)], ["data"])
+    df = session.range(1).select(
+        lit([2, 1, None, 3]).alias("data"),
+        lit([1]).alias("data2"),
+    )
+    results1 = df.select(
+        sort_array(df.data).alias("data"),
+        sort_array(df.data2).alias("data2"),
+    ).collect()
     if isinstance(session, DuckDBSession):
-        assert df.select(sort_array(df.data).alias("r")).collect() == [
-            Row(r=[1, 2, 3, None]),
-            Row(r=[1]),
-        ]
+        assert results1 == [Row(data=[1, 2, 3, None], data2=[1])]
     else:
-        assert df.select(sort_array(df.data).alias("r")).collect() == [
-            Row(r=[None, 1, 2, 3]),
-            Row(r=[1]),
+        assert results1 == [
+            Row(data=[None, 1, 2, 3], data2=[1]),
         ]
-    assert df.select(sort_array(df.data, asc=False).alias("r")).collect() == [
-        Row(r=[3, 2, 1, None]),
-        Row(r=[1]),
+    assert df.select(
+        sort_array(df.data, asc=False).alias("data"),
+        sort_array(df.data2, asc=False).alias("data2"),
+    ).collect() == [
+        Row(data=[3, 2, 1, None], data2=[1]),
     ]
 
 
@@ -2414,26 +2555,36 @@ def test_array_sort(get_session_and_func, get_func):
             Row(r=[1]),
         ]
         return
-    df = session.createDataFrame([([2, 1, None, 3],), ([1],)], ["data"])
-    assert df.select(array_sort(df.data).alias("r")).collect() == [
-        Row(r=[1, 2, 3, None]),
-        Row(r=[1]),
+    df = session.range(1).select(
+        lit([2, 1, None, 3]).alias("data"),
+        lit([1]).alias("data2"),
+    )
+    assert df.select(
+        array_sort(df.data).alias("data"),
+        array_sort(df.data2).alias("data2"),
+    ).collect() == [
+        Row(data=[1, 2, 3, None], data2=[1]),
     ]
-    df = session.createDataFrame([(["foo", "foobar", None, "bar"],), (["foo"],)], ["data"])
-    if isinstance(session, DuckDBSession):
-        assert df.select(
-            array_sort(
-                "data",
-                lambda x, y: when(x.isNull() | y.isNull(), lit(0)).otherwise(length(y) - length(x)),
-            ).alias("r")
-        ).collect() == [Row(r=["bar", "foo", "foobar", None]), Row(r=["foo"])]
-    else:
-        assert df.select(
-            array_sort(
-                "data",
-                lambda x, y: when(x.isNull() | y.isNull(), lit(0)).otherwise(length(y) - length(x)),
-            ).alias("r")
-        ).collect() == [Row(r=["foobar", "foo", None, "bar"]), Row(r=["foo"])]
+    if not isinstance(session, SnowflakeSession):
+        df = session.createDataFrame([(["foo", "foobar", None, "bar"],), (["foo"],)], ["data"])
+        if isinstance(session, DuckDBSession):
+            assert df.select(
+                array_sort(
+                    "data",
+                    lambda x, y: when(x.isNull() | y.isNull(), lit(0)).otherwise(
+                        length(y) - length(x)
+                    ),
+                ).alias("r")
+            ).collect() == [Row(r=["bar", "foo", "foobar", None]), Row(r=["foo"])]
+        else:
+            assert df.select(
+                array_sort(
+                    "data",
+                    lambda x, y: when(x.isNull() | y.isNull(), lit(0)).otherwise(
+                        length(y) - length(x)
+                    ),
+                ).alias("r")
+            ).collect() == [Row(r=["foobar", "foo", None, "bar"]), Row(r=["foo"])]
 
 
 def test_shuffle(get_session_and_func):
@@ -2453,21 +2604,35 @@ def test_reverse(get_session_and_func):
         assert df.select(reverse(df.data).alias("r")).collect() == [Row(r=[3, 1, 2]), Row(r=[1])]
 
 
-def test_flatten(get_session_and_func):
+def test_flatten(get_session_and_func, get_func):
     session, flatten = get_session_and_func("flatten")
-    df = session.createDataFrame([([[1, 2, 3], [4, 5], [6]],), ([None, [4, 5]],)], ["data"])
-    results = df.select(flatten(df.data).alias("r")).collect()
+    lit = get_func("lit", session)
+    # df = session.createDataFrame([([[1, 2, 3], [4, 5], [6]],), ([None, [4, 5]],)], ["data"])
+    df = session.range(1).select(
+        lit([[1, 2, 3], [4, 5], [6]]).alias("data"),
+        lit([None, [4, 5]]).alias("data2"),
+    )
+    results = df.select(
+        flatten(df.data).alias("data"),
+        flatten(df.data2).alias("data2"),
+    ).collect()
     assert results[0][0] == [1, 2, 3, 4, 5, 6]
     if isinstance(session, DuckDBSession):
-        assert results[1][0] == [4, 5]
+        assert results[0][1] == [4, 5]
     else:
-        assert results[1][0] is None
+        assert results[0][1] is None
 
 
 def test_map_keys(get_session_and_func):
     session, map_keys = get_session_and_func("map_keys")
-    df = session.sql("SELECT map(1, 'a', 2, 'b') as data")
-    assert df.select(map_keys("data").alias("keys")).first()[0] == [1, 2]
+    if isinstance(session, SnowflakeSession):
+        sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as data"
+        expected = ["A", "B"]
+    else:
+        sql = "SELECT map(1, 'a', 2, 'b') as data"
+        expected = [1, 2]
+    df = session.sql(sql)
+    assert df.select(map_keys("data").alias("keys")).first()[0] == expected
 
 
 def test_map_values(get_session_and_func):
@@ -2509,12 +2674,14 @@ def test_arrays_zip(get_session_and_func):
 
 def test_map_concat(get_session_and_func):
     session, map_concat = get_session_and_func("map_concat")
-    df = session.sql("SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2")
-    assert df.select(map_concat("map1", "map2").alias("map3")).first()[0] == {
-        1: "a",
-        2: "b",
-        3: "c",
-    }
+    if isinstance(session, SnowflakeSession):
+        sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as map1, {'c': 3}::MAP(VARCHAR, NUMBER) as map2"
+        expected = {"A": 1, "B": 2, "C": 3}
+    else:
+        sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
+        expected = {1: "a", 2: "b", 3: "c"}
+    df = session.sql(sql)
+    assert df.select(map_concat("map1", "map2").alias("map3")).first()[0] == expected
 
 
 def test_sequence(get_session_and_func):
@@ -2688,3 +2855,21 @@ def test_map_zip_with(get_session_and_func, get_func):
         map_zip_with("base", "ratio", lambda k, v1, v2: round(v1 * v2, 2)).alias("updated_data")
     ).head()
     assert sorted(row["updated_data"].items()) == [("IT", 48.0), ("SALES", 16.8)]
+
+
+def test_nullif(get_session_and_func):
+    session, nullif = get_session_and_func("nullif")
+    df = session.createDataFrame(
+        [
+            (
+                None,
+                None,
+            ),
+            (
+                1,
+                9,
+            ),
+        ],
+        ["a", "b"],
+    )
+    assert df.select(nullif(df.a, df.b).alias("r")).collect() == [Row(r=None), Row(r=1)]

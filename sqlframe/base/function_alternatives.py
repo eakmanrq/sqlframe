@@ -7,6 +7,7 @@ import typing as t
 
 from sqlglot import exp as expression
 from sqlglot.helper import ensure_list
+from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.util import get_func_from_session
@@ -58,6 +59,10 @@ def first_always_ignore_nulls(col: ColumnOrName, ignorenulls: t.Optional[bool] =
     from sqlframe.base.functions import first
 
     return first(col)
+
+
+def bitwise_not_from_bitnot(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITNOT")
 
 
 def factorial_from_case_statement(col: ColumnOrName) -> Column:
@@ -160,6 +165,10 @@ def factorial_ensure_int(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col_func(col).cast("integer"), "FACTORIAL")
 
 
+def skewness_from_skew(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "SKEW")
+
+
 def isnan_using_equal(col: ColumnOrName) -> Column:
     lit = get_func_from_session("lit")
     return Column(
@@ -219,6 +228,30 @@ def percentile_approx_without_accuracy_and_plural(
     return Column(make_bracket_approx_percentile(percentage))  # type: ignore
 
 
+def percentile_approx_without_accuracy_and_max_array(
+    col: ColumnOrName,
+    percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
+    accuracy: t.Optional[float] = None,
+) -> Column:
+    from sqlframe.base.functions import percentile_approx
+
+    lit = get_func_from_session("lit")
+    array = get_func_from_session("array")
+    col_func = get_func_from_session("col")
+
+    def make_approx_percentile(percentage: float) -> expression.Anonymous:
+        return expression.Anonymous(
+            this="APPROX_PERCENTILE",
+            expressions=[col_func(col).expression, lit(percentage).expression],
+        )
+
+    if accuracy:
+        logger.warning("Accuracy is ignored since it is not supported in this dialect")
+    if isinstance(percentage, (list, tuple)):
+        return array(*[make_approx_percentile(p) for p in percentage])
+    return percentile_approx(col, percentage)
+
+
 def percentile_without_disc(
     col: ColumnOrName,
     percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
@@ -256,6 +289,57 @@ def round_cast_as_numeric(col: ColumnOrName, scale: t.Optional[int] = None) -> C
     col_func = get_func_from_session("col")
 
     return round(col_func(col).cast("numeric"), scale)
+
+
+def bround_using_half_even(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
+    lit_func = get_func_from_session("lit")
+
+    return Column.invoke_anonymous_function(col, "ROUND", scale, lit_func("HALF_TO_EVEN"))  # type: ignore
+
+
+def shiftleft_from_bitshiftleft(col: ColumnOrName, numBits: int) -> Column:
+    col_func = get_func_from_session("col")
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="BITSHIFTLEFT",
+            expressions=[col_func(col).expression, lit(numBits).expression],
+        )
+    )
+
+
+def shiftright_from_bitshiftright(col: ColumnOrName, numBits: int) -> Column:
+    col_func = get_func_from_session("col")
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="BITSHIFTRIGHT",
+            expressions=[col_func(col).expression, lit(numBits).expression],
+        )
+    )
+
+
+def struct_with_eq(
+    col: t.Union[ColumnOrName, t.Iterable[ColumnOrName]], *cols: ColumnOrName
+) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    col_func = get_func_from_session("col")
+
+    columns = [col_func(x) for x in ensure_list(col) + list(cols)]
+    expressions = []
+    for column in columns:
+        expressions.append(
+            expression.PropertyEQ(
+                this=expression.parse_identifier(
+                    column.alias_or_name, dialect=_BaseSession().input_dialect
+                ),
+                expression=column.expression,
+            )
+        )
+    return Column(expression.Struct(expressions=expressions))
 
 
 def year_from_extract(col: ColumnOrName) -> Column:
@@ -421,6 +505,49 @@ def make_date_from_date_func(year: ColumnOrName, month: ColumnOrName, day: Colum
     )
 
 
+def make_date_date_from_parts(year: ColumnOrName, month: ColumnOrName, day: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="DATE_FROM_PARTS",
+            expressions=[
+                col_func(year).cast("integer").expression,
+                col_func(month).cast("integer").expression,
+                col_func(day).cast("integer").expression,
+            ],
+        )
+    )
+
+
+def date_add_no_date_sub(
+    col: ColumnOrName, days: t.Union[ColumnOrName, int], cast_as_date: bool = True
+) -> Column:
+    lit_func = get_func_from_session("col")
+
+    if isinstance(days, int):
+        days = lit_func(days)
+
+    result = Column.invoke_expression_over_column(
+        Column.ensure_col(col).cast("date"),
+        expression.DateAdd,
+        expression=days,
+        unit=expression.Var(this="DAY"),
+    )
+    if cast_as_date:
+        return result.cast("date")
+    return result
+
+
+def date_sub_by_date_add(
+    col: ColumnOrName, days: t.Union[ColumnOrName, int], cast_as_date: bool = True
+) -> Column:
+    lit_func = get_func_from_session("col")
+    date_add_func = get_func_from_session("date_add")
+
+    return date_add_func(col, days * lit_func(-1), cast_as_date)
+
+
 def to_date_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.functions import to_date
 
@@ -520,6 +647,31 @@ def add_months_by_multiplication(
     return value
 
 
+def add_months_using_func(
+    start: ColumnOrName, months: t.Union[ColumnOrName, int], cast_as_date: bool = True
+) -> Column:
+    from sqlframe.base.functions import add_months
+
+    if isinstance(months, int):
+        months = get_func_from_session("lit")(months)
+    else:
+        months = Column.ensure_col(months)
+
+    value = Column(
+        expression.Anonymous(
+            this="ADD_MONTHS",
+            expressions=[
+                Column.ensure_col(start).expression,
+                months.expression,  # type: ignore
+            ],
+        )
+    )
+
+    if cast_as_date:
+        return value.cast("date")
+    return value
+
+
 def months_between_from_age_and_extract(
     date1: ColumnOrName, date2: ColumnOrName, roundOff: t.Optional[bool] = None
 ) -> Column:
@@ -543,6 +695,23 @@ def months_between_from_age_and_extract(
         + Column(expression.Extract(this=expression.Var(this="month"), expression=age_expression))
         + lit(1)
     ).cast("bigint")
+
+
+def months_between_cast_as_date_cast_roundoff(
+    date1: ColumnOrName, date2: ColumnOrName, roundOff: t.Optional[bool] = None
+) -> Column:
+    from sqlframe.base.functions import months_between
+
+    col_func = get_func_from_session("col")
+
+    date1 = col_func(date1).cast("date")
+    date2 = col_func(date2).cast("date")
+
+    value = months_between(date1, date2)
+
+    if roundOff:
+        return value.cast("bigint")
+    return value
 
 
 def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
@@ -590,9 +759,27 @@ def bas64_from_encode(col: ColumnOrLiteral) -> Column:
     )
 
 
+def base64_from_base64_encode(col: ColumnOrLiteral) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="BASE64_ENCODE",
+            expressions=[Column(col).expression],
+        )
+    )
+
+
 def unbase64_from_decode(col: ColumnOrLiteral) -> Column:
     return Column(
         expression.Decode(this=Column(col).expression, charset=expression.Literal.string("base64"))
+    )
+
+
+def unbase64_from_base64_decode_string(col: ColumnOrLiteral) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="BASE64_DECODE_STRING",
+            expressions=[Column(col).expression],
+        )
     )
 
 
@@ -716,6 +903,19 @@ def overlay_from_substr(
     )
 
 
+def levenshtein_edit_distance(
+    left: ColumnOrName, right: ColumnOrName, threshold: t.Optional[int] = None
+) -> Column:
+    if threshold is not None:
+        logger.warning("Threshold is ignored since it is not supported in this dialect")
+    return Column(
+        expression.Anonymous(
+            this="EDITDISTANCE",
+            expressions=[Column.ensure_col(left).expression, Column.ensure_col(right).expression],
+        )
+    )
+
+
 def split_no_limit(str: ColumnOrName, pattern: str, limit: t.Optional[int] = None) -> Column:
     from sqlframe.base.functions import split
 
@@ -756,6 +956,17 @@ def split_with_split(str: ColumnOrName, pattern: str, limit: t.Optional[int] = N
             expressions=[col_func(str).expression, lit(pattern).expression],
         )
     )
+
+
+def regexp_extract_coalesce_empty_str(
+    str: ColumnOrName, pattern: str, idx: t.Optional[int] = None
+) -> Column:
+    from sqlframe.base.functions import regexp_extract
+
+    coalesce = get_func_from_session("coalesce")
+    lit_func = get_func_from_session("lit")
+
+    return coalesce(regexp_extract(str, pattern, idx), lit_func(""))
 
 
 def array_contains_any(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
@@ -830,6 +1041,16 @@ def slice_with_brackets(
     )
 
 
+def array_join_no_null_replacement(
+    col: ColumnOrName, delimiter: str, null_replacement: t.Optional[str] = None
+) -> Column:
+    from sqlframe.base.functions import array_join
+
+    if null_replacement is None:
+        logger.warning("Null replacement is ignored since it is not supported in this dialect")
+    return array_join(col, delimiter)
+
+
 def array_join_null_replacement_with_transform(
     col: ColumnOrName, delimiter: str, null_replacement: t.Optional[str] = None
 ) -> Column:
@@ -858,6 +1079,57 @@ def array_join_null_replacement_with_transform(
         )
     )
     return array_join(col, delimiter)
+
+
+def array_contains_cast_variant(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.functions import array_contains
+
+    lit = get_func_from_session("lit")
+    value_col = value if isinstance(value, Column) else lit(value)
+    return array_contains(col, value_col.cast("variant"))
+
+
+def arrays_overlap_as_plural(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAYS_OVERLAP",
+            expressions=[col_func(col1).expression, col_func(col2).expression],
+        )
+    )
+
+
+def slice_as_array_slice(
+    x: ColumnOrName, start: t.Union[ColumnOrName, int], length: t.Union[ColumnOrName, int]
+) -> Column:
+    lit = get_func_from_session("lit")
+
+    start_col = start if isinstance(start, Column) else lit(start)
+    length_col = length if isinstance(length, Column) else lit(length)
+    return Column.invoke_anonymous_function(
+        x, "ARRAY_SLICE", start_col - lit(1), start_col + length_col
+    )
+
+
+def array_position_cast_variant_and_flip(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    when = get_func_from_session("when")
+    lit = get_func_from_session("lit")
+    value_col = value if isinstance(value, Column) else lit(value)
+    # Some engines return NULL if item is not found but Spark expects 0 so we coalesce to 0
+    resp = Column.invoke_anonymous_function(value_col.cast("variant"), "ARRAY_POSITION", col)
+    return when(resp.isNotNull(), resp + lit(1)).otherwise(lit(0))
+
+
+def array_intersect_using_intersection(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAY_INTERSECTION",
+            expressions=[col_func(col1).expression, col_func(col2).expression],
+        )
+    )
 
 
 def element_at_using_brackets(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
@@ -936,6 +1208,25 @@ def get_json_object_using_arrow_op(col: ColumnOrName, path: str) -> Column:
     )
 
 
+def get_json_object_cast_object(col: ColumnOrName, path: str) -> Column:
+    from sqlframe.base.functions import get_json_object
+
+    col_func = get_func_from_session("col")
+
+    return get_json_object(col_func(col).cast("variant"), path)
+
+
+def create_map_with_cast(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
+    from sqlframe.base.functions import create_map
+
+    col = get_func_from_session("col")
+
+    columns = list(_flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols
+    col1_dtype = col(columns[0]).dtype or "VARCHAR"
+    col2_dtype = col(columns[1]).dtype or "VARCHAR"
+    return create_map(*cols).cast(f"MAP({col1_dtype}, {col2_dtype})")
+
+
 def array_min_from_sort(col: ColumnOrName) -> Column:
     element_at = get_func_from_session("element_at")
     array_sort = get_func_from_session("array_sort")
@@ -992,6 +1283,43 @@ def array_max_from_subquery(col: ColumnOrName) -> Column:
     return Column(expression.Subquery(this=select)).alias(col_func(col).alias_or_name)
 
 
+def sort_array_using_array_sort(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
+    col_func = get_func_from_session("col")
+    lit_func = get_func_from_session("lit")
+    expressions = [col_func(col).expression]
+    asc = asc if asc is not None else True
+    expressions.append(lit_func(asc).expression)
+    if asc:
+        expressions.append(lit_func(True).expression)
+    else:
+        expressions.append(lit_func(False).expression)
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAY_SORT",
+            expressions=expressions,
+        )
+    )
+
+
+def flatten_using_array_flatten(col: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAY_FLATTEN",
+            expressions=[col_func(col).expression],
+        )
+    )
+
+
+def map_concat_using_map_cat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
+    columns = list(flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
+    if len(columns) == 1:
+        return Column.invoke_anonymous_function(columns[0], "MAP_CAT")
+    return Column.invoke_anonymous_function(columns[0], "MAP_CAT", *columns[1:])
+
+
 def sequence_from_generate_series(
     start: ColumnOrName, stop: ColumnOrName, step: t.Optional[ColumnOrName] = None
 ) -> Column:
@@ -1026,6 +1354,27 @@ def sequence_from_generate_array(
     )
 
 
+def sequence_from_array_generate_range(
+    start: ColumnOrName, stop: ColumnOrName, step: t.Optional[ColumnOrName] = None
+) -> Column:
+    col_func = get_func_from_session("col")
+    when = get_func_from_session("when")
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAY_GENERATE_RANGE",
+            expressions=[
+                col_func(start).expression,
+                (
+                    col_func(stop) + when(col_func(stop) > lit(0), lit(1)).otherwise(lit(-1))
+                ).expression,
+                col_func(step).expression if step else lit(1).expression,
+            ],
+        )
+    )
+
+
 def regexp_extract_only_one_group(
     str: ColumnOrName, pattern: str, idx: t.Optional[int] = None
 ) -> Column:
@@ -1044,6 +1393,28 @@ def hex_casted_as_bytes(col: ColumnOrName) -> Column:
         expression.Anonymous(
             this="TO_HEX",
             expressions=[col_func(col).cast("bytes").expression],
+        )
+    )
+
+
+def hex_using_encode(col: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="HEX_ENCODE",
+            expressions=[col_func(col).expression],
+        )
+    )
+
+
+def unhex_hex_decode_str(col: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="HEX_DECODE_STRING",
+            expressions=[col_func(col).expression],
         )
     )
 

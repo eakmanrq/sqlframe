@@ -24,9 +24,17 @@ else:
 
 
 class JsonLoadsSnowflakeConverter(SnowflakeConverter):
+    # This might not be needed once proper arrow types are supported.
+    # Checkout this PR: https://github.com/snowflakedb/snowflake-connector-python/pull/1853/files
+    # Specifically see if `alter session set enable_structured_types_in_client_response=true` and
+    # `alter session set force_enable_structured_types_native_arrow_format=true` are supported then it might work.
+    # At the time of writing these were not supported parameters on my version on Snowflake.
     def _json_loads(self, ctx: dict[str, t.Any]) -> t.Callable:
         def conv(value: str) -> t.List:
-            return json.loads(value)
+            # Snowflake returns "undefined" for null values when inside an array
+            # We check if we replaced "'undefined'" string and if so we switch it back
+            # this is a lazy approach compared to writing a proper regex replace
+            return json.loads(value.replace("undefined", "null").replace("'null'", "undefined"))
 
         return conv
 
@@ -49,10 +57,9 @@ class SnowflakeSession(
     _writer = SnowflakeDataFrameWriter
     _df = SnowflakeDataFrame
 
+    DEFAULT_TIME_FORMAT = "YYYY-MM-DD HH:MI:SS"
+
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):
-        warnings.warn(
-            "SnowflakeSession is still in active development. Functions may not work as expected."
-        )
         import snowflake
 
         snowflake.connector.cursor.CAN_USE_ARROW_RESULT_FORMAT = False
