@@ -9,6 +9,7 @@ SQLFrame currently supports the following engines (many more in development):
 * [BigQuery](https://sqlframe.readthedocs.io/en/stable/bigquery/)
 * [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb)
 * [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
+* [Snowflake](https://sqlframe.readthedocs.io/en/stable/snowflake)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
 * [Standalone](https://sqlframe.readthedocs.io/en/stable/standalone)
@@ -28,6 +29,8 @@ pip install "sqlframe[bigquery]"
 pip install "sqlframe[duckdb]"
 # Postgres
 pip install "sqlframe[postgres]"
+# Snowflake
+pip install "sqlframe[snowflake]"
 # Standalone
 pip install sqlframe
 ```
