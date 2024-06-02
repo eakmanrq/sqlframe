@@ -29,6 +29,7 @@ stubs:
 	stubgen sqlframe/bigquery/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/duckdb/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/postgres/functions.py --output ./ --inspect-mode
+	stubgen sqlframe/snowflake/functions.py --output ./ --inspect-mode
 
 package:
 	pip3 install wheel && python3 setup.py sdist bdist_wheel

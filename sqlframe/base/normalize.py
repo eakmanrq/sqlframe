@@ -65,6 +65,15 @@ def replace_branch_and_sequence_ids_with_cte_name(
                 return
 
 
+def normalize_dict(session: SESSION, data: t.Dict) -> t.Dict:
+    if isinstance(data, dict):
+        return {session._normalize_string(k): normalize_dict(session, v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [normalize_dict(session, v) for v in data]
+    else:
+        return data
+
+
 def _set_alias_name(id: exp.Identifier, name: str):
     id.set("this", name)
     id.set("quoted", False)

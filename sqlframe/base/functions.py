@@ -222,7 +222,7 @@ def cot(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "COT")
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def csc(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "CSC")
 
@@ -281,7 +281,7 @@ def rint(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "RINT")
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def sec(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "SEC")
 
@@ -407,7 +407,7 @@ def collect_set(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ArrayUniqueAgg)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def hypot(col1: t.Union[ColumnOrName, float], col2: t.Union[ColumnOrName, float]) -> Column:
     col1_value = lit(col1) if isinstance(col1, (int, float)) else col1
     col2_value = lit(col2) if isinstance(col2, (int, float)) else col2
@@ -482,7 +482,7 @@ def covar_samp(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col1, expression.CovarSamp, expression=col2)
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def first(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
     this = Column.invoke_expression_over_column(col, expression.First)
     if ignorenulls:
@@ -516,7 +516,7 @@ def isnull(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "ISNULL")
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def last(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
     this = Column.invoke_expression_over_column(col, expression.Last)
     if ignorenulls:
@@ -569,7 +569,7 @@ def rand(seed: t.Optional[int] = None) -> Column:
     return Column.invoke_expression_over_column(None, expression.Rand)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def randn(seed: t.Optional[int] = None) -> Column:
     if seed is not None:
         return Column.invoke_expression_over_column(None, expression.Randn, this=lit(seed))
@@ -610,7 +610,7 @@ def shiftright(col: ColumnOrName, numBits: int) -> Column:
 shiftRight = shiftright
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def shiftrightunsigned(col: ColumnOrName, numBits: int) -> Column:
     return Column.invoke_anonymous_function(
         Column.ensure_col(col).cast("bigint"), "SHIFTRIGHTUNSIGNED", lit(numBits)
@@ -631,7 +631,7 @@ def struct(col: t.Union[ColumnOrName, t.Iterable[ColumnOrName]], *cols: ColumnOr
     return Column.invoke_expression_over_column(None, expression.Struct, expressions=columns)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def conv(col: ColumnOrName, fromBase: int, toBase: int) -> Column:
     return Column.invoke_anonymous_function(col, "CONV", lit(fromBase), lit(toBase))
 
@@ -976,7 +976,7 @@ def session_window(timeColumn: ColumnOrName, gapDuration: ColumnOrName) -> Colum
     return Column.invoke_anonymous_function(timeColumn, "SESSION_WINDOW", gap_duration_column)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def crc32(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "CRC32")
 
@@ -1002,7 +1002,7 @@ def hash(*cols: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(cols[0], "HASH", *args)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def xxhash64(*cols: ColumnOrName) -> Column:
     args = cols[1:] if len(cols) > 1 else []
     return Column.invoke_anonymous_function(cols[0], "XXHASH64", *args)
@@ -1069,14 +1069,14 @@ def concat_ws(sep: str, *cols: ColumnOrName) -> Column:
     )
 
 
-@meta(unsupported_engines="bigquery")
+@meta(unsupported_engines=["bigquery", "snowflake"])
 def decode(col: ColumnOrName, charset: str) -> Column:
     return Column.invoke_expression_over_column(
         col, expression.Decode, charset=expression.Literal.string(charset)
     )
 
 
-@meta(unsupported_engines="bigquery")
+@meta(unsupported_engines=["bigquery", "snowflake"])
 def encode(col: ColumnOrName, charset: str) -> Column:
     return Column.invoke_expression_over_column(
         col, expression.Encode, charset=expression.Literal.string(charset)
@@ -1088,7 +1088,7 @@ def format_number(col: ColumnOrName, d: int) -> Column:
     return Column.invoke_anonymous_function(col, "FORMAT_NUMBER", lit(d))
 
 
-@meta()
+@meta(unsupported_engines="snowflake")
 def format_string(format: str, *cols: ColumnOrName) -> Column:
     format_col = lit(format)
     columns = [Column.ensure_col(x) for x in cols]
@@ -1114,7 +1114,7 @@ def overlay(
     return Column.invoke_anonymous_function(src, "OVERLAY", replace, pos_value)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def sentences(
     string: ColumnOrName,
     language: t.Optional[ColumnOrName] = None,
@@ -1134,7 +1134,7 @@ def substring(str: ColumnOrName, pos: int, len: int) -> Column:
     return Column.ensure_col(str).substr(pos, len)
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def substring_index(str: ColumnOrName, delim: str, count: int) -> Column:
     return Column.invoke_anonymous_function(str, "SUBSTRING_INDEX", lit(delim), lit(count))
 
@@ -1236,7 +1236,7 @@ def soundex(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "SOUNDEX")
 
 
-@meta(unsupported_engines="postgres")
+@meta(unsupported_engines=["postgres", "snowflake"])
 def bin(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "BIN")
 
@@ -1288,7 +1288,7 @@ def create_map(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column
     )
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def map_from_arrays(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(None, expression.Map, keys=col1, values=col2)
 
@@ -1382,27 +1382,28 @@ def posexplode(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Posexplode)
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def explode_outer(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ExplodeOuter)
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def posexplode_outer(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.PosexplodeOuter)
 
 
-@meta()
+# Snowflake doesn't support JSONPath which is what this function uses
+@meta(unsupported_engines="snowflake")
 def get_json_object(col: ColumnOrName, path: str) -> Column:
     return Column.invoke_expression_over_column(col, expression.JSONExtract, expression=lit(path))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def json_tuple(col: ColumnOrName, *fields: str) -> Column:
     return Column.invoke_anonymous_function(col, "JSON_TUPLE", *[lit(field) for field in fields])
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def from_json(
     col: ColumnOrName,
     schema: t.Union[ArrayType, StructType, Column, str],
@@ -1419,7 +1420,7 @@ def from_json(
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
@@ -1443,7 +1444,7 @@ def schema_of_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = Non
     return Column.invoke_anonymous_function(col, "SCHEMA_OF_CSV")
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def to_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
@@ -1486,12 +1487,12 @@ def array_sort(
     return Column.invoke_expression_over_column(col, expression.ArraySort)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def shuffle(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "SHUFFLE")
 
 
-@meta()
+@meta(unsupported_engines="snowflake")
 def reverse(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "REVERSE")
 
@@ -1506,28 +1507,28 @@ def map_keys(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "MAP_KEYS")
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def map_values(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "MAP_VALUES")
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def map_entries(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "MAP_ENTRIES")
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def map_from_entries(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.MapFromEntries)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def array_repeat(col: ColumnOrName, count: t.Union[ColumnOrName, int]) -> Column:
     count_col = count if isinstance(count, Column) else lit(count)
     return Column.invoke_anonymous_function(col, "ARRAY_REPEAT", count_col)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def arrays_zip(*cols: ColumnOrName) -> Column:
     if len(cols) == 1:
         return Column.invoke_anonymous_function(cols[0], "ARRAYS_ZIP")
@@ -1551,7 +1552,7 @@ def sequence(
     return Column.invoke_anonymous_function(start, "SEQUENCE", stop)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def from_csv(
     col: ColumnOrName,
     schema: t.Union[Column, str],
@@ -1564,7 +1565,7 @@ def from_csv(
     return Column.invoke_anonymous_function(col, "FROM_CSV", schema)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def aggregate(
     col: ColumnOrName,
     initialValue: ColumnOrName,
@@ -1586,7 +1587,7 @@ def aggregate(
     )
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def transform(
     col: ColumnOrName,
     f: t.Union[t.Callable[[Column], Column], t.Callable[[Column, Column], Column]],
@@ -1597,19 +1598,19 @@ def transform(
     )
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def exists(col: ColumnOrName, f: t.Callable[[Column], Column]) -> Column:
     f_expression = _get_lambda_from_func(f)
     return Column.invoke_anonymous_function(col, "EXISTS", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def forall(col: ColumnOrName, f: t.Callable[[Column], Column]) -> Column:
     f_expression = _get_lambda_from_func(f)
     return Column.invoke_anonymous_function(col, "FORALL", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def filter(
     col: ColumnOrName,
     f: t.Union[t.Callable[[Column], Column], t.Callable[[Column, Column], Column]],
@@ -1620,7 +1621,7 @@ def filter(
     )
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def zip_with(
     left: ColumnOrName, right: ColumnOrName, f: t.Callable[[Column, Column], Column]
 ) -> Column:
@@ -1628,25 +1629,25 @@ def zip_with(
     return Column.invoke_anonymous_function(left, "ZIP_WITH", right, Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def transform_keys(col: ColumnOrName, f: t.Union[t.Callable[[Column, Column], Column]]) -> Column:
     f_expression = _get_lambda_from_func(f)
     return Column.invoke_anonymous_function(col, "TRANSFORM_KEYS", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def transform_values(col: ColumnOrName, f: t.Union[t.Callable[[Column, Column], Column]]) -> Column:
     f_expression = _get_lambda_from_func(f)
     return Column.invoke_anonymous_function(col, "TRANSFORM_VALUES", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def map_filter(col: ColumnOrName, f: t.Union[t.Callable[[Column, Column], Column]]) -> Column:
     f_expression = _get_lambda_from_func(f)
     return Column.invoke_anonymous_function(col, "MAP_FILTER", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def map_zip_with(
     col1: ColumnOrName,
     col2: ColumnOrName,
@@ -1656,9 +1657,14 @@ def map_zip_with(
     return Column.invoke_anonymous_function(col1, "MAP_ZIP_WITH", col2, Column(f_expression))
 
 
-@meta(unsupported_engines="postgres")
+@meta(unsupported_engines=["postgres", "snowflake"])
 def typeof(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TYPEOF")
+
+
+@meta()
+def nullif(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    return Column.invoke_expression_over_column(col1, expression.Nullif, expression=col2)
 
 
 @meta()

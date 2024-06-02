@@ -78,13 +78,6 @@ ENGINE_PARAMETERS = [
             pytest.mark.local,
         ],
     ),
-    # pytest.param(
-    #     "spark",
-    #     marks=[
-    #         pytest.mark.spark_session,
-    #         pytest.mark.local,
-    #     ],
-    # ),
     pytest.param(
         "bigquery",
         marks=[
@@ -94,6 +87,22 @@ ENGINE_PARAMETERS = [
             pytest.mark.xdist_group("bigquery_tests"),
         ],
     ),
+    pytest.param(
+        "snowflake",
+        marks=[
+            pytest.mark.snowflake,
+            pytest.mark.remote,
+            # Set xdist group in order to serialize tests
+            pytest.mark.xdist_group("snowflake_tests"),
+        ],
+    ),
+    # pytest.param(
+    #     "spark",
+    #     marks=[
+    #         pytest.mark.spark_session,
+    #         pytest.mark.local,
+    #     ],
+    # ),
     # pytest.param(
     #     "redshift",
     #     marks=[
@@ -101,15 +110,6 @@ ENGINE_PARAMETERS = [
     #         pytest.mark.remote,
     #         # Set xdist group in order to serialize tests
     #         pytest.mark.xdist_group("redshift_tests"),
-    #     ],
-    # ),
-    # pytest.param(
-    #     "snowflake",
-    #     marks=[
-    #         pytest.mark.snowflake,
-    #         pytest.mark.remote,
-    #         # Set xdist group in order to serialize tests
-    #         pytest.mark.xdist_group("snowflake_tests"),
     #     ],
     # ),
 ]

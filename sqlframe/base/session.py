@@ -23,6 +23,7 @@ from sqlglot.schema import MappingSchema
 
 from sqlframe.base.catalog import _BaseCatalog
 from sqlframe.base.dataframe import _BaseDataFrame
+from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
@@ -257,6 +258,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             if isinstance(sample_row, Row):
                 sample_row = sample_row.asDict()
             if isinstance(sample_row, dict):
+                sample_row = normalize_dict(self, sample_row)
                 default_data_type = get_default_data_type(sample_row[name])
                 updated_mapping[name] = (
                     exp.DataType.build(default_data_type, dialect="spark")

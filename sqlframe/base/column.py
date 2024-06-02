@@ -251,6 +251,13 @@ class Column:
             return lit(value)
         return Column(value)
 
+    @property
+    def dtype(self) -> t.Optional[DataType]:
+        expression = self.expression.unalias()
+        if isinstance(expression, exp.Cast):
+            return expression.args.get("to")
+        return None
+
     def copy(self) -> Column:
         return Column(self.expression.copy())
 
