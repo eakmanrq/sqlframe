@@ -9,7 +9,7 @@ setup(
     author="Ryan Eakman",
     author_email="eakmanrq@gmail.com",
     license="MIT",
-    packages=find_packages(include=["sqlframe", "sqlframe.*"]),
+    packages=find_packages(include=["sqlframe", "sqlframe.*", "py.typed", "*.pyi", "**/*.pyi"]),
     package_data={"sqlframe": ["py.typed"]},
     use_scm_version={
         "write_to": "sqlframe/_version.py",
