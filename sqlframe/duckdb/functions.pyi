@@ -126,6 +126,7 @@ from sqlframe.base.functions import (
     months_between as months_between,
     nth_value as nth_value,
     ntile as ntile,
+    nullif as nullif,
     percent_rank as percent_rank,
     percentile as percentile,
     pow as pow,

@@ -119,6 +119,7 @@ from sqlframe.base.functions import (
     min as min,
     nth_value as nth_value,
     ntile as ntile,
+    nullif as nullif,
     octet_length as octet_length,
     overlay as overlay,
     percent_rank as percent_rank,
