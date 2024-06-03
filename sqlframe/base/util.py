@@ -265,6 +265,15 @@ def verify_openai_installed():
         )
 
 
+def verify_numpy_installed():
+    try:
+        import numpy  # noqa
+    except ImportError:
+        raise ImportError(
+            """Numpy is required for this functionality. `pip install "sqlframe[pandas]"` (also include your engine if needed) to install pandas/numpy."""
+        )
+
+
 def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
     from sqlframe.base.session import _BaseSession
 
