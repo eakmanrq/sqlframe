@@ -28,7 +28,7 @@ setup(
             "google-cloud-bigquery-storage>=2,<3",
         ],
         "dev": [
-            "duckdb>=0.9,<0.11",
+            "duckdb>=0.9,<1.1",
             "mypy>=1.10.0,<1.11",
             "openai>=1.30,<1.31",
             "pandas>=2,<3",
@@ -53,7 +53,7 @@ setup(
             "pymdown-extensions",
         ],
         "duckdb": [
-            "duckdb>=0.9,<0.11",
+            "duckdb>=0.9,<1.1",
             "pandas>=2,<3",
         ],
         "openai": [
