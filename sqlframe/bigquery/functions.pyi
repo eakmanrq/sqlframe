@@ -189,6 +189,7 @@ from sqlframe.base.functions import min as min
 from sqlframe.base.functions import min_by as min_by
 from sqlframe.base.functions import nth_value as nth_value
 from sqlframe.base.functions import ntile as ntile
+from sqlframe.base.functions import nullif as nullif
 from sqlframe.base.functions import octet_length as octet_length
 from sqlframe.base.functions import percent_rank as percent_rank
 from sqlframe.base.functions import posexplode as posexplode
