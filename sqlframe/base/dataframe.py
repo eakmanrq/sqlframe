@@ -642,6 +642,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def select(self, *cols, **kwargs) -> Self:
         from sqlframe.base.column import Column
 
+        if isinstance(cols[0], list):
+            cols = cols[0]  # type: ignore
         columns = self._ensure_and_normalize_cols(cols)
         kwargs["append"] = kwargs.get("append", False)
         if self.expression.args.get("joins"):
@@ -674,6 +676,13 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     else:
                         cte = ctes_with_column[resolved_column_position[ambiguous_col]]
                     ambiguous_col.expression.set("table", exp.to_identifier(cte.alias_or_name))
+        # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
+        columns = [
+            col.alias(col.expression.alias_or_name)
+            if isinstance(col.expression, exp.Cast) and col.expression.alias_or_name
+            else col
+            for col in columns
+        ]
         return self.copy(
             expression=self.expression.select(*[x.expression for x in columns], **kwargs), **kwargs
         )
@@ -1175,6 +1184,63 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         replacement_columns = [replacement_mapping[column.alias_or_name] for column in all_columns]
         new_df = new_df.select(*replacement_columns)
         return new_df
+
+    def transform(self, func: t.Callable[..., DF], *args: t.Any, **kwargs: t.Any) -> Self:
+        """Returns a new :class:`DataFrame`. Concise syntax for chaining custom transformations.
+
+        .. versionadded:: 3.0.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        func : function
+            a function that takes and returns a :class:`DataFrame`.
+        *args
+            Positional arguments to pass to func.
+
+            .. versionadded:: 3.3.0
+        **kwargs
+            Keyword arguments to pass to func.
+
+            .. versionadded:: 3.3.0
+
+        Returns
+        -------
+        :class:`DataFrame`
+            Transformed DataFrame.
+
+        Examples
+        --------
+        >>> from pyspark.sql.functions import col
+        >>> df = spark.createDataFrame([(1, 1.0), (2, 2.0)], ["int", "float"])
+        >>> def cast_all_to_int(input_df):
+        ...     return input_df.select([col(col_name).cast("int") for col_name in input_df.columns])
+        ...
+        >>> def sort_columns_asc(input_df):
+        ...     return input_df.select(*sorted(input_df.columns))
+        ...
+        >>> df.transform(cast_all_to_int).transform(sort_columns_asc).show()
+        +-----+---+
+        |float|int|
+        +-----+---+
+        |    1|  1|
+        |    2|  2|
+        +-----+---+
+
+        >>> def add_n(input_df, n):
+        ...     return input_df.select([(col(col_name) + n).alias(col_name)
+        ...                             for col_name in input_df.columns])
+        >>> df.transform(add_n, 1).transform(add_n, n=10).show()
+        +---+-----+
+        |int|float|
+        +---+-----+
+        | 12| 12.0|
+        | 13| 13.0|
+        +---+-----+
+        """
+        return func(self, *args, **kwargs)  # type: ignore
 
     @operation(Operation.SELECT)
     def withColumn(self, colName: str, col: Column) -> Self:
