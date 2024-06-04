@@ -2036,3 +2036,24 @@ def test_persist_select(
         store.store_id, dfs_employee.num_employees
     )
     compare_frames(df_joined, dfs_joined)
+
+
+def test_transform(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    def cast_all_to_int_pyspark(input_df):
+        return input_df.select([F.col(col_name).cast("string") for col_name in input_df.columns])
+
+    def cast_all_to_int_sqlframe(input_df):
+        return input_df.select([SF.col(col_name).cast("string") for col_name in input_df.columns])
+
+    def sort_columns_asc(input_df):
+        return input_df.select(*sorted(input_df.columns))
+
+    employee = get_df("employee")
+
+    df = pyspark_employee.transform(cast_all_to_int_pyspark).transform(sort_columns_asc)
+    dfs = employee.transform(cast_all_to_int_sqlframe).transform(sort_columns_asc)
+    compare_frames(df, dfs)

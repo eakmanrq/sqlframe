@@ -74,6 +74,20 @@ def test_with_columns(standalone_employee: StandaloneDataFrame):
     )
 
 
+def test_transform(standalone_employee: StandaloneDataFrame):
+    def cast_all_to_int(input_df):
+        return input_df.select([F.col(col_name).cast("int") for col_name in input_df.columns])
+
+    def sort_columns_asc(input_df):
+        return input_df.select(*sorted(input_df.columns))
+
+    df = standalone_employee.transform(cast_all_to_int).transform(sort_columns_asc)
+    assert df.columns == ["age", "employee_id", "fname", "lname", "store_id"]
+    assert df.sql(pretty=False, optimize=False).endswith(  # type: ignore
+        "SELECT CAST(employee_id AS INT) AS employee_id, CAST(fname AS INT) AS fname, CAST(lname AS INT) AS lname, CAST(age AS INT) AS age, CAST(store_id AS INT) AS store_id FROM t51718876) SELECT age, employee_id, fname, lname, store_id FROM t16881256"
+    )
+
+
 # https://github.com/eakmanrq/sqlframe/issues/19
 def test_with_column_dual_expression(standalone_employee: StandaloneDataFrame):
     df1 = standalone_employee.withColumn("new_col1", standalone_employee.age)
