@@ -60,7 +60,6 @@ else:
     SESSION = t.TypeVar("SESSION")
     GROUP_DATA = t.TypeVar("GROUP_DATA")
 
-
 logger = logging.getLogger(__name__)
 
 JOIN_HINTS = {
@@ -1244,17 +1243,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.SELECT)
     def withColumn(self, colName: str, col: Column) -> Self:
-        col = self._ensure_and_normalize_col(col)
-        col_name = self._ensure_and_normalize_col(colName).alias_or_name
-        existing_col_names = self.expression.named_selects
-        existing_col_index = (
-            existing_col_names.index(col_name) if col_name in existing_col_names else None
-        )
-        if existing_col_index:
-            expression = self.expression.copy()
-            expression.expressions[existing_col_index] = col.alias(col_name).expression
-            return self.copy(expression=expression)
-        return self.select.__wrapped__(self, col.alias(col_name), append=True)  # type: ignore
+        return self.withColumns.__wrapped__(self, {colName: col})  # type: ignore
 
     @operation(Operation.SELECT)
     def withColumnRenamed(self, existing: str, new: str) -> Self:
@@ -1274,6 +1263,66 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             else:
                 existing_column.set("alias", exp.to_identifier(new))
         return self.copy(expression=expression)
+
+    @operation(Operation.SELECT)
+    def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
+        """
+        Returns a new :class:`DataFrame` by adding multiple columns or replacing the
+        existing columns that have the same names.
+
+        The colsMap is a map of column name and column, the column must only refer to attributes
+        supplied by this Dataset. It is an error to add columns that refer to some other Dataset.
+
+        .. versionadded:: 3.3.0
+           Added support for multiple columns adding
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        colsMap : dict
+            a dict of column name and :class:`Column`. Currently, only a single map is supported.
+
+        Returns
+        -------
+        :class:`DataFrame`
+            DataFrame with new or replaced columns.
+
+        Examples
+        --------
+        >>> df = spark.createDataFrame([(2, "Alice"), (5, "Bob")], schema=["age", "name"])
+        >>> df.withColumns({'age2': df.age + 2, 'age3': df.age + 3}).show()
+        +---+-----+----+----+
+        |age| name|age2|age3|
+        +---+-----+----+----+
+        |  2|Alice|   4|   5|
+        |  5|  Bob|   7|   8|
+        +---+-----+----+----+
+        """
+        if len(colsMap) != 1:
+            raise ValueError("Only a single map is supported")
+        col_map = {
+            self._ensure_and_normalize_col(k).alias_or_name: self._ensure_and_normalize_col(v)
+            for k, v in colsMap[0].items()
+        }
+        existing_col_names = [
+            x.alias_or_name for x in self._get_outer_select_columns(self.expression)
+        ]
+        updated_expression = self.expression.copy()
+        select_columns = []
+        for column_name, col_value in col_map.items():
+            existing_col_index = (
+                existing_col_names.index(column_name) if column_name in existing_col_names else None
+            )
+            if existing_col_index:
+                updated_expression.expressions[existing_col_index] = col_value.alias(
+                    column_name
+                ).expression
+            else:
+                select_columns.append(col_value.alias(column_name))
+        df = self.copy(expression=updated_expression)
+        return df.select.__wrapped__(df, *select_columns, append=True)  # type: ignore
 
     @operation(Operation.SELECT)
     def drop(self, *cols: t.Union[str, Column]) -> Self:
