@@ -1670,6 +1670,64 @@ def test_with_column_renamed_double(
     compare_frames(df, dfs)
 
 
+def test_with_columns(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.withColumns(
+        {
+            "test": F.col("age"),
+            "test2": F.col("age"),
+        }
+    )
+
+    dfs = employee.withColumns(
+        {
+            "test": SF.col("age"),
+            "test2": SF.col("age"),
+        }
+    )
+
+    compare_frames(df, dfs)
+
+
+def test_with_columns_reference_another(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+    is_bigquery: t.Callable,
+    is_postgres: t.Callable,
+):
+    # Could consider two options:
+    # 1. Use SQLGlot optimizer to properly change the references to be expanded to avoid the issue (a rule already does this)
+    # 2. Write specific logic to both these dataframes to detect if there is a self reference and create a new scope
+    if is_bigquery():
+        pytest.skip(
+            "BigQuery doesn't support having selects with columns that reference each other."
+        )
+    if is_postgres():
+        pytest.skip(
+            "Postgres doesn't support having selects with columns that reference each other."
+        )
+    employee = get_df("employee")
+    df = pyspark_employee.withColumns(
+        {
+            "test": F.col("age"),
+            "test2": F.col("test"),
+        }
+    )
+
+    dfs = employee.withColumns(
+        {
+            "test": SF.col("age"),
+            "test2": SF.col("test"),
+        }
+    )
+    compare_frames(df, dfs)
+
+
 def test_drop_column_single(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
