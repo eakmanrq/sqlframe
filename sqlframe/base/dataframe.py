@@ -641,6 +641,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def select(self, *cols, **kwargs) -> Self:
         from sqlframe.base.column import Column
 
+        if not cols:
+            return self
+
         if isinstance(cols[0], list):
             cols = cols[0]  # type: ignore
         columns = self._ensure_and_normalize_cols(cols)
