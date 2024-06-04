@@ -12,6 +12,7 @@ from sqlglot.helper import flatten, is_iterable
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
 from sqlframe.base.decorators import normalize
+from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.types import DataType
 from sqlframe.base.util import get_func_from_session, quote_preserving_alias_or_name
 
@@ -120,6 +121,11 @@ class Column:
 
     def __ror__(self, other: ColumnOrLiteral) -> Column:
         return self.inverse_binary_op(exp.Or, other)
+
+    def __call__(self, *args, **kwargs):
+        raise UnsupportedOperationError(
+            "Tried to call a column which is unexpected. Did you mean to call a method on a DataFrame? If so, make sure the method is typed correctly and is supported. If not, please open an issue requesting support: https://github.com/eakmanrq/sqlframe/issues"
+        )
 
     @classmethod
     def ensure_col(cls, value: t.Optional[t.Union[ColumnOrName, exp.Expression]]) -> Column:

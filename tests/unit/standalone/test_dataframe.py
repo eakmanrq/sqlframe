@@ -1,7 +1,9 @@
 import typing as t
 
+import pytest
 from sqlglot import expressions as exp
 
+from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.standalone import functions as F
 from sqlframe.standalone.dataframe import StandaloneDataFrame
 
@@ -114,3 +116,10 @@ def test_where_expr(standalone_employee: StandaloneDataFrame):
         df.sql(pretty=False)
         == "SELECT `a1`.`employee_id` AS `employee_id`, CAST(`a1`.`fname` AS STRING) AS `fname`, CAST(`a1`.`lname` AS STRING) AS `lname`, `a1`.`age` AS `age`, `a1`.`store_id` AS `store_id` FROM VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100) AS `a1`(`employee_id`, `fname`, `lname`, `age`, `store_id`) WHERE `a1`.`age` = 37 AND CAST(`a1`.`fname` AS STRING) = 'Jack'"
     )
+
+
+def test_missing_method(standalone_employee: StandaloneDataFrame):
+    with pytest.raises(
+        UnsupportedOperationError, match="Tried to call a column which is unexpected.*"
+    ):
+        standalone_employee.missing_method("blah")
