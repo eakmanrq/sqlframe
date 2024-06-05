@@ -668,7 +668,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         cte
                         for cte in self.expression.ctes
                         if cte.alias_or_name in cte_names_in_join
-                        and ambiguous_col.alias_or_name in cte.this.named_selects
+                        and ambiguous_col.column_alias_or_name in cte.this.named_selects
                     ]
                     # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
                     # use the same CTE we used before
@@ -677,7 +677,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         resolved_column_position[ambiguous_col] += 1
                     else:
                         cte = ctes_with_column[resolved_column_position[ambiguous_col]]
-                    ambiguous_col.expression.set("table", exp.to_identifier(cte.alias_or_name))
+                    ambiguous_col.column_expression.set(
+                        "table", exp.to_identifier(cte.alias_or_name)
+                    )
         # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
         columns = [
             col.alias(col.expression.alias_or_name)
