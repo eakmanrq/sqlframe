@@ -247,6 +247,10 @@ class Column:
     def alias_or_name(self) -> str:
         return quote_preserving_alias_or_name(self.expression)  # type: ignore
 
+    @property
+    def column_alias_or_name(self) -> str:
+        return quote_preserving_alias_or_name(self.column_expression)  # type: ignore
+
     @classmethod
     def ensure_literal(cls, value) -> Column:
         from sqlframe.base.functions import lit
