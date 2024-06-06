@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "prettytable<3.11.0",
-        "sqlglot>=24.0.0,<24.2",
+        "sqlglot>=24.0.0,<25.1",
     ],
     extras_require={
         "bigquery": [
