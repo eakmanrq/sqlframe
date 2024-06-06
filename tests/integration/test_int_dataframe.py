@@ -2057,3 +2057,48 @@ def test_transform(
     df = pyspark_employee.transform(cast_all_to_int_pyspark).transform(sort_columns_asc)
     dfs = employee.transform(cast_all_to_int_sqlframe).transform(sort_columns_asc)
     compare_frames(df, dfs)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/51
+def test_join_full_outer_no_match(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    spark = pyspark_employee._session
+    initial = spark.createDataFrame(
+        [
+            (1, "data"),
+            (2, "data"),
+        ],
+        ["id", "data"],
+    )
+    for_join = spark.createDataFrame(
+        [
+            (1, "other_data"),
+            (2, "other_data"),
+            (3, "other_data"),
+        ],
+        ["id", "other_data"],
+    )
+    df = initial.join(for_join, on="id", how="full")
+
+    session = get_df("employee").session
+    dfs_initial = session.createDataFrame(
+        [
+            (1, "data"),
+            (2, "data"),
+        ],
+        ["id", "data"],
+    )
+    dfs_for_join = session.createDataFrame(
+        [
+            (1, "other_data"),
+            (2, "other_data"),
+            (3, "other_data"),
+        ],
+        ["id", "other_data"],
+    )
+    dfs = dfs_initial.join(dfs_for_join, on="id", how="full")
+
+    compare_frames(df, dfs)

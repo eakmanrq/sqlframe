@@ -776,6 +776,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         how: str = "inner",
         **kwargs,
     ) -> Self:
+        from sqlframe.base.functions import coalesce
+
         if on is None:
             logger.warning("Got no value for on. This appears change the join to a cross join.")
             how = "cross"
@@ -835,7 +837,15 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         for left_column, right_column in join_column_pairs
                     ],
                 )
-                join_column_names = [left_col.alias_or_name for left_col, _ in join_column_pairs]
+                join_column_names = [
+                    coalesce(
+                        left_col.sql(dialect=self.session.input_dialect),
+                        right_col.sql(dialect=self.session.input_dialect),
+                    ).alias(left_col.alias_or_name)
+                    if how == "full"
+                    else left_col.alias_or_name
+                    for left_col, right_col in join_column_pairs
+                ]
                 # To match spark behavior only the join clause gets deduplicated and it gets put in the front of the column list
                 select_column_names = [
                     (
@@ -848,7 +858,10 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 select_column_names = [
                     column_name
                     for column_name in select_column_names
-                    if column_name not in join_column_names
+                    if column_name
+                    not in [
+                        x.alias_or_name if not isinstance(x, str) else x for x in join_column_names
+                    ]
                 ]
                 select_column_names = join_column_names + select_column_names
             else:
