@@ -30,7 +30,7 @@ setup(
         "dev": [
             "duckdb>=0.9,<1.1",
             "mypy>=1.10.0,<1.11",
-            "openai>=1.30,<1.33",
+            "openai>=1.30,<1.34",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
@@ -57,7 +57,7 @@ setup(
             "pandas>=2,<3",
         ],
         "openai": [
-            "openai>=1.30,<1.33",
+            "openai>=1.30,<1.34",
         ],
         "pandas": [
             "pandas>=2,<3",
