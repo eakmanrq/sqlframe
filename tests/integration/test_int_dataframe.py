@@ -375,7 +375,7 @@ def test_join_inner(
         pyspark_employee["fname"],
         F.col("lname"),
         F.col("age"),
-        F.col("store_id").alias("renamed_store_id"),
+        F.coalesce("store_id", "age").alias("store_id_size"),
         pyspark_store.store_name,
         pyspark_store["num_sales"],
     )
@@ -384,7 +384,7 @@ def test_join_inner(
         employee["fname"],
         SF.col("lname"),
         SF.col("age"),
-        SF.col("store_id").alias("renamed_store_id"),
+        SF.coalesce("store_id", "age").alias("store_id_size"),
         store.store_name,
         store["num_sales"],
     )
