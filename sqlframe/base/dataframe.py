@@ -17,7 +17,7 @@ import sqlglot
 from prettytable import PrettyTable
 from sqlglot import Dialect
 from sqlglot import expressions as exp
-from sqlglot.helper import ensure_list, object_to_dict, seq_get
+from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
 from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
 from sqlglot.optimizer.qualify_columns import quote_identifiers
@@ -649,11 +649,16 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         columns = self._ensure_and_normalize_cols(cols)
         kwargs["append"] = kwargs.get("append", False)
         if self.expression.args.get("joins"):
-            ambiguous_cols = [
-                col
-                for col in columns
-                if isinstance(col.column_expression, exp.Column) and not col.column_expression.table
-            ]
+            ambiguous_cols: t.List[exp.Column] = list(
+                flatten(
+                    [
+                        sub_col
+                        for col in columns
+                        for sub_col in col.expression.find_all(exp.Column)
+                        if not sub_col.table
+                    ]
+                )
+            )
             if ambiguous_cols:
                 join_table_identifiers = [
                     x.this for x in get_tables_from_expression_with_join(self.expression)
@@ -662,13 +667,15 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
                 # and therefore we allow multiple columns with the same name in the result. This matches the behavior
                 # of Spark.
-                resolved_column_position: t.Dict[Column, int] = {col: -1 for col in ambiguous_cols}
+                resolved_column_position: t.Dict[exp.Column, int] = {
+                    col.copy(): -1 for col in ambiguous_cols
+                }
                 for ambiguous_col in ambiguous_cols:
                     ctes_with_column = [
                         cte
                         for cte in self.expression.ctes
                         if cte.alias_or_name in cte_names_in_join
-                        and ambiguous_col.column_alias_or_name in cte.this.named_selects
+                        and ambiguous_col.alias_or_name in cte.this.named_selects
                     ]
                     # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
                     # use the same CTE we used before
@@ -677,9 +684,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         resolved_column_position[ambiguous_col] += 1
                     else:
                         cte = ctes_with_column[resolved_column_position[ambiguous_col]]
-                    ambiguous_col.column_expression.set(
-                        "table", exp.to_identifier(cte.alias_or_name)
-                    )
+                    ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
         # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
         columns = [
             col.alias(col.expression.alias_or_name)
