@@ -569,6 +569,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             self,
             key: t.Optional[str] = None,
             value: t.Optional[t.Any] = None,
+            conf: t.Optional[t.Any] = None,
             *,
             map: t.Optional[t.Dict[str, t.Any]] = None,
         ) -> Self:
