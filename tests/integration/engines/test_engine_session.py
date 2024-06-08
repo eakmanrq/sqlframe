@@ -29,7 +29,7 @@ def test_session(cleanup_session: _BaseSession):
         cola_type = exp.DataType.build("DECIMAL", dialect=session.output_dialect)
     else:
         cola_type = exp.DataType.build("INT", dialect=session.output_dialect)
-    if session.output_dialect == "bigquery":
+    if session.output_dialect in ("bigquery", "spark"):
         cola_name = "`cola`"
         colb_name = "`colb`"
     elif session.output_dialect == "snowflake":

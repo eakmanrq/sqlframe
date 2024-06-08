@@ -96,13 +96,13 @@ ENGINE_PARAMETERS = [
             pytest.mark.xdist_group("snowflake_tests"),
         ],
     ),
-    # pytest.param(
-    #     "spark",
-    #     marks=[
-    #         pytest.mark.spark_session,
-    #         pytest.mark.local,
-    #     ],
-    # ),
+    pytest.param(
+        "spark",
+        marks=[
+            pytest.mark.spark_session,
+            pytest.mark.local,
+        ],
+    ),
     # pytest.param(
     #     "redshift",
     #     marks=[

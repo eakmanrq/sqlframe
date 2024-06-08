@@ -1,23 +1,23 @@
-from sqlframe.redshift.catalog import RedshiftCatalog
-from sqlframe.redshift.column import Column
-from sqlframe.redshift.dataframe import RedshiftDataFrame, RedshiftDataFrameNaFunctions
-from sqlframe.redshift.group import RedshiftGroupedData
-from sqlframe.redshift.readwriter import (
-    RedshiftDataFrameReader,
-    RedshiftDataFrameWriter,
+from sqlframe.spark.catalog import SparkCatalog
+from sqlframe.spark.column import Column
+from sqlframe.spark.dataframe import SparkDataFrame, SparkDataFrameNaFunctions
+from sqlframe.spark.group import SparkGroupedData
+from sqlframe.spark.readwriter import (
+    SparkDataFrameReader,
+    SparkDataFrameWriter,
 )
-from sqlframe.redshift.session import RedshiftSession
-from sqlframe.redshift.window import Window, WindowSpec
+from sqlframe.spark.session import SparkSession
+from sqlframe.spark.window import Window, WindowSpec
 
 __all__ = [
-    "RedshiftCatalog",
+    "SparkCatalog",
     "Column",
-    "RedshiftDataFrame",
-    "RedshiftDataFrameNaFunctions",
-    "RedshiftGroupedData",
-    "RedshiftDataFrameReader",
-    "RedshiftDataFrameWriter",
-    "RedshiftSession",
+    "SparkDataFrame",
+    "SparkDataFrameNaFunctions",
+    "SparkGroupedData",
+    "SparkDataFrameReader",
+    "SparkDataFrameWriter",
+    "SparkSession",
     "Window",
     "WindowSpec",
 ]

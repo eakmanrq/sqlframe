@@ -6,6 +6,7 @@ nav:
   - "BigQuery": bigquery.md
   - "DuckDB": duckdb.md
   - "Postgres": postgres.md
+  - "Spark": spark.md
   - "Standalone": standalone.md
   - "Configuration": configuration.md
 theme:

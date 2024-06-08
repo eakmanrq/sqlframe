@@ -213,7 +213,7 @@ def test_alias(get_session_and_func):
     else:
         assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
-    if isinstance(session, (DuckDBSession, BigQuerySession)):
+    if isinstance(session, (DuckDBSession, BigQuerySession, SparkSession)):
         assert space_result == "a space in new name"
     else:
         assert space_result == "A Space In New Name"

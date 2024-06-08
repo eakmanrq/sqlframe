@@ -578,7 +578,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         def _set_session_properties(self) -> None:
             self.session.input_dialect = Dialect.get_or_raise(self.input_dialect)
             self.session.output_dialect = Dialect.get_or_raise(self.output_dialect)
-            if not self.session._connection:
+            if hasattr(self.session, "_connection") and not self.session._connection:
                 self.session._connection = self._conn
 
     builder = Builder()

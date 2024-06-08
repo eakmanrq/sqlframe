@@ -10,14 +10,17 @@ SQLFrame currently supports the following engines (many more in development):
 * [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb)
 * [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
 * [Snowflake](https://sqlframe.readthedocs.io/en/stable/snowflake)
+* [Spark](https://sqlframe.readthedocs.io/en/stable/spark)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
+
 * [Standalone](https://sqlframe.readthedocs.io/en/stable/standalone)
 
 SQLFrame is great for:
 
 * Users who want to run PySpark DataFrame code without having to use a Spark cluster
 * Users who want a SQL representation of their DataFrame code for debugging or sharing with others
+    * See [Spark Engine](https://sqlframe.readthedocs.io/en/stable/spark/) for more details
 * Users who want a DataFrame API that leverages the full power of their engine to do the processing 
 
 ## Installation
@@ -31,6 +34,8 @@ pip install "sqlframe[duckdb]"
 pip install "sqlframe[postgres]"
 # Snowflake
 pip install "sqlframe[snowflake]"
+# Spark
+pip install "sqlframe[spark]"
 # Standalone
 pip install sqlframe
 ```

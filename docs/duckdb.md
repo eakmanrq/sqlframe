@@ -84,6 +84,8 @@ df_store = session.createDataFrame(
 
 ## Supported PySpark API Methods
 
+See something that you would like to see supported? [Open an issue](https://github.com/eakmanrq/sqlframe/issues)!
+
 ### Catalog Class
 
 * add_table
