@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="sqlframe",
-    description="Taking the Spark out of PySpark by converting to SQL",
+    description="Turning PySpark Into a Universal DataFrame API",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/eakmanrq/sqlframe",
