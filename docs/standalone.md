@@ -71,6 +71,8 @@ FROM `test_table` AS `test_table`
 
 ## Supported PySpark API Methods
 
+See something that you would like to see supported? [Open an issue](https://github.com/eakmanrq/sqlframe/issues)!
+
 ### Column Class
 
 * [alias](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Column.alias.html)
