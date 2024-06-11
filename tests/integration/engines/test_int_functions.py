@@ -2428,17 +2428,17 @@ def test_to_json(get_session_and_func, get_types, get_func):
 
 
 def test_schema_of_json(get_session_and_func, get_func):
-    session, schema_of_csv = get_session_and_func("schema_of_csv")
+    session, schema_of_json = get_session_and_func("schema_of_json")
     lit = get_func("lit", session)
-    col = get_func("col", session)
-    df = session.range(1).select(col("id").alias("a"))
+    df = session.range(1)
     assert (
-        df.select(schema_of_csv(lit("1|a"), {"sep": "|"}).alias("csv")).first()[0]
-        == "STRUCT<_c0: INT, _c1: STRING>"
+        df.select(schema_of_json(lit('{"a": 0}')).alias("json")).first()[0] == "STRUCT<a: BIGINT>"
     )
     assert (
-        df.select(schema_of_csv("1|a", {"sep": "|"}).alias("csv")).first()[0]
-        == "STRUCT<_c0: INT, _c1: STRING>"
+        df.select(
+            schema_of_json("{a: 1}", {"allowUnquotedFieldNames": "true"}).alias("json")
+        ).first()[0]
+        == "STRUCT<a: BIGINT>"
     )
 
 
@@ -2873,3 +2873,13 @@ def test_nullif(get_session_and_func):
         ["a", "b"],
     )
     assert df.select(nullif(df.a, df.b).alias("r")).collect() == [Row(r=None), Row(r=1)]
+
+
+def test_stack(get_session_and_func, get_func):
+    session, stack = get_session_and_func("stack")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(1, 2, 3)], ["a", "b", "c"])
+    assert df.select(stack(lit(2), df.a, df.b, df.c)).collect() == [
+        Row(key=1, value=2),
+        Row(key=3, value=None),
+    ]

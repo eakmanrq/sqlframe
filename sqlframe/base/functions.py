@@ -151,9 +151,10 @@ def sumDistinct(col: ColumnOrName) -> Column:
 sum_distinct = sumDistinct
 
 
-@meta(unsupported_engines="*")
-def product(col: ColumnOrName) -> Column:
-    raise NotImplementedError("Product is not currently implemented")
+# Product does not have a SQL function available
+# @meta(unsupported_engines="*")
+# def product(col: ColumnOrName) -> Column:
+# raise NotImplementedError("Product is not currently implemented")
 
 
 @meta()
@@ -1430,6 +1431,8 @@ def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> 
 
 @meta(unsupported_engines="*")
 def schema_of_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
+    if isinstance(col, str):
+        col = lit(col)
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "SCHEMA_OF_JSON", options_col)
@@ -1438,6 +1441,8 @@ def schema_of_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = No
 
 @meta(unsupported_engines="*")
 def schema_of_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
+    if isinstance(col, str):
+        col = lit(col)
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "SCHEMA_OF_CSV", options_col)
@@ -1560,7 +1565,9 @@ def from_csv(
 ) -> Column:
     schema = schema if isinstance(schema, Column) else lit(schema)
     if options is not None:
-        option_cols = create_map([lit(x) for x in _flatten(options.items())])
+        option_cols = create_map(
+            [lit(str(x) if isinstance(x, bool) else x) for x in _flatten(options.items())]
+        )
         return Column.invoke_anonymous_function(col, "FROM_CSV", schema, option_cols)
     return Column.invoke_anonymous_function(col, "FROM_CSV", schema)
 
@@ -1665,6 +1672,14 @@ def typeof(col: ColumnOrName) -> Column:
 @meta()
 def nullif(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col1, expression.Nullif, expression=col2)
+
+
+@meta(unsupported_engines="*")
+def stack(*cols: ColumnOrName) -> Column:
+    columns = [Column.ensure_col(x) for x in cols]
+    return Column.invoke_anonymous_function(
+        columns[0], "STACK", *columns[1:] if len(columns) > 1 else []
+    )
 
 
 @meta()

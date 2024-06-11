@@ -8,9 +8,7 @@ globals().update(
     {
         name: func
         for name, func in inspect.getmembers(module, inspect.isfunction)
-        if hasattr(func, "unsupported_engines")
-        and "spark" not in func.unsupported_engines
-        and "*" not in func.unsupported_engines
+        if hasattr(func, "unsupported_engines") and "spark" not in func.unsupported_engines
     }
 )
 

@@ -207,13 +207,6 @@ def test_sum_distinct(expression, expected):
     assert expression.sql() == expected
 
 
-def test_product():
-    with pytest.raises(NotImplementedError):
-        SF.product("cola")
-    with pytest.raises(NotImplementedError):
-        SF.product("cola")
-
-
 @pytest.mark.parametrize(
     "expression, expected",
     [
@@ -2794,3 +2787,16 @@ def test_map_zip_with():
 
 def test_nullif():
     assert SF.nullif("cola", "colb").sql() == "NULLIF(cola, colb)"
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.stack("cola", "colb"), "STACK(cola, colb)"),
+        (SF.stack(SF.col("cola"), SF.col("colb")), "STACK(cola, colb)"),
+        (SF.stack("cola"), "STACK(cola)"),
+        (SF.stack("cola", "colb", "colc", "cold"), "STACK(cola, colb, colc, cold)"),
+    ],
+)
+def test_stack(expression, expected):
+    assert expression.sql() == expected
