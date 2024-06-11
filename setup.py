@@ -21,6 +21,7 @@ setup(
     install_requires=[
         "prettytable<3.11.0",
         "sqlglot>=24.0.0,<25.1",
+        "typing_extensions>=4.8,<5",
     ],
     extras_require={
         "bigquery": [
@@ -42,7 +43,6 @@ setup(
             "pre-commit>=3.5;python_version=='3.8'",
             "pre-commit>=3.7,<3.8;python_version>='3.9'",
             "ruff>=0.4.4,<0.5",
-            "typing_extensions>=4.11,<5",
             "types-psycopg2>=2.9,<3",
         ],
         "docs": [
