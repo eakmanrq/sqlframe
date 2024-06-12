@@ -4,6 +4,7 @@ import datetime
 import math
 import typing as t
 from collections import Counter
+from decimal import Decimal
 
 import pytest
 from pyspark.sql import SparkSession as PySparkSession
@@ -2883,3 +2884,190 @@ def test_stack(get_session_and_func, get_func):
         Row(key=1, value=2),
         Row(key=3, value=None),
     ]
+
+
+def test_make_interval(get_session_and_func, get_func):
+    session, make_interval = get_session_and_func("make_interval")
+    df = session.createDataFrame(
+        [[100, 11, 1, 1, 12, 30, 01.001001]], ["year", "month", "week", "day", "hour", "min", "sec"]
+    )
+    assert (
+        df.select(
+            make_interval(df.year, df.month, df.week, df.day, df.hour, df.min, df.sec)
+            .cast("string")
+            .alias("r")
+        ).first()[0]
+        == "100 years 11 months 8 days 12 hours 30 minutes 1.001001 seconds"
+    )
+    assert (
+        df.select(
+            make_interval(df.year, df.month, df.week, df.day, df.hour, df.min)
+            .cast("string")
+            .alias("r")
+        ).first()[0]
+        == "100 years 11 months 8 days 12 hours 30 minutes"
+    )
+    assert (
+        df.select(
+            make_interval(df.year, df.month, df.week, df.day, df.hour).cast("string").alias("r")
+        ).first()[0]
+        == "100 years 11 months 8 days 12 hours"
+    )
+    assert (
+        df.select(
+            make_interval(df.year, df.month, df.week, df.day).cast("string").alias("r")
+        ).first()[0]
+        == "100 years 11 months 8 days"
+    )
+    assert (
+        df.select(make_interval(df.year, df.month, df.week).cast("string").alias("r")).first()[0]
+        == "100 years 11 months 7 days"
+    )
+    assert (
+        df.select(make_interval(df.year, df.month).cast("string").alias("r")).first()[0]
+        == "100 years 11 months"
+    )
+    assert df.select(make_interval(df.year).cast("string").alias("r")).first()[0] == "100 years"
+
+
+def test_try_add(get_session_and_func, get_func, get_types):
+    session, try_add = get_session_and_func("try_add")
+    to_date = get_func("to_date", session)
+    make_interval = get_func("make_interval", session)
+    lit = get_func("lit", session)
+    types = get_types(session)
+    df = session.createDataFrame([(1982, 15), (1990, 2)], ["birth", "age"])
+    assert df.select(try_add(df.birth, df.age).alias("r")).collect() == [
+        Row(r=1997),
+        Row(r=1992),
+    ]
+    schema = types.StructType(
+        [
+            types.StructField("i", types.IntegerType(), True),
+            types.StructField("d", types.StringType(), True),
+        ]
+    )
+    df = session.createDataFrame([(1, "2015-09-30")], schema)
+    df = df.select(df.i, to_date(df.d).alias("d"))
+    assert df.select(try_add(df.d, df.i).alias("r")).collect() == [
+        Row(r=datetime.date(2015, 10, 1))
+    ]
+    assert df.select(try_add(df.d, make_interval(df.i)).alias("r")).collect() == [
+        Row(r=datetime.date(2016, 9, 30))
+    ]
+    assert df.select(
+        try_add(df.d, make_interval(lit(0), lit(0), lit(0), df.i)).alias("r")
+    ).collect() == [Row(r=datetime.date(2015, 10, 1))]
+    assert df.select(
+        try_add(make_interval(df.i), make_interval(df.i)).cast("string").alias("r")
+    ).collect() == [Row(r="2 years")]
+
+
+def test_try_avg(get_session_and_func, get_func):
+    session, try_avg = get_session_and_func("try_avg")
+    df = session.createDataFrame([(1982, 15), (1990, 2)], ["birth", "age"])
+    assert df.select(try_avg("age")).first()[0] == 8.5
+
+
+def test_try_divide(get_session_and_func, get_func):
+    session, try_divide = get_session_and_func("try_divide")
+    make_interval = get_func("make_interval", session)
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(6000, 15), (1990, 2)], ["a", "b"])
+    assert df.select(try_divide(df.a, df.b).alias("r")).collect() == [
+        Row(r=400.0),
+        Row(r=995.0),
+    ]
+    df = session.createDataFrame([(1, 2)], ["year", "month"])
+    assert (
+        df.select(try_divide(make_interval(df.year), df.month).cast("string").alias("r")).first()[0]
+        == "6 months"
+    )
+    assert (
+        df.select(
+            try_divide(make_interval(df.year, df.month), lit(2)).cast("string").alias("r")
+        ).first()[0]
+        == "7 months"
+    )
+    assert (
+        df.select(
+            try_divide(make_interval(df.year, df.month), lit(0)).cast("string").alias("r")
+        ).first()[0]
+        is None
+    )
+
+
+def test_try_multiply(get_session_and_func, get_func):
+    session, try_multiply = get_session_and_func("try_multiply")
+    make_interval = get_func("make_interval", session)
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(6000, 15), (1990, 2)], ["a", "b"])
+    assert df.select(try_multiply(df.a, df.b).alias("r")).collect() == [
+        Row(r=90000),
+        Row(r=3980),
+    ]
+    df = session.createDataFrame([(2, 3)], ["a", "b"])
+    assert (
+        df.select(try_multiply(make_interval(df.a), df.b).cast("string").alias("r")).first()[0]
+        == "6 years"
+    )
+
+
+def test_try_subtract(get_session_and_func, get_func, get_types):
+    session, try_subtract = get_session_and_func("try_subtract")
+    make_interval = get_func("make_interval", session)
+    types = get_types(session)
+    lit = get_func("lit", session)
+    to_date = get_func("to_date", session)
+    df = session.createDataFrame([(6000, 15), (1990, 2)], ["a", "b"])
+    assert df.select(try_subtract(df.a, df.b).alias("r")).collect() == [
+        Row(r=5985),
+        Row(r=1988),
+    ]
+    schema = types.StructType(
+        [
+            types.StructField("i", types.IntegerType(), True),
+            types.StructField("d", types.StringType(), True),
+        ]
+    )
+    df = session.createDataFrame([(1, "2015-09-30")], schema)
+    df = df.select(df.i, to_date(df.d).alias("d"))
+    assert df.select(try_subtract(df.d, df.i).alias("r")).first()[0] == datetime.date(2015, 9, 29)
+    assert df.select(try_subtract(df.d, make_interval(df.i)).alias("r")).first()[
+        0
+    ] == datetime.date(2014, 9, 30)
+    assert df.select(
+        try_subtract(df.d, make_interval(lit(0), lit(0), lit(0), df.i)).alias("r")
+    ).first()[0] == datetime.date(2015, 9, 29)
+    assert (
+        df.select(
+            try_subtract(make_interval(df.i), make_interval(df.i)).cast("string").alias("r")
+        ).first()[0]
+        == "0 seconds"
+    )
+
+
+def test_try_sum(get_session_and_func, get_func):
+    session, try_sum = get_session_and_func("try_sum")
+    assert session.range(10).select(try_sum("id")).first()[0] == 45
+
+
+def test_try_to_binary(get_session_and_func, get_func):
+    session, try_to_binary = get_session_and_func("try_to_binary")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("abc",)], ["e"])
+    assert df.select(try_to_binary(df.e, lit("utf-8")).alias("r")).first()[0] == bytearray(b"abc")
+    df = session.createDataFrame([("414243",)], ["e"])
+    assert df.select(try_to_binary(df.e).alias("r")).first()[0] == bytearray(b"ABC")
+
+
+def test_try_to_number(get_session_and_func, get_func):
+    session, try_to_number = get_session_and_func("try_to_number")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("$78.12",)], ["e"])
+    actual = df.select(try_to_number(df.e, lit("$99.99")).alias("r")).first()[0]
+    if isinstance(session, SparkSession):
+        expected = 78.12
+    else:
+        expected = Decimal("78.12")
+    assert actual == expected
