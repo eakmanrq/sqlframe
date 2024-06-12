@@ -519,7 +519,10 @@ class SparkCatalog(
                 )
                 for col in df.columns
             ]
-        return [Column(*x) for x in self._spark_catalog.listColumns(tableName, dbName)]
+        return [
+            Column(**{name: x._asdict()[name] for name in Column._fields})
+            for x in self._spark_catalog.listColumns(tableName, dbName)
+        ]
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
