@@ -2800,3 +2800,106 @@ def test_nullif():
 )
 def test_stack(expression, expected):
     assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.make_interval("cola", "colb", None, SF.lit(100)),
+            "MAKE_INTERVAL(cola, colb, NULL, 100)",
+        ),
+    ],
+)
+def test_make_interval(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_add("cola", "colb"), "TRY_ADD(cola, colb)"),
+        (SF.try_add(SF.col("cola"), SF.col("colb")), "TRY_ADD(cola, colb)"),
+    ],
+)
+def test_try_add(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_avg("cola"), "TRY_AVG(cola)"),
+        (SF.try_avg(SF.col("cola")), "TRY_AVG(cola)"),
+    ],
+)
+def test_try_avg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_divide("cola", "colb"), "TRY_DIVIDE(cola, colb)"),
+        (SF.try_divide(SF.col("cola"), SF.col("colb")), "TRY_DIVIDE(cola, colb)"),
+    ],
+)
+def test_try_divide(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_multiply("cola", "colb"), "TRY_MULTIPLY(cola, colb)"),
+        (SF.try_multiply(SF.col("cola"), SF.col("colb")), "TRY_MULTIPLY(cola, colb)"),
+    ],
+)
+def test_try_multiply(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_subtract("cola", "colb"), "TRY_SUBTRACT(cola, colb)"),
+        (SF.try_subtract(SF.col("cola"), SF.col("colb")), "TRY_SUBTRACT(cola, colb)"),
+    ],
+)
+def test_try_subtract(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_sum("cola"), "TRY_SUM(cola)"),
+        (SF.try_sum(SF.col("cola")), "TRY_SUM(cola)"),
+    ],
+)
+def test_try_sum(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_to_binary("cola"), "TRY_TO_BINARY(cola)"),
+        (SF.try_to_binary(SF.col("cola")), "TRY_TO_BINARY(cola)"),
+        (SF.try_to_binary("cola", SF.lit("UTF-8")), "TRY_TO_BINARY(cola, 'UTF-8')"),
+    ],
+)
+def test_try_to_binary(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_to_number("cola"), "TRY_TO_NUMBER(cola)"),
+        (SF.try_to_number(SF.col("cola")), "TRY_TO_NUMBER(cola)"),
+        (SF.try_to_number(SF.col("cola"), SF.lit("$99.99")), "TRY_TO_NUMBER(cola, '$99.99')"),
+    ],
+)
+def test_try_to_number(expression, expected):
+    assert expression.sql() == expected

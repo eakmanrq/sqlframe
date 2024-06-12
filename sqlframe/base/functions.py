@@ -1682,6 +1682,71 @@ def stack(*cols: ColumnOrName) -> Column:
     )
 
 
+@meta(unsupported_engines="*")
+def make_interval(
+    years: t.Optional[ColumnOrName] = None,
+    months: t.Optional[ColumnOrName] = None,
+    weeks: t.Optional[ColumnOrName] = None,
+    days: t.Optional[ColumnOrName] = None,
+    hours: t.Optional[ColumnOrName] = None,
+    mins: t.Optional[ColumnOrName] = None,
+    secs: t.Optional[ColumnOrName] = None,
+) -> Column:
+    values = [years, months, weeks, days, hours, mins, secs]
+    for value in reversed(values.copy()):
+        if value is not None:
+            break
+        values = values[:-1]
+    else:
+        raise ValueError("At least one value must be provided")
+    columns = [Column.ensure_col(x) if x is not None else lit(None) for x in values]
+    return Column.invoke_anonymous_function(columns[0], "MAKE_INTERVAL", *columns[1:])
+
+
+@meta(unsupported_engines="*")
+def try_add(left: ColumnOrName, right: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(left, "TRY_ADD", right)
+
+
+@meta(unsupported_engines="*")
+def try_avg(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "TRY_AVG")
+
+
+@meta(unsupported_engines="*")
+def try_divide(left: ColumnOrName, right: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(left, "TRY_DIVIDE", right)
+
+
+@meta(unsupported_engines="*")
+def try_multiply(left: ColumnOrName, right: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(left, "TRY_MULTIPLY", right)
+
+
+@meta(unsupported_engines="*")
+def try_subtract(left: ColumnOrName, right: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(left, "TRY_SUBTRACT", right)
+
+
+@meta(unsupported_engines="*")
+def try_sum(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "TRY_SUM")
+
+
+@meta(unsupported_engines="*")
+def try_to_binary(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(col, "TRY_TO_BINARY", format)
+    return Column.invoke_anonymous_function(col, "TRY_TO_BINARY")
+
+
+@meta(unsupported_engines="*")
+def try_to_number(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(col, "TRY_TO_NUMBER", format)
+    return Column.invoke_anonymous_function(col, "TRY_TO_NUMBER")
+
+
 @meta()
 def _lambda_quoted(value: str) -> t.Optional[bool]:
     return False if value == "_" else None
