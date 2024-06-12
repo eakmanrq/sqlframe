@@ -202,8 +202,12 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             expected = expected.split("<")[0]
         if expected == "binary":
             pytest.skip("BigQuery doesn't support binary")
+        if expected == "timestamp":
+            expected = "datetime"
     result = df.select(typeof("col").alias("test")).first()[0]
-    assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(expected)
+    assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(
+        expected, dialect=dialect
+    )
 
 
 def test_alias(get_session_and_func):
