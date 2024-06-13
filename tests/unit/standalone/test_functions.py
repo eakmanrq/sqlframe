@@ -2903,3 +2903,68 @@ def test_try_to_binary(expression, expected):
 )
 def test_try_to_number(expression, expected):
     assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.aes_decrypt("cola", "colb", "colc", "cold", "cole"),
+            "AES_DECRYPT(cola, colb, colc, cold, cole)",
+        ),
+        (
+            SF.aes_decrypt(
+                SF.col("cola"), SF.col("colb"), SF.col("colc"), SF.col("cold"), SF.col("cole")
+            ),
+            "AES_DECRYPT(cola, colb, colc, cold, cole)",
+        ),
+        (SF.aes_decrypt("cola", SF.col("colb")), "AES_DECRYPT(cola, colb)"),
+        (
+            SF.aes_decrypt(SF.col("cola"), SF.col("colb"), padding="colc"),
+            "AES_DECRYPT(cola, colb, NULL, colc)",
+        ),
+    ],
+)
+def test_aes_decrypt(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.aes_encrypt("cola", "colb", "colc", "cold", "cole", "colf"),
+            "AES_ENCRYPT(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.aes_encrypt(
+                SF.col("cola"),
+                SF.col("colb"),
+                SF.col("colc"),
+                SF.col("cold"),
+                SF.col("cole"),
+                SF.col("colf"),
+            ),
+            "AES_ENCRYPT(cola, colb, colc, cold, cole, colf)",
+        ),
+        (SF.aes_encrypt("cola", SF.col("colb")), "AES_ENCRYPT(cola, colb)"),
+        (
+            SF.aes_encrypt(SF.col("cola"), SF.col("colb"), padding="colc"),
+            "AES_ENCRYPT(cola, colb, NULL, colc)",
+        ),
+    ],
+)
+def test_aes_encrypt(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_binary("cola"), "TO_BINARY(cola)"),
+        (SF.to_binary(SF.col("cola")), "TO_BINARY(cola)"),
+        (SF.to_binary("cola", SF.lit("UTF-8")), "TO_BINARY(cola, 'UTF-8')"),
+    ],
+)
+def test_to_binary(expression, expected):
+    assert expression.sql() == expected

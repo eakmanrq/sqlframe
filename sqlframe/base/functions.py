@@ -1692,14 +1692,9 @@ def make_interval(
     mins: t.Optional[ColumnOrName] = None,
     secs: t.Optional[ColumnOrName] = None,
 ) -> Column:
-    values = [years, months, weeks, days, hours, mins, secs]
-    for value in reversed(values.copy()):
-        if value is not None:
-            break
-        values = values[:-1]
-    else:
+    columns = _ensure_column_of_optionals([years, months, weeks, days, hours, mins, secs])
+    if not columns:
         raise ValueError("At least one value must be provided")
-    columns = [Column.ensure_col(x) if x is not None else lit(None) for x in values]
     return Column.invoke_anonymous_function(columns[0], "MAKE_INTERVAL", *columns[1:])
 
 
@@ -1747,6 +1742,38 @@ def try_to_number(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) ->
     return Column.invoke_anonymous_function(col, "TRY_TO_NUMBER")
 
 
+@meta(unsupported_engines="*")
+def aes_decrypt(
+    input: ColumnOrName,
+    key: ColumnOrName,
+    mode: t.Optional[ColumnOrName] = None,
+    padding: t.Optional[ColumnOrName] = None,
+    aad: t.Optional[ColumnOrName] = None,
+) -> Column:
+    columns = _ensure_column_of_optionals([key, mode, padding, aad])
+    return Column.invoke_anonymous_function(input, "AES_DECRYPT", *columns)
+
+
+@meta(unsupported_engines="*")
+def aes_encrypt(
+    input: ColumnOrName,
+    key: ColumnOrName,
+    mode: t.Optional[ColumnOrName] = None,
+    padding: t.Optional[ColumnOrName] = None,
+    iv: t.Optional[ColumnOrName] = None,
+    aad: t.Optional[ColumnOrName] = None,
+) -> Column:
+    columns = _ensure_column_of_optionals([key, mode, padding, iv, aad])
+    return Column.invoke_anonymous_function(input, "AES_ENCRYPT", *columns)
+
+
+@meta(unsupported_engines="*")
+def to_binary(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(col, "TO_BINARY", format)
+    return Column.invoke_anonymous_function(col, "TO_BINARY")
+
+
 @meta()
 def _lambda_quoted(value: str) -> t.Optional[bool]:
     return False if value == "_" else None
@@ -1762,3 +1789,11 @@ def _get_lambda_from_func(lambda_expression: t.Callable):
         this=lambda_expression(*[Column(x) for x in variables]).expression,
         expressions=variables,
     )
+
+
+def _ensure_column_of_optionals(optionals: t.List[t.Optional[ColumnOrName]]) -> t.List[Column]:
+    for value in reversed(optionals.copy()):
+        if value is not None:
+            break
+        optionals = optionals[:-1]
+    return [Column.ensure_col(x) if x is not None else lit(None) for x in optionals]

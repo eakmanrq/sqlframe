@@ -3075,3 +3075,148 @@ def test_try_to_number(get_session_and_func, get_func):
     else:
         expected = Decimal("78.12")
     assert actual == expected
+
+
+def test_to_binary(get_session_and_func, get_func):
+    session, to_binary = get_session_and_func("to_binary")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("abc",)], ["e"])
+    assert df.select(to_binary(df.e, lit("utf-8")).alias("r")).first()[0] == bytearray(b"abc")
+    df = session.createDataFrame([("414243",)], ["e"])
+    assert df.select(to_binary(df.e).alias("r")).first()[0] == bytearray(b"ABC")
+
+
+def test_aes_decrypt(get_session_and_func, get_func):
+    session, aes_decrypt = get_session_and_func("aes_decrypt")
+    unhex = get_func("unhex", session)
+    unbase64 = get_func("unbase64", session)
+    df = session.createDataFrame(
+        [
+            (
+                "AAAAAAAAAAAAAAAAQiYi+sTLm7KD9UcZ2nlRdYDe/PX4",
+                "abcdefghijklmnop12345678ABCDEFGH",
+                "GCM",
+                "DEFAULT",
+                "This is an AAD mixed into the input",
+            )
+        ],
+        ["input", "key", "mode", "padding", "aad"],
+    )
+    assert df.select(
+        aes_decrypt(unbase64(df.input), df.key, df.mode, df.padding, df.aad).alias("r")
+    ).first()[0] == bytearray(b"Spark")
+    df = session.createDataFrame(
+        [
+            (
+                "AAAAAAAAAAAAAAAAAAAAAPSd4mWyMZ5mhvjiAPQJnfg=",
+                "abcdefghijklmnop12345678ABCDEFGH",
+                "CBC",
+                "DEFAULT",
+            )
+        ],
+        ["input", "key", "mode", "padding"],
+    )
+    assert df.select(
+        aes_decrypt(unbase64(df.input), df.key, df.mode, df.padding).alias("r")
+    ).first()[0] == bytearray(b"Spark")
+    assert df.select(aes_decrypt(unbase64(df.input), df.key, df.mode).alias("r")).first()[
+        0
+    ] == bytearray(b"Spark")
+    df = session.createDataFrame(
+        [
+            (
+                "83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94",
+                "0000111122223333",
+            )
+        ],
+        ["input", "key"],
+    )
+    assert df.select(aes_decrypt(unhex(df.input), df.key).alias("r")).first()[0] == bytearray(
+        b"Spark"
+    )
+
+
+def test_aes_encrypt(get_session_and_func, get_func):
+    session, aes_encrypt = get_session_and_func("aes_encrypt")
+    to_binary = get_func("to_binary", session)
+    base64 = get_func("base64", session)
+    unbase64 = get_func("unbase64", session)
+    lit = get_func("lit", session)
+    aes_decrypt = get_func("aes_decrypt", session)
+    df = session.createDataFrame(
+        [
+            (
+                "Spark",
+                "abcdefghijklmnop12345678ABCDEFGH",
+                "GCM",
+                "DEFAULT",
+                "000000000000000000000000",
+                "This is an AAD mixed into the input",
+            )
+        ],
+        ["input", "key", "mode", "padding", "iv", "aad"],
+    )
+    assert (
+        df.select(
+            base64(
+                aes_encrypt(
+                    df.input, df.key, df.mode, df.padding, to_binary(df.iv, lit("hex")), df.aad
+                )
+            ).alias("r")
+        ).first()[0]
+        == "AAAAAAAAAAAAAAAAQiYi+sTLm7KD9UcZ2nlRdYDe/PX4"
+    )
+    assert (
+        df.select(
+            base64(
+                aes_encrypt(df.input, df.key, df.mode, df.padding, to_binary(df.iv, lit("hex")))
+            ).alias("r")
+        ).first()[0]
+        == "AAAAAAAAAAAAAAAAQiYi+sRNYDAOTjdSEcYBFsAWPL1f"
+    )
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                "1234567890abcdef",
+                "ECB",
+                "PKCS",
+            )
+        ],
+        ["input", "key", "mode", "padding"],
+    )
+    assert df.select(
+        aes_decrypt(
+            aes_encrypt(df.input, df.key, df.mode, df.padding), df.key, df.mode, df.padding
+        ).alias("r")
+    ).first()[0] == bytearray(b"Spark SQL")
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                "0000111122223333",
+                "ECB",
+            )
+        ],
+        ["input", "key", "mode"],
+    )
+    assert df.select(
+        aes_decrypt(aes_encrypt(df.input, df.key, df.mode), df.key, df.mode).alias("r")
+    ).first()[0] == bytearray(b"Spark SQL")
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                "abcdefghijklmnop",
+            )
+        ],
+        ["input", "key"],
+    )
+    assert (
+        df.select(
+            aes_decrypt(unbase64(base64(aes_encrypt(df.input, df.key))), df.key)
+            .cast("STRING")
+            .alias("r")
+        ).first()[0]
+        == "Spark SQL"
+    )
