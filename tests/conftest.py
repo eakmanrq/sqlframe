@@ -7,7 +7,7 @@ import pytest
 
 def pytest_collection_modifyitems(items, *args, **kwargs):
     for item in items:
-        if not list(item.iter_markers()):
+        if not [x for x in item.iter_markers() if x.name != "parametrize"]:
             item.add_marker("fast")
 
 
