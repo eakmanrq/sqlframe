@@ -2348,14 +2348,14 @@ def test_to_json(expression, expected):
     "expression, expected",
     [
         (
-            SF.schema_of_json("cola", dict(timestampFormat="dd/MM/yyyy")),
+            SF.schema_of_json(SF.col("cola"), dict(timestampFormat="dd/MM/yyyy")),
             "SCHEMA_OF_JSON(cola, MAP('timestampFormat', 'dd/MM/yyyy'))",
         ),
         (
             SF.schema_of_json(SF.col("cola"), dict(timestampFormat="dd/MM/yyyy")),
             "SCHEMA_OF_JSON(cola, MAP('timestampFormat', 'dd/MM/yyyy'))",
         ),
-        (SF.schema_of_json("cola"), "SCHEMA_OF_JSON(cola)"),
+        (SF.schema_of_json(SF.col("cola")), "SCHEMA_OF_JSON(cola)"),
     ],
 )
 def test_schema_of_json(expression, expected):
@@ -2366,14 +2366,14 @@ def test_schema_of_json(expression, expected):
     "expression, expected",
     [
         (
-            SF.schema_of_csv("cola", dict(timestampFormat="dd/MM/yyyy")),
+            SF.schema_of_csv(SF.col("cola"), dict(timestampFormat="dd/MM/yyyy")),
             "SCHEMA_OF_CSV(cola, MAP('timestampFormat', 'dd/MM/yyyy'))",
         ),
         (
             SF.schema_of_csv(SF.col("cola"), dict(timestampFormat="dd/MM/yyyy")),
             "SCHEMA_OF_CSV(cola, MAP('timestampFormat', 'dd/MM/yyyy'))",
         ),
-        (SF.schema_of_csv("cola"), "SCHEMA_OF_CSV(cola)"),
+        (SF.schema_of_csv(SF.col("cola")), "SCHEMA_OF_CSV(cola)"),
     ],
 )
 def test_schema_of_csv(expression, expected):
