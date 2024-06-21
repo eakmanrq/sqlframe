@@ -2071,8 +2071,8 @@ def test_array(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_agg("cola"), "ARRAY_AGG(cola)"),
-        (SF.array_agg(SF.col("cola")), "ARRAY_AGG(cola)"),
+        (SF.array_agg("cola"), "COLLECT_LIST(cola)"),
+        (SF.array_agg(SF.col("cola")), "COLLECT_LIST(cola)"),
     ],
 )
 def test_array_agg(expression, expected):
@@ -2127,8 +2127,8 @@ def test_array_prepend(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_size("cola"), "ARRAY_SIZE(cola)"),
-        (SF.array_size(SF.col("cola")), "ARRAY_SIZE(cola)"),
+        (SF.array_size("cola"), "SIZE(cola)"),
+        (SF.array_size(SF.col("cola")), "SIZE(cola)"),
     ],
 )
 def test_array_size(expression, expected):
