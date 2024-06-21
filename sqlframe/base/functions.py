@@ -1280,7 +1280,7 @@ def array(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
 
 @meta(unsupported_engines="*")
 def array_agg(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ARRAY_AGG")
+    return Column.invoke_expression_over_column(col, expression.ArrayAgg)
 
 
 @meta(unsupported_engines="*")
@@ -1299,8 +1299,9 @@ def array_insert(
     col: ColumnOrName, pos: t.Union[ColumnOrName, int], value: ColumnOrLiteral
 ) -> Column:
     value = value if isinstance(value, Column) else lit(value)
-    pos = pos if isinstance(pos, Column) else lit(pos)
-    return Column.invoke_anonymous_function(col, "ARRAY_INSERT", pos, value)
+    if isinstance(pos, int):
+        pos = lit(pos)
+    return Column.invoke_anonymous_function(col, "ARRAY_INSERT", pos, value)  # type: ignore
 
 
 @meta(unsupported_engines="*")
@@ -1311,7 +1312,7 @@ def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta(unsupported_engines="*")
 def array_size(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+    return Column.invoke_expression_over_column(col, expression.ArraySize)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
