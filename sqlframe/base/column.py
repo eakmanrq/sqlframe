@@ -229,7 +229,7 @@ class Column:
         return Column(op)
 
     def unary_op(self, klass: t.Callable, **kwargs) -> Column:
-        return Column(klass(this=self.column_expression, **kwargs))
+        return Column(klass(this=exp.Paren(this=self.column_expression), **kwargs))
 
     @property
     def is_alias(self):
