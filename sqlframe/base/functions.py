@@ -1278,6 +1278,42 @@ def array(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     return Column.invoke_expression_over_column(None, expression.Array, expressions=columns)
 
 
+@meta(unsupported_engines="*")
+def array_agg(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "ARRAY_AGG")
+
+
+@meta(unsupported_engines="*")
+def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    value = value if isinstance(value, Column) else lit(value)
+    return Column.invoke_anonymous_function(col, "ARRAY_APPEND", value)
+
+
+@meta(unsupported_engines="*")
+def array_compact(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "ARRAY_COMPACT")
+
+
+@meta(unsupported_engines="*")
+def array_insert(
+    col: ColumnOrName, pos: t.Union[ColumnOrName, int], value: ColumnOrLiteral
+) -> Column:
+    value = value if isinstance(value, Column) else lit(value)
+    pos = pos if isinstance(pos, Column) else lit(pos)
+    return Column.invoke_anonymous_function(col, "ARRAY_INSERT", pos, value)
+
+
+@meta(unsupported_engines="*")
+def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    value = value if isinstance(value, Column) else lit(value)
+    return Column.invoke_anonymous_function(col, "ARRAY_PREPEND", value)
+
+
+@meta(unsupported_engines="*")
+def array_size(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+
+
 @meta(unsupported_engines=["bigquery", "postgres"])
 def create_map(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     cols = list(_flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore

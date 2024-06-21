@@ -2071,6 +2071,73 @@ def test_array(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
+        (SF.array_agg("cola"), "ARRAY_AGG(cola)"),
+        (SF.array_agg(SF.col("cola")), "ARRAY_AGG(cola)"),
+    ],
+)
+def test_array_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_append("cola", "val"), "ARRAY_APPEND(cola, 'val')"),
+        (SF.array_append(SF.col("cola"), SF.col("colb")), "ARRAY_APPEND(cola, colb)"),
+    ],
+)
+def test_array_append(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_compact("cola"), "ARRAY_COMPACT(cola)"),
+        (SF.array_compact(SF.col("cola")), "ARRAY_COMPACT(cola)"),
+    ],
+)
+def test_array_compact(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_insert("cola", 1, "val"), "ARRAY_INSERT(cola, 1, 'val')"),
+        (SF.array_insert(SF.col("cola"), 1, SF.col("colb")), "ARRAY_INSERT(cola, 1, colb)"),
+        (SF.array_insert("cola", "colb", "val"), "ARRAY_INSERT(cola, colb, 'val')"),
+    ],
+)
+def test_array_insert(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_prepend("cola", "-"), "ARRAY_PREPEND(cola, '-')"),
+        (SF.array_prepend(SF.col("cola"), SF.col("colb")), "ARRAY_PREPEND(cola, colb)"),
+    ],
+)
+def test_array_prepend(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_size("cola"), "ARRAY_SIZE(cola)"),
+        (SF.array_size(SF.col("cola")), "ARRAY_SIZE(cola)"),
+    ],
+)
+def test_array_size(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
         (SF.create_map("keya", "valuea", "keyb", "valueb"), "MAP(keya, valuea, keyb, valueb)"),
         (
             SF.create_map(SF.col("keya"), SF.col("valuea"), SF.col("keyb"), SF.col("valueb")),
