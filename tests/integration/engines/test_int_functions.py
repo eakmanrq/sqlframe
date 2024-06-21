@@ -194,7 +194,7 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
     if isinstance(session, DuckDBSession):
         if expected == "binary":
             pytest.skip("DuckDB doesn't support binary")
-        expected = expected.replace("string", "varchar")
+        expected = expected.replace("string", "varchar").replace("struct<a:", "struct<a ")
     if isinstance(session, BigQuerySession):
         if expected.startswith("map"):
             pytest.skip("BigQuery doesn't support map types")
