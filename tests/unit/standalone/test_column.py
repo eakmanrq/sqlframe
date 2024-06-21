@@ -85,7 +85,11 @@ def test_rpow():
 
 
 def test_invert():
-    assert (~F.col("cola")).sql() == "NOT cola"
+    assert (~F.col("cola")).sql() == "NOT (cola)"
+
+
+def test_invert_conjuction():
+    assert (~(F.col("cola") | F.col("colb"))).sql() == "NOT (cola OR colb)"
 
 
 def test_paren():
