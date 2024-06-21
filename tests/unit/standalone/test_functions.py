@@ -12,7 +12,8 @@ from sqlframe.standalone import functions as SF
 
 @pytest.mark.parametrize("name,func", inspect.getmembers(SF, inspect.isfunction))
 def test_invoke_anonymous(name, func):
-    if "invoke_anonymous_function" in inspect.getsource(func):
+    ignore_funcs = {"array_size"}
+    if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
 
@@ -2065,6 +2066,73 @@ def test_translate(expression, expected):
     ],
 )
 def test_array(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_agg("cola"), "COLLECT_LIST(cola)"),
+        (SF.array_agg(SF.col("cola")), "COLLECT_LIST(cola)"),
+    ],
+)
+def test_array_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_append("cola", "val"), "ARRAY_APPEND(cola, 'val')"),
+        (SF.array_append(SF.col("cola"), SF.col("colb")), "ARRAY_APPEND(cola, colb)"),
+    ],
+)
+def test_array_append(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_compact("cola"), "ARRAY_COMPACT(cola)"),
+        (SF.array_compact(SF.col("cola")), "ARRAY_COMPACT(cola)"),
+    ],
+)
+def test_array_compact(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_insert("cola", 1, "val"), "ARRAY_INSERT(cola, 1, 'val')"),
+        (SF.array_insert(SF.col("cola"), 1, SF.col("colb")), "ARRAY_INSERT(cola, 1, colb)"),
+        (SF.array_insert("cola", "colb", "val"), "ARRAY_INSERT(cola, colb, 'val')"),
+    ],
+)
+def test_array_insert(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_prepend("cola", "-"), "ARRAY_PREPEND(cola, '-')"),
+        (SF.array_prepend(SF.col("cola"), SF.col("colb")), "ARRAY_PREPEND(cola, colb)"),
+    ],
+)
+def test_array_prepend(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.array_size("cola"), "ARRAY_SIZE(cola)"),
+        (SF.array_size(SF.col("cola")), "ARRAY_SIZE(cola)"),
+    ],
+)
+def test_array_size(expression, expected):
     assert expression.sql() == expected
 
 

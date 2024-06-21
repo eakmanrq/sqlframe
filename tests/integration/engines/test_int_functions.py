@@ -2067,6 +2067,69 @@ def test_array(get_session_and_func):
     ]
 
 
+def test_array_agg(get_session_and_func):
+    session, array_agg = get_session_and_func("array_agg")
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.agg(array_agg("c").alias("r")).collect() == [
+        Row(r=[1, 1, 2]),
+    ]
+
+
+def test_array_append(get_session_and_func):
+    session, array_append = get_session_and_func("array_append")
+    df = session.createDataFrame([Row(c1=["b", "a", "c"], c2="c")])
+    assert df.select(array_append(df.c1, df.c2)).collect() == [
+        Row(value=["b", "a", "c", "c"]),
+    ]
+    assert df.select(array_append(df.c1, "x")).collect() == [
+        Row(value=["b", "a", "c", "x"]),
+    ]
+
+
+def test_array_compact(get_session_and_func):
+    session, array_compact = get_session_and_func("array_compact")
+    df = session.createDataFrame([([1, None, 2, 3],), ([4, 5, None, 4],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [
+        Row(value=[1, 2, 3]),
+        Row(value=[4, 5, 4]),
+    ]
+
+
+def test_array_insert(get_session_and_func):
+    session, array_insert = get_session_and_func("array_insert")
+    df = session.createDataFrame(
+        [(["a", "b", "c"], 2, "d"), (["c", "b", "a"], -2, "d")], ["data", "pos", "val"]
+    )
+    assert df.select(
+        array_insert(df.data, df.pos.cast("integer"), df.val).alias("data")
+    ).collect() == [
+        Row(data=["a", "d", "b", "c"]),
+        Row(data=["c", "b", "d", "a"]),
+    ]
+    assert df.select(array_insert(df.data, 5, "hello").alias("data")).collect() == [
+        Row(data=["a", "b", "c", None, "hello"]),
+        Row(data=["c", "b", "a", None, "hello"]),
+    ]
+
+
+def test_array_prepend(get_session_and_func):
+    session, array_prepend = get_session_and_func("array_prepend")
+    df = session.createDataFrame([([2, 3, 4],), ([],)], ["data"])
+    assert df.select(array_prepend(df.data, 1)).collect() == [
+        Row(value=[1, 2, 3, 4]),
+        Row(value=[1]),
+    ]
+
+
+def test_array_size(get_session_and_func):
+    session, array_size = get_session_and_func("array_size")
+    df = session.createDataFrame([([2, 1, 3],), (None,)], ["data"])
+    assert df.select(array_size(df.data).alias("r")).collect() == [
+        Row(r=3),
+        Row(r=None),
+    ]
+
+
 def test_create_map(get_session_and_func, get_func):
     session, create_map = get_session_and_func("create_map")
     col = get_func("col", session)
