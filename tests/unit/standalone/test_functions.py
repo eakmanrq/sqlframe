@@ -12,7 +12,8 @@ from sqlframe.standalone import functions as SF
 
 @pytest.mark.parametrize("name,func", inspect.getmembers(SF, inspect.isfunction))
 def test_invoke_anonymous(name, func):
-    if "invoke_anonymous_function" in inspect.getsource(func):
+    ignore_funcs = {"array_size"}
+    if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
 
@@ -2127,8 +2128,8 @@ def test_array_prepend(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_size("cola"), "SIZE(cola)"),
-        (SF.array_size(SF.col("cola")), "SIZE(cola)"),
+        (SF.array_size("cola"), "ARRAY_SIZE(cola)"),
+        (SF.array_size(SF.col("cola")), "ARRAY_SIZE(cola)"),
     ],
 )
 def test_array_size(expression, expected):

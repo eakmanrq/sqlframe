@@ -2128,9 +2128,6 @@ def test_array_size(get_session_and_func):
         Row(r=3),
         Row(r=None),
     ]
-    # df = spark.createDataFrame([([2, 1, 3],), (None,)], ['data'])
-    # df.select(array_size(df.data).alias('r')).collect()
-    # [Row(r=3), Row(r=None)]
 
 
 def test_create_map(get_session_and_func, get_func):

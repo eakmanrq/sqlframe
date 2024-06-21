@@ -1312,7 +1312,7 @@ def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta(unsupported_engines="*")
 def array_size(col: ColumnOrName) -> Column:
-    return Column.invoke_expression_over_column(col, expression.ArraySize)
+    return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
