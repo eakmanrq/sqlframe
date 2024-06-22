@@ -2655,6 +2655,44 @@ def test_array_sort(get_session_and_func, get_func):
             ).collect() == [Row(r=["foobar", "foo", None, "bar"]), Row(r=["foo"])]
 
 
+def test_bit_and(get_session_and_func):
+    session, bit_and = get_session_and_func("bit_and")
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(bit_and("c")).first() == Row(value=0)
+
+
+def test_bit_or(get_session_and_func):
+    session, bit_or = get_session_and_func("bit_or")
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(bit_or("c")).first() == Row(value=3)
+
+
+def test_bit_xor(get_session_and_func):
+    session, bit_xor = get_session_and_func("bit_xor")
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(bit_xor("c")).first() == Row(value=2)
+
+
+def test_bit_count(get_session_and_func):
+    session, bit_count = get_session_and_func("bit_count")
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(bit_count("c")).collect() == [Row(value=1), Row(value=1), Row(value=1)]
+
+
+def test_bit_get(get_session_and_func, get_func):
+    session, bit_get = get_session_and_func("bit_get")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(bit_get("c", lit(1))).collect() == [Row(value=0), Row(value=0), Row(value=1)]
+
+
+def test_getbit(get_session_and_func, get_func):
+    session, getbit = get_session_and_func("getbit")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([[1], [1], [2]], ["c"])
+    assert df.select(getbit("c", lit(1))).collect() == [Row(value=0), Row(value=0), Row(value=1)]
+
+
 def test_shuffle(get_session_and_func):
     session, shuffle = get_session_and_func("shuffle")
     df = session.createDataFrame([([1, 20, 3, 5],), ([1, 20, None, 3],)], ["data"])

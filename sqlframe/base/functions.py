@@ -1315,6 +1315,36 @@ def array_size(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
 
 
+@meta(unsupported_engines="*")
+def bit_and(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BIT_AND")
+
+
+@meta(unsupported_engines="*")
+def bit_or(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BIT_OR")
+
+
+@meta(unsupported_engines="*")
+def bit_xor(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BIT_XOR")
+
+
+@meta(unsupported_engines="*")
+def bit_count(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BIT_COUNT")
+
+
+@meta(unsupported_engines="*")
+def bit_get(col: ColumnOrName, pos: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BIT_GET", pos)
+
+
+@meta(unsupported_engines="*")
+def getbit(col: ColumnOrName, pos: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "GETBIT", pos)
+
+
 @meta(unsupported_engines=["bigquery", "postgres"])
 def create_map(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     cols = list(_flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
