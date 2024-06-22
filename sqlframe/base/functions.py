@@ -1835,6 +1835,31 @@ def aes_encrypt(
 
 
 @meta(unsupported_engines="*")
+def bitmap_bit_position(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_BIT_POSITION")
+
+
+@meta(unsupported_engines="*")
+def bitmap_bucket_number(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_BUCKET_NUMBER")
+
+
+@meta(unsupported_engines="*")
+def bitmap_construct_agg(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_CONSTRUCT_AGG")
+
+
+@meta(unsupported_engines="*")
+def bitmap_count(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_COUNT")
+
+
+@meta(unsupported_engines="*")
+def bitmap_or_agg(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_OR_AGG")
+
+
+@meta(unsupported_engines="*")
 def to_binary(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     if format is not None:
         return Column.invoke_anonymous_function(col, "TO_BINARY", format)

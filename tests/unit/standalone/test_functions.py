@@ -3095,10 +3095,53 @@ def test_aes_encrypt(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.to_binary("cola"), "TO_BINARY(cola)"),
-        (SF.to_binary(SF.col("cola")), "TO_BINARY(cola)"),
-        (SF.to_binary("cola", SF.lit("UTF-8")), "TO_BINARY(cola, 'UTF-8')"),
+        (SF.bitmap_bit_position("cola"), "BITMAP_BIT_POSITION(cola)"),
+        (SF.bitmap_bit_position(SF.col("cola")), "BITMAP_BIT_POSITION(cola)"),
     ],
 )
-def test_to_binary(expression, expected):
+def test_bitmap_bit_position(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bitmap_bucket_number("cola"), "BITMAP_BUCKET_NUMBER(cola)"),
+        (SF.bitmap_bucket_number(SF.col("cola")), "BITMAP_BUCKET_NUMBER(cola)"),
+    ],
+)
+def test_bitmap_bucket_number(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bitmap_construct_agg("cola"), "BITMAP_CONSTRUCT_AGG(cola)"),
+        (SF.bitmap_construct_agg(SF.col("cola")), "BITMAP_CONSTRUCT_AGG(cola)"),
+    ],
+)
+def test_bitmap_construct_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bitmap_count("cola"), "BITMAP_COUNT(cola)"),
+        (SF.bitmap_count(SF.col("cola")), "BITMAP_COUNT(cola)"),
+    ],
+)
+def test_bitmap_count(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bitmap_or_agg("cola"), "BITMAP_OR_AGG(cola)"),
+        (SF.bitmap_or_agg(SF.col("cola")), "BITMAP_OR_AGG(cola)"),
+    ],
+)
+def test_bitmap_or_agg(expression, expected):
     assert expression.sql() == expected
