@@ -3321,3 +3321,52 @@ def test_aes_encrypt(get_session_and_func, get_func):
         ).first()[0]
         == "Spark SQL"
     )
+
+
+def test_bitmap_bit_position(get_session_and_func, get_func):
+    session, bitmap_bit_position = get_session_and_func("bitmap_bit_position")
+    df = session.createDataFrame([(123,)], ["a"])
+    assert df.select(bitmap_bit_position(df.a).alias("r")).collect() == [Row(r=122)]
+
+
+def test_bitmap_bucket_number(get_session_and_func, get_func):
+    session, bitmap_bucket_number = get_session_and_func("bitmap_bucket_number")
+    df = session.createDataFrame([(123,)], ["a"])
+    assert df.select(bitmap_bucket_number(df.a).alias("r")).collect() == [Row(r=1)]
+
+
+def test_bitmap_construct_agg(get_session_and_func, get_func):
+    session, bitmap_construct_agg = get_session_and_func("bitmap_construct_agg")
+    substring = get_func("substring", session)
+    hex = get_func("hex", session)
+    bitmap_bit_position = get_func("bitmap_bit_position", session)
+    df = session.createDataFrame([(1,), (2,), (3,)], ["a"])
+    assert (
+        df.select(
+            substring(hex(bitmap_construct_agg(bitmap_bit_position(df.a))), 0, 6).alias("r")
+        ).first()[0]
+        == "070000"
+    )
+
+
+def test_bitmap_count(get_session_and_func, get_func):
+    session, bitmap_count = get_session_and_func("bitmap_count")
+    to_binary = get_func("to_binary", session)
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("FFFF",)], ["a"])
+    assert df.select(bitmap_count(to_binary(df.a, lit("hex"))).alias("r")).first()[0] == 16
+
+
+def test_bitmap_or_agg(get_session_and_func, get_func):
+    session, bitmap_or_agg = get_session_and_func("bitmap_or_agg")
+    to_binary = get_func("to_binary", session)
+    lit = get_func("lit", session)
+    substring = get_func("substring", session)
+    hex = get_func("hex", session)
+    df = session.createDataFrame([("10",), ("20",), ("40",)], ["a"])
+    assert (
+        df.select(
+            substring(hex(bitmap_or_agg(to_binary(df.a, lit("hex")))), 0, 6).alias("r")
+        ).first()[0]
+        == "700000"
+    )
