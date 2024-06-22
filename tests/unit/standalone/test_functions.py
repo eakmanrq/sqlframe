@@ -2139,6 +2139,72 @@ def test_array_size(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
+        (SF.bit_and("cola"), "BIT_AND(cola)"),
+        (SF.bit_and(SF.col("cola")), "BIT_AND(cola)"),
+    ],
+)
+def test_bit_and(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bit_or("cola"), "BIT_OR(cola)"),
+        (SF.bit_or(SF.col("cola")), "BIT_OR(cola)"),
+    ],
+)
+def test_bit_or(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bit_xor("cola"), "BIT_XOR(cola)"),
+        (SF.bit_xor(SF.col("cola")), "BIT_XOR(cola)"),
+    ],
+)
+def test_bit_xor(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bit_count("cola"), "BIT_COUNT(cola)"),
+        (SF.bit_count(SF.col("cola")), "BIT_COUNT(cola)"),
+    ],
+)
+def test_bit_count(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bit_get("cola", "colb"), "BIT_GET(cola, colb)"),
+        (SF.bit_get(SF.col("cola"), SF.col("colb")), "BIT_GET(cola, colb)"),
+    ],
+)
+def test_bit_get(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.getbit("cola", "colb"), "GETBIT(cola, colb)"),
+        (SF.getbit(SF.col("cola"), SF.lit(1)), "GETBIT(cola, 1)"),
+    ],
+)
+def test_getbit(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
         (SF.create_map("keya", "valuea", "keyb", "valueb"), "MAP(keya, valuea, keyb, valueb)"),
         (
             SF.create_map(SF.col("keya"), SF.col("valuea"), SF.col("keyb"), SF.col("valueb")),
