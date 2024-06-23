@@ -12,7 +12,9 @@ from sqlframe.standalone import functions as SF
 
 @pytest.mark.parametrize("name,func", inspect.getmembers(SF, inspect.isfunction))
 def test_invoke_anonymous(name, func):
-    ignore_funcs = {"array_size"}
+    # array_size - converts to `size` but `array_size` and `size` behave differently
+    # to_char - convert to a cast that ignores the format provided
+    ignore_funcs = {"array_size", "to_char"}
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
@@ -729,6 +731,19 @@ def test_hypot(expression, expected):
     ],
 )
 def test_pow(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.power("cola", "colb"), "POWER(cola, colb)"),
+        (SF.power(SF.col("cola"), SF.col("colb")), "POWER(cola, colb)"),
+        (SF.power(10.10, "colb"), "POWER(10.1, colb)"),
+        (SF.power("cola", 10.10), "POWER(cola, 10.1)"),
+    ],
+)
+def test_power(expression, expected):
     assert expression.sql() == expected
 
 
@@ -3144,4 +3159,1721 @@ def test_bitmap_count(expression, expected):
     ],
 )
 def test_bitmap_or_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.any_value("cola", False), "ANY_VALUE(cola)"),
+        (SF.any_value(SF.col("cola"), True), "ANY_VALUE(cola) IGNORE NULLS"),
+    ],
+)
+def test_any_value(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.approx_percentile("cola", 0.5), "PERCENTILE_APPROX(cola, 0.5, 10000)"),
+        (
+            SF.approx_percentile(SF.col("cola"), SF.col("colb")),
+            "PERCENTILE_APPROX(cola, colb, 10000)",
+        ),
+        (SF.approx_percentile("cola", 0.5, 100), "PERCENTILE_APPROX(cola, 0.5, 100)"),
+        (
+            SF.approx_percentile("cola", [0.5, 0.75], 100),
+            "PERCENTILE_APPROX(cola, ARRAY(0.5, 0.75), 100)",
+        ),
+    ],
+)
+def test_approx_percentile(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bool_and("cola"), "BOOL_AND(cola)"),
+        (SF.bool_and(SF.col("cola")), "BOOL_AND(cola)"),
+    ],
+)
+def test_bool_and(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bool_or("cola"), "BOOL_OR(cola)"),
+        (SF.bool_or(SF.col("cola")), "BOOL_OR(cola)"),
+    ],
+)
+def test_bool_or(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.btrim("cola"), "BTRIM(cola)"),
+        (SF.btrim(SF.col("cola")), "BTRIM(cola)"),
+        (SF.btrim("cola", "chars"), "BTRIM(cola, chars)"),
+        (SF.btrim("cola", SF.lit("chars")), "BTRIM(cola, 'chars')"),
+    ],
+)
+def test_btrim(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bucket(1, "cola"), "BUCKET(1, cola)"),
+        (SF.bucket(SF.col("bucket_col"), SF.col("cola")), "BUCKET(bucket_col, cola)"),
+    ],
+)
+def test_bucket(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.call_function("blah", "cola"), "BLAH(cola)"),
+        (SF.call_function("blah", SF.col("cola")), "BLAH(cola)"),
+        (SF.call_function("blah", "cola", "colb"), "BLAH(cola, colb)"),
+    ],
+)
+def test_call_function(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.cardinality("cola"), "CARDINALITY(cola)"),
+        (SF.cardinality(SF.col("cola")), "CARDINALITY(cola)"),
+    ],
+)
+def test_cardinality(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.char("cola"), "CHR(cola)"),
+        (SF.char(SF.col("cola")), "CHR(cola)"),
+    ],
+)
+def test_char(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.char_length("cola"), "CHAR_LENGTH(cola)"),
+        (SF.char_length(SF.col("cola")), "CHAR_LENGTH(cola)"),
+    ],
+)
+def test_char_length(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.character_length("cola"), "CHARACTER_LENGTH(cola)"),
+        (SF.character_length(SF.col("cola")), "CHARACTER_LENGTH(cola)"),
+    ],
+)
+def test_character_length(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.contains("cola", "colb"), "CONTAINS(cola, colb)"),
+        (SF.contains(SF.col("cola"), SF.col("colb")), "CONTAINS(cola, colb)"),
+    ],
+)
+def test_contains(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.convert_timezone(None, SF.col("cola"), "colb"), "CONVERT_TIMEZONE(cola, colb)"),
+        (SF.convert_timezone(None, SF.col("cola"), SF.col("colb")), "CONVERT_TIMEZONE(cola, colb)"),
+        (SF.convert_timezone(SF.col("colc"), "cola", "colb"), "CONVERT_TIMEZONE(colc, cola, colb)"),
+    ],
+)
+def test_convert_timezone(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.count_if("cola"), "COUNT_IF(cola)"),
+        (SF.count_if(SF.col("cola")), "COUNT_IF(cola)"),
+    ],
+)
+def test_count_if(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.count_min_sketch("cola", "colb", "colc", "cold"),
+            "COUNT_MIN_SKETCH(cola, CAST(colb AS DOUBLE), CAST(colc AS DOUBLE), cold)",
+        ),
+        (
+            SF.count_min_sketch(SF.col("cola"), SF.col("colb"), SF.col("colc"), SF.col("cold")),
+            "COUNT_MIN_SKETCH(cola, CAST(colb AS DOUBLE), CAST(colc AS DOUBLE), cold)",
+        ),
+    ],
+)
+def test_count_min_sketch(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.curdate(), "CURDATE()"),
+    ],
+)
+def test_curdate(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_catalog(), "CURRENT_CATALOG()"),
+    ],
+)
+def test_current_catalog(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_database(), "CURRENT_DATABASE()"),
+    ],
+)
+def test_current_database(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_schema(), "CURRENT_DATABASE()"),
+    ],
+)
+def test_current_schema(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_timezone(), "CURRENT_TIMEZONE()"),
+    ],
+)
+def test_current_timezone(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_user(), "CURRENT_USER()"),
+    ],
+)
+def test_current_user(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.date_from_unix_date("cola"), "DATE_FROM_UNIX_DATE(cola)"),
+        (SF.date_from_unix_date(SF.col("cola")), "DATE_FROM_UNIX_DATE(cola)"),
+    ],
+)
+def test_date_from_unix_date(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.date_part("cola", "colb"), "DATE_PART(cola, colb)"),
+        (SF.date_part(SF.col("cola"), SF.col("colb")), "DATE_PART(cola, colb)"),
+    ],
+)
+def test_date_part(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.dateadd("cola", 1), "DATE_ADD(cola, 1)"),
+        (SF.dateadd(SF.col("cola"), SF.col("colb")), "DATE_ADD(cola, colb)"),
+    ],
+)
+def test_dateadd(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.datediff("cola", "colb"), "DATEDIFF(CAST(cola AS DATE), CAST(colb AS DATE))"),
+        (
+            SF.datediff(SF.col("cola"), SF.col("colb")),
+            "DATEDIFF(CAST(cola AS DATE), CAST(colb AS DATE))",
+        ),
+    ],
+)
+def test_datediff(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.datepart("cola", "colb"), "DATEPART(cola, colb)"),
+        (SF.datepart(SF.col("cola"), SF.col("colb")), "DATEPART(cola, colb)"),
+    ],
+)
+def test_datepart(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.day("cola"), "DAY(cola)"),
+        (SF.day(SF.col("cola")), "DAY(cola)"),
+    ],
+)
+def test_day(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.days("cola"), "DAYS(cola)"),
+        (SF.days(SF.col("cola")), "DAYS(cola)"),
+    ],
+)
+def test_days(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.elt("cola"), "ELT(cola)"),
+        (SF.elt(SF.col("cola")), "ELT(cola)"),
+        (SF.elt("cola", "colb", "colc"), "ELT(cola, colb, colc)"),
+    ],
+)
+def test_elt(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.endswith("cola", "colb"), "ENDSWITH(cola, colb)"),
+        (SF.endswith(SF.col("cola"), SF.col("colb")), "ENDSWITH(cola, colb)"),
+    ],
+)
+def test_endswith(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.equal_null("cola", "colb"), "EQUAL_NULL(cola, colb)"),
+        (SF.equal_null(SF.col("cola"), SF.col("colb")), "EQUAL_NULL(cola, colb)"),
+    ],
+)
+def test_equal_null(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.every("cola"), "EVERY(cola)"),
+        (SF.every(SF.col("cola")), "EVERY(cola)"),
+    ],
+)
+def test_every(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.extract("cola", "colb"), "EXTRACT(cola FROM colb)"),
+        (SF.extract(SF.col("cola"), SF.col("colb")), "EXTRACT(cola FROM colb)"),
+    ],
+)
+def test_extract(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.find_in_set("cola", "colb"), "FIND_IN_SET(cola, colb)"),
+        (SF.find_in_set(SF.col("cola"), SF.col("colb")), "FIND_IN_SET(cola, colb)"),
+    ],
+)
+def test_find_in_set(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.first_value("cola"), "FIRST_VALUE(cola)"),
+        (SF.first_value(SF.col("cola")), "FIRST_VALUE(cola)"),
+        (SF.first_value("cola", True), "FIRST_VALUE(cola) IGNORE NULLS"),
+        (SF.first_value("cola", False), "FIRST_VALUE(cola)"),
+    ],
+)
+def test_first_value(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.get("cola", "colb"), "GET(cola, colb)"),
+        (SF.get(SF.col("cola"), SF.col("colb")), "GET(cola, colb)"),
+        (SF.get("cola", 1), "GET(cola, 1)"),
+    ],
+)
+def test_get(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.grouping("cola"), "GROUPING(cola)"),
+        (SF.grouping(SF.col("cola")), "GROUPING(cola)"),
+    ],
+)
+def test_grouping(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.histogram_numeric("cola", "colb"), "HISTOGRAM_NUMERIC(cola, colb)"),
+        (SF.histogram_numeric(SF.col("cola"), SF.col("colb")), "HISTOGRAM_NUMERIC(cola, colb)"),
+    ],
+)
+def test_histogram_numeric(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.hll_sketch_agg("cola"), "HLL_SKETCH_AGG(cola)"),
+        (SF.hll_sketch_agg(SF.col("cola")), "HLL_SKETCH_AGG(cola)"),
+        (SF.hll_sketch_agg("cola", 12), "HLL_SKETCH_AGG(cola, 12)"),
+        (SF.hll_sketch_agg("cola", "colb"), "HLL_SKETCH_AGG(cola, colb)"),
+    ],
+)
+def test_hll_sketch_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.hll_sketch_estimate("cola"), "HLL_SKETCH_ESTIMATE(cola)"),
+        (SF.hll_sketch_estimate(SF.col("cola")), "HLL_SKETCH_ESTIMATE(cola)"),
+    ],
+)
+def test_hll_sketch_estimate(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.hll_union("cola", "colb"), "HLL_UNION(cola, colb)"),
+        (SF.hll_union(SF.col("cola"), SF.col("colb")), "HLL_UNION(cola, colb)"),
+        (SF.hll_union("cola", "colb", "colc"), "HLL_UNION(cola, colb, colc)"),
+        (SF.hll_union("cola", "colb", False), "HLL_UNION(cola, colb, FALSE)"),
+    ],
+)
+def test_hll_union(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.hll_union_agg("cola"), "HLL_UNION_AGG(cola)"),
+        (SF.hll_union_agg(SF.col("cola")), "HLL_UNION_AGG(cola)"),
+        (SF.hll_union_agg("cola", "colb"), "HLL_UNION_AGG(cola, colb)"),
+        (SF.hll_union_agg("cola", False), "HLL_UNION_AGG(cola, FALSE)"),
+    ],
+)
+def test_hll_union_agg(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.hours("cola"), "HOURS(cola)"),
+        (SF.hours(SF.col("cola")), "HOURS(cola)"),
+    ],
+)
+def test_hours(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.ifnull("cola", "colb"), "COALESCE(cola, colb)"),
+        (SF.ifnull(SF.col("cola"), SF.col("colb")), "COALESCE(cola, colb)"),
+    ],
+)
+def test_ifnull(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.ilike("cola", "colb"), "cola ILIKE colb"),
+        (SF.ilike(SF.col("cola"), SF.col("colb")), "cola ILIKE colb"),
+        (SF.ilike("cola", "colb", SF.col("colc")), "cola ILIKE colb ESCAPE colc"),
+    ],
+)
+def test_ilike(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.inline("cola"), "INLINE(cola)"),
+        (SF.inline(SF.col("cola")), "INLINE(cola)"),
+    ],
+)
+def test_inline(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.inline_outer("cola"), "INLINE_OUTER(cola)"),
+        (SF.inline_outer(SF.col("cola")), "INLINE_OUTER(cola)"),
+    ],
+)
+def test_inline_outer(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.isnotnull("cola"), "ISNOTNULL(cola)"),
+        (SF.isnotnull(SF.col("cola")), "ISNOTNULL(cola)"),
+    ],
+)
+def test_isnotnull(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.java_method("cola"), "JAVA_METHOD(cola)"),
+        (SF.java_method(SF.col("cola")), "JAVA_METHOD(cola)"),
+        (SF.java_method("cola", "colb"), "JAVA_METHOD(cola, colb)"),
+        (SF.java_method("cola", "colb", "colc"), "JAVA_METHOD(cola, colb, colc)"),
+    ],
+)
+def test_java_method(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.json_array_length("cola"), "JSON_ARRAY_LENGTH(cola)"),
+        (SF.json_array_length(SF.col("cola")), "JSON_ARRAY_LENGTH(cola)"),
+    ],
+)
+def test_json_array_length(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.json_object_keys("cola"), "JSON_OBJECT_KEYS(cola)"),
+        (SF.json_object_keys(SF.col("cola")), "JSON_OBJECT_KEYS(cola)"),
+    ],
+)
+def test_json_object_keys(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.last_value("cola"), "LAST_VALUE(cola)"),
+        (SF.last_value(SF.col("cola")), "LAST_VALUE(cola)"),
+        (SF.last_value("cola", True), "LAST_VALUE(cola) IGNORE NULLS"),
+        (SF.last_value("cola", False), "LAST_VALUE(cola)"),
+    ],
+)
+def test_last_value(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.lcase("cola"), "LOWER(cola)"),
+        (SF.lcase(SF.col("cola")), "LOWER(cola)"),
+    ],
+)
+def test_lcase(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.left("cola", "colb"), "LEFT(cola, colb)"),
+        (SF.left(SF.col("cola"), SF.col("colb")), "LEFT(cola, colb)"),
+    ],
+)
+def test_left(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.like("cola", "colb"), "cola LIKE colb"),
+        (SF.like(SF.col("cola"), SF.col("colb")), "cola LIKE colb"),
+        (SF.like("cola", "colb", SF.col("colc")), "cola LIKE colb ESCAPE colc"),
+    ],
+)
+def test_like(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.ln("cola"), "LN(cola)"),
+        (SF.ln(SF.col("cola")), "LN(cola)"),
+    ],
+)
+def test_ln(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.localtimestamp(), "LOCALTIMESTAMP()"),
+        (SF.localtimestamp(), "LOCALTIMESTAMP()"),
+    ],
+)
+def test_localtimestamp(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.make_dt_interval(), "MAKE_DT_INTERVAL(0, 0, 0, 0)"),
+        (SF.make_dt_interval(SF.col("cola")), "MAKE_DT_INTERVAL(cola, 0, 0, 0)"),
+        (SF.make_dt_interval(SF.col("cola"), SF.col("colb")), "MAKE_DT_INTERVAL(cola, colb, 0, 0)"),
+        (
+            SF.make_dt_interval(SF.col("cola"), SF.col("colb"), SF.col("colc")),
+            "MAKE_DT_INTERVAL(cola, colb, colc, 0)",
+        ),
+        (
+            SF.make_dt_interval(SF.col("cola"), SF.col("colb"), SF.col("colc"), SF.col("cold")),
+            "MAKE_DT_INTERVAL(cola, colb, colc, cold)",
+        ),
+    ],
+)
+def test_make_dt_interval(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.make_timestamp("cola", "colb", "colc", "cold", "cole", "colf"),
+            "MAKE_TIMESTAMP(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.make_timestamp(
+                SF.col("cola"),
+                SF.col("colb"),
+                SF.col("colc"),
+                SF.col("cold"),
+                SF.col("cole"),
+                SF.col("colf"),
+            ),
+            "MAKE_TIMESTAMP(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.make_timestamp("cola", "colb", "colc", "cold", "cole", "colf", "colg"),
+            "MAKE_TIMESTAMP(cola, colb, colc, cold, cole, colf, colg)",
+        ),
+    ],
+)
+def test_make_timestamp(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.make_timestamp_ltz("cola", "colb", "colc", "cold", "cole", "colf"),
+            "MAKE_TIMESTAMP_LTZ(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.make_timestamp_ltz(
+                SF.col("cola"),
+                SF.col("colb"),
+                SF.col("colc"),
+                SF.col("cold"),
+                SF.col("cole"),
+                SF.col("colf"),
+            ),
+            "MAKE_TIMESTAMP_LTZ(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.make_timestamp_ltz("cola", "colb", "colc", "cold", "cole", "colf", "colg"),
+            "MAKE_TIMESTAMP_LTZ(cola, colb, colc, cold, cole, colf, colg)",
+        ),
+    ],
+)
+def test_make_timestamp_ltz(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.make_timestamp_ntz("cola", "colb", "colc", "cold", "cole", "colf"),
+            "MAKE_TIMESTAMP_NTZ(cola, colb, colc, cold, cole, colf)",
+        ),
+        (
+            SF.make_timestamp_ntz(
+                SF.col("cola"),
+                SF.col("colb"),
+                SF.col("colc"),
+                SF.col("cold"),
+                SF.col("cole"),
+                SF.col("colf"),
+            ),
+            "MAKE_TIMESTAMP_NTZ(cola, colb, colc, cold, cole, colf)",
+        ),
+    ],
+)
+def test_make_timestamp_ntz(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.make_ym_interval("cola", "colb"), "MAKE_YM_INTERVAL(cola, colb)"),
+        (SF.make_ym_interval(SF.col("cola"), SF.col("colb")), "MAKE_YM_INTERVAL(cola, colb)"),
+        (SF.make_ym_interval("cola"), "MAKE_YM_INTERVAL(cola, 0)"),
+        (SF.make_ym_interval(None, "colb"), "MAKE_YM_INTERVAL(0, colb)"),
+        (SF.make_ym_interval(), "MAKE_YM_INTERVAL(0, 0)"),
+    ],
+)
+def test_make_ym_interval(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.map_contains_key("cola", 1), "MAP_CONTAINS_KEY(cola, 1)"),
+        (SF.map_contains_key(SF.col("cola"), SF.lit(1)), "MAP_CONTAINS_KEY(cola, 1)"),
+    ],
+)
+def test_map_contains_key(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.mask("cola"), "MASK(cola, 'X', 'x', 'n', NULL)"),
+        (SF.mask(SF.col("cola")), "MASK(cola, 'X', 'x', 'n', NULL)"),
+        (SF.mask("cola", "colb"), "MASK(cola, colb, 'x', 'n', NULL)"),
+        (SF.mask("cola", "colb", "colc"), "MASK(cola, colb, colc, 'n', NULL)"),
+        (SF.mask("cola", "colb", "colc", "cold"), "MASK(cola, colb, colc, cold, NULL)"),
+        (SF.mask("cola", "colb", "colc", "cold", "cole"), "MASK(cola, colb, colc, cold, cole)"),
+        (SF.mask("cola", None, "colb"), "MASK(cola, 'X', colb, 'n', NULL)"),
+    ],
+)
+def test_mask(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.median("cola"), "MEDIAN(cola)"),
+        (SF.median(SF.col("cola")), "MEDIAN(cola)"),
+    ],
+)
+def test_median(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.mode("cola"), "MODE(cola)"),
+        (SF.mode(SF.col("cola")), "MODE(cola)"),
+    ],
+)
+def test_mode(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.months("cola"), "MONTHS(cola)"),
+        (SF.months(SF.col("cola")), "MONTHS(cola)"),
+    ],
+)
+def test_months(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.named_struct("cola"), "NAMED_STRUCT(cola)"),
+        (SF.named_struct(SF.col("cola")), "NAMED_STRUCT(cola)"),
+        (SF.named_struct("cola", "colb"), "NAMED_STRUCT(cola, colb)"),
+    ],
+)
+def test_named_struct(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.negate("cola"), "NEGATIVE(cola)"),
+        (SF.negate(SF.col("cola")), "NEGATIVE(cola)"),
+    ],
+)
+def test_negate(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.negative("cola"), "NEGATIVE(cola)"),
+        (SF.negative(SF.col("cola")), "NEGATIVE(cola)"),
+    ],
+)
+def test_negative(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.now(), "CURRENT_TIMESTAMP()"),
+        (SF.now(), "CURRENT_TIMESTAMP()"),
+    ],
+)
+def test_now(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.nvl("cola", "colb"), "COALESCE(cola, colb)"),
+        (SF.nvl(SF.col("cola"), SF.col("colb")), "COALESCE(cola, colb)"),
+    ],
+)
+def test_nvl(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.nvl2("cola", "colb", "colc"), "NVL2(cola, colb, colc)"),
+        (SF.nvl2(SF.col("cola"), SF.col("colb"), SF.col("colc")), "NVL2(cola, colb, colc)"),
+    ],
+)
+def test_nvl2(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.parse_url("cola", "colb"), "PARSE_URL(cola, colb)"),
+        (SF.parse_url(SF.col("cola"), SF.col("colb")), "PARSE_URL(cola, colb)"),
+        (SF.parse_url("cola", "colb", "colc"), "PARSE_URL(cola, colb, colc)"),
+    ],
+)
+def test_parse_url(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.pi(), "PI()"),
+    ],
+)
+def test_pi(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.pmod("cola", "colb"), "PMOD(cola, colb)"),
+        (SF.pmod(SF.col("cola"), SF.col("colb")), "PMOD(cola, colb)"),
+        (SF.pmod("cola", 2.0), "PMOD(cola, 2.0)"),
+        (SF.pmod(1.0, "colb"), "PMOD(1.0, colb)"),
+    ],
+)
+def test_pmod(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.position("cola", "colb"), "LOCATE(cola, colb)"),
+        (SF.position(SF.col("cola"), SF.col("colb")), "LOCATE(cola, colb)"),
+        (SF.position("cola", "colb", "colc"), "LOCATE(cola, colb, colc)"),
+    ],
+)
+def test_position(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.positive("cola"), "POSITIVE(cola)"),
+        (SF.positive(SF.col("cola")), "POSITIVE(cola)"),
+    ],
+)
+def test_positive(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.printf("cola", "colb"), "PRINTF(cola, colb)"),
+        (SF.printf(SF.col("cola"), SF.col("colb")), "PRINTF(cola, colb)"),
+        (SF.printf("cola", "colb", "colc"), "PRINTF(cola, colb, colc)"),
+    ],
+)
+def test_printf(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.product("cola"), "PRODUCT(cola)"),
+        (SF.product(SF.col("cola")), "PRODUCT(cola)"),
+    ],
+)
+def test_product(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.reduce("cola", "colb", lambda acc, x: acc + x),
+            "AGGREGATE(cola, colb, (acc, x) -> (acc + x))",
+        ),
+        (
+            SF.reduce(SF.col("cola"), SF.col("colb"), lambda acc, x: acc + x),
+            "AGGREGATE(cola, colb, (acc, x) -> (acc + x))",
+        ),
+        (
+            SF.reduce("cola", "colb", lambda acc, x: acc + x, lambda acc: acc + 1),
+            "AGGREGATE(cola, colb, (acc, x) -> (acc + x), acc -> (acc + 1))",
+        ),
+    ],
+)
+def test_reduce(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.reflect("cola"), "REFLECT(cola)"),
+        (SF.reflect(SF.col("cola")), "REFLECT(cola)"),
+        (SF.reflect("cola", "colb", "colc"), "REFLECT(cola, colb, colc)"),
+    ],
+)
+def test_reflect(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp("cola", "colb"), "REGEXP(cola, colb)"),
+        (SF.regexp(SF.col("cola"), SF.col("colb")), "REGEXP(cola, colb)"),
+    ],
+)
+def test_regexp(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp_count("cola", "colb"), "REGEXP_COUNT(cola, colb)"),
+        (SF.regexp_count(SF.col("cola"), SF.col("colb")), "REGEXP_COUNT(cola, colb)"),
+    ],
+)
+def test_regexp_count(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp_extract_all("cola", "colb"), "REGEXP_EXTRACT_ALL(cola, colb)"),
+        (SF.regexp_extract_all(SF.col("cola"), SF.col("colb")), "REGEXP_EXTRACT_ALL(cola, colb)"),
+        (
+            SF.regexp_extract_all("cola", "colb", SF.col("colc")),
+            "REGEXP_EXTRACT_ALL(cola, colb, colc)",
+        ),
+        (SF.regexp_extract_all("cola", "colb", 1), "REGEXP_EXTRACT_ALL(cola, colb, 1)"),
+    ],
+)
+def test_regexp_extract_all(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp_instr("cola", "colb"), "REGEXP_INSTR(cola, colb)"),
+        (SF.regexp_instr(SF.col("cola"), SF.col("colb")), "REGEXP_INSTR(cola, colb)"),
+        (SF.regexp_instr("cola", "colb", SF.col("colc")), "REGEXP_INSTR(cola, colb, colc)"),
+        (SF.regexp_instr("cola", "colb", 1), "REGEXP_INSTR(cola, colb, 1)"),
+    ],
+)
+def test_regexp_instr(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp_like("cola", "colb"), "cola RLIKE colb"),
+        (SF.regexp_like(SF.col("cola"), SF.col("colb")), "cola RLIKE colb"),
+    ],
+)
+def test_regexp_like(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regexp_substr("cola", "colb"), "REGEXP_SUBSTR(cola, colb)"),
+        (SF.regexp_substr(SF.col("cola"), SF.col("colb")), "REGEXP_SUBSTR(cola, colb)"),
+    ],
+)
+def test_regexp_substr(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_avgx("cola", "colb"), "REGR_AVGX(cola, colb)"),
+        (SF.regr_avgx(SF.col("cola"), SF.col("colb")), "REGR_AVGX(cola, colb)"),
+    ],
+)
+def test_regr_avgx(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_avgy("cola", "colb"), "REGR_AVGY(cola, colb)"),
+        (SF.regr_avgy(SF.col("cola"), SF.col("colb")), "REGR_AVGY(cola, colb)"),
+    ],
+)
+def test_regr_avgy(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_count("cola", "colb"), "REGR_COUNT(cola, colb)"),
+        (SF.regr_count(SF.col("cola"), SF.col("colb")), "REGR_COUNT(cola, colb)"),
+    ],
+)
+def test_regr_count(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_intercept("cola", "colb"), "REGR_INTERCEPT(cola, colb)"),
+        (SF.regr_intercept(SF.col("cola"), SF.col("colb")), "REGR_INTERCEPT(cola, colb)"),
+    ],
+)
+def test_regr_intercept(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_r2("cola", "colb"), "REGR_R2(cola, colb)"),
+        (SF.regr_r2(SF.col("cola"), SF.col("colb")), "REGR_R2(cola, colb)"),
+    ],
+)
+def test_regr_r2(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_slope("cola", "colb"), "REGR_SLOPE(cola, colb)"),
+        (SF.regr_slope(SF.col("cola"), SF.col("colb")), "REGR_SLOPE(cola, colb)"),
+    ],
+)
+def test_regr_slope(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_sxx("cola", "colb"), "REGR_SXX(cola, colb)"),
+        (SF.regr_sxx(SF.col("cola"), SF.col("colb")), "REGR_SXX(cola, colb)"),
+    ],
+)
+def test_regr_sxx(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_sxy("cola", "colb"), "REGR_SXY(cola, colb)"),
+        (SF.regr_sxy(SF.col("cola"), SF.col("colb")), "REGR_SXY(cola, colb)"),
+    ],
+)
+def test_regr_sxy(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.regr_syy("cola", "colb"), "REGR_SYY(cola, colb)"),
+        (SF.regr_syy(SF.col("cola"), SF.col("colb")), "REGR_SYY(cola, colb)"),
+    ],
+)
+def test_regr_syy(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.replace("cola", "colb"), "REPLACE(cola, colb)"),
+        (SF.replace(SF.col("cola"), SF.col("colb")), "REPLACE(cola, colb)"),
+        (SF.replace("cola", "colb", "colc"), "REPLACE(cola, colb, colc)"),
+    ],
+)
+def test_replace(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.right("cola", "colb"), "RIGHT(cola, colb)"),
+        (SF.right(SF.col("cola"), SF.col("colb")), "RIGHT(cola, colb)"),
+    ],
+)
+def test_right(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.rlike("cola", "colb"), "cola RLIKE colb"),
+        (SF.rlike(SF.col("cola"), SF.col("colb")), "cola RLIKE colb"),
+    ],
+)
+def test_rlike(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.sha("cola"), "SHA(cola)"),
+        (SF.sha(SF.col("cola")), "SHA(cola)"),
+    ],
+)
+def test_sha(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.sign("cola"), "SIGN(cola)"),
+        (SF.sign(SF.col("cola")), "SIGN(cola)"),
+    ],
+)
+def test_sign(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.some("cola"), "SOME(cola)"),
+        (SF.some(SF.col("cola")), "SOME(cola)"),
+    ],
+)
+def test_some(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.spark_partition_id(), "SPARK_PARTITION_ID()"),
+    ],
+)
+def test_spark_partition_id(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.split_part("cola", "colb", "colc"), "SPLIT_PART(cola, colb, colc)"),
+        (
+            SF.split_part(SF.col("cola"), SF.col("colb"), SF.col("colc")),
+            "SPLIT_PART(cola, colb, colc)",
+        ),
+    ],
+)
+def test_split_part(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.startswith("cola", "colb"), "STARTSWITH(cola, colb)"),
+        (SF.startswith(SF.col("cola"), SF.col("colb")), "STARTSWITH(cola, colb)"),
+    ],
+)
+def test_startswith(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.std("cola"), "STD(cola)"),
+        (SF.std(SF.col("cola")), "STD(cola)"),
+    ],
+)
+def test_std(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.str_to_map("cola"), "STR_TO_MAP(cola, ',', ':')"),
+        (SF.str_to_map(SF.col("cola")), "STR_TO_MAP(cola, ',', ':')"),
+        (SF.str_to_map("cola", "colb"), "STR_TO_MAP(cola, colb, ':')"),
+        (SF.str_to_map("cola", "colb", "colc"), "STR_TO_MAP(cola, colb, colc)"),
+        (SF.str_to_map("cola", None, "colc"), "STR_TO_MAP(cola, ',', colc)"),
+    ],
+)
+def test_str_to_map(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.substr("cola", "colb"), "SUBSTR(cola, colb)"),
+        (SF.substr(SF.col("cola"), SF.col("colb")), "SUBSTR(cola, colb)"),
+        (SF.substr("cola", "colb", "colc"), "SUBSTR(cola, colb, colc)"),
+    ],
+)
+def test_substr(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.timestamp_micros("cola"), "TIMESTAMP_MICROS(cola)"),
+        (SF.timestamp_micros(SF.col("cola")), "TIMESTAMP_MICROS(cola)"),
+    ],
+)
+def test_timestamp_micros(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.timestamp_millis("cola"), "TIMESTAMP_MILLIS(cola)"),
+        (SF.timestamp_millis(SF.col("cola")), "TIMESTAMP_MILLIS(cola)"),
+    ],
+)
+def test_timestamp_millis(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_char("cola", "colb"), "TO_CHAR(cola, colb)"),
+        (SF.to_char(SF.col("cola"), SF.col("colb")), "TO_CHAR(cola, colb)"),
+    ],
+)
+def test_to_char(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_number("cola", "colb"), "TO_NUMBER(cola, colb)"),
+        (SF.to_number(SF.col("cola"), SF.col("colb")), "TO_NUMBER(cola, colb)"),
+    ],
+)
+def test_to_number(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "input, output",
+    [
+        (SF.to_str(1), "1"),
+        (SF.to_str(False), "false"),
+        (SF.to_str(None), None),
+    ],
+)
+def test_to_str(input, output):
+    assert input == output
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_timestamp_ltz("cola"), "TO_TIMESTAMP_LTZ(cola)"),
+        (SF.to_timestamp_ltz(SF.col("cola")), "TO_TIMESTAMP_LTZ(cola)"),
+        (SF.to_timestamp_ltz("cola", "colb"), "TO_TIMESTAMP_LTZ(cola, colb)"),
+    ],
+)
+def test_to_timestamp_ltz(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_timestamp_ntz("cola"), "TO_TIMESTAMP_NTZ(cola)"),
+        (SF.to_timestamp_ntz(SF.col("cola")), "TO_TIMESTAMP_NTZ(cola)"),
+        (SF.to_timestamp_ntz("cola", "colb"), "TO_TIMESTAMP_NTZ(cola, colb)"),
+    ],
+)
+def test_to_timestamp_ntz(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_unix_timestamp("cola"), "UNIX_TIMESTAMP(cola)"),
+        (SF.to_unix_timestamp(SF.col("cola")), "UNIX_TIMESTAMP(cola)"),
+        (SF.to_unix_timestamp("cola", "colb"), "UNIX_TIMESTAMP(cola, colb)"),
+    ],
+)
+def test_to_unix_timestamp(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_varchar("cola", "colb"), "TO_VARCHAR(cola, colb)"),
+        (SF.to_varchar(SF.col("cola"), SF.col("colb")), "TO_VARCHAR(cola, colb)"),
+    ],
+)
+def test_to_varchar(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_aes_decrypt("cola", "colb"), "TRY_AES_DECRYPT(cola, colb, 'GCM', 'DEFAULT', '')"),
+        (
+            SF.try_aes_decrypt(SF.col("cola"), SF.col("colb")),
+            "TRY_AES_DECRYPT(cola, colb, 'GCM', 'DEFAULT', '')",
+        ),
+        (
+            SF.try_aes_decrypt("cola", "colb", "colc"),
+            "TRY_AES_DECRYPT(cola, colb, colc, 'DEFAULT', '')",
+        ),
+        (
+            SF.try_aes_decrypt("cola", "colb", "colc", "cold"),
+            "TRY_AES_DECRYPT(cola, colb, colc, cold, '')",
+        ),
+        (
+            SF.try_aes_decrypt("cola", "colb", "colc", "cold", "cole"),
+            "TRY_AES_DECRYPT(cola, colb, colc, cold, cole)",
+        ),
+        (
+            SF.try_aes_decrypt("cola", "colb", "colc", None, "cole"),
+            "TRY_AES_DECRYPT(cola, colb, colc, 'DEFAULT', cole)",
+        ),
+    ],
+)
+def test_try_aes_decrypt(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_element_at("cola", "colb"), "TRY_ELEMENT_AT(cola, colb)"),
+        (SF.try_element_at(SF.col("cola"), SF.col("colb")), "TRY_ELEMENT_AT(cola, colb)"),
+    ],
+)
+def test_try_element_at(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_to_timestamp("cola"), "TRY_TO_TIMESTAMP(cola)"),
+        (SF.try_to_timestamp(SF.col("cola")), "TRY_TO_TIMESTAMP(cola)"),
+        (SF.try_to_timestamp("cola", "colb"), "TRY_TO_TIMESTAMP(cola, colb)"),
+    ],
+)
+def test_try_to_timestamp(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.ucase("cola"), "UPPER(cola)"),
+        (SF.ucase(SF.col("cola")), "UPPER(cola)"),
+    ],
+)
+def test_ucase(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.unix_date("cola"), "DATEDIFF(DAY, CAST('1970-01-01' AS DATE), cola)"),
+        (SF.unix_date(SF.col("cola")), "DATEDIFF(DAY, CAST('1970-01-01' AS DATE), cola)"),
+    ],
+)
+def test_unix_date(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.unix_micros("cola"), "UNIX_MICROS(cola)"),
+        (SF.unix_micros(SF.col("cola")), "UNIX_MICROS(cola)"),
+    ],
+)
+def test_unix_micros(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.unix_millis("cola"), "UNIX_MILLIS(cola)"),
+        (SF.unix_millis(SF.col("cola")), "UNIX_MILLIS(cola)"),
+    ],
+)
+def test_unix_millis(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.unix_seconds("cola"), "UNIX_SECONDS(cola)"),
+        (SF.unix_seconds(SF.col("cola")), "UNIX_SECONDS(cola)"),
+    ],
+)
+def test_unix_seconds(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.url_decode("cola"), "URL_DECODE(cola)"),
+        (SF.url_decode(SF.col("cola")), "URL_DECODE(cola)"),
+    ],
+)
+def test_url_decode(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.url_encode("cola"), "URL_ENCODE(cola)"),
+        (SF.url_encode(SF.col("cola")), "URL_ENCODE(cola)"),
+    ],
+)
+def test_url_encode(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.version(), "VERSION()"),
+    ],
+)
+def test_version(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.weekday("cola"), "WEEKDAY(cola)"),
+        (SF.weekday(SF.col("cola")), "WEEKDAY(cola)"),
+    ],
+)
+def test_weekday(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.width_bucket("cola", "colb", "colc", "cold"), "WIDTH_BUCKET(cola, colb, colc, cold)"),
+        (
+            SF.width_bucket(SF.col("cola"), SF.col("colb"), SF.col("colc"), SF.col("cold")),
+            "WIDTH_BUCKET(cola, colb, colc, cold)",
+        ),
+        (
+            SF.width_bucket("cola", "colb", "colc", 1),
+            "WIDTH_BUCKET(cola, colb, colc, 1)",
+        ),
+    ],
+)
+def test_width_bucket(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.window_time("cola"), "WINDOW_TIME(cola)"),
+        (SF.window_time(SF.col("cola")), "WINDOW_TIME(cola)"),
+    ],
+)
+def test_window_time(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath("cola", "colb"), "XPATH(cola, colb)"),
+        (SF.xpath(SF.col("cola"), SF.col("colb")), "XPATH(cola, colb)"),
+    ],
+)
+def test_xpath(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_boolean("cola", "colb"), "XPATH_BOOLEAN(cola, colb)"),
+        (SF.xpath_boolean(SF.col("cola"), SF.col("colb")), "XPATH_BOOLEAN(cola, colb)"),
+    ],
+)
+def test_xpath_boolean(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_double("cola", "colb"), "XPATH_DOUBLE(cola, colb)"),
+        (SF.xpath_double(SF.col("cola"), SF.col("colb")), "XPATH_DOUBLE(cola, colb)"),
+    ],
+)
+def test_xpath_double(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_float("cola", "colb"), "XPATH_FLOAT(cola, colb)"),
+        (SF.xpath_float(SF.col("cola"), SF.col("colb")), "XPATH_FLOAT(cola, colb)"),
+    ],
+)
+def test_xpath_float(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_int("cola", "colb"), "XPATH_INT(cola, colb)"),
+        (SF.xpath_int(SF.col("cola"), SF.col("colb")), "XPATH_INT(cola, colb)"),
+    ],
+)
+def test_xpath_int(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_long("cola", "colb"), "XPATH_LONG(cola, colb)"),
+        (SF.xpath_long(SF.col("cola"), SF.col("colb")), "XPATH_LONG(cola, colb)"),
+    ],
+)
+def test_xpath_long(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_number("cola", "colb"), "XPATH_NUMBER(cola, colb)"),
+        (SF.xpath_number(SF.col("cola"), SF.col("colb")), "XPATH_NUMBER(cola, colb)"),
+    ],
+)
+def test_xpath_number(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_short("cola", "colb"), "XPATH_SHORT(cola, colb)"),
+        (SF.xpath_short(SF.col("cola"), SF.col("colb")), "XPATH_SHORT(cola, colb)"),
+    ],
+)
+def test_xpath_short(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.xpath_string("cola", "colb"), "XPATH_STRING(cola, colb)"),
+        (SF.xpath_string(SF.col("cola"), SF.col("colb")), "XPATH_STRING(cola, colb)"),
+    ],
+)
+def test_xpath_string(expression, expected):
+    assert expression.sql() == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.years("cola"), "YEARS(cola)"),
+        (SF.years(SF.col("cola")), "YEARS(cola)"),
+    ],
+)
+def test_years(expression, expected):
     assert expression.sql() == expected

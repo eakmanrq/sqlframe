@@ -40,6 +40,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     date_add_by_multiplication as date_add,
     date_sub_by_multiplication as date_sub,
     date_diff_with_subtraction as date_diff,
+    date_diff_with_subtraction as datediff,
     add_months_by_multiplication as add_months,
     months_between_from_age_and_extract as months_between,
     from_unixtime_from_timestamp as from_unixtime,
