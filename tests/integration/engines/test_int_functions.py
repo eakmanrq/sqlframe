@@ -726,6 +726,13 @@ def test_pow(get_session_and_func, get_func):
     assert df.select(pow(lit(3), lit(2))).first()[0] == 9.0
 
 
+def test_power(get_session_and_func, get_func):
+    session, power = get_session_and_func("power")
+    lit = get_func("lit", session)
+    df = session.range(1)
+    assert df.select(power(lit(3), lit(2))).first()[0] == 9.0
+
+
 def test_row_number(get_session_and_func, get_window):
     session, row_number = get_session_and_func("row_number")
     df = session.range(3)
@@ -1565,11 +1572,12 @@ def test_window(get_session_and_func, get_func):
     sum = get_func("sum", session)
     df = session.createDataFrame([(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)]).toDF("date", "val")
     w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
-    assert w.select(
+    result = w.select(
         w.window.start.cast("string").alias("start"),
         w.window.end.cast("string").alias("end"),
         "sum",
-    ).collect() == [
+    ).collect()
+    assert result == [
         Row(start="2016-03-11 09:00:05", end="2016-03-11 09:00:10", sum=1),
     ]
 
@@ -3370,3 +3378,1623 @@ def test_bitmap_or_agg(get_session_and_func, get_func):
         ).first()[0]
         == "700000"
     )
+
+
+def test_any_value(get_session_and_func):
+    session, any_value = get_session_and_func("any_value")
+    df = session.createDataFrame([(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
+    assert df.select(any_value("c1"), any_value("c2")).collect() == [Row(value=None, value2=1)]
+    assert df.select(any_value("c1", True), any_value("c2", True)).collect() == [
+        Row(value="a", value2=1)
+    ]
+
+
+def test_approx_percentile(get_session_and_func, get_func):
+    session, approx_percentile = get_session_and_func("approx_percentile")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    key = (col("id") % 3).alias("key")
+    value = (randn(42) + key * 10).alias("value")
+    df = session.range(0, 1000, 1, 1).select(key, value)
+    assert df.select(approx_percentile("value", [0.25, 0.5, 0.75], 1000000)).collect() == [
+        Row(value=[0.7264430125286507, 9.98975299938167, 19.335304783039014])
+    ]
+    assert df.groupBy("key").agg(approx_percentile("value", 0.5, 1000000)).collect() == [
+        Row(key=0, value=-0.03519435193070876),
+        Row(key=1, value=9.990389751837329),
+        Row(key=2, value=19.967859769284075),
+    ]
+
+
+def test_bool_and(get_session_and_func, get_func):
+    session, bool_and = get_session_and_func("bool_and")
+    df = session.createDataFrame([[True], [True], [True]], ["flag"])
+    assert df.select(bool_and("flag")).collect() == [Row(flag=True)]
+    df = session.createDataFrame([[True], [False], [True]], ["flag"])
+    assert df.select(bool_and("flag")).collect() == [Row(flag=False)]
+    df = session.createDataFrame([[False], [False], [False]], ["flag"])
+    assert df.select(bool_and("flag")).collect() == [Row(flag=False)]
+
+
+def test_bool_or(get_session_and_func, get_func):
+    session, bool_or = get_session_and_func("bool_or")
+    df = session.createDataFrame([[True], [True], [True]], ["flag"])
+    assert df.select(bool_or("flag")).collect() == [Row(flag=True)]
+    df = session.createDataFrame([[True], [False], [True]], ["flag"])
+    assert df.select(bool_or("flag")).collect() == [Row(flag=True)]
+    df = session.createDataFrame([[False], [False], [False]], ["flag"])
+    assert df.select(bool_or("flag")).collect() == [Row(flag=False)]
+
+
+def test_btrim(get_session_and_func, get_func):
+    session, btrim = get_session_and_func("btrim")
+    df = session.createDataFrame(
+        [
+            (
+                "SSparkSQLS",
+                "SL",
+            )
+        ],
+        ["a", "b"],
+    )
+    assert df.select(btrim(df.a, df.b).alias("r")).collect() == [Row(r="parkSQ")]
+    df = session.createDataFrame([("    SparkSQL   ",)], ["a"])
+    assert df.select(btrim(df.a).alias("r")).collect() == [Row(r="SparkSQL")]
+
+
+def test_call_function(get_session_and_func, get_func):
+    session, call_function = get_session_and_func("call_function")
+    df = session.createDataFrame([(1, "a"), (2, "b"), (3, "c")], ["id", "name"])
+    assert df.select(call_function("avg", "id")).first()[0] == 2.0
+
+
+def test_cardinality(get_session_and_func, get_func):
+    session, cardinality = get_session_and_func("cardinality")
+    df = session.createDataFrame([([1, 2, 3],), ([1],), ([],)], ["data"])
+    assert df.select(cardinality("data")).collect() == [Row(value=3), Row(value=1), Row(value=0)]
+
+
+def test_char(get_session_and_func, get_func):
+    session, char = get_session_and_func("char")
+    lit = get_func("lit", session)
+    assert session.range(1).select(char(lit(65))).first()[0] == "A"
+
+
+def test_char_length(get_session_and_func, get_func):
+    session, char_length = get_session_and_func("char_length")
+    lit = get_func("lit", session)
+    assert session.range(1).select(char_length(lit("SparkSQL"))).first()[0] == 8
+
+
+def test_character_length(get_session_and_func, get_func):
+    session, character_length = get_session_and_func("character_length")
+    lit = get_func("lit", session)
+    assert session.range(1).select(character_length(lit("SparkSQL"))).first()[0] == 8
+
+
+def test_contains(get_session_and_func, get_func):
+    session, contains = get_session_and_func("contains")
+    to_binary = get_func("to_binary", session)
+    df = session.createDataFrame([("Spark SQL", "Spark")], ["a", "b"])
+    assert df.select(contains(df.a, df.b).alias("r")).collect() == [Row(r=True)]
+    df = session.createDataFrame(
+        [
+            (
+                "414243",
+                "4243",
+            )
+        ],
+        ["c", "d"],
+    )
+    df = df.select(to_binary("c").alias("c"), to_binary("d").alias("d"))
+    assert df.select(contains("c", "d"), contains("d", "c")).collect() == [
+        Row(value=True, value2=False),
+    ]
+
+
+def test_convert_timezone(get_session_and_func, get_func):
+    session, convert_timezone = get_session_and_func("convert_timezone")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("2015-04-08",)], ["dt"])
+    assert df.select(convert_timezone(None, lit("Asia/Hong_Kong"), "dt").alias("ts")).collect() == [
+        Row(ts=datetime.datetime(2015, 4, 8, 15, 0))
+    ]
+    assert df.select(
+        convert_timezone(lit("America/Los_Angeles"), lit("Asia/Hong_Kong"), "dt").alias("ts")
+    ).collect() == [Row(ts=datetime.datetime(2015, 4, 8, 15, 0))]
+
+
+def test_count_if(get_session_and_func, get_func):
+    session, count_if = get_session_and_func("count_if")
+    df = session.createDataFrame([("a", 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
+    assert df.select(count_if(df.c2 % 2 == 0)).collect() == [Row(value=3)]
+
+
+def test_count_min_sketch(get_session_and_func, get_func):
+    session, count_min_sketch = get_session_and_func("count_min_sketch")
+    lit = get_func("lit", session)
+    hex = get_func("hex", session)
+    df = session.createDataFrame([[1], [2], [1]], ["data"])
+    df = df.agg(count_min_sketch(df.data, lit(0.5), lit(0.5), lit(1)).alias("sketch"))
+    assert df.select(hex(df.sketch).alias("r")).collect() == [
+        Row(
+            r="0000000100000000000000030000000100000004000000005D8D6AB90000000000000000000000000000000200000000000000010000000000000000"
+        )
+    ]
+
+
+def test_curdate(get_session_and_func, get_func):
+    session, curdate = get_session_and_func("curdate")
+    assert session.range(1).select(curdate()).first()[0] == datetime.date.today()
+
+
+def test_current_catalog(get_session_and_func, get_func):
+    session, current_catalog = get_session_and_func("current_catalog")
+    assert session.range(1).select(current_catalog()).first()[0] == "spark_catalog"
+
+
+def test_current_database(get_session_and_func, get_func):
+    session, current_database = get_session_and_func("current_database")
+    assert session.range(1).select(current_database()).first()[0] == "db1"
+
+
+def test_current_schema(get_session_and_func, get_func):
+    session, current_schema = get_session_and_func("current_schema")
+    assert session.range(1).select(current_schema()).first()[0] == "db1"
+
+
+def test_current_timezone(get_session_and_func, get_func):
+    session, current_timezone = get_session_and_func("current_timezone")
+    assert session.range(1).select(current_timezone()).first()[0] == "America/Los_Angeles"
+
+
+def test_date_from_unix_date(get_session_and_func, get_func):
+    session, date_from_unix_date = get_session_and_func("date_from_unix_date")
+    lit = get_func("lit", session)
+    assert session.range(1).select(date_from_unix_date(lit(1))).first()[0] == datetime.date(
+        1970, 1, 2
+    )
+
+
+def test_date_part(get_session_and_func, get_func):
+    session, date_part = get_session_and_func("date_part")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(datetime.datetime(2015, 4, 8, 13, 8, 15),)], ["ts"])
+    assert df.select(
+        date_part(lit("YEAR"), "ts").alias("year"),
+        date_part(lit("month"), "ts").alias("month"),
+        date_part(lit("WEEK"), "ts").alias("week"),
+        date_part(lit("D"), "ts").alias("day"),
+        date_part(lit("M"), "ts").alias("minute"),
+        date_part(lit("S"), "ts").alias("second"),
+    ).collect() == [Row(year=2015, month=4, week=15, day=8, minute=8, second=Decimal("15.000000"))]
+
+
+def test_dateadd(get_session_and_func, get_func):
+    session, dateadd = get_session_and_func("dateadd")
+    assert session.createDataFrame(
+        [
+            (
+                "2015-04-08",
+                2,
+            )
+        ],
+        ["dt", "add"],
+    ).select(dateadd("dt", 1)).first()[0] == datetime.date(2015, 4, 9)
+    assert session.createDataFrame(
+        [
+            (
+                "2015-04-08",
+                2,
+            )
+        ],
+        ["dt", "add"],
+    ).select(dateadd("dt", 2)).first()[0] == datetime.date(2015, 4, 10)
+    assert session.createDataFrame(
+        [
+            (
+                "2015-04-08",
+                2,
+            )
+        ],
+        ["dt", "add"],
+    ).select(dateadd("dt", -1)).first()[0] == datetime.date(2015, 4, 7)
+
+
+def test_datediff(get_session_and_func, get_func):
+    session, datediff = get_session_and_func("datediff")
+    df = session.createDataFrame([("2015-04-08", "2015-05-10")], ["d1", "d2"])
+    assert df.select(datediff(df.d2, df.d1).alias("diff")).first()[0] == 32
+
+
+def test_datepart(get_session_and_func, get_func):
+    session, datepart = get_session_and_func("datepart")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(datetime.datetime(2015, 4, 8, 13, 8, 15),)], ["ts"])
+    assert df.select(
+        datepart(lit("YEAR"), "ts").alias("year"),
+        datepart(lit("month"), "ts").alias("month"),
+        datepart(lit("WEEK"), "ts").alias("week"),
+        datepart(lit("D"), "ts").alias("day"),
+        datepart(lit("M"), "ts").alias("minute"),
+        datepart(lit("S"), "ts").alias("second"),
+    ).collect() == [Row(year=2015, month=4, week=15, day=8, minute=8, second=Decimal("15.000000"))]
+
+
+def test_day(get_session_and_func, get_func):
+    session, day = get_session_and_func("day")
+    df = session.createDataFrame([("2015-04-08",)], ["dt"])
+    assert df.select(day("dt").alias("day")).first()[0] == 8
+
+
+def test_elt(get_session_and_func, get_func):
+    session, elt = get_session_and_func("elt")
+    df = session.createDataFrame([(1, "scala", "java")], ["a", "b", "c"])
+    assert df.select(elt(df.a, df.b, df.c).alias("r")).first()[0] == "scala"
+
+
+def test_endswith(get_session_and_func, get_func):
+    session, endswith = get_session_and_func("endswith")
+    to_binary = get_func("to_binary", session)
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                "Spark",
+            )
+        ],
+        ["a", "b"],
+    )
+    assert df.select(endswith(df.a, df.b).alias("r")).collect() == [Row(r=False)]
+    df = session.createDataFrame(
+        [
+            (
+                "414243",
+                "4243",
+            )
+        ],
+        ["e", "f"],
+    )
+    df = df.select(to_binary("e").alias("e"), to_binary("f").alias("f"))
+    assert df.select(endswith("e", "f"), endswith("f", "e")).collect() == [
+        Row(value1=True, value2=False)
+    ]
+
+
+def test_equal_null(get_session_and_func, get_func):
+    session, equal_null = get_session_and_func("equal_null")
+    df = session.createDataFrame(
+        [
+            (
+                None,
+                None,
+            ),
+            (
+                1,
+                9,
+            ),
+        ],
+        ["a", "b"],
+    )
+    assert df.select(equal_null(df.a, df.b).alias("r")).collect() == [Row(r=True), Row(r=False)]
+
+
+def test_every(get_session_and_func, get_func):
+    session, every = get_session_and_func("every")
+    assert session.createDataFrame([[True], [True], [True]], ["flag"]).select(
+        every("flag")
+    ).collect() == [Row(value=True)]
+    assert session.createDataFrame([[True], [False], [True]], ["flag"]).select(
+        every("flag")
+    ).collect() == [Row(value=False)]
+    assert session.createDataFrame([[False], [False], [False]], ["flag"]).select(
+        every("flag")
+    ).collect() == [Row(value=False)]
+
+
+def test_extract(get_session_and_func, get_func):
+    session, extract = get_session_and_func("extract")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(datetime.datetime(2015, 4, 8, 13, 8, 15),)], ["ts"])
+    assert df.select(
+        extract(lit("YEAR"), "ts").alias("year"),
+        extract(lit("month"), "ts").alias("month"),
+        extract(lit("WEEK"), "ts").alias("week"),
+        extract(lit("D"), "ts").alias("day"),
+        extract(lit("M"), "ts").alias("minute"),
+        extract(lit("S"), "ts").alias("second"),
+    ).collect() == [Row(year=2015, month=4, week=15, day=8, minute=8, second=Decimal("15.000000"))]
+
+
+def test_find_in_set(get_session_and_func, get_func):
+    session, find_in_set = get_session_and_func("find_in_set")
+    df = session.createDataFrame([("ab", "abc,b,ab,c,def")], ["a", "b"])
+    assert df.select(find_in_set(df.a, df.b).alias("r")).first()[0] == 3
+
+
+def test_first_value(get_session_and_func, get_func):
+    session, first_value = get_session_and_func("first_value")
+    assert session.createDataFrame(
+        [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
+    ).select(first_value("a"), first_value("b")).collect() == [Row(value1=None, value2=1)]
+    assert session.createDataFrame(
+        [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
+    ).select(first_value("a", True), first_value("b", True)).collect() == [
+        Row(value1="a", value2=1)
+    ]
+
+
+def test_get(get_session_and_func, get_func):
+    session, get = get_session_and_func("get")
+    col = get_func("col", session)
+    df = session.createDataFrame([(["a", "b", "c"], 1)], ["data", "index"])
+    assert df.select(get(df.data, 1)).collect() == [Row(value="b")]
+    assert df.select(get(df.data, -1)).collect() == [Row(value=None)]
+    assert df.select(get(df.data, 3)).collect() == [Row(value=None)]
+    assert df.select(get(df.data, "index")).collect() == [Row(value="b")]
+    assert df.select(get(df.data, col("index") - 1)).collect() == [Row(value="a")]
+
+
+def test_get_active_spark_context(get_session_and_func):
+    session, get_active_spark_context = get_session_and_func("get_active_spark_context")
+    if isinstance(session, PySparkSession):
+        assert session.sparkContext == get_active_spark_context()
+    else:
+        assert session.spark_session.sparkContext == get_active_spark_context()
+
+
+def test_grouping(get_session_and_func, get_func):
+    session, grouping = get_session_and_func("grouping")
+    sum = get_func("sum", session)
+    df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
+    assert df.cube("name").agg(grouping("name"), sum("age")).orderBy("name").collect() == [
+        Row(name=None, value1=1, value2=7),
+        Row(name="Alice", value1=0, value2=2),
+        Row(name="Bob", value1=0, value2=5),
+    ]
+
+
+def test_histogram_numeric(get_session_and_func, get_func):
+    session, histogram_numeric = get_session_and_func("histogram_numeric")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("a", 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
+    assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+        Row(value=[Row(x=1, y=1.0), Row(x=2, y=2.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
+    ]
+
+
+def test_hll_sketch_agg(get_session_and_func, get_func):
+    session, hll_sketch_agg = get_session_and_func("hll_sketch_agg")
+    lit = get_func("lit", session)
+    hll_sketch_estimate = get_func("hll_sketch_estimate", session)
+    df = session.createDataFrame([1, 2, 2, 3], "INT")
+    assert (
+        df.agg(hll_sketch_estimate(hll_sketch_agg("value")).alias("distinct_cnt")).first()[0] == 3
+    )
+    assert (
+        df.agg(hll_sketch_estimate(hll_sketch_agg("value", lit(12))).alias("distinct_cnt")).first()[
+            0
+        ]
+        == 3
+    )
+    assert (
+        df.agg(hll_sketch_estimate(hll_sketch_agg("value", 12)).alias("distinct_cnt")).first()[0]
+        == 3
+    )
+
+
+def test_hll_sketch_estimate(get_session_and_func, get_func):
+    session, hll_sketch_estimate = get_session_and_func("hll_sketch_estimate")
+    hll_sketch_agg = get_func("hll_sketch_agg", session)
+    df = session.createDataFrame([1, 2, 2, 3], "INT")
+    assert (
+        df.agg(hll_sketch_estimate(hll_sketch_agg("value")).alias("distinct_cnt")).first()[0] == 3
+    )
+
+
+def test_hll_union(get_session_and_func, get_func):
+    session, hll_union = get_session_and_func("hll_union")
+    hll_sketch_agg = get_func("hll_sketch_agg", session)
+    hll_sketch_estimate = get_func("hll_sketch_estimate", session)
+    df = session.createDataFrame([(1, 4), (2, 5), (2, 5), (3, 6)], "struct<v1:int,v2:int>")
+    df = df.agg(hll_sketch_agg("v1").alias("sketch1"), hll_sketch_agg("v2").alias("sketch2"))
+    df = df.withColumn("distinct_cnt", hll_sketch_estimate(hll_union("sketch1", "sketch2")))
+    assert df.drop("sketch1", "sketch2").first()[0] == 6
+
+
+def test_hll_union_agg(get_session_and_func, get_func):
+    session, hll_union_agg = get_session_and_func("hll_union_agg")
+    hll_sketch_agg = get_func("hll_sketch_agg", session)
+    hll_sketch_estimate = get_func("hll_sketch_estimate", session)
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df1 = session.createDataFrame([1, 2, 2, 3], "INT")
+    df1 = df1.agg(hll_sketch_agg("value").alias("sketch"))
+    df2 = session.createDataFrame([4, 5, 5, 6], "INT")
+    df2 = df2.agg(hll_sketch_agg("value").alias("sketch"))
+    df3 = df1.union(df2).agg(hll_sketch_estimate(hll_union_agg("sketch")).alias("distinct_cnt"))
+    assert df3.drop("sketch").first()[0] == 6
+    df4 = df1.union(df2).agg(
+        hll_sketch_estimate(hll_union_agg("sketch", lit(False))).alias("distinct_cnt")
+    )
+    assert df4.drop("sketch").first()[0] == 6
+    df5 = df1.union(df2).agg(
+        hll_sketch_estimate(hll_union_agg(col("sketch"), lit(False))).alias("distinct_cnt")
+    )
+    assert df5.drop("sketch").first()[0] == 6
+
+
+def test_ifnull(get_session_and_func, get_func):
+    session, ifnull = get_session_and_func("ifnull")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(None,), (1,)], ["e"])
+    assert df.select(ifnull(df.e, lit(8))).collect() == [
+        Row(value=8),
+        Row(value=1),
+    ]
+
+
+def test_ilike(get_session_and_func, get_func):
+    session, ilike = get_session_and_func("ilike")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("Spark", "_park")], ["a", "b"])
+    assert df.select(ilike(df.a, df.b).alias("r")).collect() == [Row(r=True)]
+    df = session.createDataFrame(
+        [("%SystemDrive%/Users/John", "/%SystemDrive/%//Users%")], ["a", "b"]
+    )
+    assert df.select(ilike(df.a, df.b, lit("/")).alias("r")).collect() == [Row(r=True)]
+
+
+def test_inline(get_session_and_func, get_func):
+    session, inline = get_session_and_func("inline")
+    df = session.createDataFrame([Row(structlist=[Row(a=1, b=2), Row(a=3, b=4)])])
+    assert df.select(inline(df.structlist)).collect() == [Row(a=1, b=2), Row(a=3, b=4)]
+
+
+def test_inline_outer(get_session_and_func, get_func):
+    session, inline_outer = get_session_and_func("inline_outer")
+    df = session.createDataFrame(
+        [Row(id=1, structlist=[Row(a=1, b=2), Row(a=3, b=4)]), Row(id=2, structlist=[])]
+    )
+    assert df.select("id", inline_outer(df.structlist)).collect() == [
+        Row(id=1, a=1, b=2),
+        Row(id=1, a=3, b=4),
+        Row(id=2, a=None, b=None),
+    ]
+
+
+def test_isnotnull(get_session_and_func, get_func):
+    session, isnotnull = get_session_and_func("isnotnull")
+    df = session.createDataFrame([(None,), (1,)], ["e"])
+    assert df.select(isnotnull(df.e).alias("r")).collect() == [Row(r=False), Row(r=True)]
+
+
+def test_java_method(get_session_and_func, get_func):
+    session, java_method = get_session_and_func("java_method")
+    lit = get_func("lit", session)
+    assert (
+        session.range(1)
+        .select(
+            java_method(
+                lit("java.util.UUID"),
+                lit("fromString"),
+                lit("a5cf6c42-0c85-418f-af6c-3e4e5b1328f2"),
+            )
+        )
+        .first()[0]
+        == "a5cf6c42-0c85-418f-af6c-3e4e5b1328f2"
+    )
+
+
+def test_json_array_length(get_session_and_func, get_func):
+    session, json_array_length = get_session_and_func("json_array_length")
+    df = session.createDataFrame([(None,), ("[1, 2, 3]",), ("[]",)], ["data"])
+    assert df.select(json_array_length(df.data).alias("r")).collect() == [
+        Row(r=None),
+        Row(r=3),
+        Row(r=0),
+    ]
+
+
+def test_json_object_keys(get_session_and_func, get_func):
+    session, json_object_keys = get_session_and_func("json_object_keys")
+    df = session.createDataFrame([(None,), ("{}",), ('{"key1":1, "key2":2}',)], ["data"])
+    assert df.select(json_object_keys(df.data).alias("r")).collect() == [
+        Row(r=None),
+        Row(r=[]),
+        Row(r=["key1", "key2"]),
+    ]
+
+
+def test_last_value(get_session_and_func, get_func):
+    session, last_value = get_session_and_func("last_value")
+    assert session.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+    ).select(last_value("a"), last_value("b")).collect() == [Row(value1=None, value2=2)]
+    assert session.createDataFrame(
+        [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+    ).select(last_value("a", True), last_value("b", True)).collect() == [Row(value1="b", value2=2)]
+
+
+def test_lcase(get_session_and_func, get_func):
+    session, lcase = get_session_and_func("lcase")
+    lit = get_func("lit", session)
+    assert session.range(1).select(lcase(lit("Spark"))).first()[0] == "spark"
+
+
+def test_left(get_session_and_func, get_func):
+    session, left = get_session_and_func("left")
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                3,
+            )
+        ],
+        ["a", "b"],
+    )
+    assert df.select(left(df.a, df.b).alias("r")).collect() == [Row(r="Spa")]
+
+
+def test_like(get_session_and_func, get_func):
+    session, like = get_session_and_func("like")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("Spark", "_park")], ["a", "b"])
+    assert df.select(like(df.a, df.b).alias("r")).collect() == [Row(r=True)]
+    df = session.createDataFrame(
+        [("%SystemDrive%/Users/John", "/%SystemDrive/%//Users%")], ["a", "b"]
+    )
+    assert df.select(like(df.a, df.b, lit("/")).alias("r")).collect() == [Row(r=True)]
+
+
+def test_ln(get_session_and_func, get_func):
+    session, ln = get_session_and_func("ln")
+    df = session.createDataFrame([(4,)], ["a"])
+    assert df.select(ln("a")).first()[0] == 1.3862943611198906
+
+
+def test_localtimestamp(get_session_and_func, get_func):
+    session, localtimestamp = get_session_and_func("localtimestamp")
+    df = session.range(1)
+    now = datetime.datetime.now().replace(microsecond=0)
+    assert df.select(localtimestamp()).first()[0] - now <= datetime.timedelta(seconds=3)
+
+
+def test_make_dt_interval(get_session_and_func, get_func):
+    session, make_dt_interval = get_session_and_func("make_dt_interval")
+    df = session.createDataFrame([[1, 12, 30, 01.001001]], ["day", "hour", "min", "sec"])
+    assert df.select(make_dt_interval(df.day, df.hour, df.min, df.sec).alias("r")).first()[
+        0
+    ] == datetime.timedelta(days=1, seconds=45001, microseconds=1001)
+    assert df.select(make_dt_interval(df.day, df.hour, df.min).alias("r")).first()[
+        0
+    ] == datetime.timedelta(days=1, seconds=45000)
+    assert df.select(make_dt_interval(df.day, df.hour).alias("r")).first()[0] == datetime.timedelta(
+        days=1, seconds=43200
+    )
+    assert df.select(make_dt_interval(df.day).alias("r")).first()[0] == datetime.timedelta(days=1)
+    assert df.select(make_dt_interval().alias("r")).first()[0] == datetime.timedelta(0)
+
+
+def test_make_timestamp(get_session_and_func, get_func):
+    session, make_timestamp = get_session_and_func("make_timestamp")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887, "CET"]],
+        ["year", "month", "day", "hour", "min", "sec", "timezone"],
+    )
+    assert df.select(
+        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias("r")
+    ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
+    assert df.select(
+        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+    ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_make_timestamp_ltz(get_session_and_func, get_func):
+    session, make_timestamp_ltz = get_session_and_func("make_timestamp_ltz")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887, "CET"]],
+        ["year", "month", "day", "hour", "min", "sec", "timezone"],
+    )
+    assert df.select(
+        make_timestamp_ltz(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone)
+    ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
+    assert df.select(
+        make_timestamp_ltz(df.year, df.month, df.day, df.hour, df.min, df.sec)
+    ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_make_timestamp_ntz(get_session_and_func, get_func):
+    session, make_timestamp_ntz = get_session_and_func("make_timestamp_ntz")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887]], ["year", "month", "day", "hour", "min", "sec"]
+    )
+    assert df.select(
+        make_timestamp_ntz(df.year, df.month, df.day, df.hour, df.min, df.sec)
+    ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_make_ym_interval(get_session_and_func, get_func):
+    session, make_ym_interval = get_session_and_func("make_ym_interval")
+    df = session.createDataFrame([[2014, 12]], ["year", "month"])
+    assert df.select(make_ym_interval(df.year, df.month).alias("r")).first()[0] == 24180
+
+
+def test_map_contains_key(get_session_and_func, get_func):
+    session, map_contains_key = get_session_and_func("map_contains_key")
+    df = session.sql("SELECT map(1, 'a', 2, 'b') as data")
+    assert df.select(map_contains_key("data", 1)).collect() == [Row(value=True)]
+    assert df.select(map_contains_key("data", -1)).collect() == [Row(value=False)]
+
+
+def test_mask(get_session_and_func, get_func):
+    session, mask = get_session_and_func("mask")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("AbCD123-@$#",), ("abcd-EFGH-8765-4321",)], ["data"])
+    assert df.select(mask(df.data).alias("r")).collect() == [
+        Row(r="XxXXnnn-@$#"),
+        Row(r="xxxx-XXXX-nnnn-nnnn"),
+    ]
+    assert df.select(mask(df.data, lit("Y")).alias("r")).collect() == [
+        Row(r="YxYYnnn-@$#"),
+        Row(r="xxxx-YYYY-nnnn-nnnn"),
+    ]
+    assert df.select(mask(df.data, lit("Y"), lit("y")).alias("r")).collect() == [
+        Row(r="YyYYnnn-@$#"),
+        Row(r="yyyy-YYYY-nnnn-nnnn"),
+    ]
+    assert df.select(mask(df.data, lit("Y"), lit("y"), lit("d")).alias("r")).collect() == [
+        Row(r="YyYYddd-@$#"),
+        Row(r="yyyy-YYYY-dddd-dddd"),
+    ]
+    assert df.select(
+        mask(df.data, lit("Y"), lit("y"), lit("d"), lit("*")).alias("r")
+    ).collect() == [Row(r="YyYYddd****"), Row(r="yyyy*YYYY*dddd*dddd")]
+
+
+def test_median(get_session_and_func, get_func):
+    session, median = get_session_and_func("median")
+    df = session.createDataFrame(
+        [
+            ("Java", 2012, 20000),
+            ("dotNET", 2012, 5000),
+            ("Java", 2012, 22000),
+            ("dotNET", 2012, 10000),
+            ("dotNET", 2013, 48000),
+            ("Java", 2013, 30000),
+        ],
+        schema=("course", "year", "earnings"),
+    )
+    assert df.groupby("course").agg(median("earnings")).collect() == [
+        Row(value1="Java", value2=22000.0),
+        Row(value1="dotNET", value2=10000.0),
+    ]
+
+
+def test_mode(get_session_and_func, get_func):
+    session, mode = get_session_and_func("mode")
+    df = session.createDataFrame(
+        [
+            ("Java", 2012, 20000),
+            ("dotNET", 2012, 5000),
+            ("Java", 2012, 20000),
+            ("dotNET", 2012, 5000),
+            ("dotNET", 2013, 48000),
+            ("Java", 2013, 30000),
+        ],
+        schema=("course", "year", "earnings"),
+    )
+    assert df.groupby("course").agg(mode("year")).collect() == [
+        Row(value1="Java", value2=2012),
+        Row(value1="dotNET", value2=2012),
+    ]
+
+
+def test_named_struct(get_session_and_func, get_func):
+    session, named_struct = get_session_and_func("named_struct")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(1, 2, 3)], ["a", "b", "c"])
+    assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
+        Row(r=Row(x=1, y=2))
+    ]
+
+
+def test_negative(get_session_and_func, get_func):
+    session, negative = get_session_and_func("negative")
+    assert session.range(3).select(negative("id")).collect() == [
+        Row(value=0),
+        Row(value=-1),
+        Row(value=-2),
+    ]
+
+
+def test_negate(get_session_and_func, get_func):
+    session, negate = get_session_and_func("negate")
+    assert session.range(3).select(negate("id")).collect() == [
+        Row(value=0),
+        Row(value=-1),
+        Row(value=-2),
+    ]
+
+
+def test_now(get_session_and_func):
+    session, now = get_session_and_func("now")
+    df = session.range(1)
+    # The current date can depend on how the connection is configured so we check for dates around today
+    result = df.select(now()).first()[0]
+    assert isinstance(result, datetime.datetime)
+    assert result.date() in (
+        datetime.date.today() - datetime.timedelta(days=1),
+        datetime.date.today(),
+        datetime.date.today() + datetime.timedelta(days=1),
+    )
+
+
+def test_nvl(get_session_and_func, get_func):
+    session, nvl = get_session_and_func("nvl")
+    df = session.createDataFrame(
+        [
+            (
+                None,
+                8,
+            ),
+            (
+                1,
+                9,
+            ),
+        ],
+        ["a", "b"],
+    )
+    assert df.select(nvl(df.a, df.b).alias("r")).collect() == [Row(r=8), Row(r=1)]
+
+
+def test_nvl2(get_session_and_func, get_func):
+    session, nvl2 = get_session_and_func("nvl2")
+    df = session.createDataFrame(
+        [
+            (
+                None,
+                8,
+                6,
+            ),
+            (
+                1,
+                9,
+                9,
+            ),
+        ],
+        ["a", "b", "c"],
+    )
+    assert df.select(nvl2(df.a, df.b, df.c).alias("r")).collect() == [Row(r=6), Row(r=9)]
+
+
+def test_parse_url(get_session_and_func, get_func):
+    session, parse_url = get_session_and_func("parse_url")
+    df = session.createDataFrame(
+        [
+            (
+                "http://spark.apache.org/path?query=1",
+                "QUERY",
+                "query",
+            )
+        ],
+        ["a", "b", "c"],
+    )
+    assert df.select(parse_url(df.a, df.b, df.c).alias("r")).collect() == [Row(r="1")]
+    assert df.select(parse_url(df.a, df.b).alias("r")).collect() == [Row(r="query=1")]
+
+
+def test_pi(get_session_and_func, get_func):
+    session, pi = get_session_and_func("pi")
+    assert session.range(1).select(pi()).first()[0] == math.pi
+
+
+def test_pmod(get_session_and_func, get_func):
+    session, pmod = get_session_and_func("pmod")
+    df = session.createDataFrame(
+        [
+            (1.0, float("nan")),
+            (float("nan"), 2.0),
+            (10.0, 3.0),
+            (float("nan"), float("nan")),
+            (-3.0, 4.0),
+            (-10.0, 3.0),
+            (-5.0, -6.0),
+            (7.0, -8.0),
+            (1.0, 2.0),
+        ],
+        ("a", "b"),
+    )
+    for i, row in enumerate(df.select(pmod("a", "b")).collect()):
+        value = row[0]
+        if i in {0, 1, 3}:
+            assert math.isnan(value)
+        elif i == 2:
+            assert value == 1.0
+        elif i == 4:
+            assert value == 1.0
+        elif i == 5:
+            assert value == 2.0
+        elif i == 6:
+            assert value == -5.0
+        elif i == 7:
+            assert value == 7.0
+        elif i == 8:
+            assert value == 1.0
+        else:
+            raise RuntimeError("Too many results")
+
+
+def test_position(get_session_and_func, get_func):
+    session, position = get_session_and_func("position")
+    assert (
+        session.createDataFrame(
+            [
+                (
+                    "bar",
+                    "foobarbar",
+                    5,
+                )
+            ],
+            ["a", "b", "c"],
+        )
+        .select(position("a", "b", "c"))
+        .first()[0]
+        == 7
+    )
+    assert (
+        session.createDataFrame(
+            [
+                (
+                    "bar",
+                    "foobarbar",
+                    5,
+                )
+            ],
+            ["a", "b", "c"],
+        )
+        .select(position("a", "b"))
+        .first()[0]
+        == 4
+    )
+
+
+def test_positive(get_session_and_func, get_func):
+    session, positive = get_session_and_func("positive")
+    df = session.createDataFrame([(-1,), (0,), (1,)], ["v"])
+    assert df.select(positive("v").alias("p")).collect() == [
+        Row(value=-1),
+        Row(value=0),
+        Row(value=1),
+    ]
+
+
+def test_printf(get_session_and_func, get_func):
+    session, printf = get_session_and_func("printf")
+    assert (
+        session.createDataFrame(
+            [
+                (
+                    "aa%d%s",
+                    123,
+                    "cc",
+                )
+            ],
+            ["a", "b", "c"],
+        )
+        .select(printf("a", "b", "c"))
+        .first()[0]
+        == "aa123cc"
+    )
+
+
+def test_product(get_session_and_func, get_func):
+    session, product = get_session_and_func("product")
+    col = get_func("col", session)
+    df = session.range(1, 10).toDF("x").withColumn("mod3", col("x") % 3)
+    prods = df.groupBy("mod3").agg(product("x").alias("product"))
+    assert prods.orderBy("mod3").collect() == [
+        Row(value1=0, value2=162.0),
+        Row(value1=1, value2=28.0),
+        Row(value1=2, value2=80.0),
+    ]
+
+
+def test_reduce(get_session_and_func, get_func):
+    session, reduce = get_session_and_func("reduce")
+    lit = get_func("lit", session)
+    struct = get_func("struct", session)
+    df = session.createDataFrame([(1, [20.0, 4.0, 2.0, 6.0, 10.0])], ("id", "values"))
+    assert (
+        df.select(
+            reduce("values", lit(0.0).cast("double"), lambda acc, x: acc + x).alias("sum")
+        ).first()[0]
+        == 42.0
+    )
+
+    if isinstance(session, PySparkSession):
+
+        def merge(acc, x):
+            count = acc.count + 1
+            sum = acc.sum + x
+            return struct(count.alias("count"), sum.alias("sum"))
+
+        assert (
+            df.select(
+                reduce(
+                    "values",
+                    struct(lit(0).alias("count"), lit(0.0).alias("sum")),
+                    merge,
+                    lambda acc: acc.sum / acc.count,
+                ).alias("mean")
+            ).first()[0]
+            == 8.4
+        )
+
+
+def test_reflect(get_session_and_func, get_func):
+    session, reflect = get_session_and_func("reflect")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("a5cf6c42-0c85-418f-af6c-3e4e5b1328f2",)], ["a"])
+    assert (
+        df.select(reflect(lit("java.util.UUID"), lit("fromString"), df.a).alias("r")).first()[0]
+        == "a5cf6c42-0c85-418f-af6c-3e4e5b1328f2"
+    )
+
+
+def test_regexp(get_session_and_func, get_func):
+    session, regexp = get_session_and_func("regexp")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp("str", lit(r"(\d+)"))
+    ).collect() == [Row(value=True)]
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp("str", lit(r"\d{2}b")).alias("r")
+    ).collect() == [Row(r=False)]
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp("str", col("regexp")).alias("r")
+    ).collect() == [Row(r=True)]
+
+
+def test_regexp_count(get_session_and_func, get_func):
+    session, regexp_count = get_session_and_func("regexp_count")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df = session.createDataFrame([("1a 2b 14m", r"\d+")], ["str", "regexp"])
+    assert df.select(regexp_count("str", lit(r"\d+")).alias("d")).first()[0] == 3
+    assert df.select(regexp_count("str", lit(r"mmm")).alias("d")).first()[0] == 0
+    assert df.select(regexp_count("str", col("regexp")).alias("d")).first()[0] == 3
+
+
+def test_regexp_extract_all(get_session_and_func, get_func):
+    session, regexp_extract_all = get_session_and_func("regexp_extract_all")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df = session.createDataFrame([("100-200, 300-400", r"(\d+)-(\d+)")], ["str", "regexp"])
+    assert df.select(regexp_extract_all("str", lit(r"(\d+)-(\d+)")).alias("d")).first()[0] == [
+        "100",
+        "300",
+    ]
+    assert df.select(regexp_extract_all("str", lit(r"(\d+)-(\d+)"), 1).alias("d")).first()[0] == [
+        "100",
+        "300",
+    ]
+    assert df.select(regexp_extract_all("str", lit(r"(\d+)-(\d+)"), 2).alias("d")).first()[0] == [
+        "200",
+        "400",
+    ]
+    assert df.select(regexp_extract_all("str", col("regexp")).alias("d")).first()[0] == [
+        "100",
+        "300",
+    ]
+
+
+def test_regexp_instr(get_session_and_func, get_func):
+    session, regexp_instr = get_session_and_func("regexp_instr")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df = session.createDataFrame([("1a 2b 14m", r"\d+(a|b|m)")], ["str", "regexp"])
+    assert df.select(regexp_instr("str", lit(r"\d+(a|b|m)")).alias("d")).first()[0] == 1
+    assert df.select(regexp_instr("str", lit(r"\d+(a|b|m)"), 1).alias("d")).first()[0] == 1
+    assert df.select(regexp_instr("str", lit(r"\d+(a|b|m)"), 2).alias("d")).first()[0] == 1
+    assert df.select(regexp_instr("str", col("regexp")).alias("d")).first()[0] == 1
+
+
+def test_regexp_like(get_session_and_func, get_func):
+    session, regexp_like = get_session_and_func("regexp_like")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp_like("str", lit(r"(\d+)"))
+    ).collect() == [Row(value=True)]
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp_like("str", lit(r"\d{2}b"))
+    ).collect() == [Row(value=False)]
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+        regexp_like("str", col("regexp"))
+    ).collect() == [Row(value=True)]
+
+
+def test_regexp_substr(get_session_and_func, get_func):
+    session, regexp_substr = get_session_and_func("regexp_substr")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df = session.createDataFrame([("1a 2b 14m", r"\d+")], ["str", "regexp"])
+    assert df.select(regexp_substr("str", lit(r"\d+")).alias("d")).collect() == [Row(d="1")]
+    assert df.select(regexp_substr("str", lit(r"mmm")).alias("d")).collect() == [Row(d=None)]
+    assert df.select(regexp_substr("str", col("regexp")).alias("d")).collect() == [Row(d="1")]
+
+
+def test_regr_avgx(get_session_and_func, get_func):
+    session, regr_avgx = get_session_and_func("regr_avgx")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_avgx("y", "x")).first()[0] == 0.999
+
+
+def test_regr_avgy(get_session_and_func, get_func):
+    session, regr_avgy = get_session_and_func("regr_avgy")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_avgy("y", "x")).first()[0] == 9.980732994136464
+
+
+def test_regr_count(get_session_and_func, get_func):
+    session, regr_count = get_session_and_func("regr_count")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_count("y", "x")).first()[0] == 1000
+
+
+def test_regr_intercept(get_session_and_func, get_func):
+    session, regr_intercept = get_session_and_func("regr_intercept")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_intercept("y", "x")).first()[0] == -0.04961745990969568
+
+
+def test_regr_r2(get_session_and_func, get_func):
+    session, regr_r2 = get_session_and_func("regr_r2")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_r2("y", "x")).first()[0] == 0.9851908293645436
+
+
+def test_regr_slope(get_session_and_func, get_func):
+    session, regr_slope = get_session_and_func("regr_slope")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_slope("y", "x")).first()[0] == 10.040390844891048
+
+
+def test_regr_sxx(get_session_and_func, get_func):
+    session, regr_sxx = get_session_and_func("regr_sxx")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_sxx("y", "x")).first()[0] == 666.9989999999996
+
+
+def test_regr_sxy(get_session_and_func, get_func):
+    session, regr_sxy = get_session_and_func("regr_sxy")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_sxy("y", "x")).first()[0] == 6696.93065315148
+
+
+def test_regr_syy(get_session_and_func, get_func):
+    session, regr_syy = get_session_and_func("regr_syy")
+    col = get_func("col", session)
+    randn = get_func("randn", session)
+    x = (col("id") % 3).alias("x")
+    y = (randn(42) + x * 10).alias("y")
+    df = session.range(0, 1000, 1, 1).select(x, y)
+    assert df.select(regr_syy("y", "x")).first()[0] == 68250.53503811295
+
+
+def test_replace(get_session_and_func, get_func):
+    session, replace = get_session_and_func("replace")
+    df = session.createDataFrame(
+        [
+            (
+                "ABCabc",
+                "abc",
+                "DEF",
+            )
+        ],
+        ["a", "b", "c"],
+    )
+    assert df.select(replace(df.a, df.b, df.c).alias("r")).first()[0] == "ABCDEF"
+    assert df.select(replace(df.a, df.b).alias("r")).first()[0] == "ABC"
+
+
+def test_right(get_session_and_func, get_func):
+    session, right = get_session_and_func("right")
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                3,
+            )
+        ],
+        ["a", "b"],
+    )
+    assert df.select(right(df.a, df.b).alias("r")).first()[0] == "SQL"
+
+
+def test_rlike(get_session_and_func, get_func):
+    session, rlike = get_session_and_func("rlike")
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    df = session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"])
+    assert df.select(rlike("str", lit(r"(\d+)")).alias("d")).collect() == [Row(d=True)]
+    assert df.select(rlike("str", lit(r"\d{2}b")).alias("d")).collect() == [Row(d=False)]
+    assert df.select(rlike("str", col("regexp")).alias("d")).collect() == [Row(d=True)]
+
+
+def test_sha(get_session_and_func, get_func):
+    session, sha = get_session_and_func("sha")
+    lit = get_func("lit", session)
+    assert (
+        session.range(1).select(sha(lit("Spark"))).first()[0]
+        == "85f5955f4b27a9a4c2aab6ffe5d7189fc298b92c"
+    )
+
+
+def test_sign(get_session_and_func, get_func):
+    session, sign = get_session_and_func("sign")
+    lit = get_func("lit", session)
+    assert session.range(1).select(sign(lit(-5)), sign(lit(6))).collect() == [
+        Row(value1=-1.0, value2=1.0)
+    ]
+
+
+def test_some(get_session_and_func, get_func):
+    session, some = get_session_and_func("some")
+    assert session.createDataFrame([[True], [True], [True]], ["flag"]).select(
+        some("flag")
+    ).collect() == [Row(value=True)]
+    assert session.createDataFrame([[True], [False], [True]], ["flag"]).select(
+        some("flag")
+    ).collect() == [Row(value=True)]
+    assert session.createDataFrame([[False], [False], [False]], ["flag"]).select(
+        some("flag")
+    ).collect() == [Row(value=False)]
+
+
+def test_spark_partition_id(get_session_and_func, get_func):
+    session, spark_partition_id = get_session_and_func("spark_partition_id")
+    df = session.range(2)
+    assert df.repartition(1).select(spark_partition_id().alias("pid")).collect() == [
+        Row(pid=0),
+        Row(pid=0),
+    ]
+
+
+def test_split_part(get_session_and_func, get_func):
+    session, split_part = get_session_and_func("split_part")
+    df = session.createDataFrame(
+        [
+            (
+                "11.12.13",
+                ".",
+                3,
+            )
+        ],
+        ["a", "b", "c"],
+    )
+    assert df.select(split_part(df.a, df.b, df.c).alias("r")).first()[0] == "13"
+
+
+def test_startswith(get_session_and_func, get_func):
+    session, startswith = get_session_and_func("startswith")
+    to_binary = get_func("to_binary", session)
+    df = session.createDataFrame(
+        [
+            (
+                "Spark SQL",
+                "Spark",
+            )
+        ],
+        ["a", "b"],
+    )
+    assert df.select(startswith(df.a, df.b).alias("r")).collect() == [Row(r=True)]
+    df = session.createDataFrame(
+        [
+            (
+                "414243",
+                "4142",
+            )
+        ],
+        ["e", "f"],
+    )
+    df = df.select(to_binary("e").alias("e"), to_binary("f").alias("f"))
+    assert df.select(startswith("e", "f"), startswith("f", "e")).collect() == [
+        Row(value1=True, value2=False)
+    ]
+
+
+def test_std(get_session_and_func, get_func):
+    session, std = get_session_and_func("std")
+    assert session.range(6).select(std("id")).first()[0] == 1.8708286933869707
+
+
+def test_str_to_map(get_session_and_func, get_func):
+    session, str_to_map = get_session_and_func("str_to_map")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
+    assert df.select(str_to_map(df.e, lit(","), lit(":")).alias("r")).first()[0] == {
+        "a": "1",
+        "b": "2",
+        "c": "3",
+    }
+    df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
+    assert df.select(str_to_map(df.e, lit(",")).alias("r")).first()[0] == {
+        "a": "1",
+        "b": "2",
+        "c": "3",
+    }
+    df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
+    assert df.select(str_to_map(df.e).alias("r")).first()[0] == {"a": "1", "b": "2", "c": "3"}
+
+
+def test_substr(get_session_and_func, get_func):
+    session, substr = get_session_and_func("substr")
+    assert (
+        session.createDataFrame(
+            [
+                (
+                    "Spark SQL",
+                    5,
+                    1,
+                )
+            ],
+            ["a", "b", "c"],
+        )
+        .select(substr("a", "b", "c"))
+        .first()[0]
+        == "k"
+    )
+    assert (
+        session.createDataFrame(
+            [
+                (
+                    "Spark SQL",
+                    5,
+                    1,
+                )
+            ],
+            ["a", "b", "c"],
+        )
+        .select(substr("a", "b"))
+        .first()[0]
+        == "k SQL"
+    )
+
+
+def test_timestamp_micros(get_session_and_func, get_func):
+    session, timestamp_micros = get_session_and_func("timestamp_micros")
+    time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
+    assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[
+        0
+    ] == datetime.datetime(1969, 12, 31, 16, 20, 30, 219000)
+
+
+def test_timestamp_millis(get_session_and_func, get_func):
+    session, timestamp_millis = get_session_and_func("timestamp_millis")
+    time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
+    assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[
+        0
+    ] == datetime.datetime(1970, 1, 14, 21, 43, 39)
+
+
+def test_to_char(get_session_and_func, get_func):
+    session, to_char = get_session_and_func("to_char")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(78.12,)], ["e"])
+    assert df.select(to_char(df.e, lit("$99.99")).alias("r")).first()[0] == "$78.12"
+
+
+def test_to_number(get_session_and_func, get_func):
+    session, to_number = get_session_and_func("to_number")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("$78.12",)], ["e"])
+    result = df.select(to_number(df.e, lit("$99.99")).alias("r")).first()[0]
+    if isinstance(session, PySparkSession):
+        assert result == Decimal("78.12")
+    else:
+        assert result == 78.12
+
+
+def test_to_timestamp_ltz(get_session_and_func, get_func):
+    session, to_timestamp_ltz = get_session_and_func("to_timestamp_ltz")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("2016-12-31",)], ["e"])
+    assert df.select(to_timestamp_ltz(df.e, lit("yyyy-MM-dd")).alias("r")).first()[
+        0
+    ] == datetime.datetime(2016, 12, 31, 0, 0)
+    df = session.createDataFrame([("2016-12-31",)], ["e"])
+    assert df.select(to_timestamp_ltz(df.e).alias("r")).first()[0] == datetime.datetime(
+        2016, 12, 31, 0, 0
+    )
+
+
+def test_to_timestamp_ntz(get_session_and_func, get_func):
+    session, to_timestamp_ntz = get_session_and_func("to_timestamp_ntz")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("2016-04-08",)], ["e"])
+    assert df.select(to_timestamp_ntz(df.e, lit("yyyy-MM-dd")).alias("r")).first()[
+        0
+    ] == datetime.datetime(2016, 4, 8, 0, 0)
+    df = session.createDataFrame([("2016-04-08",)], ["e"])
+    assert df.select(to_timestamp_ntz(df.e).alias("r")).first()[0] == datetime.datetime(
+        2016, 4, 8, 0, 0
+    )
+
+
+def test_to_unix_timestamp(get_session_and_func, get_func):
+    session, to_unix_timestamp = get_session_and_func("to_unix_timestamp")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("2016-04-08",)], ["e"])
+    assert df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0] == 1460098800
+    df = session.createDataFrame([("2016-04-08",)], ["e"])
+    assert df.select(to_unix_timestamp(df.e).alias("r")).collect() == [Row(r=None)]
+
+
+def test_to_varchar(get_session_and_func, get_func):
+    session, to_varchar = get_session_and_func("to_varchar")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(78.12,)], ["e"])
+    assert df.select(to_varchar(df.e, lit("$99.99")).alias("r")).first()[0] == "$78.12"
+
+
+def test_try_aes_decrypt(get_session_and_func, get_func):
+    session, try_aes_decrypt = get_session_and_func("try_aes_decrypt")
+    unbase64 = get_func("unbase64", session)
+    unhex = get_func("unhex", session)
+    df = session.createDataFrame(
+        [
+            (
+                "AAAAAAAAAAAAAAAAQiYi+sTLm7KD9UcZ2nlRdYDe/PX4",
+                "abcdefghijklmnop12345678ABCDEFGH",
+                "GCM",
+                "DEFAULT",
+                "This is an AAD mixed into the input",
+            )
+        ],
+        ["input", "key", "mode", "padding", "aad"],
+    )
+    assert df.select(
+        try_aes_decrypt(unbase64(df.input), df.key, df.mode, df.padding, df.aad).alias("r")
+    ).first()[0] == bytearray(b"Spark")
+    df = session.createDataFrame(
+        [
+            (
+                "AAAAAAAAAAAAAAAAAAAAAPSd4mWyMZ5mhvjiAPQJnfg=",
+                "abcdefghijklmnop12345678ABCDEFGH",
+                "CBC",
+                "DEFAULT",
+            )
+        ],
+        ["input", "key", "mode", "padding"],
+    )
+    assert df.select(
+        try_aes_decrypt(unbase64(df.input), df.key, df.mode, df.padding).alias("r")
+    ).first()[0] == bytearray(b"Spark")
+    assert df.select(try_aes_decrypt(unbase64(df.input), df.key, df.mode).alias("r")).first()[
+        0
+    ] == bytearray(b"Spark")
+
+    df = session.createDataFrame(
+        [
+            (
+                "83F16B2AA704794132802D248E6BFD4E380078182D1544813898AC97E709B28A94",
+                "0000111122223333",
+            )
+        ],
+        ["input", "key"],
+    )
+    assert df.select(try_aes_decrypt(unhex(df.input), df.key).alias("r")).first()[0] == bytearray(
+        b"Spark"
+    )
+
+
+def test_try_element_at(get_session_and_func, get_func):
+    session, try_element_at = get_session_and_func("try_element_at")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([(["a", "b", "c"],)], ["data"])
+    assert df.select(try_element_at(df.data, lit(1)).alias("r")).first()[0] == "a"
+    assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] == "c"
+    df = session.createDataFrame([({"a": 1.0, "b": 2.0},)], ["data"])
+    assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == 1.0
+
+
+def test_try_to_timestamp(get_session_and_func, get_func):
+    session, try_to_timestamp = get_session_and_func("try_to_timestamp")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
+    assert df.select(try_to_timestamp(df.t).alias("dt")).first()[0] == datetime.datetime(
+        1997, 2, 28, 10, 30
+    )
+    assert df.select(try_to_timestamp(df.t, lit("yyyy-MM-dd HH:mm:ss")).alias("dt")).first()[
+        0
+    ] == datetime.datetime(1997, 2, 28, 10, 30)
+
+
+def test_ucase(get_session_and_func, get_func):
+    session, ucase = get_session_and_func("ucase")
+    lit = get_func("lit", session)
+    assert session.range(1).select(ucase(lit("Spark"))).first()[0] == "SPARK"
+
+
+def test_unix_date(get_session_and_func, get_func):
+    session, unix_date = get_session_and_func("unix_date")
+    to_date = get_func("to_date", session)
+    df = session.createDataFrame([("1970-01-02",)], ["t"])
+    assert df.select(unix_date(to_date(df.t)).alias("n")).first()[0] == 1
+
+
+def test_unix_micros(get_session_and_func, get_func):
+    session, unix_micros = get_session_and_func("unix_micros")
+    to_timestamp = get_func("to_timestamp", session)
+    df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
+    assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000000
+
+
+def test_unix_millis(get_session_and_func, get_func):
+    session, unix_millis = get_session_and_func("unix_millis")
+    to_timestamp = get_func("to_timestamp", session)
+    df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
+    assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000
+
+
+def test_unix_seconds(get_session_and_func, get_func):
+    session, unix_seconds = get_session_and_func("unix_seconds")
+    to_timestamp = get_func("to_timestamp", session)
+    df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
+    assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400
+
+
+def test_url_decode(get_session_and_func, get_func):
+    session, url_decode = get_session_and_func("url_decode")
+    df = session.createDataFrame([("https%3A%2F%2Fspark.apache.org",)], ["a"])
+    assert df.select(url_decode(df.a).alias("r")).first()[0] == "https://spark.apache.org"
+
+
+def test_url_encode(get_session_and_func, get_func):
+    session, url_encode = get_session_and_func("url_encode")
+    df = session.createDataFrame([("https://spark.apache.org",)], ["a"])
+    assert df.select(url_encode(df.a).alias("r")).first()[0] == "https%3A%2F%2Fspark.apache.org"
+
+
+def test_version(get_session_and_func, get_func):
+    session, version = get_session_and_func("version")
+    result = session.range(1).select(version()).first()[0]
+    assert len(result.split(" ")) == 2
+    assert len(result.split(" ")[0].split(".")) == 3
+
+
+def test_weekday(get_session_and_func, get_func):
+    session, weekday = get_session_and_func("weekday")
+    df = session.createDataFrame([("2015-04-08",)], ["dt"])
+    assert df.select(weekday("dt").alias("day")).first()[0] == 2
+
+
+def test_width_bucket(get_session_and_func, get_func):
+    session, width_bucket = get_session_and_func("width_bucket")
+    df = session.createDataFrame(
+        [(5.3, 0.2, 10.6, 5), (-2.1, 1.3, 3.4, 3), (8.1, 0.0, 5.7, 4), (-0.9, 5.2, 0.5, 2)],
+        ["v", "min", "max", "n"],
+    )
+    assert df.select(width_bucket("v", "min", "max", "n")).collect() == [
+        Row(value=3),
+        Row(value=0),
+        Row(value=5),
+        Row(value=3),
+    ]
+
+
+def test_window_time(get_session_and_func, get_func):
+    session, window_time = get_session_and_func("window_time")
+    window = get_func("window", session)
+    sum = get_func("sum", session)
+    df = session.createDataFrame(
+        [(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)],
+    ).toDF("date", "val")
+    w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    assert w.select(
+        w.window.end.cast("string").alias("end"),
+        window_time(w.window).cast("string").alias("window_time"),
+        "sum",
+    ).collect() == [Row(end="2016-03-11 09:00:10", window_time="2016-03-11 09:00:09.999999", sum=1)]
+
+
+def test_xpath(get_session_and_func, get_func):
+    session, xpath = get_session_and_func("xpath")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>b1</b><b>b2</b><b>b3</b><c>c1</c><c>c2</c></a>",)], ["x"])
+    assert df.select(xpath(df.x, lit("a/b/text()")).alias("r")).first()[0] == ["b1", "b2", "b3"]
+
+
+def test_xpath_boolean(get_session_and_func, get_func):
+    session, xpath_boolean = get_session_and_func("xpath_boolean")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b></a>",)], ["x"])
+    assert df.select(xpath_boolean(df.x, lit("a/b")).alias("r")).collect() == [Row(r=True)]
+
+
+def test_xpath_double(get_session_and_func, get_func):
+    session, xpath_double = get_session_and_func("xpath_double")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+    assert df.select(xpath_double(df.x, lit("sum(a/b)")).alias("r")).first()[0] == 3.0
+
+
+def test_xpath_float(get_session_and_func, get_func):
+    session, xpath_float = get_session_and_func("xpath_float")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+    assert df.select(xpath_float(df.x, lit("sum(a/b)")).alias("r")).first()[0] == 3.0
+
+
+def test_xpath_int(get_session_and_func, get_func):
+    session, xpath_int = get_session_and_func("xpath_int")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+    assert df.select(xpath_int(df.x, lit("sum(a/b)")).alias("r")).first()[0] == 3
+
+
+def test_xpath_long(get_session_and_func, get_func):
+    session, xpath_long = get_session_and_func("xpath_long")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+    assert df.select(xpath_long(df.x, lit("sum(a/b)")).alias("r")).first()[0] == 3
+
+
+def test_xpath_number(get_session_and_func, get_func):
+    session, xpath_number = get_session_and_func("xpath_number")
+    lit = get_func("lit", session)
+    assert (
+        session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+        .select(xpath_number("x", lit("sum(a/b)")))
+        .first()[0]
+        == 3.0
+    )
+
+
+def test_xpath_short(get_session_and_func, get_func):
+    session, xpath_short = get_session_and_func("xpath_short")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>1</b><b>2</b></a>",)], ["x"])
+    assert df.select(xpath_short(df.x, lit("sum(a/b)")).alias("r")).first()[0] == 3
+
+
+def test_xpath_string(get_session_and_func, get_func):
+    session, xpath_string = get_session_and_func("xpath_string")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("<a><b>b</b><c>cc</c></a>",)], ["x"])
+    assert df.select(xpath_string(df.x, lit("a/c")).alias("r")).first()[0] == "cc"

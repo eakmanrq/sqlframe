@@ -71,6 +71,11 @@ def get_column_mapping_from_schema_input(
         col_name_type_strs = [x.strip() for x in schema.split(",")]
         if len(col_name_type_strs) == 1 and len(col_name_type_strs[0].split(" ")) == 1:
             value = {"value": col_name_type_strs[0].strip()}
+        elif schema.startswith("struct<") and schema.endswith(">"):
+            value = {
+                name_type_str.split(":")[0].strip(): name_type_str.split(":")[1].strip()
+                for name_type_str in schema[7:-1].split(",")
+            }
         else:
             value = {
                 name_type_str.split(" ")[0].strip(): name_type_str.split(" ")[1].strip()
