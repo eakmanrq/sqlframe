@@ -1872,7 +1872,7 @@ def to_binary(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Col
     return Column.invoke_anonymous_function(col, "TO_BINARY")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def any_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
     column = Column.invoke_expression_over_column(col, expression.AnyValue)
     if ignoreNulls:
@@ -1894,12 +1894,12 @@ def approx_percentile(
     )
 
 
-@meta(unsupported_engines="*")
+@meta()
 def bool_and(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LogicalAnd)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def bool_or(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LogicalOr)
 
@@ -2013,7 +2013,7 @@ def cardinality(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "cardinality")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def char(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Chr)
 
@@ -2043,7 +2043,7 @@ def convert_timezone(
         return Column.invoke_anonymous_function(sourceTz, "convert_timezone", targetTz, sourceTs)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="postgres")
 def count_if(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.CountIf)
 
@@ -2130,7 +2130,7 @@ def current_timezone() -> Column:
     return Column.invoke_anonymous_function(None, "current_timezone")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def current_user() -> Column:
     return Column.invoke_expression_over_column(None, expression.CurrentUser)
 
@@ -2145,12 +2145,7 @@ def date_part(field: ColumnOrName, source: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(field, "date_part", source)
 
 
-@meta(unsupported_engines="*")
-def dateadd(start: ColumnOrName, days: t.Union[ColumnOrName, int]) -> Column:
-    days = lit(days) if isinstance(days, int) else days
-    return Column.invoke_expression_over_column(start, expression.DateAdd, expression=days)
-
-
+dateadd = date_add
 datediff = date_diff
 
 
@@ -2192,7 +2187,7 @@ def every(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "every")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def extract(field: ColumnOrName, source: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(field, expression.Extract, expression=source)
 
@@ -2874,7 +2869,7 @@ def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]]
     return column
 
 
-@meta(unsupported_engines="*")
+@meta()
 def lcase(str: ColumnOrName) -> Column:
     """
     Returns `str` with all characters changed to lowercase.
@@ -2899,7 +2894,7 @@ def lcase(str: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(str, expression.Lower)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def left(str: ColumnOrName, len: ColumnOrName) -> Column:
     """
     Returns the leftmost `len`(`len` can be string type) characters from the string `str`,
@@ -2978,7 +2973,7 @@ def like(
     return column
 
 
-@meta(unsupported_engines="*")
+@meta()
 def ln(col: ColumnOrName) -> Column:
     """Returns the natural logarithm of the argument.
 
@@ -3643,7 +3638,7 @@ def nvl(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col1, expression.Coalesce, expressions=[col2])
 
 
-@meta(unsupported_engines="*")
+@meta()
 def nvl2(col1: ColumnOrName, col2: ColumnOrName, col3: ColumnOrName) -> Column:
     """
     Returns `col2` if `col1` is not null, or `col3` otherwise.
@@ -3770,7 +3765,7 @@ def pmod(dividend: t.Union[ColumnOrName, float], divisor: t.Union[ColumnOrName, 
     return Column.invoke_anonymous_function(dividend, "pmod", divisor)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def position(
     substr: ColumnOrName, str: ColumnOrName, start: t.Optional[ColumnOrName] = None
 ) -> Column:
@@ -4114,7 +4109,7 @@ def regexp_instr(
         return Column.invoke_anonymous_function(str, "regexp_instr", regexp, idx)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="snowflake")
 def regexp_like(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     r"""Returns true if `str` matches the Java regex `regexp`, or false otherwise.
 
@@ -4513,7 +4508,7 @@ def replace(
         return Column.invoke_anonymous_function(src, "replace", search)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def right(str: ColumnOrName, len: ColumnOrName) -> Column:
     """
     Returns the rightmost `len`(`len` can be string type) characters from the string `str`,
@@ -4541,7 +4536,7 @@ rlike = regexp_like
 sha = sha1
 
 
-@meta(unsupported_engines="*")
+@meta()
 def sign(col: ColumnOrName) -> Column:
     """
     Computes the signum of the given value.
@@ -4685,7 +4680,7 @@ def split_part(src: ColumnOrName, delimiter: ColumnOrName, partNum: ColumnOrName
     return Column.invoke_anonymous_function(src, "split_part", delimiter, partNum)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def startswith(str: ColumnOrName, prefix: ColumnOrName) -> Column:
     """
     Returns a boolean. The value is True if str starts with prefix.
@@ -4952,7 +4947,7 @@ def to_char(col: ColumnOrName, format: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "to_char", format)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "duckdb"])
 def to_number(col: ColumnOrName, format: ColumnOrName) -> Column:
     """
     Convert string 'col' to a number based on the string format 'format'.
@@ -5078,7 +5073,7 @@ def to_timestamp_ntz(
         return Column.invoke_anonymous_function(timestamp, "to_timestamp_ntz")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def to_unix_timestamp(
     timestamp: ColumnOrName,
     format: t.Optional[ColumnOrName] = None,
@@ -5231,7 +5226,7 @@ def try_aes_decrypt(
     return Column.invoke_anonymous_function(input, "try_aes_decrypt", key, _mode, _padding, _aad)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "snowflake"])
 def try_element_at(col: ColumnOrName, extraction: ColumnOrName) -> Column:
     """
     (array, index) - Returns element of array at given (1-based) index. If Index is 0, Spark will
@@ -5302,7 +5297,7 @@ def try_to_timestamp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None)
         return Column.invoke_anonymous_function(col, "try_to_timestamp")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def ucase(str: ColumnOrName) -> Column:
     """
     Returns `str` with all characters changed to uppercase.
@@ -5327,7 +5322,7 @@ def ucase(str: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(str, expression.Upper)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def unix_date(col: ColumnOrName) -> Column:
     """Returns the number of days since 1970-01-01.
 

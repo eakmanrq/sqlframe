@@ -3430,8 +3430,11 @@ def test_date_part(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.dateadd("cola", 1), "DATE_ADD(cola, 1)"),
-        (SF.dateadd(SF.col("cola"), SF.col("colb")), "DATE_ADD(cola, colb)"),
+        (SF.dateadd("cola", 1), "CAST(DATE_ADD(CAST(cola AS DATE), 1) AS DATE)"),
+        (
+            SF.dateadd(SF.col("cola"), SF.col("colb")),
+            "CAST(DATE_ADD(CAST(cola AS DATE), colb) AS DATE)",
+        ),
     ],
 )
 def test_dateadd(expression, expected):

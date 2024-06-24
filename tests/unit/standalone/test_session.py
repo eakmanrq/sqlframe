@@ -1,5 +1,7 @@
 import typing as t
 
+import pytest
+
 from sqlframe.standalone import functions as F
 from sqlframe.standalone import types
 from sqlframe.standalone.session import StandaloneSession
@@ -136,3 +138,24 @@ def test_sql_insert(standalone_session: StandaloneSession, compare_sql: t.Callab
 
 def test_session_create_builder_patterns():
     assert StandaloneSession.builder.appName("abc").getOrCreate() == StandaloneSession()
+
+
+# @pytest.mark.parametrize(
+#     "input, expected",
+#     [
+#         (
+#             StandaloneSession._to_row(["a"], [1]),
+#             types.Row(a=1),
+#         ),
+#         (
+#             StandaloneSession._to_row(["a", "b"], [1, 2]),
+#             types.Row(a=1, b=2),
+#         ),
+#         (
+#             StandaloneSession._to_row(["a", "a"], [1, 2]),
+#             types.Row(a=1, a=2),
+#         ),
+#     ],
+# )
+# def test_to_row(input, expected):
+#     assert input == expected

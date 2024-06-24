@@ -26,8 +26,11 @@ globals().update(
 
 
 from sqlframe.base.function_alternatives import (  # noqa
+    any_value_ignore_nulls_not_supported as any_value,
+    current_user_from_session_user as current_user,
     e_literal as e,
     expm1_from_exp as expm1,
+    extract_convert_to_var as extract,
     factorial_from_case_statement as factorial,
     log1p_from_log as log1p,
     rint_from_round as rint,
@@ -63,6 +66,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     element_at_using_brackets as element_at,
     array_union_using_array_concat as array_union,
     sequence_from_generate_array as sequence,
+    position_as_strpos as position,
 )
 
 

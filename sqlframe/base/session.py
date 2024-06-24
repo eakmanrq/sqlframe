@@ -442,12 +442,12 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
 
     @classmethod
     def _to_row(cls, columns: t.List[str], values: t.Iterable[t.Any]) -> Row:
-        from sqlframe.base.types import Row
+        from sqlframe.base.types import Row, _create_row
 
         converted_values = []
         for value in values:
             converted_values.append(cls._to_value(value))
-        return Row(**dict(zip(columns, converted_values)))
+        return _create_row(columns, converted_values)
 
     def _fetch_rows(
         self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
