@@ -1424,3 +1424,99 @@ def bit_length_from_length(col: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
     return Column(expression.Length(this=col_func(col).expression)) * lit(8)
+
+
+def any_value_always_ignore_nulls(
+    col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None
+) -> Column:
+    from sqlframe.base.functions import any_value
+
+    if not ignoreNulls:
+        logger.warning("Nulls are always ignored when using `ANY_VALUE` on this engine")
+    return any_value(col)
+
+
+def any_value_ignore_nulls_not_supported(
+    col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None
+) -> Column:
+    from sqlframe.base.functions import any_value
+
+    if ignoreNulls:
+        logger.warning("Ignoring nulls is not supported in this dialect")
+    return any_value(col)
+
+
+def current_user_from_session_user() -> Column:
+    return Column(expression.Anonymous(this="SESSION_USER"))
+
+
+def extract_convert_to_var(field: ColumnOrName, source: ColumnOrName) -> Column:
+    from sqlframe.base.functions import extract
+
+    field = expression.Var(this=Column.ensure_col(field).alias_or_name)  # type: ignore
+    return extract(field, source)  # type: ignore
+
+
+def left_cast_len(str: ColumnOrName, len: ColumnOrName) -> Column:
+    from sqlframe.base.functions import left
+
+    len = Column.ensure_col(len).cast("integer")
+    return left(str, len)
+
+
+def right_cast_len(str: ColumnOrName, len: ColumnOrName) -> Column:
+    from sqlframe.base.functions import right
+
+    len = Column.ensure_col(len).cast("integer")
+    return right(str, len)
+
+
+def position_cast_start(
+    substr: ColumnOrName, str: ColumnOrName, start: t.Optional[ColumnOrName] = None
+) -> Column:
+    from sqlframe.base.functions import position
+
+    start = Column.ensure_col(start).cast("integer") if start else None
+    return position(substr, str, start)
+
+
+def position_as_strpos(
+    substr: ColumnOrName, str: ColumnOrName, start: t.Optional[ColumnOrName] = None
+) -> Column:
+    substr_func = get_func_from_session("substr")
+    lit = get_func_from_session("lit")
+
+    if start:
+        str = substr_func(str, start)
+    column = Column.invoke_anonymous_function(str, "STRPOS", substr)
+    if start:
+        return column + start - lit(1)
+    return column
+
+
+def to_number_using_to_double(col: ColumnOrName, format: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "TO_DOUBLE", format)
+
+
+def try_element_at_zero_based(col: ColumnOrName, extraction: ColumnOrName) -> Column:
+    from sqlframe.base.functions import try_element_at
+
+    lit = get_func_from_session("lit")
+    index = Column.ensure_col(extraction)
+    if isinstance(index.expression, expression.Literal) and index.expression.is_number:
+        index = index - lit(1)
+    return try_element_at(col, index)
+
+
+def to_unix_timestamp_include_default_format(
+    timestamp: ColumnOrName,
+    format: t.Optional[ColumnOrName] = None,
+) -> Column:
+    from sqlframe.base.functions import to_unix_timestamp
+
+    lit = get_func_from_session("lit")
+
+    if not format:
+        format = lit("%Y-%m-%d %H:%M:%S")
+
+    return to_unix_timestamp(timestamp, format)

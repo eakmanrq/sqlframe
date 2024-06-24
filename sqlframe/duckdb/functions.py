@@ -18,6 +18,7 @@ globals().update(
 
 
 from sqlframe.base.function_alternatives import (  # noqa
+    any_value_always_ignore_nulls as any_value,
     e_literal as e,
     expm1_from_exp as expm1,
     log1p_from_log as log1p,
@@ -44,4 +45,6 @@ from sqlframe.base.function_alternatives import (  # noqa
     array_min_from_sort as array_min,
     array_max_from_sort as array_max,
     sequence_from_generate_series as sequence,
+    try_element_at_zero_based as try_element_at,
+    to_unix_timestamp_include_default_format as to_unix_timestamp,
 )

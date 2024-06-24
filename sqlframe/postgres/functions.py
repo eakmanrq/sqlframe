@@ -16,6 +16,7 @@ globals().update(
 
 
 from sqlframe.base.function_alternatives import (  # noqa
+    any_value_ignore_nulls_not_supported as any_value,
     e_literal as e,
     expm1_from_exp as expm1,
     log1p_from_log as log1p,
@@ -59,4 +60,8 @@ from sqlframe.base.function_alternatives import (  # noqa
     get_json_object_using_arrow_op as get_json_object,
     array_min_from_subquery as array_min,
     array_max_from_subquery as array_max,
+    left_cast_len as left,
+    right_cast_len as right,
+    position_cast_start as position,
+    try_element_at_zero_based as try_element_at,
 )

@@ -16,6 +16,7 @@ globals().update(
 
 
 from sqlframe.base.function_alternatives import (  # noqa
+    any_value_ignore_nulls_not_supported as any_value,
     e_literal as e,
     expm1_from_exp as expm1,
     log1p_from_log as log1p,
@@ -32,6 +33,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     struct_with_eq as struct,
     make_date_date_from_parts as make_date,
     date_add_no_date_sub as date_add,
+    date_add_no_date_sub as dateadd,
     date_sub_by_date_add as date_sub,
     add_months_using_func as add_months,
     months_between_cast_as_date_cast_roundoff as months_between,
@@ -60,4 +62,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     flatten_using_array_flatten as flatten,
     map_concat_using_map_cat as map_concat,
     sequence_from_array_generate_range as sequence,
+    to_number_using_to_double as to_number,
 )

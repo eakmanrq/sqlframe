@@ -222,7 +222,7 @@ class StructType(DataType):
 def _create_row(
     fields: t.Union[Row, t.List[str]], values: t.Union[t.Tuple[t.Any, ...], t.List[t.Any]]
 ) -> Row:
-    row = Row(*values)
+    row = Row(*[float(x) if isinstance(x, Decimal) else x for x in values])
     row.__fields__ = fields
     return row
 

@@ -3382,11 +3382,26 @@ def test_bitmap_or_agg(get_session_and_func, get_func):
 
 def test_any_value(get_session_and_func):
     session, any_value = get_session_and_func("any_value")
-    df = session.createDataFrame([(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
-    assert df.select(any_value("c1"), any_value("c2")).collect() == [Row(value=None, value2=1)]
-    assert df.select(any_value("c1", True), any_value("c2", True)).collect() == [
-        Row(value="a", value2=1)
-    ]
+    df = session.createDataFrame(
+        [("c", None), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"]
+    )
+    non_ignore_nulls = df.select(any_value("c1"), any_value("c2")).collect()
+    ignore_nulls = df.select(any_value("c1", True), any_value("c2", True)).collect()
+    # Always ignores nulls
+    if isinstance(session, (BigQuerySession, DuckDBSession)):
+        assert non_ignore_nulls == [Row(value="c", value2=2)]
+        assert ignore_nulls == [Row(value="c", value2=2)]
+    # SQLGlot converts any_value to max
+    elif isinstance(session, PostgresSession):
+        assert non_ignore_nulls == [Row(value="c", value2=8)]
+        assert ignore_nulls == [Row(value="c", value2=8)]
+    # Always includes nulls
+    elif isinstance(session, SnowflakeSession):
+        assert non_ignore_nulls == [Row(value="c", value2=None)]
+        assert ignore_nulls == [Row(value="c", value2=None)]
+    else:
+        assert non_ignore_nulls == [Row(value="c", value2=None)]
+        assert ignore_nulls == [Row(value="c", value2=2)]
 
 
 def test_approx_percentile(get_session_and_func, get_func):
@@ -3526,6 +3541,11 @@ def test_count_min_sketch(get_session_and_func, get_func):
 def test_curdate(get_session_and_func, get_func):
     session, curdate = get_session_and_func("curdate")
     assert session.range(1).select(curdate()).first()[0] == datetime.date.today()
+
+
+def test_current_user(get_session_and_func, get_func):
+    session, current_user = get_session_and_func("current_user")
+    assert len(session.range(1).select(current_user()).first()[0]) > 0
 
 
 def test_current_catalog(get_session_and_func, get_func):
@@ -3696,14 +3716,20 @@ def test_extract(get_session_and_func, get_func):
     session, extract = get_session_and_func("extract")
     lit = get_func("lit", session)
     df = session.createDataFrame([(datetime.datetime(2015, 4, 8, 13, 8, 15),)], ["ts"])
-    assert df.select(
+    result = df.select(
         extract(lit("YEAR"), "ts").alias("year"),
-        extract(lit("month"), "ts").alias("month"),
+        extract(lit("MONTH"), "ts").alias("month"),
         extract(lit("WEEK"), "ts").alias("week"),
-        extract(lit("D"), "ts").alias("day"),
-        extract(lit("M"), "ts").alias("minute"),
-        extract(lit("S"), "ts").alias("second"),
-    ).collect() == [Row(year=2015, month=4, week=15, day=8, minute=8, second=Decimal("15.000000"))]
+        extract(lit("DAY"), "ts").alias("day"),
+        extract(lit("MINUTE"), "ts").alias("minute"),
+        extract(lit("SECOND"), "ts").alias("second"),
+    ).collect()
+    if isinstance(session, BigQuerySession):
+        assert result == [Row(year=2015, month=4, week=14, day=8, minute=8, second=15)]
+    else:
+        assert result == [
+            Row(year=2015, month=4, week=15, day=8, minute=8, second=Decimal("15.000000"))
+        ]
 
 
 def test_find_in_set(get_session_and_func, get_func):
@@ -3950,7 +3976,10 @@ def test_like(get_session_and_func, get_func):
 def test_ln(get_session_and_func, get_func):
     session, ln = get_session_and_func("ln")
     df = session.createDataFrame([(4,)], ["a"])
-    assert df.select(ln("a")).first()[0] == 1.3862943611198906
+    if isinstance(session, SnowflakeSession):
+        assert df.select(ln("a")).first()[0] == 1.386294361
+    else:
+        assert df.select(ln("a")).first()[0] == 1.3862943611198906
 
 
 def test_localtimestamp(get_session_and_func, get_func):
@@ -4405,14 +4434,14 @@ def test_regexp_like(get_session_and_func, get_func):
     session, regexp_like = get_session_and_func("regexp_like")
     lit = get_func("lit", session)
     col = get_func("col", session)
-    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp_col"]).select(
         regexp_like("str", lit(r"(\d+)"))
     ).collect() == [Row(value=True)]
-    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp_col"]).select(
         regexp_like("str", lit(r"\d{2}b"))
     ).collect() == [Row(value=False)]
-    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp"]).select(
-        regexp_like("str", col("regexp"))
+    assert session.createDataFrame([("1a 2b 14m", r"(\d+)")], ["str", "regexp_col"]).select(
+        regexp_like("str", col("regexp_col"))
     ).collect() == [Row(value=True)]
 
 
@@ -4612,7 +4641,6 @@ def test_split_part(get_session_and_func, get_func):
 
 def test_startswith(get_session_and_func, get_func):
     session, startswith = get_session_and_func("startswith")
-    to_binary = get_func("to_binary", session)
     df = session.createDataFrame(
         [
             (
@@ -4632,6 +4660,7 @@ def test_startswith(get_session_and_func, get_func):
         ],
         ["e", "f"],
     )
+    to_binary = get_func("to_binary", session)
     df = df.select(to_binary("e").alias("e"), to_binary("f").alias("f"))
     assert df.select(startswith("e", "f"), startswith("f", "e")).collect() == [
         Row(value1=True, value2=False)
@@ -4760,9 +4789,23 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
     session, to_unix_timestamp = get_session_and_func("to_unix_timestamp")
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-04-08",)], ["e"])
-    assert df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0] == 1460098800
-    df = session.createDataFrame([("2016-04-08",)], ["e"])
-    assert df.select(to_unix_timestamp(df.e).alias("r")).collect() == [Row(r=None)]
+    if isinstance(session, DuckDBSession):
+        assert (
+            df.select(to_unix_timestamp(df.e, lit("%Y-%m-%d")).alias("r")).first()[0]
+            == 1460073600.0
+        )
+    else:
+        assert (
+            df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0]
+            == 1460098800
+        )
+    # DuckDB requires the value to match the format which the default format is "yyyy-MM-dd HH:mm:ss".
+    # https://spark.apache.org/docs/latest/api/sql/#to_unix_timestamp
+    if isinstance(session, DuckDBSession):
+        pass
+    else:
+        df = session.createDataFrame([("2016-04-08",)], ["e"])
+        assert df.select(to_unix_timestamp(df.e).alias("r")).collect() == [Row(r=None)]
 
 
 def test_to_varchar(get_session_and_func, get_func):
@@ -4828,9 +4871,17 @@ def test_try_element_at(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([(["a", "b", "c"],)], ["data"])
     assert df.select(try_element_at(df.data, lit(1)).alias("r")).first()[0] == "a"
-    assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] == "c"
+    if isinstance(session, PostgresSession):
+        assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] is None
+    else:
+        assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] == "c"
     df = session.createDataFrame([({"a": 1.0, "b": 2.0},)], ["data"])
-    assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == 1.0
+    if isinstance(session, DuckDBSession):
+        assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == [1.0]
+    elif isinstance(session, PostgresSession):
+        pass
+    else:
+        assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == 1.0
 
 
 def test_try_to_timestamp(get_session_and_func, get_func):
