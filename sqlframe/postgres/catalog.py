@@ -7,16 +7,17 @@ import typing as t
 
 from sqlglot import exp, parse_one
 
-from sqlframe.base.catalog import Function, _BaseCatalog
+from sqlframe.base.catalog import Column, Function, _BaseCatalog
+from sqlframe.base.decorators import normalize
 from sqlframe.base.mixins.catalog_mixins import (
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
-    ListColumnsFromInfoSchemaMixin,
     ListDatabasesFromInfoSchemaMixin,
     ListTablesFromInfoSchemaMixin,
     SetCurrentDatabaseFromSearchPathMixin,
 )
+from sqlframe.base.util import to_schema
 
 if t.TYPE_CHECKING:
     from sqlframe.postgres.session import PostgresSession  # noqa
@@ -30,11 +31,130 @@ class PostgresCatalog(
     ListCatalogsFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
     SetCurrentDatabaseFromSearchPathMixin["PostgresSession", "PostgresDataFrame"],
     ListTablesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
-    ListColumnsFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
     _BaseCatalog["PostgresSession", "PostgresDataFrame"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.column("current_catalog")
     TEMP_SCHEMA_FILTER = exp.column("table_schema").like("pg_temp_%")
+
+    @normalize(["tableName", "dbName"])
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
+        """Returns a t.List of columns for the given table/view in the specified database.
+
+        .. versionadded:: 2.0.0
+
+        Parameters
+        ----------
+        tableName : str
+            name of the table to t.List columns.
+
+            .. versionchanged:: 3.4.0
+               Allow ``tableName`` to be qualified with catalog name when ``dbName`` is None.
+
+        dbName : str, t.Optional
+            name of the database to find the table to t.List columns.
+
+        Returns
+        -------
+        t.List
+            A t.List of :class:`Column`.
+
+        Notes
+        -----
+        The order of arguments here is different from that of its JVM counterpart
+        because Python does not support method overloading.
+
+        If no database is specified, the current database and catalog
+        are used. This API includes all temporary views.
+
+        Examples
+        --------
+        >>> _ = spark.sql("DROP TABLE IF EXISTS tbl1")
+        >>> _ = spark.sql("CREATE TABLE tblA (name STRING, age INT) USING parquet")
+        >>> spark.catalog.t.listColumns("tblA")
+        [Column(name='name', description=None, dataType='string', nullable=True, ...
+        >>> _ = spark.sql("DROP TABLE tblA")
+        """
+        if df := self.session.temp_views.get(tableName):
+            return [
+                Column(
+                    name=x,
+                    description=None,
+                    dataType="",
+                    nullable=True,
+                    isPartition=False,
+                    isBucket=False,
+                )
+                for x in df.columns
+            ]
+
+        table = exp.to_table(tableName, dialect=self.session.input_dialect)
+        schema = to_schema(dbName, dialect=self.session.input_dialect) if dbName else None
+        if not table.db:
+            if schema and schema.db:
+                table.set("db", schema.args["db"])
+            else:
+                table.set(
+                    "db",
+                    exp.parse_identifier(
+                        self.currentDatabase(), dialect=self.session.input_dialect
+                    ),
+                )
+        if not table.catalog:
+            if schema and schema.catalog:
+                table.set("catalog", schema.args["catalog"])
+            else:
+                table.set(
+                    "catalog",
+                    exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
+                )
+        source_table = self._get_info_schema_table("columns", database=table.db)
+        select = parse_one(
+            f"""
+        SELECT
+    att.attname AS column_name,
+    pg_catalog.format_type(att.atttypid, NULL) AS data_type,
+    col.is_nullable
+FROM
+    pg_catalog.pg_attribute att
+JOIN
+    pg_catalog.pg_class cls ON cls.oid = att.attrelid
+JOIN
+    pg_catalog.pg_namespace nsp ON nsp.oid = cls.relnamespace
+JOIN
+    information_schema.columns col ON col.table_schema = nsp.nspname AND col.table_name = cls.relname AND col.column_name = att.attname
+WHERE
+    cls.relname = '{table.name}' AND   -- replace with your table name
+    att.attnum > 0 AND
+    NOT att.attisdropped
+ORDER BY
+    att.attnum;
+        """,
+            dialect="postgres",
+        )
+        if table.db:
+            schema_filter: exp.Expression = exp.column("table_schema").eq(table.db)
+            if include_temp and self.TEMP_SCHEMA_FILTER:
+                schema_filter = exp.Or(this=schema_filter, expression=self.TEMP_SCHEMA_FILTER)
+            select = select.where(schema_filter)  # type: ignore
+        if table.catalog:
+            catalog_filter: exp.Expression = exp.column("table_catalog").eq(table.catalog)
+            if include_temp and self.TEMP_CATALOG_FILTER:
+                catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
+            select = select.where(catalog_filter)  # type: ignore
+        results = self.session._fetch_rows(select)
+        return [
+            Column(
+                name=x["column_name"],
+                description=None,
+                dataType=x["data_type"],
+                nullable=x["is_nullable"] == "YES",
+                isPartition=False,
+                isBucket=False,
+            )
+            for x in results
+        ]
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None

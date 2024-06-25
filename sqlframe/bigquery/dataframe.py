@@ -53,6 +53,8 @@ class BigQueryDataFrame(
                     column = field_to_column(subfield)
                     data_type += f"{column.name} {column.dataType},"
                 data_type += ">"
+            elif field.field_type == "INTEGER":
+                data_type = "INT64"
             else:
                 data_type = field.field_type
             if field.mode == "REPEATED":
