@@ -22,6 +22,7 @@ from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
 from sqlglot.optimizer.qualify_columns import quote_identifiers
 
+from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.decorators import normalize
 from sqlframe.base.operations import Operation, operation
 from sqlframe.base.transforms import replace_id_value
@@ -230,6 +231,10 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def __copy__(self):
         return self.copy()
+
+    @property
+    def _typed_columns(self) -> t.List[CatalogColumn]:
+        raise NotImplementedError
 
     @property
     def write(self) -> WRITER:
@@ -1536,6 +1541,36 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             for row in result:
                 table.add_row(list(row))
         print(table)
+
+    def printSchema(self, level: t.Optional[int] = None) -> None:
+        def print_schema(
+            column_name: str, column_type: exp.DataType, nullable: bool, current_level: int
+        ):
+            if level and current_level >= level:
+                return
+            if current_level > 0:
+                print(" |   " * current_level, end="")
+            print(
+                f" |-- {column_name}: {column_type.sql(self.session.output_dialect).lower()} (nullable = {str(nullable).lower()})"
+            )
+            if column_type.this in (exp.DataType.Type.STRUCT, exp.DataType.Type.OBJECT):
+                for column_def in column_type.expressions:
+                    print_schema(column_def.name, column_def.args["kind"], True, current_level + 1)
+            if column_type.this == exp.DataType.Type.ARRAY:
+                for data_type in column_type.expressions:
+                    print_schema("element", data_type, True, current_level + 1)
+            if column_type.this == exp.DataType.Type.MAP:
+                print_schema("key", column_type.expressions[0], True, current_level + 1)
+                print_schema("value", column_type.expressions[1], True, current_level + 1)
+
+        print("root")
+        for column in self._typed_columns:
+            print_schema(
+                column.name,
+                exp.DataType.build(column.dataType, dialect=self.session.output_dialect),
+                column.nullable,
+                0,
+            )
 
     def toPandas(self) -> pd.DataFrame:
         sql_kwargs = dict(

@@ -9,12 +9,8 @@ from sqlframe.base.dataframe import (
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
+from sqlframe.base.mixins.dataframe_mixins import NoCachePersistSupportMixin
 from sqlframe.redshift.group import RedshiftGroupedData
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if t.TYPE_CHECKING:
     from sqlframe.redshift.readwriter import RedshiftDataFrameWriter
@@ -33,22 +29,15 @@ class RedshiftDataFrameStatFunctions(_BaseDataFrameStatFunctions["RedshiftDataFr
 
 
 class RedshiftDataFrame(
+    NoCachePersistSupportMixin,
     _BaseDataFrame[
         "RedshiftSession",
         "RedshiftDataFrameWriter",
         "RedshiftDataFrameNaFunctions",
         "RedshiftDataFrameStatFunctions",
         "RedshiftGroupedData",
-    ]
+    ],
 ):
     _na = RedshiftDataFrameNaFunctions
     _stat = RedshiftDataFrameStatFunctions
     _group_data = RedshiftGroupedData
-
-    def cache(self) -> Self:
-        logger.warning("Redshift does not support caching. Ignoring cache() call.")
-        return self
-
-    def persist(self) -> Self:
-        logger.warning("Redshift does not support persist. Ignoring persist() call.")
-        return self
