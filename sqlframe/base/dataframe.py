@@ -30,6 +30,7 @@ from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
     quote_preserving_alias_or_name,
+    sqlglot_to_spark,
     verify_openai_installed,
 )
 
@@ -298,7 +299,24 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         StructType([StructField('age', LongType(), True),
                     StructField('name', StringType(), True)])
         """
-        raise NotImplementedError
+        from sqlframe.base import types
+
+        try:
+            return types.StructType(
+                [
+                    types.StructField(
+                        c.name,
+                        sqlglot_to_spark(
+                            exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
+                        ),
+                    )
+                    for c in self._typed_columns
+                ]
+            )
+        except NotImplementedError as e:
+            raise NotImplementedError(
+                "This engine does not support schema inference likely since it does not have an active connection."
+            ) from e
 
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
         replacement_mapping = {}

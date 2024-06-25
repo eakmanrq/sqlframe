@@ -291,3 +291,54 @@ def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
         return col.sql(dialect=_BaseSession().input_dialect)
     # We may get things like `Null()` expression or maybe literals so we just return the alias or name in those cases
     return col.alias_or_name
+
+
+def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
+    from sqlframe.base import types
+
+    primitive_mapping = {
+        exp.DataType.Type.VARCHAR: types.VarcharType,
+        exp.DataType.Type.CHAR: types.CharType,
+        exp.DataType.Type.TEXT: types.StringType,
+        exp.DataType.Type.BINARY: types.BinaryType,
+        exp.DataType.Type.BOOLEAN: types.BooleanType,
+        exp.DataType.Type.INT: types.IntegerType,
+        exp.DataType.Type.BIGINT: types.LongType,
+        exp.DataType.Type.SMALLINT: types.ShortType,
+        exp.DataType.Type.FLOAT: types.FloatType,
+        exp.DataType.Type.DOUBLE: types.DoubleType,
+        exp.DataType.Type.DECIMAL: types.DecimalType,
+        exp.DataType.Type.TIMESTAMP: types.TimestampType,
+        exp.DataType.Type.TIMESTAMPTZ: types.TimestampType,
+        exp.DataType.Type.TIMESTAMPLTZ: types.TimestampType,
+        exp.DataType.Type.TIMESTAMPNTZ: types.TimestampType,
+        exp.DataType.Type.DATE: types.DateType,
+    }
+    if sqlglot_dtype.this in primitive_mapping:
+        pyspark_class = primitive_mapping[sqlglot_dtype.this]
+        if issubclass(pyspark_class, types.DataTypeWithLength) and sqlglot_dtype.expressions:
+            return pyspark_class(length=int(sqlglot_dtype.expressions[0].this.this))
+        elif issubclass(pyspark_class, types.DecimalType) and sqlglot_dtype.expressions:
+            return pyspark_class(
+                precision=int(sqlglot_dtype.expressions[0].this.this),
+                scale=int(sqlglot_dtype.expressions[1].this.this),
+            )
+        return pyspark_class()
+    if sqlglot_dtype.this == exp.DataType.Type.ARRAY:
+        return types.ArrayType(sqlglot_to_spark(sqlglot_dtype.expressions[0]))
+    elif sqlglot_dtype.this == exp.DataType.Type.MAP:
+        return types.MapType(
+            sqlglot_to_spark(sqlglot_dtype.expressions[0]),
+            sqlglot_to_spark(sqlglot_dtype.expressions[1]),
+        )
+    elif sqlglot_dtype.this in (exp.DataType.Type.STRUCT, exp.DataType.Type.OBJECT):
+        return types.StructType(
+            [
+                types.StructField(
+                    name=field.this.alias_or_name,
+                    dataType=sqlglot_to_spark(field.args["kind"]),
+                )
+                for field in sqlglot_dtype.expressions
+            ]
+        )
+    raise NotImplementedError(f"Unsupported data type: {sqlglot_dtype}")

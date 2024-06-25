@@ -1,37 +1,25 @@
 import datetime
 
-from sqlframe.base.types import Row
+import pytest
+
+from sqlframe.base import types
 from sqlframe.duckdb import DuckDBDataFrame, DuckDBSession
 
 pytest_plugins = ["tests.integration.fixtures"]
 
 
-def test_print_schema_basic(duckdb_employee: DuckDBDataFrame, capsys):
-    duckdb_employee.printSchema()
-    captured = capsys.readouterr()
-    assert (
-        captured.out.strip()
-        == """
-root
- |-- employee_id: int (nullable = true)
- |-- fname: text (nullable = true)
- |-- lname: text (nullable = true)
- |-- age: int (nullable = true)
- |-- store_id: int (nullable = true)""".strip()
-    )
-
-
-def test_print_schema_nested(duckdb_session: DuckDBSession, capsys):
-    df = duckdb_session.createDataFrame(
+@pytest.fixture()
+def duckdb_datatypes(duckdb_session: DuckDBSession) -> DuckDBDataFrame:
+    return duckdb_session.createDataFrame(
         [
             (
                 1,
                 2.0,
                 "foo",
                 {"a": 1},
-                [Row(a=1, b=2)],
+                [types.Row(a=1, b=2)],
                 [1, 2, 3],
-                Row(a=1),
+                types.Row(a=1),
                 datetime.date(2022, 1, 1),
                 datetime.datetime(2022, 1, 1, 0, 0, 0),
                 datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc),
@@ -52,7 +40,25 @@ def test_print_schema_nested(duckdb_session: DuckDBSession, capsys):
             "boolean_col",
         ],
     )
-    df.printSchema()
+
+
+def test_print_schema_basic(duckdb_employee: DuckDBDataFrame, capsys):
+    duckdb_employee.printSchema()
+    captured = capsys.readouterr()
+    assert (
+        captured.out.strip()
+        == """
+root
+ |-- employee_id: int (nullable = true)
+ |-- fname: text (nullable = true)
+ |-- lname: text (nullable = true)
+ |-- age: int (nullable = true)
+ |-- store_id: int (nullable = true)""".strip()
+    )
+
+
+def test_print_schema_nested(duckdb_datatypes: DuckDBDataFrame, capsys):
+    duckdb_datatypes.printSchema()
     captured = capsys.readouterr()
     assert (
         captured.out.strip()
@@ -77,3 +83,83 @@ root
  |-- timestamptz_col: timestamptz (nullable = true)
  |-- boolean_col: boolean (nullable = true)""".strip()
     )
+
+
+def test_schema(duckdb_employee: DuckDBDataFrame):
+    assert duckdb_employee.schema == types.StructType(
+        [
+            types.StructField(
+                "employee_id",
+                types.IntegerType(),
+            ),
+            types.StructField(
+                "fname",
+                types.StringType(),
+            ),
+            types.StructField(
+                "lname",
+                types.StringType(),
+            ),
+            types.StructField(
+                "age",
+                types.IntegerType(),
+            ),
+            types.StructField(
+                "store_id",
+                types.IntegerType(),
+            ),
+        ]
+    )
+
+
+def test_schema_nested(duckdb_datatypes: DuckDBDataFrame):
+    assert isinstance(duckdb_datatypes.schema, types.StructType)
+    struct_fields = list(duckdb_datatypes.schema)
+    assert len(struct_fields) == 11
+    assert struct_fields[0].name == "bigint_col"
+    assert struct_fields[0].dataType == types.LongType()
+    assert struct_fields[1].name == "double_col"
+    assert struct_fields[1].dataType == types.DoubleType()
+    assert struct_fields[2].name == "string_col"
+    assert struct_fields[2].dataType == types.StringType()
+    assert struct_fields[3].name == "map<string,bigint>_col"
+    assert struct_fields[3].dataType == types.MapType(
+        types.StringType(),
+        types.LongType(),
+    )
+    assert struct_fields[4].name == "array<struct<a:bigint,b:bigint>>"
+    assert struct_fields[4].dataType == types.ArrayType(
+        types.StructType(
+            [
+                types.StructField(
+                    "a",
+                    types.LongType(),
+                ),
+                types.StructField(
+                    "b",
+                    types.LongType(),
+                ),
+            ]
+        ),
+    )
+    assert struct_fields[5].name == "array<bigint>_col"
+    assert struct_fields[5].dataType == types.ArrayType(
+        types.LongType(),
+    )
+    assert struct_fields[6].name == "struct<a:bigint>_col"
+    assert struct_fields[6].dataType == types.StructType(
+        [
+            types.StructField(
+                "a",
+                types.LongType(),
+            ),
+        ]
+    )
+    assert struct_fields[7].name == "date_col"
+    assert struct_fields[7].dataType == types.DateType()
+    assert struct_fields[8].name == "timestamp_col"
+    assert struct_fields[8].dataType == types.TimestampType()
+    assert struct_fields[9].name == "timestamptz_col"
+    assert struct_fields[9].dataType == types.TimestampType()
+    assert struct_fields[10].name == "boolean_col"
+    assert struct_fields[10].dataType == types.BooleanType()
