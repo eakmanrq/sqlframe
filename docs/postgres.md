@@ -43,6 +43,31 @@ from sqlframe.postgres import functions as F
 from sqlframe.postgres import PostgresDataFrame
 ```
 
+## Using Postgres Unique Functions
+
+Postgres may have a function that isn't represented within the PySpark API. 
+If that is the case, you can call it directly using PySpark [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html) function.
+
+```python
+from psycopg2 import connect
+from sqlframe.postgres import PostgresSession
+from sqlframe.postgres import functions as F
+
+conn = connect(
+    dbname="postgres",
+    user="postgres",
+    password="password",
+    host="localhost",
+    port="5432",
+)
+session = PostgresSession(conn=conn)
+(
+    session.table("example.table")
+    .select(F.call_function("PG_DATABASE_SIZE", F.lit("some_database")).alias("database_size"))
+    .show()
+)
+```
+
 ## Example Usage
 
 ```python
@@ -227,6 +252,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [bitwise_not](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bitwise_not.html)
 * [bool_and](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_and.html)
 * [bool_or](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_or.html)
+* [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html)
 * [cbrt](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.cbrt.html)
 * [ceil](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceil.html)
 * [ceiling](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceiling.html)

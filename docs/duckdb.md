@@ -48,6 +48,23 @@ from sqlframe.duckdb import functions as F
 from sqlframe.duckdb import DuckDBDataFrame
 ```
 
+## Using DuckDB Unique Functions
+
+DuckDB may have a function that isn't represented within the PySpark API. 
+If that is the case, you can call it directly using PySpark [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html) function.
+
+```python
+from sqlframe.duckdb import DuckDBSession
+from sqlframe.duckdb import functions as F
+
+session = DuckDBSession()
+(
+    session.table("example.table")
+    .select(F.call_function("CURRENT_SETTING", F.lit("access_mode")).alias("access_mode_value"))
+    .show()
+)
+```
+
 ## Example Usage
 
 ```python
@@ -228,6 +245,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [bitwise_not](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bitwise_not.html)
 * [bool_and](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_and.html)
 * [bool_or](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_or.html)
+* [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html)
 * [cbrt](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.cbrt.html)
 * [ceil](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceil.html)
 * [ceiling](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceiling.html)

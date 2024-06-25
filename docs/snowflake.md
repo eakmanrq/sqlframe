@@ -47,6 +47,34 @@ from sqlframe.snowflake import functions as F
 from sqlframe.snowflake import SnowflakeDataFrame
 ```
 
+## Using Snowflake Unique Functions
+
+Snowflake may have a function that isn't represented within the PySpark API. 
+If that is the case, you can call it directly using PySpark [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html) function.
+
+```python
+import os
+
+from snowflake.connector import connect
+from sqlframe.snowflake import SnowflakeSession
+from sqlframe.snowflake import functions as F
+
+connection = connect(
+    account=os.environ["SQLFRAME_SNOWFLAKE_ACCOUNT"],
+    user=os.environ["SQLFRAME_SNOWFLAKE_USER"],
+    password=os.environ["SQLFRAME_SNOWFLAKE_PASSWORD"],
+    warehouse=os.environ["SQLFRAME_SNOWFLAKE_WAREHOUSE"],
+    # Dataset: https://app.snowflake.com/marketplace/listing/GZ1M6ZVQIAF/insights-global-covid-statistics
+    database="GLOBAL_COVID_STATISTICS",
+    schema=os.environ["SQLFRAME_SNOWFLAKE_SCHEMA"],
+)
+session = SnowflakeSession(conn=connection)
+(
+    session.range(1)
+    .select(F.call_function("SNOWFLAKE.CORTEX.COMPLETE", F.lit("snowflake-arctic"), F.lit("What are large language models?")).alias("prompt_example"))
+    .show()
+)
+```
 
 ## Example Usage
 
@@ -244,6 +272,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [bool_or](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_or.html)
 * [bround](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bround.html)
   * [Input must be a fixed-point nnumber](https://docs.snowflake.com/en/sql-reference/data-types-numeric.html#label-data-types-for-fixed-point-numbers)
+* [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html)
 * [cbrt](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.cbrt.html)
 * [ceil](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceil.html)
 * [ceiling](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceiling.html)
