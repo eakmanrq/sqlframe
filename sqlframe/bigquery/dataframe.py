@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import logging
-import sys
 import typing as t
 
+from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
     _BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
+from sqlframe.base.mixins.dataframe_mixins import NoCachePersistSupportMixin
 from sqlframe.bigquery.group import BigQueryGroupedData
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if t.TYPE_CHECKING:
     from sqlframe.bigquery.readwriter import BigQueryDataFrameWriter
@@ -33,22 +29,44 @@ class BigQueryDataFrameStatFunctions(_BaseDataFrameStatFunctions["BigQueryDataFr
 
 
 class BigQueryDataFrame(
+    NoCachePersistSupportMixin,
     _BaseDataFrame[
         "BigQuerySession",
         "BigQueryDataFrameWriter",
         "BigQueryDataFrameNaFunctions",
         "BigQueryDataFrameStatFunctions",
         "BigQueryGroupedData",
-    ]
+    ],
 ):
     _na = BigQueryDataFrameNaFunctions
     _stat = BigQueryDataFrameStatFunctions
     _group_data = BigQueryGroupedData
 
-    def cache(self) -> Self:
-        logger.warning("BigQuery does not support caching. Ignoring cache() call.")
-        return self
+    @property
+    def _typed_columns(self) -> t.List[CatalogColumn]:
+        from google.cloud import bigquery
 
-    def persist(self) -> Self:
-        logger.warning("BigQuery does not support persist. Ignoring persist() call.")
-        return self
+        def field_to_column(field: bigquery.SchemaField) -> CatalogColumn:
+            if field.field_type == "RECORD":
+                data_type = "STRUCT<"
+                for subfield in field.fields:
+                    column = field_to_column(subfield)
+                    data_type += f"{column.name} {column.dataType},"
+                data_type += ">"
+            else:
+                data_type = field.field_type
+            if field.mode == "REPEATED":
+                data_type = f"ARRAY<{data_type}>"
+            return CatalogColumn(
+                name=field.name,
+                dataType=data_type,
+                nullable=field.is_nullable,
+                description=None,
+                isPartition=False,
+                isBucket=False,
+            )
+
+        job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+        sql = self.session._to_sql(self.expression)
+        query_job = self.session._client.query(sql, job_config=job_config)
+        return [field_to_column(field) for field in query_job.schema]

@@ -9,7 +9,10 @@ from sqlframe.base.dataframe import (
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
-from sqlframe.base.mixins.dataframe_mixins import PrintSchemaFromTempObjectsMixin
+from sqlframe.base.mixins.dataframe_mixins import (
+    NoCachePersistSupportMixin,
+    TypedColumnsFromTempViewMixin,
+)
 from sqlframe.postgres.group import PostgresGroupedData
 
 if sys.version_info >= (3, 11):
@@ -34,7 +37,8 @@ class PostgresDataFrameStatFunctions(_BaseDataFrameStatFunctions["PostgresDataFr
 
 
 class PostgresDataFrame(
-    PrintSchemaFromTempObjectsMixin,
+    NoCachePersistSupportMixin,
+    TypedColumnsFromTempViewMixin,
     _BaseDataFrame[
         "PostgresSession",
         "PostgresDataFrameWriter",
@@ -46,11 +50,3 @@ class PostgresDataFrame(
     _na = PostgresDataFrameNaFunctions
     _stat = PostgresDataFrameStatFunctions
     _group_data = PostgresGroupedData
-
-    def cache(self) -> Self:
-        logger.warning("Postgres does not support caching. Ignoring cache() call.")
-        return self
-
-    def persist(self) -> Self:
-        logger.warning("Postgres does not support persist. Ignoring persist() call.")
-        return self

@@ -4,17 +4,14 @@ import logging
 import sys
 import typing as t
 
+from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
     _BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
+from sqlframe.base.mixins.dataframe_mixins import NoCachePersistSupportMixin
 from sqlframe.snowflake.group import SnowflakeGroupedData
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if t.TYPE_CHECKING:
     from sqlframe.snowflake.readwriter import SnowflakeDataFrameWriter
@@ -33,22 +30,35 @@ class SnowflakeDataFrameStatFunctions(_BaseDataFrameStatFunctions["SnowflakeData
 
 
 class SnowflakeDataFrame(
+    NoCachePersistSupportMixin,
     _BaseDataFrame[
         "SnowflakeSession",
         "SnowflakeDataFrameWriter",
         "SnowflakeDataFrameNaFunctions",
         "SnowflakeDataFrameStatFunctions",
         "SnowflakeGroupedData",
-    ]
+    ],
 ):
     _na = SnowflakeDataFrameNaFunctions
     _stat = SnowflakeDataFrameStatFunctions
     _group_data = SnowflakeGroupedData
 
-    def cache(self) -> Self:
-        logger.warning("Snowflake does not support caching. Ignoring cache() call.")
-        return self
-
-    def persist(self) -> Self:
-        logger.warning("Snowflake does not support persist. Ignoring persist() call.")
-        return self
+    @property
+    def _typed_columns(self) -> t.List[CatalogColumn]:
+        df = self._convert_leaf_to_cte()
+        df = df.limit(0)
+        self.session._execute(df.expression)
+        query_id = self.session._cur.sfqid
+        columns = []
+        for row in self.session._fetch_rows(f"DESCRIBE RESULT '{query_id}'"):
+            columns.append(
+                CatalogColumn(
+                    name=row.name,
+                    dataType=row.type,
+                    nullable=row["null?"] == "Y",
+                    description=row.comment,
+                    isPartition=False,
+                    isBucket=False,
+                )
+            )
+        return columns

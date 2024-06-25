@@ -4,18 +4,19 @@ import logging
 import sys
 import typing as t
 
+from sqlglot import exp
+
+from sqlframe.base.catalog import Column
 from sqlframe.base.dataframe import (
     _BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
-from sqlframe.base.mixins.dataframe_mixins import PrintSchemaFromTempObjectsMixin
+from sqlframe.base.mixins.dataframe_mixins import (
+    NoCachePersistSupportMixin,
+    TypedColumnsFromTempViewMixin,
+)
 from sqlframe.duckdb.group import DuckDBGroupedData
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if t.TYPE_CHECKING:
     from sqlframe.duckdb.session import DuckDBSession  # noqa
@@ -35,7 +36,8 @@ class DuckDBDataFrameStatFunctions(_BaseDataFrameStatFunctions["DuckDBDataFrame"
 
 
 class DuckDBDataFrame(
-    PrintSchemaFromTempObjectsMixin,
+    NoCachePersistSupportMixin,
+    TypedColumnsFromTempViewMixin,
     _BaseDataFrame[
         "DuckDBSession",
         "DuckDBDataFrameWriter",
@@ -47,11 +49,3 @@ class DuckDBDataFrame(
     _na = DuckDBDataFrameNaFunctions
     _stat = DuckDBDataFrameStatFunctions
     _group_data = DuckDBGroupedData
-
-    def cache(self) -> Self:
-        logger.warning("DuckDB does not support caching. Ignoring cache() call.")
-        return self
-
-    def persist(self) -> Self:
-        logger.warning("DuckDB does not support persist. Ignoring persist() call.")
-        return self
