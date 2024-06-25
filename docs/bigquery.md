@@ -61,6 +61,22 @@ from sqlframe.bigquery import functions as F
 from sqlframe.bigquery import BigQueryDataFrame
 ```
 
+## Using BigQuery Unique Functions
+
+BigQuery may have a function that isn't represented within the PySpark API. 
+If that is the case, you can call it directly using PySpark [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html) function.
+
+```python
+from sqlframe.bigquery import BigQuerySession
+from sqlframe.bigquery import functions as F
+
+session = BigQuerySession(default_dataset="sqlframe.db1")
+(
+    session.table("bigquery-public-data.samples.natality")
+    .select(F.call_function("FARM_FINGERPRINT", F.col("source")).alias("source_hash"))
+    .show()
+)
+```
 
 ## Example Usage
 
@@ -259,6 +275,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [bool_and](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_and.html)
 * [bool_or](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_or.html)
 * [bround](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bround.html)
+* [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html)
 * [cbrt](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.cbrt.html)
 * [ceil](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceil.html)
 * [ceiling](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.ceiling.html)
