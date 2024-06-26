@@ -2030,7 +2030,7 @@ def character_length(str: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "character_length")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def contains(left: ColumnOrName, right: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(left, "contains", right)
 
