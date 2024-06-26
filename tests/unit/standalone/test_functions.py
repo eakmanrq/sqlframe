@@ -3244,6 +3244,7 @@ def test_bucket(expression, expected):
         (SF.call_function("blah", "cola"), "BLAH(cola)"),
         (SF.call_function("blah", SF.col("cola")), "BLAH(cola)"),
         (SF.call_function("blah", "cola", "colb"), "BLAH(cola, colb)"),
+        (SF.call_function("blah"), "BLAH()"),
     ],
 )
 def test_call_function(expression, expected):
