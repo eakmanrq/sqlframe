@@ -4,9 +4,6 @@ import logging
 import sys
 import typing as t
 
-from sqlglot import exp
-
-from sqlframe.base.catalog import Column
 from sqlframe.base.dataframe import (
     _BaseDataFrame,
     _BaseDataFrameNaFunctions,

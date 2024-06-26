@@ -7,8 +7,8 @@ from sqlframe.standalone import types
     "dtype, expected",
     [
         (types.StringType(), "string"),
-        (types.CharType(100), "char(100)"),
-        (types.VarcharType(65), "varchar(65)"),
+        (types.CharType(100), "char"),
+        (types.VarcharType(65), "varchar"),
         (types.BinaryType(), "binary"),
         (types.BooleanType(), "boolean"),
         (types.DateType(), "date"),
@@ -17,12 +17,12 @@ from sqlframe.standalone import types
         (types.DecimalType(10, 3), "decimal(10, 3)"),
         (types.DoubleType(), "double"),
         (types.FloatType(), "float"),
-        (types.ByteType(), "tinyint"),
-        (types.IntegerType(), "int"),
-        (types.LongType(), "bigint"),
-        (types.ShortType(), "smallint"),
-        (types.ArrayType(types.IntegerType()), "array<int>"),
-        (types.MapType(types.IntegerType(), types.StringType()), "map<int, string>"),
+        (types.ByteType(), "byte"),
+        (types.IntegerType(), "integer"),
+        (types.LongType(), "long"),
+        (types.ShortType(), "short"),
+        (types.ArrayType(types.IntegerType()), "array<integer>"),
+        (types.MapType(types.IntegerType(), types.StringType()), "map<integer, string>"),
         (
             types.StructType(
                 [
@@ -30,7 +30,7 @@ from sqlframe.standalone import types
                     types.StructField("colb", types.StringType()),
                 ]
             ),
-            "struct<cola:int, colb:string>",
+            "struct<cola:integer, colb:string>",
         ),
     ],
 )

@@ -3,6 +3,9 @@ from __future__ import annotations
 import logging
 import typing as t
 
+from sqlglot import exp
+
+from sqlframe.base.catalog import Column
 from sqlframe.base.dataframe import (
     _BaseDataFrame,
     _BaseDataFrameNaFunctions,
@@ -39,3 +42,23 @@ class SparkDataFrame(
     _na = SparkDataFrameNaFunctions
     _stat = SparkDataFrameStatFunctions
     _group_data = SparkGroupedData
+
+    @property
+    def _typed_columns(self) -> t.List[Column]:
+        columns = []
+        for field in self.session.spark_session.sql(
+            self.session._to_sql(self.expression)
+        ).schema.fields:
+            columns.append(
+                Column(
+                    name=field.name,
+                    dataType=exp.DataType.build(field.dataType.simpleString(), dialect="spark").sql(
+                        dialect="spark"
+                    ),
+                    nullable=field.nullable,
+                    description=None,
+                    isPartition=False,
+                    isBucket=False,
+                )
+            )
+        return columns
