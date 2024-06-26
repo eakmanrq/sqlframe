@@ -1923,7 +1923,9 @@ def call_function(funcName: str, *cols: ColumnOrName) -> Column:
     cols = ensure_list(cols)  # type: ignore
     if len(cols) > 1:
         return Column.invoke_anonymous_function(cols[0], funcName, *cols[1:])
-    return Column.invoke_anonymous_function(cols[0], funcName)
+    elif len(cols) == 1:
+        return Column.invoke_anonymous_function(cols[0], funcName)
+    return Column.invoke_anonymous_function(None, funcName)
 
 
 # @meta(unsupported_engines="*")
