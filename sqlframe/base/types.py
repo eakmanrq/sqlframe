@@ -22,14 +22,14 @@ class DataType:
         return not self.__eq__(other)
 
     def __str__(self) -> str:
-        return self.typeName()
+        return self.simpleString()
 
     @classmethod
     def typeName(cls) -> str:
         return cls.__name__[:-4].lower()
 
     def simpleString(self) -> str:
-        return str(self)
+        return self.typeName()
 
     def jsonValue(self) -> t.Union[str, t.Dict[str, t.Any]]:
         return str(self)

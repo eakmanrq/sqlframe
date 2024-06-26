@@ -12,3 +12,15 @@ class RowError(SQLFrameException):
 
 class TableSchemaError(SQLFrameException):
     pass
+
+
+class PandasDiffError(SQLFrameException):
+    pass
+
+
+class DataFrameDiffError(SQLFrameException):
+    pass
+
+
+class SchemaDiffError(SQLFrameException):
+    pass
