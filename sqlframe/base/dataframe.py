@@ -361,7 +361,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         cols = self._ensure_list_of_columns(cols)
         normalize(self.session, expression or self.expression, cols)
-        return cols
+        return list(flatten([self._expand_star(col) for col in cols]))
 
     def _ensure_and_normalize_col(self, col):
         from sqlframe.base.column import Column
@@ -513,6 +513,27 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         expression_select_pair = (type(self.output_expression_container), main_select)
         select_expressions.append(expression_select_pair)  # type: ignore
         return select_expressions
+
+    def _expand_star(self, col: Column) -> t.List[Column]:
+        from sqlframe.base.column import Column
+
+        if isinstance(col.column_expression, exp.Star):
+            return self._get_outer_select_columns(self.expression)
+        elif (
+            isinstance(col.column_expression, exp.Column)
+            and isinstance(col.column_expression.this, exp.Star)
+            and col.column_expression.args.get("table")
+        ):
+            for cte in self.expression.ctes:
+                if cte.alias_or_name == col.column_expression.args["table"].this:
+                    return [
+                        Column.ensure_col(exp.column(x.column_alias_or_name, cte.alias_or_name))
+                        for x in self._get_outer_select_columns(cte)
+                    ]
+            raise ValueError(
+                f"Could not find table to expand star: {col.column_expression.args['table']}"
+            )
+        return [col]
 
     @t.overload
     def sql(
@@ -1555,7 +1576,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             result = self.session._fetch_rows(sql)
         table = PrettyTable()
         if row := seq_get(result, 0):
-            table.field_names = list(row.asDict().keys())
+            table.field_names = row._unique_field_names
             for row in result:
                 table.add_row(list(row))
         print(table)

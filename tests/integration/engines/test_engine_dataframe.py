@@ -24,36 +24,42 @@ def test_collect(get_engine_df: t.Callable[[str], _BaseDataFrame], get_func):
 
 
 def test_show(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], capsys, caplog, is_snowflake: t.Callable
+    get_engine_df: t.Callable[[str], _BaseDataFrame],
+    get_func,
+    capsys,
+    caplog,
+    is_snowflake: t.Callable,
 ):
     employee = get_engine_df("employee")
+    lit = get_func("lit", employee.session)
+    employee = employee.select("*", lit(1).alias("one"))
     employee.show()
     captured = capsys.readouterr()
     if is_snowflake():
         assert (
             captured.out
-            == """+-------------+--------+-----------+-----+----------+
-| EMPLOYEE_ID | FNAME  |   LNAME   | AGE | STORE_ID |
-+-------------+--------+-----------+-----+----------+
-|      1      |  Jack  |  Shephard |  37 |    1     |
-|      2      |  John  |   Locke   |  65 |    1     |
-|      3      |  Kate  |   Austen  |  37 |    2     |
-|      4      | Claire | Littleton |  27 |    2     |
-|      5      |  Hugo  |   Reyes   |  29 |   100    |
-+-------------+--------+-----------+-----+----------+\n"""
+            == """+-------------+--------+-----------+-----+----------+-----+
+| EMPLOYEE_ID | FNAME  |   LNAME   | AGE | STORE_ID | ONE |
++-------------+--------+-----------+-----+----------+-----+
+|      1      |  Jack  |  Shephard |  37 |    1     |  1  |
+|      2      |  John  |   Locke   |  65 |    1     |  1  |
+|      3      |  Kate  |   Austen  |  37 |    2     |  1  |
+|      4      | Claire | Littleton |  27 |    2     |  1  |
+|      5      |  Hugo  |   Reyes   |  29 |   100    |  1  |
++-------------+--------+-----------+-----+----------+-----+\n"""
         )
     else:
         assert (
             captured.out
-            == """+-------------+--------+-----------+-----+----------+
-| employee_id | fname  |   lname   | age | store_id |
-+-------------+--------+-----------+-----+----------+
-|      1      |  Jack  |  Shephard |  37 |    1     |
-|      2      |  John  |   Locke   |  65 |    1     |
-|      3      |  Kate  |   Austen  |  37 |    2     |
-|      4      | Claire | Littleton |  27 |    2     |
-|      5      |  Hugo  |   Reyes   |  29 |   100    |
-+-------------+--------+-----------+-----+----------+\n"""
+            == """+-------------+--------+-----------+-----+----------+-----+
+| employee_id | fname  |   lname   | age | store_id | one |
++-------------+--------+-----------+-----+----------+-----+
+|      1      |  Jack  |  Shephard |  37 |    1     |  1  |
+|      2      |  John  |   Locke   |  65 |    1     |  1  |
+|      3      |  Kate  |   Austen  |  37 |    2     |  1  |
+|      4      | Claire | Littleton |  27 |    2     |  1  |
+|      5      |  Hugo  |   Reyes   |  29 |   100    |  1  |
++-------------+--------+-----------+-----+----------+-----+\n"""
         )
     assert "Truncate is ignored so full results will be displayed" not in caplog.text
     employee.show(truncate=True)

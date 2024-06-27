@@ -52,6 +52,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     make_date_from_date_func as make_date,
     to_date_from_timestamp as to_date,
     last_day_with_cast as last_day,
+    sha1_force_sha1_and_to_hex as sha,
     sha1_force_sha1_and_to_hex as sha1,
     hash_from_farm_fingerprint as hash,
     base64_from_blob as base64,
