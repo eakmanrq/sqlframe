@@ -407,3 +407,44 @@ class Column:
         window_expression = window.expression.copy()
         window_expression.set("this", self.column_expression)
         return Column(window_expression)
+
+    def getItem(self, key: t.Any) -> Column:
+        """
+        An expression that gets an item at position ``ordinal`` out of a list,
+        or gets an item by key out of a dict.
+
+        .. versionadded:: 1.3.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        key
+            a literal value, or a :class:`Column` expression.
+            The result will only be true at a location if the item matches in the column.
+
+             .. deprecated:: 3.0.0
+                 :class:`Column` as a parameter is deprecated.
+
+        Returns
+        -------
+        :class:`Column`
+            Column representing the item(s) got at position out of a list or by key out of a dict.
+
+        Examples
+        --------
+        >>> df = spark.createDataFrame([([1, 2], {"key": "value"})], ["l", "d"])
+        >>> df.select(df.l.getItem(0), df.d.getItem("key")).show()
+        +----+------+
+        |l[0]|d[key]|
+        +----+------+
+        |   1| value|
+        +----+------+
+        """
+        element_at = get_func_from_session("element_at")
+        lit = get_func_from_session("lit")
+        key = lit(key) if not isinstance(key, Column) else key
+        if isinstance(key.expression, exp.Literal) and key.expression.is_number:
+            key = key + lit(1)
+        return element_at(self, key)
