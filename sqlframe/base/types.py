@@ -416,3 +416,13 @@ class Row(tuple):
             )
         else:
             return "<Row(%s)>" % ", ".join(repr(field) for field in self)
+
+    # SQLFrame Specific
+    @property
+    def _unique_field_names(self) -> t.List[str]:
+        fields = []
+        for i, field in enumerate(self.__fields__):
+            if field in fields:
+                field = field + "_" + str(i)
+            fields.append(field)
+        return fields

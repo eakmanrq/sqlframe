@@ -51,6 +51,16 @@ def test_simple_select_from_table(
     compare_frames(df, dfs)
 
 
+def test_select_star_from_table(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee
+    dfs = get_df("employee").session.read.table("employee")
+    compare_frames(df, dfs)
+
+
 def test_simple_select_df_attribute(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
