@@ -1135,13 +1135,11 @@ def array_intersect_using_intersection(col1: ColumnOrName, col2: ColumnOrName) -
 def element_at_using_brackets(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     col_func = get_func_from_session("col")
     lit = get_func_from_session("lit")
-    #  SQLGlot will auto add 1 to whatever we pass in for the brackets even though the value is already 1 based.
-    if not isinstance(value, int):
-        raise ValueError("This dialect requires the value must be an integer")
-    value_lit = lit(value - 1)
-    return Column(
-        expression.Bracket(this=col_func(col).expression, expressions=[value_lit.expression])
-    )
+    # SQLGlot will auto add 1 to whatever we pass in for the brackets even though the value is already 1 based.
+    value = value if isinstance(value, Column) else lit(value)
+    if [x for x in value.expression.find_all(expression.Literal) if x.is_number]:
+        value = value - lit(1)
+    return Column(expression.Bracket(this=col_func(col).expression, expressions=[value.expression]))  # type: ignore
 
 
 def array_remove_using_filter(col: ColumnOrName, value: ColumnOrLiteral) -> Column:

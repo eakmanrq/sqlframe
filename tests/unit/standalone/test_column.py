@@ -220,3 +220,7 @@ def test_over():
         ).sql()
         == "SUM(cola) OVER (PARTITION BY colb ORDER BY colc RANGE BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING)"
     )
+
+
+def test_get_item():
+    assert F.col("cola").getItem(1).sql() == "ELEMENT_AT(cola, (1 + 1))"
