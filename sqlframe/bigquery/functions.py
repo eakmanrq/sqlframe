@@ -7,7 +7,11 @@ import typing as t
 from sqlglot import exp as sqlglot_expression
 
 import sqlframe.base.functions
-from sqlframe.base.util import get_func_from_session
+from sqlframe.base.util import (
+    format_time_from_spark,
+    get_func_from_session,
+    spark_default_time_format,
+)
 from sqlframe.bigquery.column import Column
 
 if t.TYPE_CHECKING:
@@ -148,23 +152,15 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 
     session: _BaseSession = _BaseSession()
     lit = get_func_from_session("lit")
-    to_timestamp = get_func_from_session("to_timestamp")
 
     expressions = [Column.ensure_col(col).expression]
-    if format is not None:
-        expressions.append(lit(format).expression)
     return Column(
         sqlglot_expression.Anonymous(
             this="FORMAT_TIMESTAMP",
             expressions=[
-                lit(session.DEFAULT_TIME_FORMAT).expression,
-                to_timestamp(
-                    Column(
-                        sqlglot_expression.Anonymous(
-                            this="TIMESTAMP_SECONDS", expressions=expressions
-                        )
-                    ),
-                    format,
+                lit(session.default_time_format).expression,
+                Column(
+                    sqlglot_expression.Anonymous(this="TIMESTAMP_SECONDS", expressions=expressions)
                 ).expression,
             ],
         )
@@ -174,12 +170,9 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
-    from sqlframe.base.session import _BaseSession
-
     lit = get_func_from_session("lit")
 
-    if format is None:
-        format = _BaseSession().DEFAULT_TIME_FORMAT
+    format = lit(format or spark_default_time_format())
     return Column(
         sqlglot_expression.Anonymous(
             this="UNIX_SECONDS",
@@ -187,7 +180,7 @@ def unix_timestamp(
                 sqlglot_expression.Anonymous(
                     this="PARSE_TIMESTAMP",
                     expressions=[
-                        lit(format).expression,
+                        format_time_from_spark(format).expression,
                         Column.ensure_col(timestamp).expression,
                         lit("UTC").expression,
                     ],

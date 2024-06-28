@@ -6,12 +6,14 @@ import decimal
 import logging
 import typing as t
 
+from sqlglot import Dialect
 from sqlglot import exp as expression
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.decorators import func_metadata as meta
+from sqlframe.base.util import format_time_from_spark, spark_default_time_format
 
 if t.TYPE_CHECKING:
     from pyspark.sql.session import SparkContext
@@ -695,7 +697,7 @@ def date_format(col: ColumnOrName, format: str) -> Column:
     return Column.invoke_expression_over_column(
         Column(expression.TimeStrToTime(this=Column.ensure_col(col).expression)),
         expression.TimeToStr,
-        format=lit(format),
+        format=format_time_from_spark(format),
     )
 
 
@@ -875,17 +877,21 @@ def months_between(
 
 @meta()
 def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    format = lit(format or spark_default_time_format())
     if format is not None:
         return Column.invoke_expression_over_column(
-            col, expression.TsOrDsToDate, format=lit(format)
+            col, expression.TsOrDsToDate, format=format_time_from_spark(format)
         )
     return Column.invoke_expression_over_column(col, expression.TsOrDsToDate)
 
 
 @meta()
 def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    format = lit(format or spark_default_time_format())
     if format is not None:
-        return Column.invoke_expression_over_column(col, expression.StrToTime, format=lit(format))
+        return Column.invoke_expression_over_column(
+            col, expression.StrToTime, format=format_time_from_spark(format)
+        )
 
     return Column.ensure_col(col).cast("timestamp")
 
@@ -916,23 +922,23 @@ def last_day(col: ColumnOrName) -> Column:
 
 @meta()
 def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.session import _BaseSession
-
-    if format is None:
-        format = _BaseSession().DEFAULT_TIME_FORMAT
-    return Column.invoke_expression_over_column(col, expression.UnixToStr, format=lit(format))
+    format = lit(format or spark_default_time_format())
+    return Column.invoke_expression_over_column(
+        col,
+        expression.UnixToStr,
+        format=format_time_from_spark(format),  # type: ignore
+    )
 
 
 @meta()
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
-    from sqlframe.base.session import _BaseSession
-
-    if format is None:
-        format = _BaseSession().DEFAULT_TIME_FORMAT
+    format = lit(format or spark_default_time_format())
     return Column.invoke_expression_over_column(
-        timestamp, expression.StrToUnix, format=lit(format)
+        timestamp,
+        expression.StrToUnix,
+        format=format_time_from_spark(format),  # type: ignore
     ).cast("bigint")
 
 
@@ -5106,8 +5112,11 @@ def to_unix_timestamp(
     [Row(r=None)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
+    format = lit(spark_default_time_format()) if format is None else format
     if format is not None:
-        return Column.invoke_expression_over_column(timestamp, expression.StrToUnix, format=format)
+        return Column.invoke_expression_over_column(
+            timestamp, expression.StrToUnix, format=format_time_from_spark(format)
+        )
     else:
         return Column.invoke_expression_over_column(timestamp, expression.StrToUnix)
 
@@ -5324,7 +5333,7 @@ def ucase(str: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(str, expression.Upper)
 
 
-@meta()
+@meta(unsupported_engines=["bigquery", "snowflake"])
 def unix_date(col: ColumnOrName) -> Column:
     """Returns the number of days since 1970-01-01.
 

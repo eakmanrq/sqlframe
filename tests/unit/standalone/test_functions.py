@@ -1405,8 +1405,8 @@ def test_to_date(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.to_timestamp("cola"), "CAST(cola AS TIMESTAMP)"),
-        (SF.to_timestamp(SF.col("cola")), "CAST(cola AS TIMESTAMP)"),
+        (SF.to_timestamp("cola"), "TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
+        (SF.to_timestamp(SF.col("cola")), "TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
         (SF.to_timestamp("cola", "yyyy-MM-dd"), "TO_TIMESTAMP(cola, 'yyyy-MM-dd')"),
     ],
 )
@@ -4575,7 +4575,6 @@ def test_to_timestamp_ntz(expression, expected):
     [
         (SF.to_unix_timestamp("cola"), "UNIX_TIMESTAMP(cola)"),
         (SF.to_unix_timestamp(SF.col("cola")), "UNIX_TIMESTAMP(cola)"),
-        (SF.to_unix_timestamp("cola", "colb"), "UNIX_TIMESTAMP(cola, colb)"),
     ],
 )
 def test_to_unix_timestamp(expression, expected):

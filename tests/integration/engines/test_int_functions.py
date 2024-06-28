@@ -1239,15 +1239,7 @@ def test_current_timestamp(get_session_and_func):
 def test_date_format(get_session_and_func):
     session, date_format = get_session_and_func("date_format")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
-    expected = "04/08/2015"
-    if isinstance(session, (BigQuerySession, DuckDBSession)):
-        assert df.select(date_format("dt", "%m/%d/%Y").alias("date")).first()[0] == expected
-    elif isinstance(session, PostgresSession):
-        assert df.select(date_format("dt", "MM/dd/yyyy").alias("date")).first()[0] == expected
-    elif isinstance(session, SnowflakeSession):
-        assert df.select(date_format("dt", "MM/DD/YYYY").alias("date")).first()[0] == expected
-    else:
-        assert df.select(date_format("dt", "MM/dd/yyy").alias("date")).first()[0] == expected
+    assert df.select(date_format("dt", "MM/dd/yyyy").alias("date")).first()[0] == "04/08/2015"
 
 
 def test_year(get_session_and_func):
@@ -1400,39 +1392,28 @@ def test_to_date(get_session_and_func):
     session, to_date = get_session_and_func("to_date")
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     assert df.select(to_date(df.t).alias("date")).first()[0] == datetime.date(1997, 2, 28)
+    result = df.select(to_date(df.t, "yyyy-MM-dd HH:mm:ss").alias("date")).first()[0]
     if isinstance(session, (BigQuerySession, DuckDBSession)):
-        assert df.select(to_date(df.t, "%Y-%m-%d %H:%M:%S").alias("date")).first()[
-            0
-        ] == datetime.date(1997, 2, 28)
+        assert result == datetime.date(1997, 2, 28)
     elif isinstance(session, PostgresSession):
-        assert df.select(to_date(df.t, "yyyy-MM-dd HH:MI:SS").alias("date")).first()[
-            0
-        ] == datetime.date(1997, 2, 28)
+        assert result == datetime.date(1997, 2, 28)
     elif isinstance(session, SnowflakeSession):
-        assert df.select(to_date(df.t, "YYYY-MM-DD HH:MI:SS").alias("date")).first()[
-            0
-        ] == datetime.date(1997, 2, 28)
+        assert result == datetime.date(1997, 2, 28)
     else:
-        assert df.select(to_date(df.t, "yyyy-MM-dd HH:mm:ss").alias("date")).first()[
-            0
-        ] == datetime.date(1997, 2, 28)
+        assert result == datetime.date(1997, 2, 28)
 
 
 def test_to_timestamp(get_session_and_func):
     session, to_timestamp = get_session_and_func("to_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
-    if isinstance(session, BigQuerySession):
-        assert df.select(to_timestamp(df.t).alias("dt")).first()[0] == datetime.datetime(
-            1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc
-        )
+    result = df.select(to_timestamp(df.t).alias("dt")).first()[0]
+    if isinstance(session, (BigQuerySession, PostgresSession)):
+        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
     else:
-        assert df.select(to_timestamp(df.t).alias("dt")).first()[0] == datetime.datetime(
-            1997, 2, 28, 10, 30
-        )
+        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    result = df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[0]
     if isinstance(session, (BigQuerySession, DuckDBSession)):
-        assert df.select(to_timestamp(df.t, "%Y-%m-%d %H:%M:%S").alias("dt")).first()[
-            0
-        ] == datetime.datetime(
+        assert result == datetime.datetime(
             1997,
             2,
             28,
@@ -1441,13 +1422,9 @@ def test_to_timestamp(get_session_and_func):
             tzinfo=datetime.timezone.utc if isinstance(session, BigQuerySession) else None,
         )
     elif isinstance(session, PostgresSession):
-        assert df.select(to_timestamp(df.t, "yyyy-MM-dd HH:MI:SS").alias("dt")).first()[
-            0
-        ] == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
+        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
     elif isinstance(session, SnowflakeSession):
-        assert df.select(to_timestamp(df.t, "YYYY-MM-DD HH:MI:SS").alias("dt")).first()[
-            0
-        ] == datetime.datetime(
+        assert result == datetime.datetime(
             1997,
             2,
             28,
@@ -1455,9 +1432,7 @@ def test_to_timestamp(get_session_and_func):
             30,
         )
     else:
-        assert df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[
-            0
-        ] == datetime.datetime(1997, 2, 28, 10, 30)
+        assert result == datetime.datetime(1997, 2, 28, 10, 30)
 
 
 def test_trunc(get_session_and_func):
@@ -1516,20 +1491,11 @@ def test_from_unixtime(get_session_and_func):
 def test_unix_timestamp(get_session_and_func):
     session, unix_timestamp = get_session_and_func("unix_timestamp")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
-    if isinstance(session, (BigQuerySession, DuckDBSession)):
-        date_format = "%Y-%m-%d"
-    elif isinstance(session, SnowflakeSession):
-        date_format = "YYYY-MM-DD"
-    else:
-        date_format = "yyyy-MM-dd"
+    result = df.select(unix_timestamp("dt", "yyyy-MM-dd").alias("unix_time")).first()[0]
     if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
-        assert (
-            df.select(unix_timestamp("dt", date_format).alias("unix_time")).first()[0] == 1428451200
-        )
+        assert result == 1428451200
     else:
-        assert (
-            df.select(unix_timestamp("dt", date_format).alias("unix_time")).first()[0] == 1428476400
-        )
+        assert result == 1428476400
 
 
 def test_from_utc_timestamp(get_session_and_func):
@@ -4789,16 +4755,11 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
     session, to_unix_timestamp = get_session_and_func("to_unix_timestamp")
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-04-08",)], ["e"])
+    result = df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0]
     if isinstance(session, DuckDBSession):
-        assert (
-            df.select(to_unix_timestamp(df.e, lit("%Y-%m-%d")).alias("r")).first()[0]
-            == 1460073600.0
-        )
+        assert result == 1460073600.0
     else:
-        assert (
-            df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0]
-            == 1460098800
-        )
+        assert result == 1460098800
     # DuckDB requires the value to match the format which the default format is "yyyy-MM-dd HH:mm:ss".
     # https://spark.apache.org/docs/latest/api/sql/#to_unix_timestamp
     if isinstance(session, DuckDBSession):

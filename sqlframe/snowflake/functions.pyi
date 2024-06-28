@@ -207,7 +207,6 @@ from sqlframe.base.functions import (
     trim as trim,
     trunc as trunc,
     ucase as ucase,
-    unix_date as unix_date,
     upper as upper,
     user as user,
     var_pop as var_pop,

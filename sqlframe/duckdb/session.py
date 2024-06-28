@@ -33,8 +33,6 @@ class DuckDBSession(
     _writer = DuckDBDataFrameWriter
     _df = DuckDBDataFrame
 
-    DEFAULT_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
         import duckdb
         from duckdb.typing import VARCHAR

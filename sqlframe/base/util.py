@@ -13,7 +13,12 @@ if t.TYPE_CHECKING:
     from pyspark.sql.dataframe import SparkSession as PySparkSession
 
     from sqlframe.base import types
-    from sqlframe.base._typing import OptionalPrimitiveType, SchemaInput
+    from sqlframe.base._typing import (
+        ColumnOrLiteral,
+        OptionalPrimitiveType,
+        SchemaInput,
+    )
+    from sqlframe.base.column import Column
     from sqlframe.base.session import _BaseSession
     from sqlframe.base.types import StructType
 
@@ -342,3 +347,21 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
             ]
         )
     raise NotImplementedError(f"Unsupported data type: {sqlglot_dtype}")
+
+
+def format_time_from_spark(value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.column import Column
+    from sqlframe.base.session import _BaseSession
+
+    lit = get_func_from_session("lit")
+    value = lit(value) if not isinstance(value, Column) else value
+    formatted_time = Dialect["spark"].format_time(value.expression)
+    return Column(
+        _BaseSession()
+        .output_dialect.generator()
+        .format_time(exp.StrToTime(this=exp.Null(), format=formatted_time))
+    )
+
+
+def spark_default_time_format() -> str:
+    return Dialect["spark"].TIME_FORMAT.strip("'")

@@ -6,11 +6,16 @@ import re
 import typing as t
 
 from sqlglot import exp as expression
+from sqlglot.dialects.dialect import build_formatted_time
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
-from sqlframe.base.util import get_func_from_session
+from sqlframe.base.util import (
+    format_time_from_spark,
+    get_func_from_session,
+    spark_default_time_format,
+)
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import ColumnOrLiteral, ColumnOrName
@@ -715,14 +720,10 @@ def months_between_cast_as_date_cast_roundoff(
 
 
 def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.session import _BaseSession
-
-    session: _BaseSession = _BaseSession()
     lit = get_func_from_session("lit")
     col_func = get_func_from_session("col")
 
-    if format is None:
-        format = session.DEFAULT_TIME_FORMAT
+    format = lit(format or spark_default_time_format())
     return Column.invoke_expression_over_column(
         Column(
             expression.Anonymous(
@@ -731,7 +732,7 @@ def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = No
             )
         ),
         expression.TimeToStr,
-        format=lit(format),
+        format=format_time_from_spark(format),  # type: ignore
     )
 
 
@@ -1511,10 +1512,10 @@ def to_unix_timestamp_include_default_format(
     format: t.Optional[ColumnOrName] = None,
 ) -> Column:
     from sqlframe.base.functions import to_unix_timestamp
-
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
 
     if not format:
-        format = lit("%Y-%m-%d %H:%M:%S")
-
+        format = _BaseSession().output_dialect.TIME_FORMAT
+    else:
+        format = format_time_from_spark(format)
     return to_unix_timestamp(timestamp, format)

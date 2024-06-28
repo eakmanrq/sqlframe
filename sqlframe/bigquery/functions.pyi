@@ -267,7 +267,6 @@ from sqlframe.base.functions import trunc as trunc
 from sqlframe.base.functions import ucase as ucase
 from sqlframe.base.functions import unbase64 as unbase64
 from sqlframe.base.functions import unhex as unhex
-from sqlframe.base.functions import unix_date as unix_date
 from sqlframe.base.functions import upper as upper
 from sqlframe.base.functions import user as user
 from sqlframe.base.functions import var_pop as var_pop
