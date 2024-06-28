@@ -34,8 +34,6 @@ class PostgresSession(
     _writer = PostgresDataFrameWriter
     _df = PostgresDataFrame
 
-    DEFAULT_TIME_FORMAT = "yyyy-MM-dd HH:MI:SS"
-
     def __init__(self, conn: t.Optional[psycopg2_connection] = None):
         if not hasattr(self, "_conn"):
             super().__init__(conn)

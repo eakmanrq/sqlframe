@@ -72,7 +72,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     _df: t.Type[DF]
 
     SANITIZE_COLUMN_NAMES = False
-    DEFAULT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss"
 
     def __init__(
         self,
@@ -113,6 +112,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     @cached_property
     def _cur(self) -> DBAPICursorWithPandas:
         return self._conn.cursor()
+
+    @property
+    def default_time_format(self) -> str:
+        return self.output_dialect.TIME_FORMAT.strip("'")
 
     def _sanitize_column_name(self, name: str) -> str:
         if self.SANITIZE_COLUMN_NAMES:

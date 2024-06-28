@@ -32,7 +32,6 @@ class BigQuerySession(
     _writer = BigQueryDataFrameWriter
     _df = BigQueryDataFrame
 
-    DEFAULT_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = True
     SANITIZE_COLUMN_NAMES = True
 

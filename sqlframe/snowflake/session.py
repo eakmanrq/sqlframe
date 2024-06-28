@@ -57,8 +57,6 @@ class SnowflakeSession(
     _writer = SnowflakeDataFrameWriter
     _df = SnowflakeDataFrame
 
-    DEFAULT_TIME_FORMAT = "YYYY-MM-DD HH:MI:SS"
-
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):
         import snowflake
 
