@@ -72,6 +72,8 @@ from sqlframe.base.function_alternatives import (  # noqa
     array_union_using_array_concat as array_union,
     sequence_from_generate_array as sequence,
     position_as_strpos as position,
+    try_to_timestamp_safe as try_to_timestamp,
+    _is_string_using_typeof_string as _is_string,
 )
 
 

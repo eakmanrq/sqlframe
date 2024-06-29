@@ -46,4 +46,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     array_max_from_sort as array_max,
     sequence_from_generate_series as sequence,
     try_element_at_zero_based as try_element_at,
+    day_with_try_to_timestamp as day,
+    try_to_timestamp_strptime as try_to_timestamp,
+    _is_string_using_typeof_varchar as _is_string,
 )

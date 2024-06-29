@@ -38,6 +38,14 @@ class PostgresSession(
         if not hasattr(self, "_conn"):
             super().__init__(conn)
             self._execute("CREATE EXTENSION IF NOT EXISTS fuzzystrmatch")
+            self._execute("""CREATE OR REPLACE FUNCTION pg_temp.try_to_timestamp(input_text TEXT, format TEXT)
+RETURNS TIMESTAMP AS $$
+BEGIN
+    RETURN TO_TIMESTAMP(input_text, format);
+EXCEPTION WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;""")
 
     def _fetch_rows(
         self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True

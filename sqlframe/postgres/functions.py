@@ -64,4 +64,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     right_cast_len as right,
     position_cast_start as position,
     try_element_at_zero_based as try_element_at,
+    try_to_timestamp_pgtemp as try_to_timestamp,
+    typeof_pg_typeof as typeof,
+    _is_string_using_typeof_char_varying as _is_string,
 )

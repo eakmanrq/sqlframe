@@ -561,6 +561,14 @@ def to_date_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) ->
     return to_date(to_timestamp(col, format))
 
 
+def to_date_time_format(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    from sqlframe.base.functions import to_date
+
+    lit = get_func_from_session("lit")
+    format = lit(format or spark_default_time_format())
+    return to_date(col, format=format)
+
+
 def last_day_with_cast(col: ColumnOrName) -> Column:
     from sqlframe.base.functions import last_day
 
@@ -1519,3 +1527,86 @@ def to_unix_timestamp_include_default_format(
     else:
         format = format_time_from_spark(format)
     return to_unix_timestamp(timestamp, format)
+
+
+def day_with_try_to_timestamp(col: ColumnOrName) -> Column:
+    from sqlframe.base.functions import day
+
+    try_to_timestamp = get_func_from_session("try_to_timestamp")
+    to_date = get_func_from_session("to_date")
+    when = get_func_from_session("when")
+    _is_string = get_func_from_session("_is_string")
+    coalesce = get_func_from_session("coalesce")
+    return day(
+        when(
+            _is_string(col),
+            coalesce(try_to_timestamp(col), to_date(col)),
+        ).otherwise(col)
+    )
+
+
+def try_to_timestamp_strptime(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    lit = get_func_from_session("lit")
+
+    format = lit(format or spark_default_time_format())
+    return Column.invoke_anonymous_function(col, "TRY_STRPTIME", format_time_from_spark(format))  # type: ignore
+
+
+def try_to_timestamp_safe(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    lit = get_func_from_session("lit")
+
+    format = lit(format or spark_default_time_format())
+    return Column.invoke_anonymous_function(
+        format_time_from_spark(format),  # type: ignore
+        "SAFE.PARSE_TIMESTAMP",
+        col,  # type: ignore
+    )
+
+
+def try_to_timestamp_pgtemp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    lit = get_func_from_session("lit")
+
+    format = lit(format or spark_default_time_format())
+    return Column.invoke_anonymous_function(
+        col,
+        "pg_temp.TRY_TO_TIMESTAMP",
+        format_time_from_spark(format),  # type: ignore
+    )
+
+
+def typeof_pg_typeof(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "pg_typeof").cast("regtype").cast("text")
+
+
+def typeof_from_variant(col: ColumnOrName) -> Column:
+    col = Column.invoke_anonymous_function(col, "TO_VARIANT")
+    return Column.invoke_anonymous_function(col, "TYPEOF")
+
+
+def _is_string_using_typeof_varchar(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    lit = get_func_from_session("lit")
+    return lit(typeof(col) == lit("VARCHAR"))
+
+
+def _is_string_using_typeof_char_varying(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    lit = get_func_from_session("lit")
+    return lit(
+        (typeof(col) == lit("text"))
+        | (typeof(col) == lit("character varying"))
+        | (typeof(col) == lit("unknown"))
+        | (typeof(col) == lit("text"))
+    )
+
+
+def _is_string_using_typeof_string(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    lit = get_func_from_session("lit")
+    return lit(typeof(col) == lit("STRING"))
+
+
+def _is_string_using_typeof_string_lcase(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    lit = get_func_from_session("lit")
+    return lit(typeof(col) == lit("string"))

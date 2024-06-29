@@ -36,7 +36,9 @@ def test_list_databases(postgres_session: PostgresSession):
         Database(name="db1", catalog="tests", description=None, locationUri=""),
         Database(name="information_schema", catalog="tests", description=None, locationUri=""),
         Database(name="pg_catalog", catalog="tests", description=None, locationUri=""),
+        Database(name="pg_temp_3", catalog="tests", description=None, locationUri=""),
         Database(name="pg_toast", catalog="tests", description=None, locationUri=""),
+        Database(name="pg_toast_temp_3", catalog="tests", description=None, locationUri=""),
         Database(name="public", catalog="tests", description=None, locationUri=""),
     ]
 
