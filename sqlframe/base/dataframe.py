@@ -828,7 +828,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         from sqlframe.base.functions import coalesce
 
         if on is None:
-            logger.warning("Got no value for on. This appears change the join to a cross join.")
+            logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
         other_df = other_df._convert_leaf_to_cte()
         # We will determine actual "join on" expression later so we don't provide it at first
@@ -871,13 +871,12 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                             )
                             join_column_pairs.append((left_column, right_column))
                             num_matching_ctes += 1
-                    if num_matching_ctes > 1:
+                            # We only want to match one table to the column and that should be matched left -> right
+                            # so we break after the first match
+                            break
+                    if num_matching_ctes == 0:
                         raise ValueError(
-                            f"Column {join_column.alias_or_name} is ambiguous. Please specify the table name."
-                        )
-                    elif num_matching_ctes == 0:
-                        raise ValueError(
-                            f"Column {join_column.alias_or_name} does not exist in any of the tables."
+                            f"Column `{join_column.alias_or_name}` does not exist in any of the tables."
                         )
                 join_clause = functools.reduce(
                     lambda x, y: x & y,
