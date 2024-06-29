@@ -2135,3 +2135,24 @@ def test_join_full_outer_no_match(
     dfs = dfs_initial.join(dfs_for_join, on="id", how="full")
 
     compare_frames(df, dfs)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/102
+def test_join_with_duplicate_column_name(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    spark = pyspark_employee._session
+    df = spark.createDataFrame([(2, "Alice"), (5, "Bob")], ["age", "name"])
+    df_height = spark.createDataFrame([(170, "Alice"), (180, "Bob")], ["height", "name"])
+
+    df = df.join(df_height, how="left", on="name").withColumn("name", F.upper("name"))
+
+    session = get_df("employee").session
+    dfs = session.createDataFrame([(2, "Alice"), (5, "Bob")], ["age", "name"])
+    dfs_height = session.createDataFrame([(170, "Alice"), (180, "Bob")], ["height", "name"])
+
+    dfs = dfs.join(dfs_height, how="left", on="name").withColumn("name", SF.upper("name"))
+
+    compare_frames(df, dfs, compare_schema=False)
