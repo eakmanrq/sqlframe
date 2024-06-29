@@ -211,9 +211,8 @@ class Column:
     def binary_op(
         self, klass: t.Callable, other: ColumnOrLiteral, paren: bool = False, **kwargs
     ) -> Column:
-        op = klass(
-            this=self.column_expression, expression=Column(other).column_expression, **kwargs
-        )
+        other = self._lit(other) if isinstance(other, str) else Column(other)
+        op = klass(this=self.column_expression, expression=other.column_expression, **kwargs)
         if paren:
             return Column(exp.Paren(this=op))
         return Column(op)
@@ -221,9 +220,8 @@ class Column:
     def inverse_binary_op(
         self, klass: t.Callable, other: ColumnOrLiteral, paren: bool = False, **kwargs
     ) -> Column:
-        op = klass(
-            this=Column(other).column_expression, expression=self.column_expression, **kwargs
-        )
+        other = self._lit(other) if isinstance(other, str) else Column(other)
+        op = klass(this=other.column_expression, expression=self.column_expression, **kwargs)
         if paren:
             return Column(exp.Paren(this=op))
         return Column(op)
