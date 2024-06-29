@@ -1373,23 +1373,20 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             self._ensure_and_normalize_col(k).alias_or_name: self._ensure_and_normalize_col(v)
             for k, v in colsMap[0].items()
         }
-        existing_col_names = [
-            x.alias_or_name for x in self._get_outer_select_columns(self.expression)
-        ]
-        updated_expression = self.expression.copy()
-        select_columns = []
+        existing_cols = self._get_outer_select_columns(self.expression)
+        existing_col_names = [x.alias_or_name for x in existing_cols]
+        select_columns = existing_cols
         for column_name, col_value in col_map.items():
             existing_col_index = (
                 existing_col_names.index(column_name) if column_name in existing_col_names else None
             )
-            if existing_col_index:
-                updated_expression.expressions[existing_col_index] = col_value.alias(
+            if existing_col_index is not None:
+                select_columns[existing_col_index] = col_value.alias(  # type: ignore
                     column_name
                 ).expression
             else:
                 select_columns.append(col_value.alias(column_name))
-        df = self.copy(expression=updated_expression)
-        return df.select.__wrapped__(df, *select_columns, append=True)  # type: ignore
+        return self.select.__wrapped__(self, *select_columns)  # type: ignore
 
     @operation(Operation.SELECT)
     def drop(self, *cols: t.Union[str, Column]) -> Self:
