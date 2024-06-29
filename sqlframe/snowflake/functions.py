@@ -63,4 +63,6 @@ from sqlframe.base.function_alternatives import (  # noqa
     map_concat_using_map_cat as map_concat,
     sequence_from_array_generate_range as sequence,
     to_number_using_to_double as to_number,
+    typeof_from_variant as typeof,
+    to_date_time_format as to_date,
 )

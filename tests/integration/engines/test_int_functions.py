@@ -204,6 +204,24 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             pytest.skip("BigQuery doesn't support binary")
         if expected == "timestamp":
             expected = "datetime"
+    if isinstance(session, PostgresSession):
+        if expected.startswith("map"):
+            pytest.skip("Postgres doesn't support map types")
+        elif expected.startswith("struct"):
+            pytest.skip("Postgres doesn't support struct types")
+        elif expected == "binary":
+            pytest.skip("Postgres doesn't support binary")
+    if isinstance(session, SnowflakeSession):
+        if expected == "bigint":
+            expected = "int"
+        elif expected == "string":
+            expected = "varchar"
+        elif expected.startswith("map") or expected.startswith("struct"):
+            expected = "object"
+        elif expected.startswith("array"):
+            pytest.skip("Snowflake doesn't handle arrays properly in values clause")
+        elif expected == "timestamp":
+            expected = "timestampntz"
     result = df.select(typeof("col").alias("test")).first()[0]
     assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(
         expected, dialect=dialect
@@ -4849,12 +4867,16 @@ def test_try_to_timestamp(get_session_and_func, get_func):
     session, try_to_timestamp = get_session_and_func("try_to_timestamp")
     lit = get_func("lit", session)
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
-    assert df.select(try_to_timestamp(df.t).alias("dt")).first()[0] == datetime.datetime(
-        1997, 2, 28, 10, 30
-    )
-    assert df.select(try_to_timestamp(df.t, lit("yyyy-MM-dd HH:mm:ss")).alias("dt")).first()[
-        0
-    ] == datetime.datetime(1997, 2, 28, 10, 30)
+    result = df.select(try_to_timestamp(df.t).alias("dt")).first()[0]
+    if isinstance(session, BigQuerySession):
+        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
+    else:
+        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    result = df.select(try_to_timestamp(df.t, lit("yyyy-MM-dd HH:mm:ss")).alias("dt")).first()[0]
+    if isinstance(session, BigQuerySession):
+        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
+    else:
+        assert result == datetime.datetime(1997, 2, 28, 10, 30)
 
 
 def test_ucase(get_session_and_func, get_func):
@@ -5010,3 +5032,26 @@ def test_xpath_string(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("<a><b>b</b><c>cc</c></a>",)], ["x"])
     assert df.select(xpath_string(df.x, lit("a/c")).alias("r")).first()[0] == "cc"
+
+
+def test_is_string(get_session_and_func, get_func):
+    session, _is_string = get_session_and_func("_is_string")
+    lit = get_func("lit", session)
+    assert session.range(1).select(_is_string(lit("value")), _is_string(lit(1))).collect() == [
+        Row(v1=True, v2=False)
+    ]
+
+
+def test_is_date(get_session_and_func, get_func):
+    session, _is_date = get_session_and_func("_is_date")
+    to_date = get_func("to_date", session)
+    lit = get_func("lit", session)
+    assert session.range(1).select(
+        _is_date(to_date(lit("2021-01-01"), "yyyy-MM-dd")), _is_date(lit("2021-01-01"))
+    ).collect() == [Row(v1=True, v2=False)]
+
+
+# def test_
+
+# typeof = get_func("typeof", session)
+# assert session.range(1).select(typeof(to_date(lit("2021-01-01"), 'yyyy-MM-dd'))).collect() == [Row(value=True)]

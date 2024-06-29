@@ -365,3 +365,7 @@ def format_time_from_spark(value: ColumnOrLiteral) -> Column:
 
 def spark_default_time_format() -> str:
     return Dialect["spark"].TIME_FORMAT.strip("'")
+
+
+def spark_default_date_format() -> str:
+    return Dialect["spark"].DATE_FORMAT.strip("'")

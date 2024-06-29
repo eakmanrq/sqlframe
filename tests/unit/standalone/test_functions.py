@@ -4636,9 +4636,9 @@ def test_try_element_at(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.try_to_timestamp("cola"), "TRY_TO_TIMESTAMP(cola)"),
-        (SF.try_to_timestamp(SF.col("cola")), "TRY_TO_TIMESTAMP(cola)"),
-        (SF.try_to_timestamp("cola", "colb"), "TRY_TO_TIMESTAMP(cola, colb)"),
+        (SF.try_to_timestamp("cola"), "TRY_TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
+        (SF.try_to_timestamp(SF.col("cola")), "TRY_TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
+        (SF.try_to_timestamp("cola", "blah"), "TRY_TO_TIMESTAMP(cola, 'blah')"),
     ],
 )
 def test_try_to_timestamp(expression, expected):

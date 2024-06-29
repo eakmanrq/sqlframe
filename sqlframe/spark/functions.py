@@ -17,4 +17,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     percentile_without_disc as percentile,
     add_months_by_multiplication as add_months,
     arrays_overlap_renamed as arrays_overlap,
+    _is_string_using_typeof_string_lcase as _is_string,
 )

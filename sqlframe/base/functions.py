@@ -13,7 +13,12 @@ from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.decorators import func_metadata as meta
-from sqlframe.base.util import format_time_from_spark, spark_default_time_format
+from sqlframe.base.util import (
+    format_time_from_spark,
+    get_func_from_session,
+    spark_default_date_format,
+    spark_default_time_format,
+)
 
 if t.TYPE_CHECKING:
     from pyspark.sql.session import SparkContext
@@ -877,7 +882,7 @@ def months_between(
 
 @meta()
 def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    format = lit(format or spark_default_time_format())
+    format = lit(format or spark_default_date_format())
     if format is not None:
         return Column.invoke_expression_over_column(
             col, expression.TsOrDsToDate, format=format_time_from_spark(format)
@@ -1743,7 +1748,7 @@ def map_zip_with(
     return Column.invoke_anonymous_function(col1, "MAP_ZIP_WITH", col2, Column(f_expression))
 
 
-@meta(unsupported_engines=["postgres", "snowflake"])
+@meta()
 def typeof(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TYPEOF")
 
@@ -2162,7 +2167,7 @@ def datepart(field: ColumnOrName, source: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(field, "datepart", source)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def day(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Day)
 
@@ -5277,7 +5282,7 @@ def try_element_at(col: ColumnOrName, extraction: ColumnOrName) -> Column:
     )
 
 
-@meta(unsupported_engines="*")
+@meta()
 def try_to_timestamp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     """
     Parses the `col` with the `format` to a timestamp. The function always
@@ -5302,10 +5307,8 @@ def try_to_timestamp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None)
     >>> df.select(try_to_timestamp(df.t, lit('yyyy-MM-dd HH:mm:ss')).alias('dt')).collect()
     [Row(dt=datetime.datetime(1997, 2, 28, 10, 30))]
     """
-    if format is not None:
-        return Column.invoke_anonymous_function(col, "try_to_timestamp", format)
-    else:
-        return Column.invoke_anonymous_function(col, "try_to_timestamp")
+    format = lit(format or spark_default_time_format())
+    return Column.invoke_anonymous_function(col, "try_to_timestamp", format_time_from_spark(format))  # type: ignore
 
 
 @meta()
@@ -5795,6 +5798,20 @@ def years(col: ColumnOrName) -> Column:
 
     """
     return Column.invoke_anonymous_function(col, "years")
+
+
+# SQLFrame specific
+@meta()
+def _is_string(col: ColumnOrName) -> Column:
+    col = Column.invoke_anonymous_function(col, "TO_VARIANT")
+    return Column.invoke_anonymous_function(col, "IS_VARCHAR")
+
+
+@meta()
+def _is_date(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    upper = get_func_from_session("upper")
+    return lit(upper(typeof(col)) == lit("DATE"))
 
 
 @meta()
