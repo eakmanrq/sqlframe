@@ -1558,6 +1558,19 @@ def day_with_try_to_timestamp(col: ColumnOrName) -> Column:
     )
 
 
+def endswith_with_underscore(str: ColumnOrName, suffix: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "ENDS_WITH", suffix)
+
+
+def endswith_using_like(str: ColumnOrName, suffix: ColumnOrName) -> Column:
+    concat = get_func_from_session("concat")
+    lit = get_func_from_session("lit")
+
+    return Column.invoke_expression_over_column(
+        str, expression.Like, expression=concat(lit("%"), suffix)
+    )
+
+
 def try_to_timestamp_strptime(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     lit = get_func_from_session("lit")
 
@@ -1623,3 +1636,7 @@ def _is_string_using_typeof_string_lcase(col: ColumnOrName) -> Column:
     typeof = get_func_from_session("typeof")
     lit = get_func_from_session("lit")
     return lit(typeof(col) == lit("string"))
+
+
+def _is_integer_using_func(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "IS_INTEGER")
