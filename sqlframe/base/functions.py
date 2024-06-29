@@ -1300,7 +1300,7 @@ def array_agg(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ArrayAgg)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     value = value if isinstance(value, Column) else lit(value)
     return Column.invoke_anonymous_function(col, "ARRAY_APPEND", value)

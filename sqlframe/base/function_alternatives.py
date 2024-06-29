@@ -1529,6 +1529,19 @@ def to_unix_timestamp_include_default_format(
     return to_unix_timestamp(timestamp, format)
 
 
+def array_append_list_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    lit = get_func_from_session("lit")
+    value = value if isinstance(value, Column) else lit(value)
+    return Column.invoke_anonymous_function(col, "LIST_APPEND", value)
+
+
+def array_append_using_array_cat(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    lit = get_func_from_session("lit")
+    array = get_func_from_session("array")
+    value = value if isinstance(value, Column) else lit(value)
+    return Column.invoke_anonymous_function(col, "ARRAY_CONCAT", array(value))
+
+
 def day_with_try_to_timestamp(col: ColumnOrName) -> Column:
     from sqlframe.base.functions import day
 

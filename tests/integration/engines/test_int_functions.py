@@ -2067,9 +2067,10 @@ def test_array_agg(get_session_and_func):
     ]
 
 
-def test_array_append(get_session_and_func):
+def test_array_append(get_session_and_func, get_func):
     session, array_append = get_session_and_func("array_append")
-    df = session.createDataFrame([Row(c1=["b", "a", "c"], c2="c")])
+    lit = get_func("lit", session)
+    df = session.range(1).select(lit(["b", "a", "c"]).alias("c1"), lit("c").alias("c2"))
     assert df.select(array_append(df.c1, df.c2)).collect() == [
         Row(value=["b", "a", "c", "c"]),
     ]
