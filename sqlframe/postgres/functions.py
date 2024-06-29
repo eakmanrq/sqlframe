@@ -67,4 +67,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     try_to_timestamp_pgtemp as try_to_timestamp,
     typeof_pg_typeof as typeof,
     _is_string_using_typeof_char_varying as _is_string,
+    endswith_using_like as endswith,
 )

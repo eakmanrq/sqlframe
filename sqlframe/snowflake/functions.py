@@ -65,4 +65,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     to_number_using_to_double as to_number,
     typeof_from_variant as typeof,
     to_date_time_format as to_date,
+    _is_integer_using_func as _is_integer,
 )

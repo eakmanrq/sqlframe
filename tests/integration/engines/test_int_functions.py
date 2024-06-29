@@ -5052,7 +5052,41 @@ def test_is_date(get_session_and_func, get_func):
     ).collect() == [Row(v1=True, v2=False)]
 
 
-# def test_
+def test_is_int_variant(get_session_and_func, get_func):
+    session, _is_int_variant = get_session_and_func("_is_int_variant")
+    lit = get_func("lit", session)
+    result = (
+        session.range(1)
+        .select(
+            _is_int_variant(lit(1).cast("integer")).alias("v1"),
+            _is_int_variant(lit(1).cast("smallint")).alias("v2"),
+            _is_int_variant(lit(1).cast("bigint")).alias("v3"),
+            _is_int_variant(lit(1.0)).alias("v4"),
+            _is_int_variant(lit("1")).alias("v5"),
+        )
+        .collect()
+    )
+    # Snowflake treats a number with decimal point as int unless explicitly casted
+    if isinstance(session, SnowflakeSession):
+        assert result == [Row(v1=True, v2=True, v3=True, v4=True, v5=False)]
+    else:
+        assert result == [Row(v1=True, v2=True, v3=True, v4=False, v5=False)]
+
+
+def test_is_array(get_session_and_func, get_func):
+    session, _is_array = get_session_and_func("_is_array")
+    lit = get_func("lit", session)
+    result = (
+        session.range(1)
+        .select(
+            _is_array(lit([1, 2, 3])).alias("v1"),
+            _is_array(lit(["1", "2", "3"])).alias("v2"),
+            _is_array(lit(1)).alias("v3"),
+        )
+        .collect()
+    )
+    assert result == [Row(v1=True, v2=True, v3=False)]
+
 
 # typeof = get_func("typeof", session)
 # assert session.range(1).select(typeof(to_date(lit("2021-01-01"), 'yyyy-MM-dd'))).collect() == [Row(value=True)]

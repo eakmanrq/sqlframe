@@ -2185,7 +2185,7 @@ def elt(*inputs: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(inputs[0], "elt")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def endswith(str: ColumnOrName, suffix: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "endswith", suffix)
 
@@ -5812,6 +5812,31 @@ def _is_date(col: ColumnOrName) -> Column:
     typeof = get_func_from_session("typeof")
     upper = get_func_from_session("upper")
     return lit(upper(typeof(col)) == lit("DATE"))
+
+
+@meta()
+def _is_array(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    upper = get_func_from_session("upper")
+    startswith = get_func_from_session("startswith")
+    endswith = get_func_from_session("endswith")
+    return lit(
+        (startswith(upper(typeof(col)), lit("ARRAY"))) | (endswith(upper(typeof(col)), lit("[]")))
+    )
+
+
+@meta()
+def _is_int_variant(col: ColumnOrName) -> Column:
+    typeof = get_func_from_session("typeof")
+    upper = get_func_from_session("upper")
+    return lit(
+        (upper(typeof(col)) == lit("INTEGER"))
+        | (upper(typeof(col)) == lit("BIGINT"))
+        | (upper(typeof(col)) == lit("SMALLINT"))
+        | (upper(typeof(col)) == lit("TINYINT"))
+        | (upper(typeof(col)) == lit("INT"))
+        | (upper(typeof(col)) == lit("INT64"))
+    )
 
 
 @meta()

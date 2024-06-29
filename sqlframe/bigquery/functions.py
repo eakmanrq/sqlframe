@@ -75,6 +75,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     try_to_timestamp_safe as try_to_timestamp,
     _is_string_using_typeof_string as _is_string,
     array_append_using_array_cat as array_append,
+    endswith_with_underscore as endswith,
 )
 
 
