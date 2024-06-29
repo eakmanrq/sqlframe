@@ -2156,3 +2156,27 @@ def test_join_with_duplicate_column_name(
     dfs = dfs.join(dfs_height, how="left", on="name").withColumn("name", SF.upper("name"))
 
     compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/103
+def test_chained_join_common_key(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    spark = pyspark_employee._session
+    df = spark.createDataFrame([(2, "Alice"), (5, "Bob")], ["age", "name"])
+    height = spark.createDataFrame([(170, "Alice"), (180, "Bob")], ["height", "name"])
+    location = spark.createDataFrame([("USA", "Alice"), ("Europe", "Bob")], ["location", "name"])
+
+    df = df.join(height, how="left", on="name").join(location, how="left", on="name")
+
+    session = get_df("employee").session
+    dfs = session.createDataFrame([(2, "Alice"), (5, "Bob")], ["age", "name"])
+    dfs_height = session.createDataFrame([(170, "Alice"), (180, "Bob")], ["height", "name"])
+    dfs_location = session.createDataFrame(
+        [("USA", "Alice"), ("Europe", "Bob")], ["location", "name"]
+    )
+    dfs = dfs.join(dfs_height, how="left", on="name").join(dfs_location, how="left", on="name")
+
+    compare_frames(df, dfs, compare_schema=False)
