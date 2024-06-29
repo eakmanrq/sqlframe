@@ -197,6 +197,29 @@ def test_case_when_no_otherwise(
     compare_frames(df, dfs, compare_schema=False)
 
 
+def test_case_when_implicit_lit(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.select(
+        F.when(
+            F.col("fname") == "Jack",
+            "name is Jack",
+        ).otherwise("Default")
+    )
+
+    dfs = employee.select(
+        SF.when(
+            (SF.col("fname") == "Jack"),
+            "name is Jack",
+        ).otherwise("Default")
+    )
+
+    compare_frames(df, dfs, compare_schema=False)
+
+
 def test_where_clause_single(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],

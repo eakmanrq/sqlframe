@@ -1497,7 +1497,7 @@ def position_as_strpos(
         str = substr_func(str, start)
     column = Column.invoke_anonymous_function(str, "STRPOS", substr)
     if start:
-        return column + start - lit(1)
+        return column + Column(start) - lit(1)
     return column
 
 
