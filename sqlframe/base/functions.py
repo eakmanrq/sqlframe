@@ -6,8 +6,8 @@ import decimal
 import logging
 import typing as t
 
-from sqlglot import Dialect
 from sqlglot import exp as expression
+from sqlglot import maybe_parse
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
