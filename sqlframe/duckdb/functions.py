@@ -51,4 +51,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     _is_string_using_typeof_varchar as _is_string,
     array_append_list_append as array_append,
     endswith_with_underscore as endswith,
+    last_day_with_cast as last_day,
 )
