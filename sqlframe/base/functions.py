@@ -6,8 +6,8 @@ import decimal
 import logging
 import typing as t
 
-from sqlglot import Dialect
 from sqlglot import exp as expression
+from sqlglot import maybe_parse
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
@@ -635,8 +635,17 @@ shiftRightUnsigned = shiftrightunsigned
 
 
 @meta()
-def expr(str: str) -> Column:
-    return Column(str)
+def expr(str: str, dialect: str = "spark") -> Column:
+    """
+    `dialect` is a SQLFrame unique field to pass in the dialect to use for parsing the expression.
+    """
+    from sqlframe.base.session import _BaseSession
+
+    return Column(
+        maybe_parse(str, dialect=dialect).transform(  # type: ignore
+            _BaseSession().input_dialect.normalize_identifier, copy=False
+        )
+    )
 
 
 @meta(unsupported_engines=["postgres"])
