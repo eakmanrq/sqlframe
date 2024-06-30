@@ -55,7 +55,6 @@ class DuckDBSession(
         return None
 
     class Builder(_BaseSession.Builder):
-        DEFAULT_INPUT_DIALECT = "duckdb"
         DEFAULT_OUTPUT_DIALECT = "duckdb"
 
         @cached_property

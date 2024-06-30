@@ -635,17 +635,8 @@ shiftRightUnsigned = shiftrightunsigned
 
 
 @meta()
-def expr(str: str, dialect: str = "spark") -> Column:
-    """
-    `dialect` is a SQLFrame unique field to pass in the dialect to use for parsing the expression.
-    """
-    from sqlframe.base.session import _BaseSession
-
-    return Column(
-        maybe_parse(str, dialect=dialect).transform(  # type: ignore
-            _BaseSession().input_dialect.normalize_identifier, copy=False
-        )
-    )
+def expr(str: str) -> Column:
+    return Column(str)
 
 
 @meta(unsupported_engines=["postgres"])

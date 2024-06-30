@@ -39,7 +39,6 @@ class RedshiftSession(
             super().__init__(conn)
 
     class Builder(_BaseSession.Builder):
-        DEFAULT_INPUT_DIALECT = "redshift"
         DEFAULT_OUTPUT_DIALECT = "redshift"
 
         @property
