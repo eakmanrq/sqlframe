@@ -163,3 +163,15 @@ def test_schema_nested(duckdb_datatypes: DuckDBDataFrame):
     assert struct_fields[9].dataType == types.TimestampType()
     assert struct_fields[10].name == "boolean_col"
     assert struct_fields[10].dataType == types.BooleanType()
+
+
+# https://github.com/eakmanrq/sqlframe/issues/112
+def test_reserved_word(duckdb_session: DuckDBSession):
+    df = duckdb_session.createDataFrame(
+        [("2024-01-01", "2024-05-05"), ("2024-05-21", "2024-12-05")],
+        ["start", "end"],
+    )
+    assert df.collect() == [
+        types.Row(start="2024-01-01", end="2024-05-05"),
+        types.Row(start="2024-05-21", end="2024-12-05"),
+    ]
