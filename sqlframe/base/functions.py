@@ -920,7 +920,7 @@ def next_day(col: ColumnOrName, dayOfWeek: str) -> Column:
     return Column.invoke_anonymous_function(col, "NEXT_DAY", lit(dayOfWeek))
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta()
 def last_day(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LastDay)
 
