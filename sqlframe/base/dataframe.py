@@ -582,8 +582,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
+            quote_identifiers(select_expression, dialect=dialect)
             if optimize:
-                quote_identifiers(select_expression, dialect=dialect)
                 select_expression = t.cast(
                     exp.Select, self.session._optimize(select_expression, dialect=dialect)
                 )
