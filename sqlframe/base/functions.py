@@ -1186,12 +1186,28 @@ def locate(substr: str, str: ColumnOrName, pos: t.Optional[int] = None) -> Colum
 
 @meta()
 def lpad(col: ColumnOrName, len: int, pad: str) -> Column:
-    return Column.invoke_anonymous_function(col, "LPAD", lit(len), lit(pad))
+    return Column(
+        expression.Pad(
+            this=Column.ensure_col(col).expression,
+            expression=lit(len).expression,
+            fill_pattern=lit(pad).expression,
+            # We can use `invoke_expression_over_column` because this is an actual bool instead of literal bool
+            is_left=True,
+        )
+    )
 
 
 @meta()
 def rpad(col: ColumnOrName, len: int, pad: str) -> Column:
-    return Column.invoke_anonymous_function(col, "RPAD", lit(len), lit(pad))
+    return Column(
+        expression.Pad(
+            this=Column.ensure_col(col).expression,
+            expression=lit(len).expression,
+            fill_pattern=lit(pad).expression,
+            # We can use `invoke_expression_over_column` because this is an actual bool instead of literal bool
+            is_left=False,
+        )
+    )
 
 
 @meta()
