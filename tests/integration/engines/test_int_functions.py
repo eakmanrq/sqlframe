@@ -5086,7 +5086,3 @@ def test_is_array(get_session_and_func, get_func):
         .collect()
     )
     assert result == [Row(v1=True, v2=True, v3=False)]
-
-
-# typeof = get_func("typeof", session)
-# assert session.range(1).select(typeof(to_date(lit("2021-01-01"), 'yyyy-MM-dd'))).collect() == [Row(value=True)]
