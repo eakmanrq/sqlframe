@@ -6,9 +6,8 @@ import typing as t
 
 from sqlglot import MappingSchema, exp
 
-from sqlframe.base.decorators import normalize
 from sqlframe.base.exceptions import TableSchemaError
-from sqlframe.base.util import ensure_column_mapping, to_schema
+from sqlframe.base.util import ensure_column_mapping, normalize_string, to_schema
 
 if t.TYPE_CHECKING:
     from sqlglot.schema import ColumnMapping
@@ -65,8 +64,8 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             return {}
         return {
             exp.column(c.name, quoted=True).sql(
-                dialect=self.session.input_dialect
-            ): exp.DataType.build(c.dataType, dialect=self.session.input_dialect)
+                dialect=self.session.output_dialect
+            ): exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
             for c in columns
         }
 
@@ -88,7 +87,6 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         column_mapping = ensure_column_mapping(column_mapping)  # type: ignore
         self._schema.add_table(table, column_mapping, dialect=self.session.input_dialect)
 
-    @normalize(["dbName"])
     def getDatabase(self, dbName: str) -> Database:
         """Get the database with the specified name.
         This throws an :class:`AnalysisException` when the database cannot be found.
@@ -115,6 +113,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         >>> spark.catalog.getDatabase("spark_catalog.default")
         Database(name='default', catalog='spark_catalog', description='default database', ...
         """
+        dbName = normalize_string(dbName, from_dialect="input", is_schema=True)
         schema = to_schema(dbName, dialect=self.session.input_dialect)
         database_name = schema.db
         databases = self.listDatabases(pattern=database_name)
@@ -122,12 +121,16 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             raise ValueError(f"Database '{dbName}' not found")
         if len(databases) > 1:
             if schema.catalog is not None:
-                filtered_databases = [db for db in databases if db.catalog == schema.catalog]
+                filtered_databases = [
+                    db
+                    for db in databases
+                    if normalize_string(db.catalog, from_dialect="output", to_dialect="input")  # type: ignore
+                    == schema.catalog
+                ]
                 if filtered_databases:
                     return filtered_databases[0]
         return databases[0]
 
-    @normalize(["dbName"])
     def databaseExists(self, dbName: str) -> bool:
         """Check if the database with the specified name exists.
 
@@ -168,7 +171,6 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         except ValueError:
             return False
 
-    @normalize(["tableName"])
     def getTable(self, tableName: str) -> Table:
         """Get the table or view with the specified name. This table can be a temporary view or a
         table/view. This throws an :class:`AnalysisException` when no Table can be found.
@@ -210,13 +212,18 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             ...
         AnalysisException: ...
         """
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         table = exp.to_table(tableName, dialect=self.session.input_dialect)
         schema = table.copy()
         schema.set("this", None)
         tables = self.listTables(
             schema.sql(dialect=self.session.input_dialect) if schema.db else None
         )
-        matching_tables = [t for t in tables if t.name == table.name]
+        matching_tables = [
+            t
+            for t in tables
+            if normalize_string(t.name, from_dialect="output", to_dialect="input") == table.name
+        ]
         if not matching_tables:
             raise ValueError(f"Table '{tableName}' not found")
         return matching_tables[0]
@@ -315,7 +322,6 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             raise ValueError(f"Function '{functionName}' not found")
         return matching_functions[0]
 
-    @normalize(["tableName", "dbName"])
     def tableExists(self, tableName: str, dbName: t.Optional[str] = None) -> bool:
         """Check if the table or view with the specified name exists.
         This can either be a temporary view or a table/view.
@@ -389,6 +395,8 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         >>> spark.catalog.tableExists("view1")
         False
         """
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
+        dbName = normalize_string(dbName, from_dialect="input", is_schema=True) if dbName else None
         table = exp.to_table(tableName, dialect=self.session.input_dialect)
         schema_arg = to_schema(dbName, dialect=self.session.input_dialect) if dbName else None
         if not table.db:

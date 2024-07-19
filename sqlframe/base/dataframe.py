@@ -23,12 +23,12 @@ from sqlglot.optimizer.qualify import qualify
 from sqlglot.optimizer.qualify_columns import quote_identifiers
 
 from sqlframe.base.catalog import Column as CatalogColumn
-from sqlframe.base.decorators import normalize
 from sqlframe.base.operations import Operation, operation
 from sqlframe.base.transforms import replace_id_value
 from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
+    normalize_string,
     quote_preserving_alias_or_name,
     sqlglot_to_spark,
     verify_openai_installed,
@@ -566,7 +566,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         as_list: bool = False,
         **kwargs,
     ) -> t.Union[str, t.List[str]]:
-        dialect = Dialect.get_or_raise(dialect or self.session.output_dialect)
+        dialect = Dialect.get_or_raise(dialect or self.session.execution_dialect)
 
         df = self._resolve_pending_hints()
         select_expressions = df._get_select_expressions()
@@ -1565,9 +1565,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             logger.warning("Truncate is ignored so full results will be displayed")
         # Make sure that the limit we add doesn't affect the results
         df = self._convert_leaf_to_cte()
-        sql = df.limit(n).sql(
-            pretty=False, optimize=False, dialect=self.session.output_dialect, as_list=True
-        )
+        sql = df.limit(n).sql(pretty=False, optimize=False, as_list=True)
         for sql in ensure_list(sql):
             result = self.session._fetch_rows(sql)
         table = PrettyTable()
@@ -1608,9 +1606,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
 
     def toPandas(self) -> pd.DataFrame:
-        sql_kwargs = dict(
-            pretty=False, optimize=False, dialect=self.session.output_dialect, as_list=True
-        )
+        sql_kwargs = dict(pretty=False, optimize=False, as_list=True)
         sqls = [None] + self.sql(**sql_kwargs)  # type: ignore
         for sql in self.sql(**sql_kwargs)[:-1]:  # type: ignore
             if sql:
@@ -1618,8 +1614,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         assert sqls[-1] is not None
         return self.session._fetchdf(sqls[-1])
 
-    @normalize("name")
     def createOrReplaceTempView(self, name: str) -> None:
+        name = normalize_string(name, from_dialect="input")
         self.session.temp_views[name] = self.copy()._convert_leaf_to_cte()
 
     def count(self) -> int:

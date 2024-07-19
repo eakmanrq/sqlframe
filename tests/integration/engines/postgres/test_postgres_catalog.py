@@ -208,7 +208,7 @@ def test_list_columns(postgres_session: PostgresSession):
         Column(
             name="id",
             description=None,
-            dataType="integer",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -216,7 +216,7 @@ def test_list_columns(postgres_session: PostgresSession):
         Column(
             name="name",
             description=None,
-            dataType="character varying",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -231,7 +231,7 @@ def test_list_columns_use_db_name(postgres_session: PostgresSession):
         Column(
             name="id",
             description=None,
-            dataType="integer",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -239,7 +239,7 @@ def test_list_columns_use_db_name(postgres_session: PostgresSession):
         Column(
             name="name",
             description=None,
-            dataType="character varying",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

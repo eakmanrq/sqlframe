@@ -17,7 +17,7 @@ from sqlframe.base.mixins.catalog_mixins import (
     ListTablesFromInfoSchemaMixin,
     SetCurrentDatabaseFromSearchPathMixin,
 )
-from sqlframe.base.util import schema_, to_schema
+from sqlframe.base.util import normalize_string, schema_, to_schema
 
 if t.TYPE_CHECKING:
     from sqlframe.redshift.dataframe import RedshiftDataFrame
@@ -78,15 +78,23 @@ class RedshiftCatalog(
         """
         if dbName is None:
             schema = schema_(
-                db=exp.parse_identifier(self.currentDatabase(), dialect=self.session.input_dialect),
+                db=exp.parse_identifier(
+                    self.currentDatabase(), dialect=self.session.output_dialect
+                ),
                 catalog=exp.parse_identifier(
-                    self.currentCatalog(), dialect=self.session.input_dialect
+                    self.currentCatalog(), dialect=self.session.output_dialect
                 ),
             )
         else:
+            dbName = normalize_string(dbName, from_dialect="input", is_schema=True)
             schema = to_schema(dbName, dialect=self.session.input_dialect)
             if not schema.catalog:
-                schema.set("catalog", exp.parse_identifier(self.currentCatalog()))
+                schema.set(
+                    "catalog",
+                    exp.parse_identifier(
+                        self.currentCatalog(), dialect=self.session.output_dialect
+                    ),
+                )
         query = parse_one(
             f"""SELECT database_name as catalog, schema_name as namespace, function_name as name
 FROM svv_redshift_functions
@@ -94,22 +102,29 @@ WHERE database_name = '{schema.catalog}'
 and schema_name = '{schema.db}'
 ORDER BY function_name;
         """,
-            dialect=self.session.input_dialect,
+            dialect="redshift",
         )
-        functions = self.session._fetch_rows(query)
-        if pattern:
-            functions = [x for x in functions if fnmatch.fnmatch(x["name"], pattern)]
-        return [
+        functions = [
             Function(
-                name=x["name"],
-                catalog=x["catalog"],
-                namespace=[x["namespace"]],
+                name=normalize_string(x["name"], from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(
+                    x["catalog"], from_dialect="execution", to_dialect="output"
+                ),
+                namespace=[
+                    normalize_string(x["namespace"], from_dialect="execution", to_dialect="output")
+                ],
                 description=None,
                 className="",
                 isTemporary=False,
             )
-            for x in functions
+            for x in self.session._fetch_rows(query)
         ]
+        if pattern:
+            normalized_pattern = normalize_string(
+                pattern, from_dialect="input", to_dialect="output", is_pattern=True
+            )
+            functions = [x for x in functions if fnmatch.fnmatch(x.name, normalized_pattern)]
+        return functions
 
     # def get_columns(self, table_name: t.Union[exp.Table, str]) -> t.Dict[str, exp.DataType]:
     #     table = self.ensure_table(table_name)

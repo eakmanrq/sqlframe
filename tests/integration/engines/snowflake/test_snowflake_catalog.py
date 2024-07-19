@@ -26,44 +26,44 @@ def reset_database(snowflake_session: SnowflakeSession) -> t.Iterator[None]:
 
 
 def test_current_catalog(snowflake_session: SnowflakeSession):
-    assert snowflake_session.catalog.currentCatalog() == "SQLFRAME"
+    assert snowflake_session.catalog.currentCatalog() == "sqlframe"
 
 
 def test_set_current_catalog(snowflake_session: SnowflakeSession, reset_catalog):
-    assert snowflake_session.catalog.currentCatalog() == "SQLFRAME"
+    assert snowflake_session.catalog.currentCatalog() == "sqlframe"
     snowflake_session.catalog.setCurrentCatalog("catalog1")
-    assert snowflake_session.catalog.currentCatalog() == "CATALOG1"
+    assert snowflake_session.catalog.currentCatalog() == "catalog1"
 
 
 def test_list_catalogs(snowflake_session: SnowflakeSession):
     assert sorted(snowflake_session.catalog.listCatalogs(), key=lambda x: x.name) == [
-        CatalogMetadata(name="SQLFRAME", description=None)
+        CatalogMetadata(name="sqlframe", description=None)
     ]
 
 
 def test_current_database(snowflake_session: SnowflakeSession):
-    assert snowflake_session.catalog.currentDatabase() == "DB1"
+    assert snowflake_session.catalog.currentDatabase() == "db1"
 
 
 def test_set_current_database(snowflake_session: SnowflakeSession, reset_database):
-    assert snowflake_session.catalog.currentDatabase() == "DB1"
+    assert snowflake_session.catalog.currentDatabase() == "db1"
     snowflake_session.catalog.setCurrentDatabase("public")
-    assert snowflake_session.catalog.currentDatabase() == "PUBLIC"
+    assert snowflake_session.catalog.currentDatabase() == "public"
 
 
 def test_list_databases(snowflake_session: SnowflakeSession):
     assert sorted(snowflake_session.catalog.listDatabases(), key=lambda x: (x.catalog, x.name)) == [
-        Database(name="DB1", catalog="SQLFRAME", description=None, locationUri=""),
-        Database(name="INFORMATION_SCHEMA", catalog="SQLFRAME", description=None, locationUri=""),
-        Database(name="PUBLIC", catalog="SQLFRAME", description=None, locationUri=""),
+        Database(name="db1", catalog="sqlframe", description=None, locationUri=""),
+        Database(name="information_schema", catalog="sqlframe", description=None, locationUri=""),
+        Database(name="public", catalog="sqlframe", description=None, locationUri=""),
     ]
 
 
 def test_list_databases_pattern(snowflake_session: SnowflakeSession):
     assert sorted(
-        snowflake_session.catalog.listDatabases("DB*"), key=lambda x: (x.catalog, x.name)
+        snowflake_session.catalog.listDatabases("db*"), key=lambda x: (x.catalog, x.name)
     ) == [
-        Database(name="DB1", catalog="SQLFRAME", description=None, locationUri=""),
+        Database(name="db1", catalog="sqlframe", description=None, locationUri=""),
     ]
 
 
@@ -74,13 +74,13 @@ def test_get_database_no_match(snowflake_session: SnowflakeSession):
 
 def test_get_database_name_only(snowflake_session: SnowflakeSession):
     assert snowflake_session.catalog.getDatabase("db1") == Database(
-        name="DB1", catalog="SQLFRAME", description=None, locationUri=""
+        name="db1", catalog="sqlframe", description=None, locationUri=""
     )
 
 
 def test_get_database_name_and_catalog(snowflake_session: SnowflakeSession):
     assert snowflake_session.catalog.getDatabase("sqlframe.db1") == Database(
-        name="DB1", catalog="SQLFRAME", description=None, locationUri=""
+        name="db1", catalog="sqlframe", description=None, locationUri=""
     )
 
 
@@ -97,9 +97,9 @@ def test_list_tables_no_args(snowflake_session: SnowflakeSession):
         snowflake_session.catalog.listTables(), key=lambda x: (x.catalog, x.database, x.name)
     ) == [
         Table(
-            name="TABLE1",
-            catalog="SQLFRAME",
-            namespace=["DB1"],
+            name="table1",
+            catalog="sqlframe",
+            namespace=["db1"],
             description=None,
             tableType="MANAGED",
             isTemporary=False,
@@ -112,9 +112,9 @@ def test_list_tables_db_no_catalog(snowflake_session: SnowflakeSession):
         snowflake_session.catalog.listTables("db1"), key=lambda x: (x.catalog, x.database, x.name)
     ) == [
         Table(
-            name="TABLE1",
-            catalog="SQLFRAME",
-            namespace=["DB1"],
+            name="table1",
+            catalog="sqlframe",
+            namespace=["db1"],
             description=None,
             tableType="MANAGED",
             isTemporary=False,
@@ -128,9 +128,9 @@ def test_list_tables_db_and_catalog(snowflake_session: SnowflakeSession):
         key=lambda x: (x.catalog, x.database, x.name),
     ) == [
         Table(
-            name="TABLE1",
-            catalog="SQLFRAME",
-            namespace=["DB1"],
+            name="table1",
+            catalog="sqlframe",
+            namespace=["db1"],
             description=None,
             tableType="MANAGED",
             isTemporary=False,
@@ -140,20 +140,20 @@ def test_list_tables_db_and_catalog(snowflake_session: SnowflakeSession):
 
 def test_list_tables_pattern(snowflake_session: SnowflakeSession):
     assert Table(
-        name="TABLE1",
-        catalog="SQLFRAME",
-        namespace=["DB1"],
+        name="table1",
+        catalog="sqlframe",
+        namespace=["db1"],
         description=None,
         tableType="MANAGED",
         isTemporary=False,
-    ) in snowflake_session.catalog.listTables(pattern="TAB*")
+    ) in snowflake_session.catalog.listTables(pattern="tab*")
 
 
 def test_get_table(snowflake_session: SnowflakeSession):
     assert snowflake_session.catalog.getTable("sqlframe.db1.table1") == Table(
-        name="TABLE1",
-        catalog="SQLFRAME",
-        namespace=["DB1"],
+        name="table1",
+        catalog="sqlframe",
+        namespace=["db1"],
         description=None,
         tableType="MANAGED",
         isTemporary=False,
@@ -168,9 +168,9 @@ def test_get_table_not_exists(snowflake_session: SnowflakeSession):
 def test_list_functions(snowflake_session: SnowflakeSession):
     assert snowflake_session.catalog.listFunctions() == [
         Function(
-            name="ADD",
-            catalog="SQLFRAME",
-            namespace=["DB1"],
+            name="add",
+            catalog="sqlframe",
+            namespace=["db1"],
             description=None,
             className="",
             isTemporary=False,
@@ -179,11 +179,11 @@ def test_list_functions(snowflake_session: SnowflakeSession):
 
 
 def test_list_functions_pattern(snowflake_session: SnowflakeSession):
-    assert snowflake_session.catalog.listFunctions(dbName="DB1", pattern="AD*") == [
+    assert snowflake_session.catalog.listFunctions(dbName="db1", pattern="ad*") == [
         Function(
-            name="ADD",
-            catalog="SQLFRAME",
-            namespace=["DB1"],
+            name="add",
+            catalog="sqlframe",
+            namespace=["db1"],
             description=None,
             className="",
             isTemporary=False,
@@ -192,7 +192,7 @@ def test_list_functions_pattern(snowflake_session: SnowflakeSession):
 
 
 def test_function_exists_does_exist(snowflake_session: SnowflakeSession):
-    assert snowflake_session.catalog.functionExists("ADD", dbName="SQLFRAME.DB1") is True
+    assert snowflake_session.catalog.functionExists("add", dbName="sqlframe.db1") is True
 
 
 def test_function_exists_does_not_exist(snowflake_session: SnowflakeSession):
@@ -200,10 +200,10 @@ def test_function_exists_does_not_exist(snowflake_session: SnowflakeSession):
 
 
 def test_get_function_exists(snowflake_session: SnowflakeSession):
-    assert snowflake_session.catalog.getFunction("SQLFRAME.DB1.ADD") == Function(
-        name="ADD",
-        catalog="SQLFRAME",
-        namespace=["DB1"],
+    assert snowflake_session.catalog.getFunction("sqlframe.db1.add") == Function(
+        name="add",
+        catalog="sqlframe",
+        namespace=["db1"],
         description=None,
         className="",
         isTemporary=False,
@@ -220,17 +220,17 @@ def test_list_columns(snowflake_session: SnowflakeSession):
         snowflake_session.catalog.listColumns("sqlframe.db1.table1"), key=lambda x: x.name
     ) == [
         Column(
-            name="ID",
+            name="id",
             description=None,
-            dataType="NUMBER",
+            dataType="DECIMAL(38, 0)",
             nullable=True,
             isPartition=False,
             isBucket=False,
         ),
         Column(
-            name="NAME",
+            name="name",
             description=None,
-            dataType="TEXT",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -243,17 +243,17 @@ def test_list_columns_use_db_name(snowflake_session: SnowflakeSession):
         snowflake_session.catalog.listColumns("table1", dbName="sqlframe.db1"), key=lambda x: x.name
     ) == [
         Column(
-            name="ID",
+            name="id",
             description=None,
-            dataType="NUMBER",
+            dataType="DECIMAL(38, 0)",
             nullable=True,
             isPartition=False,
             isBucket=False,
         ),
         Column(
-            name="NAME",
+            name="name",
             description=None,
-            dataType="TEXT",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

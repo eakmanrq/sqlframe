@@ -44,8 +44,8 @@ def test_print_schema_basic(postgres_employee: PostgresDataFrame, capsys):
         == """
 root
  |-- employee_id: int (nullable = true)
- |-- fname: text (nullable = true)
- |-- lname: text (nullable = true)
+ |-- fname: string (nullable = true)
+ |-- lname: string (nullable = true)
  |-- age: int (nullable = true)
  |-- store_id: int (nullable = true)""".strip()
     )
@@ -60,13 +60,13 @@ def test_print_schema_nested(postgres_datatypes: PostgresDataFrame, capsys):
         == """
 root
  |-- bigint_col: bigint (nullable = true)
- |-- double_col: double precision (nullable = true)
- |-- string_col: text (nullable = true)
- |-- array<bigint>_col: bigint[] (nullable = true)
+ |-- double_col: double (nullable = true)
+ |-- string_col: string (nullable = true)
+ |-- `array<bigint>_col`: array<bigint> (nullable = true)
  |    |-- element: bigint (nullable = true)
  |-- date_col: date (nullable = true)
  |-- timestamp_col: timestamp (nullable = true)
- |-- timestamptz_col: timestamptz (nullable = true)
+ |-- timestamptz_col: timestamp (nullable = true)
  |-- boolean_col: boolean (nullable = true)""".strip()
     )
 
@@ -108,7 +108,7 @@ def test_schema_nested(postgres_datatypes: PostgresDataFrame):
     assert struct_fields[1].dataType == types.DoubleType()
     assert struct_fields[2].name == "string_col"
     assert struct_fields[2].dataType == types.StringType()
-    assert struct_fields[3].name == "array<bigint>_col"
+    assert struct_fields[3].name == "`array<bigint>_col`"
     assert struct_fields[3].dataType == types.ArrayType(
         types.LongType(),
     )

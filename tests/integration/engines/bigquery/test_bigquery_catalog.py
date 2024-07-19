@@ -232,7 +232,7 @@ def test_list_columns(bigquery_session: BigQuerySession):
         Column(
             name="id",
             description=None,
-            dataType="INT64",
+            dataType="BIGINT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -255,7 +255,7 @@ def test_list_columns_use_db_name(bigquery_session: BigQuerySession):
         Column(
             name="id",
             description=None,
-            dataType="INT64",
+            dataType="BIGINT",
             nullable=True,
             isPartition=False,
             isBucket=False,

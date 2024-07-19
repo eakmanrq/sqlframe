@@ -22,6 +22,7 @@ def duckdb_session() -> DuckDBSession:
 
 
 def test_current_catalog(duckdb_session: DuckDBSession):
+    # Default is considered a word that must be quoted in DuckDB
     assert duckdb_session.catalog.currentCatalog() == "default"
 
 
@@ -245,7 +246,7 @@ def test_list_columns(duckdb_session: DuckDBSession):
         Column(
             name="id",
             description=None,
-            dataType="INTEGER",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -253,7 +254,7 @@ def test_list_columns(duckdb_session: DuckDBSession):
         Column(
             name="name",
             description=None,
-            dataType="VARCHAR",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -268,7 +269,7 @@ def test_list_columns_use_db_name(duckdb_session: DuckDBSession):
         Column(
             name="id",
             description=None,
-            dataType="INTEGER",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -276,7 +277,7 @@ def test_list_columns_use_db_name(duckdb_session: DuckDBSession):
         Column(
             name="name",
             description=None,
-            dataType="VARCHAR",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

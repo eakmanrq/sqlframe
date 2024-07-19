@@ -12,6 +12,7 @@ from functools import cached_property
 
 import sqlglot
 from sqlglot import Dialect, exp
+from sqlglot.dialects.dialect import NormalizationStrategy
 from sqlglot.expressions import parse_identifier
 from sqlglot.helper import seq_get
 from sqlglot.optimizer import optimize
@@ -27,6 +28,7 @@ from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
+    normalize_string,
     verify_pandas_installed,
 )
 
@@ -40,6 +42,7 @@ if t.TYPE_CHECKING:
     from _typeshed.dbapi import DBAPIConnection, DBAPICursor
 
     from sqlframe.base._typing import ColumnLiterals, SchemaInput
+    from sqlframe.base.column import Column
     from sqlframe.base.types import Row, StructType
 
     class DBAPIConnectionWithPandas(DBAPIConnection):
@@ -77,12 +80,21 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         self,
         conn: t.Optional[CONN] = None,
         schema: t.Optional[MappingSchema] = None,
+        case_sensitive: bool = False,
         *args,
         **kwargs,
     ):
         if not hasattr(self, "input_dialect"):
             self.input_dialect: Dialect = Dialect.get_or_raise(self.builder.DEFAULT_INPUT_DIALECT)
             self.output_dialect: Dialect = Dialect.get_or_raise(self.builder.DEFAULT_OUTPUT_DIALECT)
+            self.execution_dialect: Dialect = Dialect.get_or_raise(
+                self.builder.DEFAULT_EXECUTION_DIALECT
+            )
+            self.case_sensitive: bool = case_sensitive
+            if self.case_sensitive:
+                self.input_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
+                self.output_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
+                self.execution_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
             self.known_ids: t.Set[str] = set()
             self.known_branch_ids: t.Set[str] = set()
             self.known_sequence_ids: t.Set[str] = set()
@@ -115,7 +127,33 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
 
     @property
     def default_time_format(self) -> str:
-        return self.output_dialect.TIME_FORMAT.strip("'")
+        return self.input_dialect.TIME_FORMAT.strip("'")
+
+    def format_time(self, value: t.Optional[t.Union[Column, str]] = None) -> exp.Expression:
+        from sqlframe.base.column import Column
+
+        value = value or self.default_time_format
+        if isinstance(value, Column):
+            value = value.expression.this
+        return self.input_dialect.format_time(f"'{value}'")  # type: ignore
+
+    def format_execution_time(
+        self, value: t.Optional[t.Union[Column, str]] = None
+    ) -> exp.Expression:
+        from sqlframe.base.column import Column
+
+        if value is None:
+            return exp.Literal.string(self.execution_dialect.TIME_FORMAT.strip("'"))
+
+        if isinstance(value, Column):
+            value = value.expression.this
+        return exp.Literal.string(
+            self.execution_dialect.generator()
+            .format_time(
+                exp.StrToTime(this=exp.Null(), format=self.input_dialect.format_time(f"'{value}'"))
+            )
+            .strip("'")  # type: ignore
+        )
 
     def _sanitize_column_name(self, name: str) -> str:
         if self.SANITIZE_COLUMN_NAMES:
@@ -411,9 +449,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         if isinstance(sql, exp.Expression):
             expression = sql.copy()
             if quote_identifiers:
-                normalize_identifiers(expression, dialect=self.input_dialect)
-                quote_identifiers_func(expression, dialect=self.input_dialect)
-            sql = expression.sql(dialect=self.output_dialect)
+                normalize_identifiers(expression, dialect=self.execution_dialect)
+                quote_identifiers_func(expression, dialect=self.execution_dialect)
+            sql = expression.sql(dialect=self.execution_dialect)
         return t.cast(str, sql)
 
     def _optimize(
@@ -425,7 +463,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         return optimize(expression, dialect=dialect, schema=self.catalog._schema)
 
     def _execute(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
+        self,
+        sql: t.Union[str, exp.Expression],
+        *,
+        quote_identifiers: bool = True,
     ) -> None:
         self._cur.execute(self._to_sql(sql, quote_identifiers=quote_identifiers))
 
@@ -453,7 +494,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         return _create_row(columns, converted_values)
 
     def _fetch_rows(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
+        self,
+        sql: t.Union[str, exp.Expression],
+        *,
+        quote_identifiers: bool = True,
     ) -> t.List[Row]:
         self._execute(sql, quote_identifiers=quote_identifiers)
         result = self._cur.fetchall()
@@ -515,14 +559,18 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     class Builder:
         SQLFRAME_INPUT_DIALECT_KEY = "sqlframe.input.dialect"
         SQLFRAME_OUTPUT_DIALECT_KEY = "sqlframe.output.dialect"
+        SQLFRAME_EXECUTION_DIALECT_KEY = "sqlframe.execution.dialect"
+        SQLFRAME_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
         SQLFRAME_CONN_KEY = "sqlframe.conn"
         SQLFRAME_SCHEMA_KEY = "sqlframe.schema"
         DEFAULT_INPUT_DIALECT = "spark"
         DEFAULT_OUTPUT_DIALECT = "spark"
+        DEFAULT_EXECUTION_DIALECT = "spark"
 
         def __init__(self):
             self.input_dialect = self.DEFAULT_INPUT_DIALECT
             self.output_dialect = self.DEFAULT_OUTPUT_DIALECT
+            self.execution_dialect = self.DEFAULT_EXECUTION_DIALECT
             self._conn = None
             self._session_kwargs = {}
 
@@ -552,10 +600,14 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
                     self.input_dialect = value
                 elif key == self.SQLFRAME_OUTPUT_DIALECT_KEY:
                     self.output_dialect = value
+                elif key == self.SQLFRAME_EXECUTION_DIALECT_KEY:
+                    self.execution_dialect = value
                 elif key == self.SQLFRAME_CONN_KEY:
                     self._session_kwargs["conn"] = value
                 elif key == self.SQLFRAME_SCHEMA_KEY:
                     self._session_kwargs["schema"] = value
+                elif key == self.SQLFRAME_CASE_SENSITIVE_KEY:
+                    self._session_kwargs["case_sensitive"] = value
                 else:
                     self._session_kwargs[key] = value
             if map:
@@ -563,6 +615,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
                     self.input_dialect = map[self.SQLFRAME_INPUT_DIALECT_KEY]
                 if self.SQLFRAME_OUTPUT_DIALECT_KEY in map:
                     self.output_dialect = map[self.SQLFRAME_OUTPUT_DIALECT_KEY]
+                if self.SQLFRAME_EXECUTION_DIALECT_KEY in map:
+                    self.execution_dialect = map[self.SQLFRAME_EXECUTION_DIALECT_KEY]
+                if self.SQLFRAME_CASE_SENSITIVE_KEY in map:
+                    self._session_kwargs["case_sensitive"] = map[self.SQLFRAME_CASE_SENSITIVE_KEY]
                 if self.SQLFRAME_CONN_KEY in map:
                     self._session_kwargs["conn"] = map[self.SQLFRAME_CONN_KEY]
                 if self.SQLFRAME_SCHEMA_KEY in map:
@@ -582,7 +638,18 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         def _set_session_properties(self) -> None:
             self.session.input_dialect = Dialect.get_or_raise(self.input_dialect)
             self.session.output_dialect = Dialect.get_or_raise(self.output_dialect)
+            self.session.execution_dialect = Dialect.get_or_raise(self.execution_dialect)
             if hasattr(self.session, "_connection") and not self.session._connection:
                 self.session._connection = self._conn
+            if self.session.case_sensitive:
+                self.session.input_dialect.NORMALIZATION_STRATEGY = (
+                    NormalizationStrategy.CASE_SENSITIVE
+                )
+                self.session.output_dialect.NORMALIZATION_STRATEGY = (
+                    NormalizationStrategy.CASE_SENSITIVE
+                )
+                self.session.execution_dialect.NORMALIZATION_STRATEGY = (
+                    NormalizationStrategy.CASE_SENSITIVE
+                )
 
     builder = Builder()

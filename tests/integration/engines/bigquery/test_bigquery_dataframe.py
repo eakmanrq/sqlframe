@@ -51,11 +51,11 @@ def test_print_schema_basic(bigquery_employee: BigQueryDataFrame, capsys):
         captured.out.strip()
         == """
 root
- |-- employee_id: int64 (nullable = true)
+ |-- employee_id: bigint (nullable = true)
  |-- fname: string (nullable = true)
  |-- lname: string (nullable = true)
- |-- age: int64 (nullable = true)
- |-- store_id: int64 (nullable = true)""".strip()
+ |-- age: bigint (nullable = true)
+ |-- store_id: bigint (nullable = true)""".strip()
     )
 
 
@@ -66,21 +66,21 @@ def test_print_schema_nested(bigquery_datatypes: BigQueryDataFrame, capsys):
         captured.out.strip()
         == """
 root
- |-- bigint_col: int64 (nullable = true)
- |-- double_col: float64 (nullable = true)
+ |-- bigint_col: bigint (nullable = true)
+ |-- double_col: float (nullable = true)
  |-- string_col: string (nullable = true)
- |-- array_struct_a_bigint_b_bigint__: array<struct<a int64, b int64>> (nullable = false)
- |    |-- element: struct<a int64, b int64> (nullable = true)
- |    |    |-- a: int64 (nullable = true)
- |    |    |-- b: int64 (nullable = true)
- |-- array_bigint__col: array<int64> (nullable = false)
- |    |-- element: int64 (nullable = true)
- |-- struct_a_bigint__col: struct<a int64> (nullable = true)
- |    |-- a: int64 (nullable = true)
+ |-- array_struct_a_bigint_b_bigint__: array<struct<a: bigint, b: bigint>> (nullable = false)
+ |    |-- element: struct<a: bigint, b: bigint> (nullable = true)
+ |    |    |-- a: bigint (nullable = true)
+ |    |    |-- b: bigint (nullable = true)
+ |-- array_bigint__col: array<bigint> (nullable = false)
+ |    |-- element: bigint (nullable = true)
+ |-- struct_a_bigint__col: struct<a: bigint> (nullable = true)
+ |    |-- a: bigint (nullable = true)
  |-- date_col: date (nullable = true)
- |-- timestamp_col: datetime (nullable = true)
+ |-- timestamp_col: timestamp (nullable = true)
  |-- timestamptz_col: timestamp (nullable = true)
- |-- boolean_col: bool (nullable = true)""".strip()
+ |-- boolean_col: boolean (nullable = true)""".strip()
     )
 
 

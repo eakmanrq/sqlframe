@@ -8,7 +8,6 @@ import typing as t
 from sqlglot import exp, parse_one
 
 from sqlframe.base.catalog import Column, Function, _BaseCatalog
-from sqlframe.base.decorators import normalize
 from sqlframe.base.mixins.catalog_mixins import (
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
@@ -17,7 +16,7 @@ from sqlframe.base.mixins.catalog_mixins import (
     ListTablesFromInfoSchemaMixin,
     SetCurrentDatabaseFromSearchPathMixin,
 )
-from sqlframe.base.util import to_schema
+from sqlframe.base.util import normalize_string, to_schema
 
 if t.TYPE_CHECKING:
     from sqlframe.postgres.session import PostgresSession  # noqa
@@ -36,7 +35,6 @@ class PostgresCatalog(
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.column("current_catalog")
     TEMP_SCHEMA_FILTER = exp.column("table_schema").like("pg_temp_%")
 
-    @normalize(["tableName", "dbName"])
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
     ) -> t.List[Column]:
@@ -76,6 +74,7 @@ class PostgresCatalog(
         [Column(name='name', description=None, dataType='string', nullable=True, ...
         >>> _ = spark.sql("DROP TABLE tblA")
         """
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         if df := self.session.temp_views.get(tableName):
             return [
                 Column(
@@ -90,26 +89,30 @@ class PostgresCatalog(
             ]
 
         table = exp.to_table(tableName, dialect=self.session.input_dialect)
+        dbName = normalize_string(dbName, from_dialect="input", is_schema=True) if dbName else None
         schema = to_schema(dbName, dialect=self.session.input_dialect) if dbName else None
         if not table.db:
             if schema and schema.db:
                 table.set("db", schema.args["db"])
             else:
+                current_database = normalize_string(
+                    self.currentDatabase(), from_dialect="output", to_dialect="input"
+                )
                 table.set(
                     "db",
-                    exp.parse_identifier(
-                        self.currentDatabase(), dialect=self.session.input_dialect
-                    ),
+                    exp.parse_identifier(current_database, dialect=self.session.input_dialect),
                 )
         if not table.catalog:
             if schema and schema.catalog:
                 table.set("catalog", schema.args["catalog"])
             else:
+                current_catalog = normalize_string(
+                    self.currentCatalog(), from_dialect="output", to_dialect="input"
+                )
                 table.set(
                     "catalog",
-                    exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
+                    exp.parse_identifier(current_catalog, dialect=self.session.input_dialect),
                 )
-        source_table = self._get_info_schema_table("columns", database=table.db)
         select = parse_one(
             f"""
         SELECT
@@ -125,7 +128,7 @@ JOIN
 JOIN
     information_schema.columns col ON col.table_schema = nsp.nspname AND col.table_name = cls.relname AND col.column_name = att.attname
 WHERE
-    cls.relname = '{table.name}' AND   -- replace with your table name
+    cls.relname = '{table.name}' AND
     att.attnum > 0 AND
     NOT att.attisdropped
 ORDER BY
@@ -146,9 +149,13 @@ ORDER BY
         results = self.session._fetch_rows(select)
         return [
             Column(
-                name=x["column_name"],
+                name=normalize_string(
+                    x["column_name"], from_dialect="execution", to_dialect="output"
+                ),
                 description=None,
-                dataType=x["data_type"],
+                dataType=normalize_string(
+                    x["data_type"], from_dialect="execution", to_dialect="output", is_datatype=True
+                ),
                 nullable=x["is_nullable"] == "YES",
                 isPartition=False,
                 isBucket=False,
@@ -207,15 +214,17 @@ WHERE pg_catalog.pg_function_is_visible(p.oid)
       AND n.nspname <> 'information_schema'
 ORDER BY 1, 2;
         """,
-            dialect=self.session.input_dialect,
+            dialect="postgres",
         )
         functions = self.session._fetch_rows(query)
-        catalog = self.currentCatalog()
+        catalog = normalize_string(self.currentCatalog(), from_dialect="output")
         results = [
             Function(
-                name=x["name"],
+                name=normalize_string(x["name"], from_dialect="execution", to_dialect="output"),
                 catalog=catalog,
-                namespace=[x["namespace"]],
+                namespace=[
+                    normalize_string(x["namespace"], from_dialect="execution", to_dialect="output")
+                ],
                 description=None,
                 className="",
                 isTemporary=False,
@@ -223,5 +232,8 @@ ORDER BY 1, 2;
             for x in functions
         ]
         if pattern:
-            results = [x for x in results if fnmatch.fnmatch(x.name, pattern)]
+            normalized_pattern = normalize_string(
+                pattern, from_dialect="input", to_dialect="output", is_pattern=True
+            )
+            results = [x for x in results if fnmatch.fnmatch(x.name, normalized_pattern)]
         return results

@@ -1405,8 +1405,8 @@ def test_to_date(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.to_timestamp("cola"), "TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
-        (SF.to_timestamp(SF.col("cola")), "TO_TIMESTAMP(cola, 'yyyy-MM-dd HH:mm:ss')"),
+        (SF.to_timestamp("cola"), "CAST(cola AS TIMESTAMP)"),
+        (SF.to_timestamp(SF.col("cola")), "CAST(cola AS TIMESTAMP)"),
         (SF.to_timestamp("cola", "yyyy-MM-dd"), "TO_TIMESTAMP(cola, 'yyyy-MM-dd')"),
     ],
 )

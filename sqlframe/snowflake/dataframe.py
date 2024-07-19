@@ -11,6 +11,7 @@ from sqlframe.base.dataframe import (
     _BaseDataFrameStatFunctions,
 )
 from sqlframe.base.mixins.dataframe_mixins import NoCachePersistSupportMixin
+from sqlframe.base.util import normalize_string
 from sqlframe.snowflake.group import SnowflakeGroupedData
 
 if t.TYPE_CHECKING:
@@ -53,8 +54,10 @@ class SnowflakeDataFrame(
         for row in self.session._fetch_rows(f"DESCRIBE RESULT '{query_id}'"):
             columns.append(
                 CatalogColumn(
-                    name=row.name,
-                    dataType=row.type,
+                    name=normalize_string(row.name, from_dialect="execution", to_dialect="output"),
+                    dataType=normalize_string(
+                        row.type, from_dialect="execution", to_dialect="output", is_datatype=True
+                    ),
                     nullable=row["null?"] == "Y",
                     description=row.comment,
                     isPartition=False,

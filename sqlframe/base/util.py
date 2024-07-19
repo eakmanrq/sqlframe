@@ -5,7 +5,12 @@ import typing as t
 import unicodedata
 
 from sqlglot import expressions as exp
+from sqlglot import parse_one, to_table
 from sqlglot.dialects.dialect import Dialect, DialectType
+from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
+from sqlglot.optimizer.qualify_columns import (
+    quote_identifiers as quote_identifiers_func,
+)
 from sqlglot.schema import ensure_column_mapping as sqlglot_ensure_column_mapping
 
 if t.TYPE_CHECKING:
@@ -195,7 +200,7 @@ def get_func_from_session(
     session = session if session else _BaseSession()
 
     if isinstance(session, _BaseSession):
-        dialect_str = dialect_to_string(session.input_dialect)
+        dialect_str = dialect_to_string(session.execution_dialect)
         import_path = f"sqlframe.{dialect_str}.functions"
     else:
         import_path = "pyspark.sql.functions"
@@ -205,9 +210,9 @@ def get_func_from_session(
         if not fallback:
             raise e
         func = getattr(importlib.import_module("sqlframe.base.functions"), name)
-        if session.output_dialect in func.unsupported_engines:  # type: ignore
+        if session.execution_dialect in func.unsupported_engines:  # type: ignore
             raise NotImplementedError(
-                f"{name} is not supported by the engine: {session.output_dialect}"  # type: ignore
+                f"{name} is not supported by the engine: {session.execution_dialect}"  # type: ignore
             )
     return func
 
@@ -301,6 +306,7 @@ def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
 def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
     from sqlframe.base import types
 
+    sqlglot_to_spark
     primitive_mapping = {
         exp.DataType.Type.VARCHAR: types.VarcharType,
         exp.DataType.Type.CHAR: types.CharType,
@@ -313,6 +319,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
         exp.DataType.Type.FLOAT: types.FloatType,
         exp.DataType.Type.DOUBLE: types.DoubleType,
         exp.DataType.Type.DECIMAL: types.DecimalType,
+        exp.DataType.Type.DATETIME: types.TimestampType,
         exp.DataType.Type.TIMESTAMP: types.TimestampType,
         exp.DataType.Type.TIMESTAMPTZ: types.TimestampType,
         exp.DataType.Type.TIMESTAMPLTZ: types.TimestampType,
@@ -349,23 +356,61 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
     raise NotImplementedError(f"Unsupported data type: {sqlglot_dtype}")
 
 
-def format_time_from_spark(value: ColumnOrLiteral) -> Column:
-    from sqlframe.base.column import Column
+def normalize_string(
+    value: t.Union[str, exp.Expression],
+    from_dialect: t.Optional[t.Union[Dialect, str]] = None,
+    to_dialect: t.Optional[t.Union[Dialect, str]] = None,
+    is_pattern: bool = False,
+    is_schema: bool = False,
+    is_table: bool = False,
+    is_datatype: bool = False,
+    is_column: bool = False,
+    is_query: bool = False,
+    to_string_literal: bool = False,
+    quote_identifiers: bool = False,
+) -> str:
     from sqlframe.base.session import _BaseSession
 
-    lit = get_func_from_session("lit")
-    value = lit(value) if not isinstance(value, Column) else value
-    formatted_time = Dialect["spark"].format_time(value.expression)
-    return Column(
-        _BaseSession()
-        .output_dialect.generator()
-        .format_time(exp.StrToTime(this=exp.Null(), format=formatted_time))
-    )
-
-
-def spark_default_time_format() -> str:
-    return Dialect["spark"].TIME_FORMAT.strip("'")
-
-
-def spark_default_date_format() -> str:
-    return Dialect["spark"].DATE_FORMAT.strip("'")
+    str_to_dialect = {
+        "input": _BaseSession().input_dialect,
+        "output": _BaseSession().output_dialect,
+        "execution": _BaseSession().execution_dialect,
+    }
+    if not to_dialect:
+        to_dialect = from_dialect
+    from_dialect = str_to_dialect[from_dialect] if isinstance(from_dialect, str) else from_dialect
+    to_dialect = str_to_dialect[to_dialect] if isinstance(to_dialect, str) else to_dialect
+    if isinstance(value, str):
+        assert from_dialect is not None
+        if is_pattern:
+            star_positions = [i for i, c in enumerate(value) if c == "*"]
+            value_without_star = value.replace("*", "")
+        else:
+            star_positions = []
+            value_without_star = value
+        value_expression: exp.Expression
+        if is_schema:
+            value_expression = to_schema(value_without_star, dialect=from_dialect)
+        elif is_table:
+            value_expression = to_table(value_without_star, dialect=from_dialect)
+        elif is_datatype:
+            value_expression = exp.DataType.build(value_without_star, dialect=from_dialect)
+        elif is_column:
+            value_expression = exp.to_column(value_without_star, dialect=from_dialect)
+        elif is_query:
+            value_expression = parse_one(value, dialect=from_dialect)
+        else:
+            value_expression = exp.parse_identifier(value_without_star, dialect=from_dialect)
+    else:
+        star_positions = []
+        value_expression = value.copy()
+    normalized_expression = normalize_identifiers(value_expression, dialect=to_dialect)
+    if to_string_literal:
+        return normalized_expression.this
+    if quote_identifiers:
+        quote_identifiers_func(normalized_expression, dialect=to_dialect)
+    normalized_value = normalized_expression.sql(dialect=to_dialect)
+    if isinstance(value, str) and is_pattern:
+        for pos in star_positions:
+            normalized_value = normalized_value[:pos] + "*" + normalized_value[pos:]
+    return normalized_value

@@ -193,7 +193,7 @@ def test_list_columns(spark_session: SparkSession):
         Column(
             name="id",
             description=None,
-            dataType="int",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -201,7 +201,7 @@ def test_list_columns(spark_session: SparkSession):
         Column(
             name="name",
             description=None,
-            dataType="string",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -216,7 +216,7 @@ def test_list_columns_use_db_name(spark_session: SparkSession):
         Column(
             name="id",
             description=None,
-            dataType="int",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -224,7 +224,7 @@ def test_list_columns_use_db_name(spark_session: SparkSession):
         Column(
             name="name",
             description=None,
-            dataType="string",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

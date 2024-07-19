@@ -42,6 +42,6 @@ def test_session_from_config(cleanup_connector: SnowflakeConnection):
     session = SnowflakeSession.builder.config("sqlframe.conn", cleanup_connector).getOrCreate()
     columns = session.catalog.get_columns("sqlframe.db1.test_table")
     assert columns == {
-        '"COLA"': exp.DataType.build("DECIMAL", dialect=session.output_dialect),
-        '"COLB"': exp.DataType.build("TEXT", dialect=session.output_dialect),
+        "`cola`": exp.DataType.build("DECIMAL(38, 0)", dialect=session.output_dialect),
+        "`colb`": exp.DataType.build("TEXT", dialect=session.output_dialect),
     }
