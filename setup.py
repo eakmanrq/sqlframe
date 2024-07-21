@@ -37,7 +37,7 @@ setup(
             "psycopg>=3.1,<4",
             "pyarrow>=10,<18",
             "pyspark>=2,<3.6",
-            "pytest>=8.2.0,<8.3",
+            "pytest>=8.2.0,<8.4",
             "pytest-postgresql>=6,<7",
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.5;python_version=='3.8'",
