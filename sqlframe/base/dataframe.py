@@ -582,13 +582,18 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
-            quote_identifiers(select_expression, dialect=dialect)
+            quote_identifiers(select_expression, dialect=self.session.input_dialect)
             if optimize:
                 select_expression = t.cast(
-                    exp.Select, self.session._optimize(select_expression, dialect=dialect)
+                    exp.Select,
+                    self.session._optimize(select_expression, dialect=self.session.input_dialect),
                 )
             elif openai_config:
-                qualify(select_expression, dialect=dialect, schema=self.session.catalog._schema)
+                qualify(
+                    select_expression,
+                    dialect=self.session.input_dialect,
+                    schema=self.session.catalog._schema,
+                )
                 pushdown_projections(select_expression, schema=self.session.catalog._schema)
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
@@ -606,7 +611,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     cache_table_name,
                     {
                         quote_preserving_alias_or_name(expression): expression.type.sql(
-                            dialect=dialect
+                            dialect=self.session.input_dialect
                         )
                         if expression.type
                         else "UNKNOWN"

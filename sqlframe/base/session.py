@@ -458,7 +458,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         self, expression: exp.Expression, dialect: t.Optional[Dialect] = None
     ) -> exp.Expression:
         dialect = dialect or self.output_dialect
-        normalize_identifiers(expression, dialect=self.input_dialect)
+        normalize_identifiers(expression, dialect=dialect)
         quote_identifiers_func(expression, dialect=dialect)
         return optimize(expression, dialect=dialect, schema=self.catalog._schema)
 

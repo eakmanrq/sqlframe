@@ -42,23 +42,16 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
         return self._session
 
     def table(self, tableName: str) -> DF:
-        input_normalized_table_name = normalize_string(
-            tableName, from_dialect="input", is_table=True
-        )
-        execution_normalized_table_name = normalize_string(
-            tableName, from_dialect="input", to_dialect="execution", is_table=True
-        )
-        if df := self.session.temp_views.get(input_normalized_table_name):
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
+        if df := self.session.temp_views.get(tableName):
             return df
-        table = exp.to_table(
-            input_normalized_table_name, dialect=self.session.input_dialect
-        ).assert_is(exp.Table)
+        table = exp.to_table(tableName, dialect=self.session.input_dialect).assert_is(exp.Table)
         self.session.catalog.add_table(table)
         columns = self.session.catalog.get_columns_from_schema(table)
 
         return self.session._create_df(
             exp.Select()
-            .from_(execution_normalized_table_name, dialect=self.session.execution_dialect)
+            .from_(tableName, dialect=self.session.input_dialect)
             .select(*columns, dialect=self.session.input_dialect)
         )
 
@@ -390,24 +383,17 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
     def insertInto(self, tableName: str, overwrite: t.Optional[bool] = None) -> Self:
         from sqlframe.base.session import _BaseSession
 
-        input_normalized_table_name = normalize_string(
-            tableName, from_dialect="input", is_table=True
-        )
-        execution_normalized_table_name = normalize_string(
-            tableName, from_dialect="input", to_dialect="execution", is_table=True
-        )
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         output_expression_container = exp.Insert(
             **{
-                "this": exp.to_table(
-                    execution_normalized_table_name, dialect=_BaseSession().execution_dialect
-                ),
+                "this": exp.to_table(tableName, dialect=_BaseSession().input_dialect),
                 "overwrite": overwrite,
             }
         )
         df = self._df.copy(output_expression_container=output_expression_container)
         if self._by_name:
             columns = self._session.catalog._schema.column_names(
-                input_normalized_table_name, only_visible=True, dialect=_BaseSession().input_dialect
+                tableName, only_visible=True, dialect=_BaseSession().input_dialect
             )
             df = df._convert_leaf_to_cte().select(*columns)
 
