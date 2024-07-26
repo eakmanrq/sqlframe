@@ -42,6 +42,6 @@ def test_session_from_config(cleanup_connector: RedshiftConnection):
     session = RedshiftSession.builder.config("sqlframe.conn", cleanup_connector).getOrCreate()
     columns = session.catalog.get_columns("dev.db1.test_table")
     assert columns == {
-        "`cola`": exp.DataType.build("INT", dialect=session.output_dialect),
-        "`colb`": exp.DataType.build("STRING", dialect=session.output_dialect),
+        "cola": exp.DataType.build("INT", dialect=session.output_dialect),
+        "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
     }

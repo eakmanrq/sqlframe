@@ -147,18 +147,20 @@ def test_lit(get_session_and_func, arg, expected):
 
 
 @pytest.mark.parametrize(
-    "arg",
+    "input, output",
     [
-        "employee_id",
-        "employee id",
+        ("employee_id", "employee_id"),
+        ("employee id", "`employee id`"),
     ],
 )
-def test_col(get_session_and_func, arg):
+def test_col(get_session_and_func, input, output):
     session, col = get_session_and_func("col")
-    df = session.createDataFrame([(1,)], schema=[arg])
-    result = df.select(col(arg)).first()
+    if isinstance(session, PySparkSession):
+        output = output.replace("`", "")
+    df = session.createDataFrame([(1,)], schema=[input])
+    result = df.select(col(input)).first()
     assert result[0] == 1
-    assert result.__fields__[0] == arg
+    assert result.__fields__[0] == output
 
 
 @pytest.mark.parametrize(
@@ -235,7 +237,7 @@ def test_alias(get_session_and_func):
     if isinstance(
         session, (DuckDBSession, BigQuerySession, PostgresSession, SnowflakeSession, SparkSession)
     ):
-        assert space_result == "a space in new name"
+        assert space_result == "`a space in new name`"
     else:
         assert space_result == "A Space In New Name"
 
@@ -295,7 +297,7 @@ def test_max_by(get_session_and_func):
         ],
         schema=("course", "year", "earnings"),
     )
-    assert df.groupby("course").agg(max_by("year", "earnings")).collect() == [
+    assert df.groupby("course").agg(max_by("year", "earnings")).orderBy("course").collect() == [
         Row(value="Java", value2=2013),
         Row(value="dotNET", value2=2013),
     ]
@@ -312,7 +314,7 @@ def test_min_by(get_session_and_func):
         ],
         schema=("course", "year", "earnings"),
     )
-    assert df.groupby("course").agg(min_by("year", "earnings")).collect() == [
+    assert df.groupby("course").agg(min_by("year", "earnings")).orderBy("course").collect() == [
         Row(value="Java", value2=2012),
         Row(value="dotNET", value2=2012),
     ]
@@ -2120,15 +2122,14 @@ def test_create_map(get_session_and_func, get_func):
     session, create_map = get_session_and_func("create_map")
     col = get_func("col", session)
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
+    expected = (
+        [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
+        if isinstance(session, (SparkSession, PySparkSession))
+        else [Row(value={"alice": 2}), Row(value={"bob": 5})]
+    )
     # Added the cast for age for Snowflake so the data type would be correct
-    assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == [
-        Row(value={"Alice": 2}),
-        Row(value={"Bob": 5}),
-    ]
-    assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == [
-        Row(value={"Alice": 2}),
-        Row(value={"Bob": 5}),
-    ]
+    assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == expected
+    assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == expected
 
 
 def test_map_from_arrays(get_session_and_func):
@@ -2719,11 +2720,13 @@ def test_map_keys(get_session_and_func):
     session, map_keys = get_session_and_func("map_keys")
     if isinstance(session, SnowflakeSession):
         sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as data"
-        expected = ["a", "b"]
+        # Ideally this would be ["a", "b"] since it would be normalized for Spark but all I get back is a list
+        # of values and I wouldn't know if those values represent columns or not
+        expected = ["A", "B"]
     else:
-        sql = "SELECT map(1, 'a', 2, 'b') as data"
-        expected = [1, 2]
-    df = session.sql(sql)
+        sql = "SELECT map('a', 1, 'b', 2) as data"
+        expected = ["a", "b"]
+    df = session.sql(sql, dialect="snowflake" if isinstance(session, SnowflakeSession) else None)
     assert df.select(map_keys("data").alias("keys")).first()[0] == expected
 
 

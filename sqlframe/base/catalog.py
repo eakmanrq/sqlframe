@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections import defaultdict
 
 from sqlglot import MappingSchema, exp
 
@@ -32,6 +33,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         """Create a new Catalog that wraps the underlying JVM object."""
         self.session = sparkSession
         self._schema = schema or MappingSchema()
+        self._quoted_columns: t.Dict[exp.Table, t.List[str]] = defaultdict(list)
 
     @property
     def spark(self) -> SESSION:
@@ -51,7 +53,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
     def get_columns_from_schema(self, table: exp.Table | str) -> t.Dict[str, exp.DataType]:
         table = self.ensure_table(table)
         return {
-            exp.column(name, quoted=True).sql(
+            exp.column(name, quoted=name in self._quoted_columns[table]).sql(
                 dialect=self.session.input_dialect
             ): exp.DataType.build(dtype, dialect=self.session.input_dialect)
             for name, dtype in self._schema.find(table, raise_on_missing=True).items()  # type: ignore
@@ -63,9 +65,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         if not columns:
             return {}
         return {
-            exp.column(c.name, quoted=True).sql(
-                dialect=self.session.output_dialect
-            ): exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
+            c.name: exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
             for c in columns
         }
 
@@ -78,13 +78,28 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             return
         if not column_mapping:
             try:
-                column_mapping = self.get_columns(table)
+                column_mapping = {
+                    normalize_string(
+                        k, from_dialect="output", to_dialect="input", is_column=True
+                    ): normalize_string(
+                        v.sql(dialect=self.session.output_dialect),
+                        from_dialect="output",
+                        to_dialect="input",
+                        is_datatype=True,
+                    )
+                    for k, v in self.get_columns(table).items()
+                }
             except NotImplementedError:
                 # TODO: Add doc link
                 raise TableSchemaError(
                     "This session does not have access to a catalog that can lookup column information. See docs for explicitly defining columns or using a session that can automatically determine this."
                 )
         column_mapping = ensure_column_mapping(column_mapping)  # type: ignore
+        for column_name in column_mapping:
+            column = exp.to_column(column_name, dialect=self.session.input_dialect)
+            if column.this.quoted:
+                self._quoted_columns[table].append(column.this.name)
+
         self._schema.add_table(table, column_mapping, dialect=self.session.input_dialect)
 
     def getDatabase(self, dbName: str) -> Database:

@@ -146,7 +146,7 @@ ORDER BY
             if include_temp and self.TEMP_CATALOG_FILTER:
                 catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
             select = select.where(catalog_filter)  # type: ignore
-        results = self.session._fetch_rows(select)
+        results = self.session._collect(select)
         return [
             Column(
                 name=normalize_string(
@@ -216,7 +216,7 @@ ORDER BY 1, 2;
         """,
             dialect="postgres",
         )
-        functions = self.session._fetch_rows(query)
+        functions = self.session._collect(query)
         catalog = normalize_string(self.currentCatalog(), from_dialect="output")
         results = [
             Function(

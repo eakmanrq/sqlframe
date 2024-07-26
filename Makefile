@@ -19,6 +19,9 @@ bigquery-test:
 duckdb-test:
 	pytest -n auto -m "duckdb"
 
+snowflake-test:
+	pytest -n auto -m "snowflake"
+
 style:
 	pre-commit run --all-files
 

@@ -47,13 +47,21 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql;""")
 
-    def _fetch_rows(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
+    def _collect(
+        self,
+        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        *,
+        quote_identifiers: bool = True,
+        skip_normalization: bool = False,
     ) -> t.List[Row]:
         from psycopg2 import ProgrammingError
 
         try:
-            return super()._fetch_rows(sql, quote_identifiers=quote_identifiers)
+            return super()._collect(
+                expressions,
+                quote_identifiers=quote_identifiers,
+                skip_normalization=skip_normalization,
+            )
         except ProgrammingError as e:
             if "no results to fetch" in str(e):
                 return []

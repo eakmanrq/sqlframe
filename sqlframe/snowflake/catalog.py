@@ -38,6 +38,7 @@ class SnowflakeCatalog(
     _BaseCatalog["SnowflakeSession", "SnowflakeDataFrame"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
+    UPPERCASE_INFO_SCHEMA = True
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
@@ -117,7 +118,7 @@ class SnowflakeCatalog(
                 className="",
                 isTemporary=False,
             )
-            for x in self.session._fetch_rows(query)
+            for x in self.session._collect(query)
         ]
         if pattern:
             normalized_pattern = normalize_string(
@@ -136,22 +137,31 @@ class SnowflakeCatalog(
         if not table.catalog:
             table.set(
                 "catalog",
-                exp.parse_identifier(self.currentCatalog(), dialect=self.session.output_dialect),
+                exp.parse_identifier(
+                    normalize_string(
+                        self.currentCatalog(), from_dialect="output", to_dialect="input"
+                    ),
+                    dialect=self.session.input_dialect,
+                ),
             )
         if not table.db:
             table.set(
                 "db",
-                exp.parse_identifier(self.currentDatabase(), dialect=self.session.output_dialect),
+                exp.parse_identifier(
+                    normalize_string(
+                        self.currentDatabase(), from_dialect="output", to_dialect="input"
+                    ),
+                    dialect=self.session.input_dialect,
+                ),
             )
         sql = f"SHOW COLUMNS IN TABLE {table.sql(dialect=self.session.input_dialect)}"
-        results = self.session._fetch_rows(sql)
+        results = self.session._collect(sql)
         return {
             normalize_string(
                 row["column_name"],
                 from_dialect="execution",
                 to_dialect="output",
                 is_column=True,
-                quote_identifiers=True,
             ): exp.DataType.build(
                 normalize_string(
                     json.loads(row["data_type"])["type"],

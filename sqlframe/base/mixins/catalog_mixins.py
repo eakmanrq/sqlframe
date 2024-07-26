@@ -25,9 +25,11 @@ class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         database: t.Optional[str] = None,
         qualify_override: t.Optional[bool] = None,
     ) -> exp.Table:
-        table = f"information_schema.{table_name}"
+        table = table_name
+        db = "information_schema"
         if self.UPPERCASE_INFO_SCHEMA:
             table = table.upper()
+            db = db.upper()
         qualify = (
             qualify_override
             if qualify_override is not None
@@ -35,13 +37,19 @@ class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         )
         if qualify:
             if database:
-                db = normalize_string(database, from_dialect="input", to_dialect="output")
+                catalog = normalize_string(database, from_dialect="input", to_dialect="output")
             else:
-                db = self.currentDatabase()
+                catalog = self.currentDatabase()
             if not db:
                 raise ValueError("Table name must be qualified with a database.")
-            table = f"{db}.{table}"
-        return exp.to_table(table)
+            return exp.table_(
+                catalog=exp.to_identifier(catalog, quoted=True),
+                db=exp.to_identifier(db, quoted=True),
+                table=exp.to_identifier(table, quoted=True),
+            )
+        return exp.table_(
+            db=exp.to_identifier(db, quoted=True), table=exp.to_identifier(table, quoted=True)
+        )
 
 
 class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
@@ -58,7 +66,7 @@ class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         'spark_catalog'
         """
         return normalize_string(
-            self.session._fetch_rows(
+            self.session._collect(
                 exp.select(self.CURRENT_CATALOG_EXPRESSION), quote_identifiers=False
             )[0][0],
             from_dialect="execution",
@@ -80,7 +88,7 @@ class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         'default'
         """
         return normalize_string(
-            self.session._fetch_rows(exp.select(self.CURRENT_DATABASE_EXPRESSION))[0][0],
+            self.session._collect(exp.select(self.CURRENT_DATABASE_EXPRESSION))[0][0],
             from_dialect="execution",
             to_dialect="output",
         )
@@ -101,7 +109,7 @@ class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         --------
         >>> spark.catalog.setCurrentCatalog("spark_catalog")
         """
-        self.session._execute(
+        self.session._collect(
             exp.Use(this=exp.parse_identifier(catalogName, dialect=self.session.input_dialect))
         )
 
@@ -138,8 +146,11 @@ class ListDatabasesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, 
         []
         """
         table = self._get_info_schema_table("schemata", qualify_override=False)
-        results = self.session._fetch_rows(
-            exp.Select().select("schema_name", "catalog_name").from_(table)
+        results = self.session._collect(
+            # The table name can be specifically formatted in uppercase to run properly and we don't want to
+            # normalize that away
+            exp.Select().select("schema_name", "catalog_name").from_(table),
+            skip_normalization=True,
         )
         databases = [
             Database(
@@ -190,8 +201,8 @@ class ListCatalogsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, D
         []
         """
         table = self._get_info_schema_table("schemata")
-        results = self.session._fetch_rows(
-            exp.Select().select("catalog_name").from_(table).distinct()
+        results = self.session._collect(
+            exp.Select().select("catalog_name").from_(table).distinct(), skip_normalization=True
         )
         catalogs = [
             CatalogMetadata(
@@ -243,7 +254,7 @@ class SetCurrentDatabaseFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
                 "catalog",
                 exp.parse_identifier(self.currentCatalog(), dialect=self.session.output_dialect),
             )
-        self.session._execute(exp.Use(this=schema))
+        self.session._collect(exp.Use(this=schema))
 
 
 class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
@@ -339,7 +350,7 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
                     )
                 )
             )
-        results = self.session._fetch_rows(select)
+        results = self.session._collect(select, skip_normalization=True)
         tables = [
             Table(
                 name=normalize_string(
@@ -503,7 +514,7 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
             if include_temp and self.TEMP_CATALOG_FILTER:
                 catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
             select = select.where(catalog_filter)
-        results = self.session._fetch_rows(select)
+        results = self.session._collect(select, skip_normalization=True)
         return [
             Column(
                 name=normalize_string(

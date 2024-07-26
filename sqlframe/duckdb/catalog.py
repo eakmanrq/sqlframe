@@ -116,7 +116,7 @@ class DuckDBCatalog(
                 className="",
                 isTemporary=False,
             )
-            for x in self.session._fetch_rows(select)
+            for x in self.session._collect(select)
             if x["function_name"] not in ["@>", "<@", "&&"]
         ]
         if pattern:

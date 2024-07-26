@@ -535,39 +535,14 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
         return [col]
 
-    @t.overload
-    def sql(
-        self,
-        dialect: DialectType = ...,
-        optimize: bool = ...,
-        pretty: bool = ...,
-        *,
-        as_list: t.Literal[False],
-        **kwargs: t.Any,
-    ) -> str: ...
+    def _sql(self) -> str:
+        return self.session._to_sql(self.expression, dialect=self.session.execution_dialect)
 
-    @t.overload
-    def sql(
+    def _get_expressions(
         self,
-        dialect: DialectType = ...,
-        optimize: bool = ...,
-        pretty: bool = ...,
-        *,
-        as_list: t.Literal[True],
-        **kwargs: t.Any,
-    ) -> t.List[str]: ...
-
-    def sql(
-        self,
-        dialect: DialectType = None,
         optimize: bool = True,
-        pretty: bool = True,
         openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
-        as_list: bool = False,
-        **kwargs,
-    ) -> t.Union[str, t.List[str]]:
-        dialect = Dialect.get_or_raise(dialect or self.session.execution_dialect)
-
+    ) -> t.List[exp.Expression]:
         df = self._resolve_pending_hints()
         select_expressions = df._get_select_expressions()
         output_expressions: t.List[t.Union[exp.Select, exp.Cache, exp.Drop]] = []
@@ -582,11 +557,10 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
-            quote_identifiers(select_expression, dialect=self.session.input_dialect)
             if optimize:
                 select_expression = t.cast(
                     exp.Select,
-                    self.session._optimize(select_expression, dialect=self.session.input_dialect),
+                    self.session._optimize(select_expression),
                 )
             elif openai_config:
                 qualify(
@@ -647,10 +621,43 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 raise ValueError(f"Invalid expression type: {expression_type}")
 
             output_expressions.append(expression)
+        return output_expressions  # type: ignore
 
+    @t.overload
+    def sql(
+        self,
+        dialect: DialectType = ...,
+        optimize: bool = ...,
+        pretty: bool = ...,
+        *,
+        as_list: t.Literal[False],
+        **kwargs: t.Any,
+    ) -> str: ...
+
+    @t.overload
+    def sql(
+        self,
+        dialect: DialectType = ...,
+        optimize: bool = ...,
+        pretty: bool = ...,
+        *,
+        as_list: t.Literal[True],
+        **kwargs: t.Any,
+    ) -> t.List[str]: ...
+
+    def sql(
+        self,
+        dialect: DialectType = None,
+        optimize: bool = True,
+        pretty: bool = True,
+        openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
+        as_list: bool = False,
+        **kwargs,
+    ) -> t.Union[str, t.List[str]]:
+        dialect = Dialect.get_or_raise(dialect) if dialect else self.session.output_dialect
         results = []
-        for expression in output_expressions:
-            sql = expression.sql(dialect=dialect, pretty=pretty, **kwargs)
+        for expression in self._get_expressions(optimize=optimize, openai_config=openai_config):
+            sql = self.session._to_sql(expression, dialect=dialect, pretty=pretty, **kwargs)
             if openai_config:
                 assert isinstance(openai_config, OpenAIConfig)
                 verify_openai_installed()
@@ -1158,7 +1165,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if len(sql_queries) > 1:
             raise ValueError("Cannot explain a DataFrame with multiple queries")
         sql_query = "EXPLAIN " + sql_queries[0]
-        self.session._execute(sql_query, quote_identifiers=False)
+        self.session._execute(sql_query)
 
     @operation(Operation.FROM)
     def fillna(
@@ -1540,10 +1547,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self._group_data(self, grouping_columns, self.last_op)
 
     def collect(self) -> t.List[Row]:
-        result = []
-        for sql in self.sql(pretty=False, optimize=False, as_list=True):
-            result = self.session._fetch_rows(sql)
-        return result
+        return self.session._collect(self._get_expressions(optimize=False))
 
     @t.overload
     def head(self) -> t.Optional[Row]: ...
@@ -1570,9 +1574,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             logger.warning("Truncate is ignored so full results will be displayed")
         # Make sure that the limit we add doesn't affect the results
         df = self._convert_leaf_to_cte()
-        sql = df.limit(n).sql(pretty=False, optimize=False, as_list=True)
-        for sql in ensure_list(sql):
-            result = self.session._fetch_rows(sql)
+        # sql = df.limit(n).sql(pretty=False, optimize=False, as_list=True)
+        # for sql in ensure_list(sql):
+        result = df.limit(n).collect()
         table = PrettyTable()
         if row := seq_get(result, 0):
             table.field_names = row._unique_field_names
@@ -1611,13 +1615,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
 
     def toPandas(self) -> pd.DataFrame:
-        sql_kwargs = dict(pretty=False, optimize=False, as_list=True)
-        sqls = [None] + self.sql(**sql_kwargs)  # type: ignore
-        for sql in self.sql(**sql_kwargs)[:-1]:  # type: ignore
-            if sql:
-                self.session._execute(sql)
-        assert sqls[-1] is not None
-        return self.session._fetchdf(sqls[-1])
+        return self.session._fetchdf(self._get_expressions(optimize=False))
 
     def createOrReplaceTempView(self, name: str) -> None:
         name = normalize_string(name, from_dialect="input")
@@ -1629,11 +1627,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         df = self._convert_leaf_to_cte()
         df = self.copy(expression=df.expression.select("count(*)", append=False))
-        for sql in df.sql(
-            dialect=self.session.output_dialect, pretty=False, optimize=False, as_list=True
-        ):
-            result = self.session._fetch_rows(sql)
-        return result[0][0]
+        return df.collect()[0][0]
 
     def createGlobalTempView(self, name: str) -> None:
         raise NotImplementedError("Global temp views are not yet supported")

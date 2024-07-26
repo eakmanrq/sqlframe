@@ -21,7 +21,12 @@ def cleanup_session(get_session: t.Callable[[], _BaseSession]) -> t.Iterator[_Ba
 def test_session(cleanup_session: _BaseSession):
     session = cleanup_session
     session._execute("DROP TABLE IF EXISTS test_table")
-    session._execute(parse_one("CREATE TABLE test_table (cola INT, colb STRING)", dialect="spark"))
+    session._collect(
+        parse_one(
+            "CREATE TABLE test_table (cola INT, colb STRING, `col with space` STRING)",
+            dialect="spark",
+        )
+    )
     columns = session.catalog.get_columns("test_table")
     if session.execution_dialect == Dialect.get_or_raise("bigquery"):
         cola_type = exp.DataType.build("INT64", dialect=session.execution_dialect)
@@ -30,6 +35,7 @@ def test_session(cleanup_session: _BaseSession):
     else:
         cola_type = exp.DataType.build("INT", dialect=session.execution_dialect)
     assert columns == {
-        "`cola`": cola_type,
-        "`colb`": exp.DataType.build("STRING", dialect=session.output_dialect),
+        "cola": cola_type,
+        "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
+        "`col with space`": exp.DataType.build("STRING", dialect=session.output_dialect),
     }

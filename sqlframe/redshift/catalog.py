@@ -117,7 +117,7 @@ ORDER BY function_name;
                 className="",
                 isTemporary=False,
             )
-            for x in self.session._fetch_rows(query)
+            for x in self.session._collect(query)
         ]
         if pattern:
             normalized_pattern = normalize_string(

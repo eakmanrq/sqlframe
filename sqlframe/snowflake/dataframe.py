@@ -48,17 +48,18 @@ class SnowflakeDataFrame(
     def _typed_columns(self) -> t.List[CatalogColumn]:
         df = self._convert_leaf_to_cte()
         df = df.limit(0)
-        self.session._execute(df.expression)
+        df.collect()
         query_id = self.session._cur.sfqid
         columns = []
-        for row in self.session._fetch_rows(f"DESCRIBE RESULT '{query_id}'"):
+        for row in self.session._collect(f"DESCRIBE RESULT '{query_id}'"):
+            null_row = [x for x in row.__fields__ if "?" in x][0]
             columns.append(
                 CatalogColumn(
                     name=normalize_string(row.name, from_dialect="execution", to_dialect="output"),
                     dataType=normalize_string(
                         row.type, from_dialect="execution", to_dialect="output", is_datatype=True
                     ),
-                    nullable=row["null?"] == "Y",
+                    nullable=row[null_row] == "Y",
                     description=row.comment,
                     isPartition=False,
                     isBucket=False,

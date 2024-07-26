@@ -398,8 +398,7 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
             df = df._convert_leaf_to_cte().select(*columns)
 
         if self._session._has_connection:
-            for sql in df.sql(pretty=False, optimize=False, as_list=True):
-                self._session._execute(sql)
+            df.collect()
         return self.copy(_df=df)
 
     def saveAsTable(
@@ -414,17 +413,16 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
             exists = True
         if mode == "overwrite":
             replace = True
-        name = normalize_string(name, from_dialect="input", to_dialect="execution", is_table=True)
+        name = normalize_string(name, from_dialect="input", is_table=True)
         output_expression_container = exp.Create(
-            this=exp.to_table(name, dialect=self._session.execution_dialect),
+            this=exp.to_table(name, dialect=self._session.input_dialect),
             kind="TABLE",
             exists=exists,
             replace=replace,
         )
         df = self._df.copy(output_expression_container=output_expression_container)
         if self._session._has_connection:
-            for sql in df.sql(pretty=False, optimize=False, as_list=True):
-                self._session._execute(sql)
+            df.collect()
         return self.copy(_df=df)
 
     @staticmethod

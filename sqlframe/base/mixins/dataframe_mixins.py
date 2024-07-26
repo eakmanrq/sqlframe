@@ -39,7 +39,7 @@ class TypedColumnsFromTempViewMixin(
     @property
     def _typed_columns(self) -> t.List[Column]:
         table = exp.to_table(self.session._random_id)
-        self.session._execute(
+        self.session._collect(
             exp.Create(
                 this=table,
                 kind="VIEW",

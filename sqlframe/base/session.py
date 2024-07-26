@@ -12,11 +12,12 @@ from functools import cached_property
 
 import sqlglot
 from sqlglot import Dialect, exp
-from sqlglot.dialects.dialect import NormalizationStrategy
+from sqlglot.dialects.dialect import DialectType, NormalizationStrategy
 from sqlglot.expressions import parse_identifier
-from sqlglot.helper import seq_get
+from sqlglot.helper import ensure_list, seq_get
 from sqlglot.optimizer import optimize
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
+from sqlglot.optimizer.qualify import qualify as qualify_func
 from sqlglot.optimizer.qualify_columns import (
     quote_identifiers as quote_identifiers_func,
 )
@@ -361,14 +362,33 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             sel_expression = sel_expression.where(exp.false())
         return self._create_df(sel_expression)
 
-    def sql(self, sqlQuery: t.Union[str, exp.Expression], optimize: bool = True) -> DF:
+    def sql(
+        self,
+        sqlQuery: t.Union[str, exp.Expression],
+        dialect: DialectType = None,
+        qualify: bool = True,
+    ) -> DF:
+        dialect = Dialect.get_or_raise(dialect or self.input_dialect)
         expression = (
-            sqlglot.parse_one(sqlQuery, read=self.input_dialect)
+            sqlglot.parse_one(
+                normalize_string(sqlQuery, from_dialect=dialect, is_query=True), read=dialect
+            )
             if isinstance(sqlQuery, str)
             else sqlQuery
         )
-        if optimize:
-            expression = self._optimize(expression)
+        expression = sqlglot.parse_one(
+            normalize_string(
+                expression.sql(dialect=dialect),
+                from_dialect=dialect,
+                to_dialect=self.input_dialect,
+                is_query=True,
+            ),
+            dialect=self.input_dialect,
+        )
+        if qualify:
+            expression = qualify_func(
+                expression, dialect=dialect, quote_identifiers=False, identify=False
+            )
         if self.temp_views:
             replacement_mapping = {}
             for table in expression.find_all(exp.Table):
@@ -445,30 +465,82 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     def _add_alias_to_mapping(self, name: str, sequence_id: str):
         self.name_to_sequence_id_mapping[self._normalize_string(name)].append(sequence_id)
 
-    def _to_sql(self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True) -> str:
-        if isinstance(sql, exp.Expression):
-            expression = sql.copy()
-            if quote_identifiers:
-                normalize_identifiers(expression, dialect=self.execution_dialect)
-                quote_identifiers_func(expression, dialect=self.execution_dialect)
-            sql = expression.sql(dialect=self.execution_dialect)
-        return t.cast(str, sql)
+    def _collect(
+        self,
+        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        *,
+        quote_identifiers: bool = True,
+        skip_normalization: bool = False,
+    ) -> t.List[Row]:
+        for expression in ensure_list(expressions):
+            if isinstance(expression, exp.Expression):
+                sql = (
+                    expression.sql(dialect=self.execution_dialect)
+                    if skip_normalization
+                    else self._to_sql(expression, quote_identifiers=quote_identifiers)
+                )
+            else:
+                sql = expression  # type: ignore
+            self._execute(sql)
+        result = self._cur.fetchall()
+        if not self._cur.description:
+            return []
+        columns = [
+            normalize_string(x[0], from_dialect="execution", to_dialect="output", is_column=True)
+            for x in self._cur.description
+        ]
+        return [self._to_row(columns, row) for row in result]
 
-    def _optimize(
-        self, expression: exp.Expression, dialect: t.Optional[Dialect] = None
-    ) -> exp.Expression:
-        dialect = dialect or self.output_dialect
-        normalize_identifiers(expression, dialect=dialect)
-        quote_identifiers_func(expression, dialect=dialect)
-        return optimize(expression, dialect=dialect, schema=self.catalog._schema)
+    def _fetchdf(
+        self,
+        expressions: t.Union[exp.Expression, t.List[exp.Expression]],
+        *,
+        quote_identifiers: bool = True,
+    ) -> pd.DataFrame:
+        verify_pandas_installed()
+        from pandas.io.sql import read_sql_query
 
-    def _execute(
+        all_expressions = [None] + ensure_list(expressions)
+        for an_expression in all_expressions[:-1]:
+            if an_expression:
+                self._execute(self._to_sql(an_expression, quote_identifiers=quote_identifiers))  # type: ignore
+        assert all_expressions[-1] is not None
+        return read_sql_query(
+            self._to_sql(all_expressions[-1], quote_identifiers=quote_identifiers),  # type: ignore
+            self._conn,
+        )
+
+    def _to_sql(
         self,
         sql: t.Union[str, exp.Expression],
         *,
+        dialect: DialectType = None,
         quote_identifiers: bool = True,
-    ) -> None:
-        self._cur.execute(self._to_sql(sql, quote_identifiers=quote_identifiers))
+        pretty: bool = False,
+    ) -> str:
+        return normalize_string(
+            sql,
+            from_dialect=self.input_dialect,
+            to_dialect=dialect or self.execution_dialect,
+            is_query=True,
+            quote_identifiers=quote_identifiers,
+            pretty=pretty,
+        )
+
+    def _optimize(
+        self,
+        expression: exp.Expression,
+        dialect: t.Optional[Dialect] = None,
+        quote_identifiers: bool = True,
+    ) -> exp.Expression:
+        dialect = dialect or self.input_dialect
+        normalize_identifiers(expression, dialect=dialect)
+        if quote_identifiers:
+            quote_identifiers_func(expression, dialect=dialect)
+        return optimize(expression, dialect=dialect, schema=self.catalog._schema)
+
+    def _execute(self, sql: str) -> None:
+        self._cur.execute(sql)
 
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
@@ -477,7 +549,12 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     @classmethod
     def _to_value(cls, value: t.Any) -> t.Any:
         if (map_value := cls._try_get_map(value)) is not None:
-            return map_value
+            return {
+                normalize_string(k, from_dialect="execution", to_dialect="output")
+                if isinstance(k, str)
+                else k: cls._to_value(v)
+                for k, v in map_value.items()
+            }
         elif isinstance(value, dict):
             return cls._to_row(list(value.keys()), list(value.values()))
         elif isinstance(value, (list, set, tuple)) and value:
@@ -492,27 +569,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         for value in values:
             converted_values.append(cls._to_value(value))
         return _create_row(columns, converted_values)
-
-    def _fetch_rows(
-        self,
-        sql: t.Union[str, exp.Expression],
-        *,
-        quote_identifiers: bool = True,
-    ) -> t.List[Row]:
-        self._execute(sql, quote_identifiers=quote_identifiers)
-        result = self._cur.fetchall()
-        if not self._cur.description:
-            return []
-        columns = [x[0] for x in self._cur.description]
-        return [self._to_row(columns, row) for row in result]
-
-    def _fetchdf(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
-    ) -> pd.DataFrame:
-        verify_pandas_installed()
-        from pandas.io.sql import read_sql_query
-
-        return read_sql_query(self._to_sql(sql, quote_identifiers=quote_identifiers), self._conn)
 
     @property
     def _is_standalone(self) -> bool:

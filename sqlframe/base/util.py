@@ -358,8 +358,8 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
 
 def normalize_string(
     value: t.Union[str, exp.Expression],
-    from_dialect: t.Optional[t.Union[Dialect, str]] = None,
-    to_dialect: t.Optional[t.Union[Dialect, str]] = None,
+    from_dialect: DialectType = None,
+    to_dialect: DialectType = None,
     is_pattern: bool = False,
     is_schema: bool = False,
     is_table: bool = False,
@@ -368,13 +368,16 @@ def normalize_string(
     is_query: bool = False,
     to_string_literal: bool = False,
     quote_identifiers: bool = False,
+    pretty: bool = False,
 ) -> str:
     from sqlframe.base.session import _BaseSession
 
+    session: _BaseSession = _BaseSession()
+
     str_to_dialect = {
-        "input": _BaseSession().input_dialect,
-        "output": _BaseSession().output_dialect,
-        "execution": _BaseSession().execution_dialect,
+        "input": session.input_dialect,
+        "output": session.output_dialect,
+        "execution": session.execution_dialect,
     }
     if not to_dialect:
         to_dialect = from_dialect
@@ -401,15 +404,18 @@ def normalize_string(
             value_expression = parse_one(value, dialect=from_dialect)
         else:
             value_expression = exp.parse_identifier(value_without_star, dialect=from_dialect)
-    else:
+    elif isinstance(value, exp.Expression):
         star_positions = []
         value_expression = value.copy()
+        value_expression = normalize_identifiers(value_expression, dialect=from_dialect)
+    else:
+        raise ValueError(f"Unsupported value type: {type(value)}")
     normalized_expression = normalize_identifiers(value_expression, dialect=to_dialect)
     if to_string_literal:
         return normalized_expression.this
     if quote_identifiers:
         quote_identifiers_func(normalized_expression, dialect=to_dialect)
-    normalized_value = normalized_expression.sql(dialect=to_dialect)
+    normalized_value = normalized_expression.sql(dialect=to_dialect, pretty=pretty)
     if isinstance(value, str) and is_pattern:
         for pos in star_positions:
             normalized_value = normalized_value[:pos] + "*" + normalized_value[pos:]
