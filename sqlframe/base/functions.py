@@ -1656,9 +1656,13 @@ def map_concat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column
 def sequence(
     start: ColumnOrName, stop: ColumnOrName, step: t.Optional[ColumnOrName] = None
 ) -> Column:
-    if step is not None:
-        return Column.invoke_anonymous_function(start, "SEQUENCE", stop, step)
-    return Column.invoke_anonymous_function(start, "SEQUENCE", stop)
+    return Column(
+        expression.GenerateSeries(
+            start=Column.ensure_col(start).expression,
+            end=Column.ensure_col(stop).expression,
+            step=Column.ensure_col(step).expression if step is not None else None,
+        )
+    )
 
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
