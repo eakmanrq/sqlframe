@@ -47,6 +47,7 @@ class DuckDBSession(
                 pass
 
             super().__init__(conn, *args, **kwargs)
+            self._last_result = None
 
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
@@ -54,8 +55,10 @@ class DuckDBSession(
             return dict(zip(value["key"], value["value"]))
         return None
 
+    def _execute(self, sql: str) -> None:
+        self._last_result = self._cur.execute(sql)  # type: ignore
+
     class Builder(_BaseSession.Builder):
-        # DEFAULT_OUTPUT_DIALECT = "duckdb"
         DEFAULT_EXECUTION_DIALECT = "duckdb"
 
         @cached_property

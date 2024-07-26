@@ -61,6 +61,7 @@ class SparkSession(
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,
+        skip_rows: bool = False,
     ) -> t.List[Row]:
         for expression in ensure_list(expressions):
             sql = (
@@ -69,6 +70,8 @@ class SparkSession(
                 else expression
             )
             self._execute(sql)  # type: ignore
+        if skip_rows:
+            return []
         assert self._last_df is not None
         return [
             Row(

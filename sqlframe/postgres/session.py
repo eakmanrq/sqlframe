@@ -53,6 +53,7 @@ $$ LANGUAGE plpgsql;""")
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,
+        skip_rows: bool = False,
     ) -> t.List[Row]:
         from psycopg2 import ProgrammingError
 
