@@ -12,8 +12,7 @@ from sqlframe.base.catalog import (
     Table,
     _BaseCatalog,
 )
-from sqlframe.base.decorators import normalize
-from sqlframe.base.util import schema_, to_schema
+from sqlframe.base.util import normalize_string, schema_, to_schema
 
 
 class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
@@ -26,20 +25,31 @@ class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         database: t.Optional[str] = None,
         qualify_override: t.Optional[bool] = None,
     ) -> exp.Table:
-        table = f"information_schema.{table_name}"
+        table = table_name
+        db = "information_schema"
         if self.UPPERCASE_INFO_SCHEMA:
             table = table.upper()
+            db = db.upper()
         qualify = (
             qualify_override
             if qualify_override is not None
             else self.QUALIFY_INFO_SCHEMA_WITH_DATABASE
         )
         if qualify:
-            db = database or self.currentDatabase()
+            if database:
+                catalog = normalize_string(database, from_dialect="input", to_dialect="output")
+            else:
+                catalog = self.currentDatabase()
             if not db:
                 raise ValueError("Table name must be qualified with a database.")
-            table = f"{db}.{table}"
-        return exp.to_table(table)
+            return exp.table_(
+                catalog=exp.to_identifier(catalog, quoted=True),
+                db=exp.to_identifier(db, quoted=True),
+                table=exp.to_identifier(table, quoted=True),
+            )
+        return exp.table_(
+            db=exp.to_identifier(db, quoted=True), table=exp.to_identifier(table, quoted=True)
+        )
 
 
 class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
@@ -55,9 +65,13 @@ class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         >>> spark.catalog.currentCatalog()
         'spark_catalog'
         """
-        return self.session._fetch_rows(
-            exp.select(self.CURRENT_CATALOG_EXPRESSION), quote_identifiers=False
-        )[0][0]
+        return normalize_string(
+            self.session._collect(
+                exp.select(self.CURRENT_CATALOG_EXPRESSION), quote_identifiers=False
+            )[0][0],
+            from_dialect="execution",
+            to_dialect="output",
+        )
 
 
 class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
@@ -73,7 +87,11 @@ class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         >>> spark.catalog.currentDatabase()
         'default'
         """
-        return self.session._fetch_rows(exp.select(self.CURRENT_DATABASE_EXPRESSION))[0][0]
+        return normalize_string(
+            self.session._collect(exp.select(self.CURRENT_DATABASE_EXPRESSION))[0][0],
+            from_dialect="execution",
+            to_dialect="output",
+        )
 
 
 class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
@@ -91,7 +109,7 @@ class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         --------
         >>> spark.catalog.setCurrentCatalog("spark_catalog")
         """
-        self.session._execute(
+        self.session._collect(
             exp.Use(this=exp.parse_identifier(catalogName, dialect=self.session.input_dialect))
         )
 
@@ -128,14 +146,26 @@ class ListDatabasesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, 
         []
         """
         table = self._get_info_schema_table("schemata", qualify_override=False)
-        results = self.session._fetch_rows(
-            exp.Select().select("schema_name", "catalog_name").from_(table)
+        results = self.session._collect(
+            # The table name can be specifically formatted in uppercase to run properly and we don't want to
+            # normalize that away
+            exp.Select().select("schema_name", "catalog_name").from_(table),
+            skip_normalization=True,
         )
         databases = [
-            Database(name=x[0], catalog=x[1], description=None, locationUri="") for x in results
+            Database(
+                name=normalize_string(x[0], from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(x[1], from_dialect="execution", to_dialect="output"),
+                description=None,
+                locationUri="",
+            )
+            for x in results
         ]
         if pattern:
-            databases = [db for db in databases if fnmatch.fnmatch(db.name, pattern)]
+            normalized_pattern = normalize_string(
+                pattern, from_dialect="input", to_dialect="output", is_pattern=True
+            )
+            databases = [db for db in databases if fnmatch.fnmatch(db.name, normalized_pattern)]
         return databases
 
 
@@ -171,12 +201,23 @@ class ListCatalogsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, D
         []
         """
         table = self._get_info_schema_table("schemata")
-        results = self.session._fetch_rows(
-            exp.Select().select("catalog_name").from_(table).distinct()
+        results = self.session._collect(
+            exp.Select().select("catalog_name").from_(table).distinct(), skip_normalization=True
         )
-        catalogs = [CatalogMetadata(name=x[0], description=None) for x in results]
+        catalogs = [
+            CatalogMetadata(
+                name=normalize_string(x[0], from_dialect="execution", to_dialect="output"),
+                description=None,
+            )
+            for x in results
+        ]
         if pattern:
-            catalogs = [catalog for catalog in catalogs if fnmatch.fnmatch(catalog.name, pattern)]
+            normalized_pattern = normalize_string(
+                pattern, from_dialect="input", to_dialect="output", is_pattern=True
+            )
+            catalogs = [
+                catalog for catalog in catalogs if fnmatch.fnmatch(catalog.name, normalized_pattern)
+            ]
         return catalogs
 
 
@@ -205,17 +246,18 @@ class SetCurrentDatabaseFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         --------
         >>> spark.catalog.setCurrentDatabase("default")
         """
-        schema = to_schema(dbName, dialect=self.session.input_dialect)
+        dbName = normalize_string(dbName, from_dialect="input", to_dialect="output", is_schema=True)
+        schema = to_schema(dbName, dialect=self.session.output_dialect)
+
         if not schema.catalog:
             schema.set(
                 "catalog",
-                exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
+                exp.parse_identifier(self.currentCatalog(), dialect=self.session.output_dialect),
             )
-        self.session._execute(exp.Use(this=schema))
+        self.session._collect(exp.Use(this=schema))
 
 
 class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
-    @normalize(["dbName"])
     def listTables(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
     ) -> t.List[Table]:
@@ -264,13 +306,18 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
         []
         """
         if dbName is None and pattern is None:
+            database = normalize_string(
+                self.currentDatabase(), from_dialect="output", to_dialect="input"
+            )
+            catalog = normalize_string(
+                self.currentCatalog(), from_dialect="output", to_dialect="input"
+            )
             schema = schema_(
-                db=exp.parse_identifier(self.currentDatabase(), dialect=self.session.input_dialect),
-                catalog=exp.parse_identifier(
-                    self.currentCatalog(), dialect=self.session.input_dialect
-                ),
+                db=exp.parse_identifier(database, dialect=self.session.input_dialect),
+                catalog=exp.parse_identifier(catalog, dialect=self.session.input_dialect),
             )
         elif dbName:
+            dbName = normalize_string(dbName, from_dialect="input", is_schema=True)
             schema = to_schema(dbName, dialect=self.session.input_dialect)
         else:
             schema = None
@@ -282,15 +329,41 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
             'table_type AS "table_type"',
         ).from_(table)
         if schema and schema.db:
-            select = select.where(exp.column("table_schema").eq(schema.db))
+            select = select.where(
+                exp.column("table_schema").eq(
+                    normalize_string(
+                        schema.db,
+                        from_dialect="input",
+                        to_dialect="execution",
+                        to_string_literal=True,
+                    )
+                )
+            )
         if schema and schema.catalog:
-            select = select.where(exp.column("table_catalog").eq(schema.catalog))
-        results = self.session._fetch_rows(select)
+            select = select.where(
+                exp.column("table_catalog").eq(
+                    normalize_string(
+                        schema.catalog,
+                        from_dialect="input",
+                        to_dialect="execution",
+                        to_string_literal=True,
+                    )
+                )
+            )
+        results = self.session._collect(select, skip_normalization=True)
         tables = [
             Table(
-                name=x["table_name"],
-                catalog=x["table_catalog"],
-                namespace=[x["table_schema"]],
+                name=normalize_string(
+                    x["table_name"], from_dialect="execution", to_dialect="output"
+                ),
+                catalog=normalize_string(
+                    x["table_catalog"], from_dialect="execution", to_dialect="output"
+                ),
+                namespace=[
+                    normalize_string(
+                        x["table_schema"], from_dialect="execution", to_dialect="output"
+                    )
+                ],
                 description=None,
                 tableType="VIEW" if x["table_type"] == "VIEW" else "MANAGED",
                 isTemporary=False,
@@ -309,12 +382,20 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
                 )
             )
         if pattern:
-            tables = [x for x in tables if fnmatch.fnmatch(x.name, pattern)]
+            tables = [
+                x
+                for x in tables
+                if fnmatch.fnmatch(
+                    x.name,
+                    normalize_string(
+                        pattern, from_dialect="input", to_dialect="output", is_pattern=True
+                    ),
+                )
+            ]
         return tables
 
 
 class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
-    @normalize(["tableName", "dbName"])
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
     ) -> t.List[Column]:
@@ -354,6 +435,8 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
         [Column(name='name', description=None, dataType='string', nullable=True, ...
         >>> _ = spark.sql("DROP TABLE tblA")
         """
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
+        dbName = normalize_string(dbName, from_dialect="input", is_schema=True) if dbName else None
         if df := self.session.temp_views.get(tableName):
             return [
                 Column(
@@ -373,19 +456,23 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
             if schema and schema.db:
                 table.set("db", schema.args["db"])
             else:
+                current_database = normalize_string(
+                    self.currentDatabase(), from_dialect="output", to_dialect="input"
+                )
                 table.set(
                     "db",
-                    exp.parse_identifier(
-                        self.currentDatabase(), dialect=self.session.input_dialect
-                    ),
+                    exp.parse_identifier(current_database, dialect=self.session.input_dialect),
                 )
         if not table.catalog:
             if schema and schema.catalog:
                 table.set("catalog", schema.args["catalog"])
             else:
+                current_catalog = normalize_string(
+                    self.currentCatalog(), from_dialect="output", to_dialect="input"
+                )
                 table.set(
                     "catalog",
-                    exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
+                    exp.parse_identifier(current_catalog, dialect=self.session.input_dialect),
                 )
         source_table = self._get_info_schema_table("columns", database=table.db)
         select = (
@@ -395,24 +482,48 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
                 'is_nullable AS "is_nullable"',
             )
             .from_(source_table)
-            .where(exp.column("table_name").eq(table.name))
+            .where(
+                exp.column("table_name").eq(
+                    normalize_string(
+                        table.name,
+                        from_dialect="input",
+                        to_dialect="execution",
+                        to_string_literal=True,
+                    )
+                )
+            )
         )
         if table.db:
-            schema_filter: exp.Expression = exp.column("table_schema").eq(table.db)
+            schema_filter: exp.Expression = exp.column("table_schema").eq(
+                normalize_string(
+                    table.db, from_dialect="input", to_dialect="execution", to_string_literal=True
+                )
+            )
             if include_temp and self.TEMP_SCHEMA_FILTER:
                 schema_filter = exp.Or(this=schema_filter, expression=self.TEMP_SCHEMA_FILTER)
             select = select.where(schema_filter)
         if table.catalog:
-            catalog_filter: exp.Expression = exp.column("table_catalog").eq(table.catalog)
+            catalog_filter: exp.Expression = exp.column("table_catalog").eq(
+                normalize_string(
+                    table.catalog,
+                    from_dialect="input",
+                    to_dialect="execution",
+                    to_string_literal=True,
+                )
+            )
             if include_temp and self.TEMP_CATALOG_FILTER:
                 catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
             select = select.where(catalog_filter)
-        results = self.session._fetch_rows(select)
+        results = self.session._collect(select, skip_normalization=True)
         return [
             Column(
-                name=x["column_name"],
+                name=normalize_string(
+                    x["column_name"], from_dialect="execution", to_dialect="output"
+                ),
                 description=None,
-                dataType=x["data_type"],
+                dataType=normalize_string(
+                    x["data_type"], from_dialect="execution", to_dialect="output", is_datatype=True
+                ),
                 nullable=x["is_nullable"] == "YES",
                 isPartition=False,
                 isBucket=False,

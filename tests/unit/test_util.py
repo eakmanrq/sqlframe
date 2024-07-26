@@ -2,6 +2,7 @@ import typing as t
 
 import pytest
 from sqlglot import exp, parse_one
+from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
 from sqlframe.base import types
 from sqlframe.base.util import quote_preserving_alias_or_name, sqlglot_to_spark

@@ -6,11 +6,8 @@ import typing as t
 
 from sqlglot import exp as sqlglot_expression
 
-import sqlframe.base.functions
 from sqlframe.base.util import (
-    format_time_from_spark,
     get_func_from_session,
-    spark_default_time_format,
 )
 from sqlframe.bigquery.column import Column
 
@@ -155,14 +152,13 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
     session: _BaseSession = _BaseSession()
-    lit = get_func_from_session("lit")
 
     expressions = [Column.ensure_col(col).expression]
     return Column(
         sqlglot_expression.Anonymous(
             this="FORMAT_TIMESTAMP",
             expressions=[
-                lit(session.default_time_format).expression,
+                session.format_time(format),
                 Column(
                     sqlglot_expression.Anonymous(this="TIMESTAMP_SECONDS", expressions=expressions)
                 ).expression,
@@ -174,9 +170,9 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
 
-    format = lit(format or spark_default_time_format())
+    lit = get_func_from_session("lit")
     return Column(
         sqlglot_expression.Anonymous(
             this="UNIX_SECONDS",
@@ -184,7 +180,7 @@ def unix_timestamp(
                 sqlglot_expression.Anonymous(
                     this="PARSE_TIMESTAMP",
                     expressions=[
-                        format_time_from_spark(format).expression,
+                        _BaseSession().format_time(format),
                         Column.ensure_col(timestamp).expression,
                         lit("UTC").expression,
                     ],

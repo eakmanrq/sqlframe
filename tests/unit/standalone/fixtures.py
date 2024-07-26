@@ -17,7 +17,11 @@ if t.TYPE_CHECKING:
 @pytest.fixture(scope="function")
 def sqlf_sf() -> StandaloneSession:
     return StandaloneSession.builder.config(
-        map={"sqlframe.input.dialect": "snowflake", "sqlframe.output.dialect": "snowflake"}
+        map={
+            "sqlframe.input.dialect": "snowflake",
+            "sqlframe.execution.dialect": "snowflake",
+            "sqlframe.output.dialect": "snowflake",
+        }
     ).getOrCreate()
 
 

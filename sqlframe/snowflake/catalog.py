@@ -9,7 +9,6 @@ import typing as t
 from sqlglot import exp, parse_one
 
 from sqlframe.base.catalog import Function, _BaseCatalog
-from sqlframe.base.decorators import normalize
 from sqlframe.base.mixins.catalog_mixins import (
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
@@ -20,7 +19,7 @@ from sqlframe.base.mixins.catalog_mixins import (
     SetCurrentCatalogFromUseMixin,
     SetCurrentDatabaseFromUseMixin,
 )
-from sqlframe.base.util import schema_, to_schema
+from sqlframe.base.util import normalize_string, schema_, to_schema
 
 if t.TYPE_CHECKING:
     from sqlframe.snowflake.session import SnowflakeSession  # noqa
@@ -39,8 +38,8 @@ class SnowflakeCatalog(
     _BaseCatalog["SnowflakeSession", "SnowflakeDataFrame"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
+    UPPERCASE_INFO_SCHEMA = True
 
-    @normalize(["dbName"])
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
     ) -> t.List[Function]:
@@ -83,54 +82,95 @@ class SnowflakeCatalog(
         """
         if dbName is None:
             schema = schema_(
-                db=exp.parse_identifier(self.currentDatabase(), dialect=self.session.input_dialect),
+                db=exp.parse_identifier(
+                    self.currentDatabase(), dialect=self.session.output_dialect
+                ),
                 catalog=exp.parse_identifier(
-                    self.currentCatalog(), dialect=self.session.input_dialect
+                    self.currentCatalog(), dialect=self.session.output_dialect
                 ),
             )
         else:
+            dbName = normalize_string(dbName, from_dialect="input", is_schema=True)
             schema = to_schema(dbName, dialect=self.session.input_dialect)
             if not schema.catalog:
-                schema.set("catalog", exp.parse_identifier(self.currentCatalog()))
+                schema.set(
+                    "catalog",
+                    exp.parse_identifier(
+                        self.currentCatalog(), dialect=self.session.output_dialect
+                    ),
+                )
         query = parse_one(
             f"""SHOW USER FUNCTIONS IN {schema.sql(dialect=self.session.input_dialect)}""",
             dialect=self.session.input_dialect,
         )
-        functions = self.session._fetch_rows(query)
-        if pattern:
-            functions = [x for x in functions if fnmatch.fnmatch(x["name"], pattern)]
-        return [
+        functions = [
             Function(
-                name=x["name"],
-                catalog=x["catalog_name"],
-                namespace=[x["schema_name"]],
+                name=normalize_string(x["name"], from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(
+                    x["catalog_name"], from_dialect="execution", to_dialect="output"
+                ),
+                namespace=[
+                    normalize_string(
+                        x["schema_name"], from_dialect="execution", to_dialect="output"
+                    )
+                ],
                 description=None,
                 className="",
                 isTemporary=False,
             )
-            for x in functions
+            for x in self.session._collect(query)
         ]
+        if pattern:
+            normalized_pattern = normalize_string(
+                pattern, from_dialect="input", to_dialect="output", is_pattern=True
+            )
+            functions = [x for x in functions if fnmatch.fnmatch(x.name, normalized_pattern)]
+        return functions
 
-    @normalize(["table_name"])
-    def get_columns(self, table_name: str) -> t.Dict[str, exp.DataType]:
-        table = exp.to_table(table_name)
+    def get_columns(self, table: exp.Table | str) -> t.Dict[str, exp.DataType]:
+        table = (
+            normalize_string(table, from_dialect="input", is_table=True)
+            if isinstance(table, str)
+            else table
+        )
+        table = exp.to_table(table, dialect=self.session.input_dialect)
         if not table.catalog:
             table.set(
                 "catalog",
-                exp.parse_identifier(self.currentCatalog(), dialect=self.session.input_dialect),
+                exp.parse_identifier(
+                    normalize_string(
+                        self.currentCatalog(), from_dialect="output", to_dialect="input"
+                    ),
+                    dialect=self.session.input_dialect,
+                ),
             )
         if not table.db:
             table.set(
                 "db",
-                exp.parse_identifier(self.currentDatabase(), dialect=self.session.input_dialect),
+                exp.parse_identifier(
+                    normalize_string(
+                        self.currentDatabase(), from_dialect="output", to_dialect="input"
+                    ),
+                    dialect=self.session.input_dialect,
+                ),
             )
         sql = f"SHOW COLUMNS IN TABLE {table.sql(dialect=self.session.input_dialect)}"
-        results = self.session._fetch_rows(sql)
+        results = self.session._collect(sql)
         return {
-            exp.column(row["column_name"], quoted=True).sql(
-                dialect=self.session.input_dialect
+            normalize_string(
+                row["column_name"],
+                from_dialect="execution",
+                to_dialect="output",
+                is_column=True,
             ): exp.DataType.build(
-                json.loads(row["data_type"])["type"], dialect=self.session.input_dialect, udt=True
+                normalize_string(
+                    json.loads(row["data_type"])["type"],
+                    from_dialect="execution",
+                    to_dialect="output",
+                    is_datatype=True,
+                ),
+                dialect=self.session.output_dialect,
+                udt=True,
             )
             for row in results
         }

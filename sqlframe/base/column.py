@@ -7,11 +7,11 @@ import math
 import typing as t
 
 import sqlglot
+from sqlglot import Dialect
 from sqlglot import expressions as exp
 from sqlglot.helper import flatten, is_iterable
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
-from sqlframe.base.decorators import normalize
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.types import DataType
 from sqlframe.base.util import get_func_from_session, quote_preserving_alias_or_name
@@ -338,13 +338,17 @@ class Column:
         new_expression = exp.Not(this=exp.Is(this=self.column_expression, expression=exp.Null()))
         return Column(new_expression)
 
-    def cast(self, dataType: t.Union[str, DataType]) -> Column:
+    def cast(
+        self, dataType: t.Union[str, DataType], dialect: t.Optional[t.Union[str, Dialect]] = None
+    ) -> Column:
         from sqlframe.base.session import _BaseSession
 
         if isinstance(dataType, DataType):
             dataType = dataType.simpleString()
         return Column(
-            exp.cast(self.column_expression, dataType, dialect=_BaseSession().input_dialect)
+            exp.cast(
+                self.column_expression, dataType, dialect=dialect or _BaseSession().input_dialect
+            )
         )
 
     def startswith(self, value: t.Union[str, Column]) -> Column:

@@ -147,21 +147,20 @@ def test_lit(get_session_and_func, arg, expected):
 
 
 @pytest.mark.parametrize(
-    "arg",
+    "input, output",
     [
-        "employee_id",
-        "employee id",
+        ("employee_id", "employee_id"),
+        ("employee id", "`employee id`"),
     ],
 )
-def test_col(get_session_and_func, arg):
+def test_col(get_session_and_func, input, output):
     session, col = get_session_and_func("col")
-    df = session.createDataFrame([(1,)], schema=[arg])
-    result = df.select(col(arg)).first()
-    if isinstance(session, SnowflakeSession):
-        if arg != "employee id":
-            arg = arg.upper()
+    if isinstance(session, PySparkSession):
+        output = output.replace("`", "")
+    df = session.createDataFrame([(1,)], schema=[input])
+    result = df.select(col(input)).first()
     assert result[0] == 1
-    assert result.__fields__[0] == arg
+    assert result.__fields__[0] == output
 
 
 @pytest.mark.parametrize(
@@ -186,7 +185,9 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
     # it won't do this though if there is another column so that is why we include an ignore column
     df = session.createDataFrame([(1, arg)], schema=["ignore_col", "col"])
     dialect = (
-        "spark" if isinstance(session, PySparkSession) else dialect_to_string(session.input_dialect)
+        "spark"
+        if isinstance(session, PySparkSession)
+        else dialect_to_string(session.execution_dialect)
     )
     if isinstance(session, (SparkSession, PySparkSession)):
         if expected == "timestamptz":
@@ -231,13 +232,12 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
 def test_alias(get_session_and_func):
     session, col = get_session_and_func("col")
     df = session.createDataFrame([(1,)], schema=["employee_id"])
-    if isinstance(session, SnowflakeSession):
-        assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "TEST"
-    else:
-        assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
+    assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
-    if isinstance(session, (DuckDBSession, BigQuerySession, SparkSession)):
-        assert space_result == "a space in new name"
+    if isinstance(
+        session, (DuckDBSession, BigQuerySession, PostgresSession, SnowflakeSession, SparkSession)
+    ):
+        assert space_result == "`a space in new name`"
     else:
         assert space_result == "A Space In New Name"
 
@@ -297,7 +297,7 @@ def test_max_by(get_session_and_func):
         ],
         schema=("course", "year", "earnings"),
     )
-    assert df.groupby("course").agg(max_by("year", "earnings")).collect() == [
+    assert df.groupby("course").agg(max_by("year", "earnings")).orderBy("course").collect() == [
         Row(value="Java", value2=2013),
         Row(value="dotNET", value2=2013),
     ]
@@ -314,7 +314,7 @@ def test_min_by(get_session_and_func):
         ],
         schema=("course", "year", "earnings"),
     )
-    assert df.groupby("course").agg(min_by("year", "earnings")).collect() == [
+    assert df.groupby("course").agg(min_by("year", "earnings")).orderBy("course").collect() == [
         Row(value="Java", value2=2012),
         Row(value="dotNET", value2=2012),
     ]
@@ -1075,7 +1075,7 @@ def test_struct(get_session_and_func):
     expected = (
         [Row(value=Row(age=2, name="Alice")), Row(value=Row(age=5, name="Bob"))]
         if not isinstance(session, SnowflakeSession)
-        else [Row(value={"AGE": 2, "NAME": "Alice"}), Row(value={"AGE": 5, "NAME": "Bob"})]
+        else [Row(value={"age": 2, "name": "Alice"}), Row(value={"age": 5, "name": "Bob"})]
     )
     assert df.select(struct("age", "name").alias("struct")).collect() == expected
     assert df.select(struct([df.age, df.name]).alias("struct")).collect() == expected
@@ -1425,10 +1425,7 @@ def test_to_timestamp(get_session_and_func):
     session, to_timestamp = get_session_and_func("to_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     result = df.select(to_timestamp(df.t).alias("dt")).first()[0]
-    if isinstance(session, (BigQuerySession, PostgresSession)):
-        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
-    else:
-        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[0]
     if isinstance(session, (BigQuerySession, DuckDBSession)):
         assert result == datetime.datetime(
@@ -1472,7 +1469,6 @@ def test_date_trunc(get_session_and_func):
         1,
         0,
         0,
-        tzinfo=datetime.timezone.utc if isinstance(session, BigQuerySession) else None,
     )
     assert df.select(date_trunc("month", df.t).alias("month")).first()[0] == datetime.datetime(
         1997,
@@ -1480,7 +1476,6 @@ def test_date_trunc(get_session_and_func):
         1,
         0,
         0,
-        tzinfo=datetime.timezone.utc if isinstance(session, BigQuerySession) else None,
     )
 
 
@@ -2127,15 +2122,14 @@ def test_create_map(get_session_and_func, get_func):
     session, create_map = get_session_and_func("create_map")
     col = get_func("col", session)
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
+    expected = (
+        [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
+        if isinstance(session, (SparkSession, PySparkSession))
+        else [Row(value={"alice": 2}), Row(value={"bob": 5})]
+    )
     # Added the cast for age for Snowflake so the data type would be correct
-    assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == [
-        Row(value={"Alice": 2}),
-        Row(value={"Bob": 5}),
-    ]
-    assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == [
-        Row(value={"Alice": 2}),
-        Row(value={"Bob": 5}),
-    ]
+    assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == expected
+    assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == expected
 
 
 def test_map_from_arrays(get_session_and_func):
@@ -2726,11 +2720,13 @@ def test_map_keys(get_session_and_func):
     session, map_keys = get_session_and_func("map_keys")
     if isinstance(session, SnowflakeSession):
         sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as data"
+        # Ideally this would be ["a", "b"] since it would be normalized for Spark but all I get back is a list
+        # of values and I wouldn't know if those values represent columns or not
         expected = ["A", "B"]
     else:
-        sql = "SELECT map(1, 'a', 2, 'b') as data"
-        expected = [1, 2]
-    df = session.sql(sql)
+        sql = "SELECT map('a', 1, 'b', 2) as data"
+        expected = ["a", "b"]
+    df = session.sql(sql, dialect="snowflake" if isinstance(session, SnowflakeSession) else None)
     assert df.select(map_keys("data").alias("keys")).first()[0] == expected
 
 
@@ -2775,7 +2771,7 @@ def test_map_concat(get_session_and_func):
     session, map_concat = get_session_and_func("map_concat")
     if isinstance(session, SnowflakeSession):
         sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as map1, {'c': 3}::MAP(VARCHAR, NUMBER) as map2"
-        expected = {"A": 1, "B": 2, "C": 3}
+        expected = {"a": 1, "b": 2, "c": 3}
     else:
         sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
         expected = {1: "a", 2: "b", 3: "c"}

@@ -195,7 +195,7 @@ def test_list_columns(redshift_session: RedshiftSession):
         Column(
             name="id",
             description=None,
-            dataType="integer",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -203,7 +203,7 @@ def test_list_columns(redshift_session: RedshiftSession):
         Column(
             name="name",
             description=None,
-            dataType="character varying",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -218,7 +218,7 @@ def test_list_columns_use_db_name(redshift_session: RedshiftSession):
         Column(
             name="id",
             description=None,
-            dataType="integer",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -226,7 +226,7 @@ def test_list_columns_use_db_name(redshift_session: RedshiftSession):
         Column(
             name="name",
             description=None,
-            dataType="character varying",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

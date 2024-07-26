@@ -14,10 +14,7 @@ from sqlglot.helper import flatten as _flatten
 from sqlframe.base.column import Column
 from sqlframe.base.decorators import func_metadata as meta
 from sqlframe.base.util import (
-    format_time_from_spark,
     get_func_from_session,
-    spark_default_date_format,
-    spark_default_time_format,
 )
 
 if t.TYPE_CHECKING:
@@ -699,10 +696,12 @@ def current_timestamp() -> Column:
 
 @meta()
 def date_format(col: ColumnOrName, format: str) -> Column:
+    from sqlframe.base.session import _BaseSession
+
     return Column.invoke_expression_over_column(
         Column(expression.TimeStrToTime(this=Column.ensure_col(col).expression)),
         expression.TimeToStr,
-        format=format_time_from_spark(format),
+        format=_BaseSession().format_time(format),
     )
 
 
@@ -882,20 +881,23 @@ def months_between(
 
 @meta()
 def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    format = lit(format or spark_default_date_format())
+    from sqlframe.base.session import _BaseSession
+
+    # format = lit(format or spark_default_date_format())
     if format is not None:
         return Column.invoke_expression_over_column(
-            col, expression.TsOrDsToDate, format=format_time_from_spark(format)
+            col, expression.TsOrDsToDate, format=_BaseSession().format_time(format)
         )
     return Column.invoke_expression_over_column(col, expression.TsOrDsToDate)
 
 
 @meta()
 def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    format = lit(format or spark_default_time_format())
+    from sqlframe.base.session import _BaseSession
+
     if format is not None:
         return Column.invoke_expression_over_column(
-            col, expression.StrToTime, format=format_time_from_spark(format)
+            col, expression.StrToTime, format=_BaseSession().format_time(format)
         )
 
     return Column.ensure_col(col).cast("timestamp")
@@ -927,11 +929,12 @@ def last_day(col: ColumnOrName) -> Column:
 
 @meta()
 def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    format = lit(format or spark_default_time_format())
+    from sqlframe.base.session import _BaseSession
+
     return Column.invoke_expression_over_column(
         col,
         expression.UnixToStr,
-        format=format_time_from_spark(format),  # type: ignore
+        format=_BaseSession().format_time(format),
     )
 
 
@@ -939,11 +942,12 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
-    format = lit(format or spark_default_time_format())
+    from sqlframe.base.session import _BaseSession
+
     return Column.invoke_expression_over_column(
         timestamp,
         expression.StrToUnix,
-        format=format_time_from_spark(format),  # type: ignore
+        format=_BaseSession().format_time(format),
     ).cast("bigint")
 
 
@@ -5133,10 +5137,11 @@ def to_unix_timestamp(
     [Row(r=None)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
-    format = lit(spark_default_time_format()) if format is None else format
+    from sqlframe.base.session import _BaseSession
+
     if format is not None:
         return Column.invoke_expression_over_column(
-            timestamp, expression.StrToUnix, format=format_time_from_spark(format)
+            timestamp, expression.StrToUnix, format=_BaseSession().format_time(format)
         )
     else:
         return Column.invoke_expression_over_column(timestamp, expression.StrToUnix)
@@ -5323,8 +5328,13 @@ def try_to_timestamp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None)
     >>> df.select(try_to_timestamp(df.t, lit('yyyy-MM-dd HH:mm:ss')).alias('dt')).collect()
     [Row(dt=datetime.datetime(1997, 2, 28, 10, 30))]
     """
-    format = lit(format or spark_default_time_format())
-    return Column.invoke_anonymous_function(col, "try_to_timestamp", format_time_from_spark(format))  # type: ignore
+    from sqlframe.base.session import _BaseSession
+
+    return Column.invoke_anonymous_function(
+        col,
+        "try_to_timestamp",
+        _BaseSession().format_execution_time(format),  # type: ignore
+    )
 
 
 @meta()

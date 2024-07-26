@@ -90,7 +90,7 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
             from_clause = f"read_{format}([{paths}], {to_csv(options)})"
         else:
             from_clause = f"'{path}'"
-        df = self.session.sql(exp.select(*select_columns).from_(from_clause), optimize=False)
+        df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
         self.session._last_loaded_file = path  # type: ignore
         return df
 
@@ -103,9 +103,10 @@ class DuckDBDataFrameWriter(_BaseDataFrameWriter["DuckDBSession", "DuckDBDataFra
         if mode == "append":
             raise NotImplementedError("Append mode not supported")
         options = to_csv(options, equality_char=" ")  # type: ignore
-        sqls = self._df.sql(pretty=False, optimize=False, as_list=True)
-        for i, sql in enumerate(sqls):
-            if i < len(sqls) - 1:
-                self._df.session._fetch_rows(sql)
+        expressions = self._df._get_expressions()
+        for i, expression in enumerate(expressions):
+            if i < len(expressions) - 1:
+                self._df.session._collect(expressions)
             else:
-                self._df.session._fetch_rows(f"COPY ({sqls[0]}) TO '{path}' ({options})")
+                sql = self._df.session._to_sql(expression)
+                self._df.session._collect(f"COPY ({sql}) TO '{path}' ({options})")

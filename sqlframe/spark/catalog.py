@@ -14,6 +14,7 @@ from sqlframe.base.catalog import (
     _BaseCatalog,
 )
 from sqlframe.base.types import DataType, StructType
+from sqlframe.base.util import normalize_string
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import StorageLevel, UserDefinedFunctionLike
@@ -54,7 +55,16 @@ class SparkCatalog(
         >>> spark.catalog.getDatabase("spark_catalog.default")
         Database(name='default', catalog='spark_catalog', description='default database', ...
         """
-        return Database(*self._spark_catalog.getDatabase(dbName))
+        dbName = normalize_string(
+            dbName, from_dialect="input", to_dialect="execution", is_schema=True
+        )
+        resp = self._spark_catalog.getDatabase(dbName)
+        return Database(
+            name=normalize_string(resp.name, from_dialect="execution", to_dialect="output"),
+            catalog=normalize_string(resp.catalog, from_dialect="execution", to_dialect="output"),
+            description=resp.description,
+            locationUri=resp.locationUri,
+        )
 
     def databaseExists(self, dbName: str) -> bool:
         """Check if the database with the specified name exists.
@@ -90,6 +100,9 @@ class SparkCatalog(
         True
         >>> _ = spark.sql("DROP DATABASE test_new_database")
         """
+        dbName = normalize_string(
+            dbName, from_dialect="input", to_dialect="execution", is_schema=True
+        )
         return self._spark_catalog.databaseExists(dbName)
 
     def getTable(self, tableName: str) -> Table:
@@ -133,7 +146,21 @@ class SparkCatalog(
             ...
         AnalysisException: ...
         """
-        return Table(*self._spark_catalog.getTable(tableName))
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
+        resp = self._spark_catalog.getTable(tableName)
+        return Table(
+            name=normalize_string(resp.name, from_dialect="execution", to_dialect="output"),
+            catalog=normalize_string(resp.catalog, from_dialect="execution", to_dialect="output"),
+            namespace=[
+                normalize_string(x, from_dialect="execution", to_dialect="output")
+                for x in resp.namespace
+            ],
+            description=resp.description,
+            tableType=resp.tableType,
+            isTemporary=resp.isTemporary,
+        )
 
     def functionExists(self, functionName: str, dbName: t.Optional[str] = None) -> bool:
         """Check if the function with the specified name exists.
@@ -174,6 +201,12 @@ class SparkCatalog(
         >>> spark.catalog.functionExists("spark_catalog.default.unexisting_function")
         False
         """
+        dbName = (
+            normalize_string(dbName, from_dialect="input", to_dialect="execution")
+            if dbName
+            else None
+        )
+        functionName = normalize_string(functionName, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.functionExists(functionName, dbName)
 
     def getFunction(self, functionName: str) -> Function:
@@ -213,7 +246,23 @@ class SparkCatalog(
             ...
         AnalysisException: ...
         """
-        return Function(*self._spark_catalog.getFunction(functionName))
+        functionName = normalize_string(functionName, from_dialect="input", to_dialect="execution")
+        resp = self._spark_catalog.getFunction(functionName)
+        return Function(
+            name=normalize_string(resp.name, from_dialect="execution", to_dialect="output"),
+            catalog=normalize_string(resp.catalog, from_dialect="execution", to_dialect="output")
+            if resp.catalog
+            else None,
+            namespace=[
+                normalize_string(x, from_dialect="execution", to_dialect="output")
+                for x in resp.namespace
+            ]
+            if resp.namespace
+            else resp.namespace,
+            description=resp.description,
+            className=resp.className,
+            isTemporary=resp.isTemporary,
+        )
 
     def tableExists(self, tableName: str, dbName: t.Optional[str] = None) -> bool:
         """Check if the table or view with the specified name exists.
@@ -288,6 +337,14 @@ class SparkCatalog(
         >>> spark.catalog.tableExists("view1")
         False
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
+        dbName = (
+            normalize_string(dbName, from_dialect="input", to_dialect="execution")
+            if dbName
+            else None
+        )
         return self._spark_catalog.tableExists(tableName, dbName)
 
     def currentCatalog(self) -> str:
@@ -316,6 +373,7 @@ class SparkCatalog(
         --------
         >>> spark.catalog.setCurrentCatalog("spark_catalog")
         """
+        catalogName = normalize_string(catalogName, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.setCurrentCatalog(catalogName)
 
     def currentDatabase(self) -> str:
@@ -328,7 +386,9 @@ class SparkCatalog(
         >>> spark.catalog.currentDatabase()
         'default'
         """
-        return self._spark_catalog.currentDatabase()
+        return normalize_string(
+            self._spark_catalog.currentDatabase(), from_dialect="execution", to_dialect="output"
+        )
 
     def listDatabases(self, pattern: t.Optional[str] = None) -> t.List[Database]:
         """
@@ -360,7 +420,21 @@ class SparkCatalog(
         >>> spark.catalog.t.listDatabases("def2*")
         []
         """
-        return [Database(*x) for x in self._spark_catalog.listDatabases(pattern)]
+        pattern = (
+            normalize_string(pattern, from_dialect="input", to_dialect="execution", is_pattern=True)
+            if pattern
+            else None
+        )
+        resp = self._spark_catalog.listDatabases(pattern)
+        return [
+            Database(
+                name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(x.catalog, from_dialect="execution", to_dialect="output"),
+                description=x.description,
+                locationUri=x.locationUri,
+            )
+            for x in resp
+        ]
 
     def listCatalogs(self, pattern: t.Optional[str] = None) -> t.List[CatalogMetadata]:
         """
@@ -392,7 +466,19 @@ class SparkCatalog(
         >>> spark.catalog.t.listDatabases("def2*")
         []
         """
-        return [CatalogMetadata(*x) for x in self._spark_catalog.listCatalogs(pattern)]
+        pattern = (
+            normalize_string(pattern, from_dialect="input", to_dialect="execution", is_pattern=True)
+            if pattern
+            else None
+        )
+        resp = self._spark_catalog.listCatalogs(pattern)
+        return [
+            CatalogMetadata(
+                name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
+                description=x.description,
+            )
+            for x in resp
+        ]
 
     def setCurrentDatabase(self, dbName: str) -> None:
         """
@@ -404,6 +490,7 @@ class SparkCatalog(
         --------
         >>> spark.catalog.setCurrentDatabase("default")
         """
+        dbName = normalize_string(dbName, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.setCurrentDatabase(dbName)
 
     def listTables(
@@ -453,8 +540,21 @@ class SparkCatalog(
         >>> spark.catalog.t.listTables()
         []
         """
+        dbName = (
+            normalize_string(dbName, from_dialect="input", to_dialect="execution", is_schema=True)
+            if dbName
+            else None
+        )
+        pattern = (
+            normalize_string(pattern, from_dialect="input", to_dialect="execution", is_pattern=True)
+            if pattern
+            else None
+        )
         tables = self._spark_catalog.listTables(dbName, pattern)
         for table_name in self.spark.temp_views:
+            table_name = normalize_string(
+                table_name, from_dialect="input", to_dialect="execution", is_table=True
+            )
             if not pattern or (pattern and fnmatch.fnmatch(table_name, pattern)):
                 tables.append(
                     Table(
@@ -466,7 +566,20 @@ class SparkCatalog(
                         isTemporary=True,
                     )
                 )
-        return [Table(*x) for x in self._spark_catalog.listTables(dbName, pattern)]
+        return [
+            Table(
+                name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(x.catalog, from_dialect="execution", to_dialect="output"),
+                namespace=[
+                    normalize_string(y, from_dialect="execution", to_dialect="output")
+                    for y in x.namespace
+                ],
+                description=x.description,
+                tableType=x.tableType,
+                isTemporary=x.isTemporary,
+            )
+            for x in tables
+        ]
 
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
@@ -507,10 +620,13 @@ class SparkCatalog(
         [Column(name='name', description=None, dataType='string', nullable=True, ...
         >>> _ = spark.sql("DROP TABLE tblA")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         if df := self.spark.temp_views.get(tableName):
             return [
                 Column(
-                    name=col,
+                    name=normalize_string(col, from_dialect="execution", to_dialect="output"),
                     description=None,
                     dataType="",
                     nullable=True,
@@ -520,7 +636,16 @@ class SparkCatalog(
                 for col in df.columns
             ]
         return [
-            Column(**{name: x._asdict()[name] for name in Column._fields})
+            Column(
+                name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
+                description=x.description,
+                dataType=normalize_string(
+                    x.dataType, from_dialect="execution", to_dialect="output", is_datatype=True
+                ),
+                nullable=x.nullable,
+                isPartition=x.isPartition,
+                isBucket=x.isBucket,
+            )
             for x in self._spark_catalog.listColumns(tableName, dbName)
         ]
 
@@ -564,7 +689,34 @@ class SparkCatalog(
         >>> spark.catalog.t.listFunctions(pattern="*not_existing_func*")
         []
         """
-        return [Function(*x) for x in self._spark_catalog.listFunctions(dbName, pattern)]
+        dbName = (
+            normalize_string(dbName, from_dialect="input", to_dialect="execution")
+            if dbName
+            else None
+        )
+        pattern = (
+            normalize_string(pattern, from_dialect="input", to_dialect="execution", is_pattern=True)
+            if pattern
+            else None
+        )
+        return [
+            Function(
+                name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(x.catalog, from_dialect="execution", to_dialect="output")
+                if x.catalog
+                else None,
+                namespace=[
+                    normalize_string(y, from_dialect="execution", to_dialect="output")
+                    for y in x.namespace
+                ]
+                if x.namespace
+                else x.namespace,
+                description=x.description,
+                className=x.className,
+                isTemporary=x.isTemporary,
+            )
+            for x in self._spark_catalog.listFunctions(dbName, pattern)
+        ]
 
     def createExternalTable(
         self,
@@ -692,6 +844,7 @@ class SparkCatalog(
             ...
         AnalysisException: ...
         """
+        viewName = normalize_string(viewName, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.dropTempView(viewName)
 
     def dropGlobalTempView(self, viewName: str) -> bool:
@@ -729,6 +882,7 @@ class SparkCatalog(
             ...
         AnalysisException: ...
         """
+        viewName = normalize_string(viewName, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.dropGlobalTempView(viewName)
 
     def registerFunction(
@@ -745,6 +899,7 @@ class SparkCatalog(
         .. versionchanged:: 3.4.0
             Supports Spark Connect.
         """
+        name = normalize_string(name, from_dialect="input", to_dialect="execution")
         return self._spark_catalog.registerFunction(name, f, returnType)
 
     def isCached(self, tableName: str) -> bool:
@@ -787,6 +942,9 @@ class SparkCatalog(
         >>> spark.catalog.uncacheTable("tbl1")
         >>> _ = spark.sql("DROP TABLE tbl1")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         return self._spark_catalog.isCached(tableName)
 
     def cacheTable(self, tableName: str, storageLevel: t.Optional[StorageLevel] = None) -> None:
@@ -832,6 +990,9 @@ class SparkCatalog(
         >>> spark.catalog.uncacheTable("tbl1")
         >>> _ = spark.sql("DROP TABLE tbl1")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         return self._spark_catalog.cacheTable(tableName, storageLevel)
 
     def uncacheTable(self, tableName: str) -> None:
@@ -870,6 +1031,9 @@ class SparkCatalog(
         False
         >>> _ = spark.sql("DROP TABLE tbl1")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         return self._spark_catalog.uncacheTable(tableName)
 
     def clearCache(self) -> None:
@@ -935,6 +1099,9 @@ class SparkCatalog(
         >>> spark.catalog.refreshTable("spark_catalog.default.tbl1")
         >>> _ = spark.sql("DROP TABLE tbl1")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         return self._spark_catalog.refreshTable(tableName)
 
     def recoverPartitions(self, tableName: str) -> None:
@@ -978,6 +1145,9 @@ class SparkCatalog(
         +-----+---+
         >>> _ = spark.sql("DROP TABLE tbl1")
         """
+        tableName = normalize_string(
+            tableName, from_dialect="input", to_dialect="execution", is_table=True
+        )
         return self._spark_catalog.recoverPartitions(tableName)
 
     def refreshByPath(self, path: str) -> None:

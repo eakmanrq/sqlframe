@@ -1,5 +1,29 @@
 # General Configuration
 
+## Input and Output Dialect
+
+By default, SQLFrame processes all string inputs using the Spark dialect (e.g., date format strings, SQL) and generates outputs in the Spark dialect (e.g., column names, data types). 
+This configuration is ideal if you aim to use the PySpark DataFrame API as if running on Spark while actually executing on another engine.
+
+This configuration can be changed to make SQLFrame feel more like a native DataFrame API for the engine you are using.
+
+Example: Using BigQuery
+
+```python
+from sqlframe.bigquery import BigQuerySession
+
+session = BigQuerySession.builder.config(
+    map={
+        "sqlframe.input.dialect": "bigquery",
+        "sqlframe.output.dialect": "bigquery",
+    }
+).getOrCreate()
+```
+
+In this configuration, you can use BigQuery syntax for elements such as date format strings and will receive BigQuery column names and data types in the output.
+
+SQLFrame supports multiple dialects, all of which can be specific as the `input_dialect` and `output_dialect`.
+
 ## Generated SQL
 
 ### Pretty

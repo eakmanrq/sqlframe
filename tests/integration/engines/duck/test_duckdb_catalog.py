@@ -11,17 +11,18 @@ def duckdb_session() -> DuckDBSession:
     connector = duckdb.connect()
     connector.sql("set TimeZone = 'UTC'")
     session = DuckDBSession(connector)
-    session._fetch_rows('''ATTACH ':memory:' AS "default"''')
-    session._fetch_rows('''ATTACH ':memory:' AS "catalog1"''')
-    session._fetch_rows('''ATTACH ':memory:' AS "catalog2"''')
-    session._fetch_rows('''USE "default"''')
-    session._fetch_rows('CREATE SCHEMA "default"."db1"')
-    session._fetch_rows('CREATE TABLE "default"."main"."table1" (id INTEGER, name VARCHAR(100))')
-    session._fetch_rows("CREATE MACRO main.testing(a, b) AS a + b")
+    session._execute('''ATTACH ':memory:' AS "default"''')
+    session._execute('''ATTACH ':memory:' AS "catalog1"''')
+    session._execute('''ATTACH ':memory:' AS "catalog2"''')
+    session._execute('''USE "default"''')
+    session._execute('CREATE SCHEMA "default"."db1"')
+    session._execute('CREATE TABLE "default"."main"."table1" (id INTEGER, name VARCHAR(100))')
+    session._execute("CREATE MACRO main.testing(a, b) AS a + b")
     return session
 
 
 def test_current_catalog(duckdb_session: DuckDBSession):
+    # Default is considered a word that must be quoted in DuckDB
     assert duckdb_session.catalog.currentCatalog() == "default"
 
 
@@ -245,7 +246,7 @@ def test_list_columns(duckdb_session: DuckDBSession):
         Column(
             name="id",
             description=None,
-            dataType="INTEGER",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -253,7 +254,7 @@ def test_list_columns(duckdb_session: DuckDBSession):
         Column(
             name="name",
             description=None,
-            dataType="VARCHAR",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -268,7 +269,7 @@ def test_list_columns_use_db_name(duckdb_session: DuckDBSession):
         Column(
             name="id",
             description=None,
-            dataType="INTEGER",
+            dataType="INT",
             nullable=True,
             isPartition=False,
             isBucket=False,
@@ -276,7 +277,7 @@ def test_list_columns_use_db_name(duckdb_session: DuckDBSession):
         Column(
             name="name",
             description=None,
-            dataType="VARCHAR",
+            dataType="STRING",
             nullable=True,
             isPartition=False,
             isBucket=False,

@@ -3,9 +3,10 @@ from __future__ import annotations
 import typing as t
 
 from sqlglot import exp
-from sqlglot.helper import classproperty
+from sqlglot.helper import classproperty, ensure_list
 
 from sqlframe.base.session import _BaseSession
+from sqlframe.base.util import normalize_string
 from sqlframe.spark.catalog import SparkCatalog
 from sqlframe.spark.dataframe import SparkDataFrame
 from sqlframe.spark.readwriter import (
@@ -54,24 +55,49 @@ class SparkSession(
     def _cur(self) -> t.Any:
         raise NotImplementedError()
 
-    def _fetch_rows(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
+    def _collect(
+        self,
+        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        *,
+        quote_identifiers: bool = True,
+        skip_normalization: bool = False,
     ) -> t.List[Row]:
-        self._execute(sql, quote_identifiers=quote_identifiers)
+        for expression in ensure_list(expressions):
+            sql = (
+                self._to_sql(expression, quote_identifiers=quote_identifiers)
+                if isinstance(expression, exp.Expression)
+                else expression
+            )
+            self._execute(sql)  # type: ignore
         assert self._last_df is not None
-        return [Row(**row.asDict()) for row in self._last_df.collect()]
+        return [
+            Row(
+                **{
+                    normalize_string(
+                        k, from_dialect="execution", to_dialect="output", is_column=True
+                    ): v
+                    for k, v in row.asDict().items()
+                }
+            )
+            for row in self._last_df.collect()
+        ]
 
-    def _execute(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
-    ) -> None:
-        self._last_df = self.spark_session.sql(
-            self._to_sql(sql, quote_identifiers=quote_identifiers)
-        )
+    def _execute(self, sql: str) -> None:
+        self._last_df = self.spark_session.sql(sql)
 
     def _fetchdf(
-        self, sql: t.Union[str, exp.Expression], *, quote_identifiers: bool = True
+        self,
+        expressions: t.Union[exp.Expression, t.List[exp.Expression]],
+        *,
+        quote_identifiers: bool = True,
     ) -> pd.DataFrame:
-        self._execute(sql, quote_identifiers=quote_identifiers)
+        for expression in ensure_list(expressions):
+            sql = (
+                self._to_sql(expression, quote_identifiers=quote_identifiers)
+                if isinstance(expression, exp.Expression)
+                else expression
+            )
+            self._execute(sql)  # type: ignore
         assert self._last_df is not None
         return self._last_df.toPandas()
 

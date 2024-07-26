@@ -11,7 +11,7 @@ from functools import reduce
 from sqlglot import exp
 from sqlglot.helper import object_to_dict
 
-from sqlframe.base.decorators import normalize
+from sqlframe.base.util import normalize_string
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -41,20 +41,18 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
     def session(self) -> SESSION:
         return self._session
 
-    @normalize("tableName")
     def table(self, tableName: str) -> DF:
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         if df := self.session.temp_views.get(tableName):
             return df
-        table = (
-            exp.to_table(tableName, dialect=self.session.input_dialect)
-            .transform(self.session.input_dialect.normalize_identifier)
-            .assert_is(exp.Table)
-        )
+        table = exp.to_table(tableName, dialect=self.session.input_dialect).assert_is(exp.Table)
         self.session.catalog.add_table(table)
         columns = self.session.catalog.get_columns_from_schema(table)
 
         return self.session._create_df(
-            exp.Select().from_(table).select(*columns, dialect=self.session.input_dialect)
+            exp.Select()
+            .from_(tableName, dialect=self.session.input_dialect)
+            .select(*columns, dialect=self.session.input_dialect)
         )
 
     def _to_casted_columns(self, column_mapping: t.Dict) -> t.List[Column]:
@@ -385,9 +383,10 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
     def insertInto(self, tableName: str, overwrite: t.Optional[bool] = None) -> Self:
         from sqlframe.base.session import _BaseSession
 
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         output_expression_container = exp.Insert(
             **{
-                "this": exp.to_table(tableName),
+                "this": exp.to_table(tableName, dialect=_BaseSession().input_dialect),
                 "overwrite": overwrite,
             }
         )
@@ -399,8 +398,7 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
             df = df._convert_leaf_to_cte().select(*columns)
 
         if self._session._has_connection:
-            for sql in df.sql(pretty=False, optimize=False, as_list=True):
-                self._session._execute(sql)
+            df.collect()
         return self.copy(_df=df)
 
     def saveAsTable(
@@ -415,16 +413,16 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
             exists = True
         if mode == "overwrite":
             replace = True
+        name = normalize_string(name, from_dialect="input", is_table=True)
         output_expression_container = exp.Create(
-            this=exp.to_table(name),
+            this=exp.to_table(name, dialect=self._session.input_dialect),
             kind="TABLE",
             exists=exists,
             replace=replace,
         )
         df = self._df.copy(output_expression_container=output_expression_container)
         if self._session._has_connection:
-            for sql in df.sql(pretty=False, optimize=False, as_list=True):
-                self._session._execute(sql)
+            df.collect()
         return self.copy(_df=df)
 
     @staticmethod

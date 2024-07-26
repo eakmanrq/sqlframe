@@ -53,11 +53,11 @@ def test_print_schema_basic(snowflake_employee: SnowflakeDataFrame, capsys):
         captured.out.strip()
         == """
 root
- |-- EMPLOYEE_ID: decimal(38, 0) (nullable = true)
- |-- FNAME: varchar(16777216) (nullable = true)
- |-- LNAME: varchar(16777216) (nullable = true)
- |-- AGE: decimal(38, 0) (nullable = true)
- |-- STORE_ID: decimal(38, 0) (nullable = true)""".strip()
+ |-- employee_id: decimal(38, 0) (nullable = true)
+ |-- fname: string (nullable = true)
+ |-- lname: string (nullable = true)
+ |-- age: decimal(38, 0) (nullable = true)
+ |-- store_id: decimal(38, 0) (nullable = true)""".strip()
     )
 
 
@@ -68,24 +68,24 @@ def test_print_schema_nested(snowflake_datatypes: SnowflakeDataFrame, capsys):
         captured.out.strip()
         == """
 root
- |-- BIGINT_COL: decimal(38, 0) (nullable = true)
- |-- DOUBLE_COL: float (nullable = true)
- |-- STRING_COL: varchar(16777216) (nullable = true)
- |-- MAP_STRING_BIGINT__COL: map(varchar(16777216), decimal(38, 0)) (nullable = true)
- |    |-- key: varchar(16777216) (nullable = true)
+ |-- bigint_col: decimal(38, 0) (nullable = true)
+ |-- double_col: float (nullable = true)
+ |-- string_col: string (nullable = true)
+ |-- map_string_bigint__col: map<string, decimal(38, 0)> (nullable = true)
+ |    |-- key: string (nullable = true)
  |    |-- value: decimal(38, 0) (nullable = true)
- |-- ARRAY_STRUCT_A_BIGINT_B_BIGINT__: array(object(a decimal(38, 0), b decimal(38, 0))) (nullable = true)
- |    |-- element: object(a decimal(38, 0), b decimal(38, 0)) (nullable = true)
- |    |    |-- A: decimal(38, 0) (nullable = true)
- |    |    |-- B: decimal(38, 0) (nullable = true)
- |-- ARRAY_BIGINT__COL: array(decimal(38, 0)) (nullable = true)
+ |-- array_struct_a_bigint_b_bigint__: array<object<a decimal(38, 0), b decimal(38, 0)>> (nullable = true)
+ |    |-- element: object<a decimal(38, 0), b decimal(38, 0)> (nullable = true)
+ |    |    |-- a: decimal(38, 0) (nullable = true)
+ |    |    |-- b: decimal(38, 0) (nullable = true)
+ |-- array_bigint__col: array<decimal(38, 0)> (nullable = true)
  |    |-- element: decimal(38, 0) (nullable = true)
- |-- STRUCT_A_BIGINT__COL: object(a decimal(38, 0)) (nullable = true)
- |    |-- A: decimal(38, 0) (nullable = true)
- |-- DATE_COL: date (nullable = true)
- |-- TIMESTAMP_COL: timestampntz(9) (nullable = true)
- |-- TIMESTAMPTZ_COL: timestamptz(9) (nullable = true)
- |-- BOOLEAN_COL: boolean (nullable = true)""".strip()
+ |-- struct_a_bigint__col: object<a decimal(38, 0)> (nullable = true)
+ |    |-- a: decimal(38, 0) (nullable = true)
+ |-- date_col: date (nullable = true)
+ |-- timestamp_col: timestamp_ntz (nullable = true)
+ |-- timestamptz_col: timestamp (nullable = true)
+ |-- boolean_col: boolean (nullable = true)""".strip()
     )
 
 
@@ -93,15 +93,15 @@ def test_schema(snowflake_employee: SnowflakeDataFrame):
     assert isinstance(snowflake_employee.schema, types.StructType)
     struct_fields = list(snowflake_employee.schema)
     assert len(struct_fields) == 5
-    assert struct_fields[0].name == "EMPLOYEE_ID"
+    assert struct_fields[0].name == "employee_id"
     assert struct_fields[0].dataType == types.DecimalType(38, 0)
-    assert struct_fields[1].name == "FNAME"
-    assert struct_fields[1].dataType == types.VarcharType(16777216)
-    assert struct_fields[2].name == "LNAME"
-    assert struct_fields[2].dataType == types.VarcharType(16777216)
-    assert struct_fields[3].name == "AGE"
+    assert struct_fields[1].name == "fname"
+    assert struct_fields[1].dataType == types.StringType()
+    assert struct_fields[2].name == "lname"
+    assert struct_fields[2].dataType == types.StringType()
+    assert struct_fields[3].name == "age"
     assert struct_fields[3].dataType == types.DecimalType(38, 0)
-    assert struct_fields[4].name == "STORE_ID"
+    assert struct_fields[4].name == "store_id"
     assert struct_fields[4].dataType == types.DecimalType(38, 0)
 
 
@@ -109,50 +109,50 @@ def test_schema_nested(snowflake_datatypes: SnowflakeDataFrame):
     assert isinstance(snowflake_datatypes.schema, types.StructType)
     struct_fields = list(snowflake_datatypes.schema)
     assert len(struct_fields) == 11
-    assert struct_fields[0].name == "BIGINT_COL"
+    assert struct_fields[0].name == "bigint_col"
     assert struct_fields[0].dataType == types.DecimalType(38, 0)
-    assert struct_fields[1].name == "DOUBLE_COL"
+    assert struct_fields[1].name == "double_col"
     assert struct_fields[1].dataType == types.FloatType()
-    assert struct_fields[2].name == "STRING_COL"
-    assert struct_fields[2].dataType == types.VarcharType(16777216)
-    assert struct_fields[3].name == "MAP_STRING_BIGINT__COL"
+    assert struct_fields[2].name == "string_col"
+    assert struct_fields[2].dataType == types.StringType()
+    assert struct_fields[3].name == "map_string_bigint__col"
     assert struct_fields[3].dataType == types.MapType(
-        types.VarcharType(16777216),
+        types.StringType(),
         types.DecimalType(38, 0),
     )
-    assert struct_fields[4].name == "ARRAY_STRUCT_A_BIGINT_B_BIGINT__"
+    assert struct_fields[4].name == "array_struct_a_bigint_b_bigint__"
     assert struct_fields[4].dataType == types.ArrayType(
         types.StructType(
             [
                 types.StructField(
-                    "A",
+                    "a",
                     types.DecimalType(38, 0),
                 ),
                 types.StructField(
-                    "B",
+                    "b",
                     types.DecimalType(38, 0),
                 ),
             ]
         ),
     )
-    assert struct_fields[5].name == "ARRAY_BIGINT__COL"
+    assert struct_fields[5].name == "array_bigint__col"
     assert struct_fields[5].dataType == types.ArrayType(
         types.DecimalType(38, 0),
     )
-    assert struct_fields[6].name == "STRUCT_A_BIGINT__COL"
+    assert struct_fields[6].name == "struct_a_bigint__col"
     assert struct_fields[6].dataType == types.StructType(
         [
             types.StructField(
-                "A",
+                "a",
                 types.DecimalType(38, 0),
             ),
         ]
     )
-    assert struct_fields[7].name == "DATE_COL"
+    assert struct_fields[7].name == "date_col"
     assert struct_fields[7].dataType == types.DateType()
-    assert struct_fields[8].name == "TIMESTAMP_COL"
+    assert struct_fields[8].name == "timestamp_col"
     assert struct_fields[8].dataType == types.TimestampType()
-    assert struct_fields[9].name == "TIMESTAMPTZ_COL"
+    assert struct_fields[9].name == "timestamptz_col"
     assert struct_fields[9].dataType == types.TimestampType()
-    assert struct_fields[10].name == "BOOLEAN_COL"
+    assert struct_fields[10].name == "boolean_col"
     assert struct_fields[10].dataType == types.BooleanType()

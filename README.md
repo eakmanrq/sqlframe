@@ -48,6 +48,10 @@ SQLFrame generates consistently accurate yet complex SQL for engine execution.
 However, when using df.sql(), it produces more human-readable SQL. 
 For details on how to configure this output and leverage OpenAI to enhance the SQL, see [Generated SQL Configuration](https://sqlframe.readthedocs.io/en/stable/configuration/#generated-sql).
 
+SQLFrame by default uses the Spark dialect for input and output.
+This can be changed to make SQLFrame feel more like a native DataFrame API for the engine you are using.
+See [Input and Output Dialect Configuration](https://sqlframe.readthedocs.io/en/stable/configuration/#input-and-output-dialect).
+
 ## Example Usage
 
 ```python

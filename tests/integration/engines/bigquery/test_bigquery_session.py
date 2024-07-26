@@ -17,4 +17,4 @@ def test_session_from_config():
     conn.cursor().execute("CREATE TABLE IF NOT EXISTS db1.test_table (cola INT, colb STRING)")
     session = BigQuerySession.builder.config("default_dataset", "sqlframe.db1").getOrCreate()
     columns = session.catalog.get_columns("db1.test_table")
-    assert columns == {"`cola`": exp.DataType.build("BIGINT"), "`colb`": exp.DataType.build("TEXT")}
+    assert columns == {"cola": exp.DataType.build("BIGINT"), "colb": exp.DataType.build("TEXT")}

@@ -12,9 +12,7 @@ from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.util import (
-    format_time_from_spark,
     get_func_from_session,
-    spark_default_time_format,
 )
 
 if t.TYPE_CHECKING:
@@ -563,10 +561,9 @@ def to_date_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) ->
 
 def to_date_time_format(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.functions import to_date
+    from sqlframe.base.session import _BaseSession
 
-    lit = get_func_from_session("lit")
-    format = lit(format or spark_default_time_format())
-    return to_date(col, format=format)
+    return to_date(col, format=format or _BaseSession().default_time_format)
 
 
 def last_day_with_cast(col: ColumnOrName) -> Column:
@@ -728,10 +725,10 @@ def months_between_cast_as_date_cast_roundoff(
 
 
 def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
+
     col_func = get_func_from_session("col")
 
-    format = lit(format or spark_default_time_format())
     return Column.invoke_expression_over_column(
         Column(
             expression.Anonymous(
@@ -740,7 +737,7 @@ def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = No
             )
         ),
         expression.TimeToStr,
-        format=format_time_from_spark(format),  # type: ignore
+        format=_BaseSession().format_time(format),
     )
 
 
@@ -1399,7 +1396,7 @@ def hex_casted_as_bytes(col: ColumnOrName) -> Column:
     return Column(
         expression.Anonymous(
             this="TO_HEX",
-            expressions=[col_func(col).cast("bytes").expression],
+            expressions=[col_func(col).cast("bytes", dialect="bigquery").expression],
         )
     )
 
@@ -1522,11 +1519,7 @@ def to_unix_timestamp_include_default_format(
     from sqlframe.base.functions import to_unix_timestamp
     from sqlframe.base.session import _BaseSession
 
-    if not format:
-        format = _BaseSession().output_dialect.TIME_FORMAT
-    else:
-        format = format_time_from_spark(format)
-    return to_unix_timestamp(timestamp, format)
+    return to_unix_timestamp(timestamp, format or _BaseSession().default_time_format)
 
 
 def array_append_list_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
@@ -1572,36 +1565,37 @@ def endswith_using_like(str: ColumnOrName, suffix: ColumnOrName) -> Column:
 
 
 def try_to_timestamp_strptime(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
 
-    format = lit(format or spark_default_time_format())
-    return Column.invoke_anonymous_function(col, "TRY_STRPTIME", format_time_from_spark(format))  # type: ignore
+    return Column.invoke_anonymous_function(col, "TRY_STRPTIME", _BaseSession().format_time(format))  # type: ignore
 
 
 def try_to_timestamp_safe(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
 
-    format = lit(format or spark_default_time_format())
     return Column.invoke_anonymous_function(
-        format_time_from_spark(format),  # type: ignore
+        _BaseSession().format_time(format),  # type: ignore
         "SAFE.PARSE_TIMESTAMP",
         col,  # type: ignore
     )
 
 
 def try_to_timestamp_pgtemp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
-    lit = get_func_from_session("lit")
+    from sqlframe.base.session import _BaseSession
 
-    format = lit(format or spark_default_time_format())
     return Column.invoke_anonymous_function(
         col,
         "pg_temp.TRY_TO_TIMESTAMP",
-        format_time_from_spark(format),  # type: ignore
+        _BaseSession().format_execution_time(format),  # type: ignore
     )
 
 
 def typeof_pg_typeof(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "pg_typeof").cast("regtype").cast("text")
+    return (
+        Column.invoke_anonymous_function(col, "pg_typeof")
+        .cast("regtype", dialect="postgres")
+        .cast("text")
+    )
 
 
 def typeof_from_variant(col: ColumnOrName) -> Column:
