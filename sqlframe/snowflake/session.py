@@ -75,8 +75,6 @@ class SnowflakeSession(
                 self._conn._converter_class = JsonLoadsSnowflakeConverter  # type: ignore
 
     class Builder(_BaseSession.Builder):
-        # DEFAULT_INPUT_DIALECT = "snowflake"
-        # DEFAULT_OUTPUT_DIALECT = "snowflake"
         DEFAULT_EXECUTION_DIALECT = "snowflake"
 
         @property

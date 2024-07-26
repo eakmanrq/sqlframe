@@ -74,8 +74,6 @@ class BigQuerySession(
         return None
 
     class Builder(_BaseSession.Builder):
-        # DEFAULT_INPUT_DIALECT = "bigquery"
-        # DEFAULT_OUTPUT_DIALECT = "bigquery"
         DEFAULT_EXECUTION_DIALECT = "bigquery"
 
         @property

@@ -563,8 +563,6 @@ def to_date_time_format(col: ColumnOrName, format: t.Optional[str] = None) -> Co
     from sqlframe.base.functions import to_date
     from sqlframe.base.session import _BaseSession
 
-    # lit = get_func_from_session("lit")
-    # format = lit(format or spark_default_time_format())
     return to_date(col, format=format or _BaseSession().default_time_format)
 
 

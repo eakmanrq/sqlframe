@@ -68,8 +68,6 @@ $$ LANGUAGE plpgsql;""")
             raise e
 
     class Builder(_BaseSession.Builder):
-        # DEFAULT_INPUT_DIALECT = "postgres"
-        # DEFAULT_OUTPUT_DIALECT = "postgres"
         DEFAULT_EXECUTION_DIALECT = "postgres"
 
         @property
