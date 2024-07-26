@@ -41,6 +41,7 @@ else:
 
 if t.TYPE_CHECKING:
     import pandas as pd
+    from pyarrow import Table as ArrowTable
     from sqlglot.dialects.dialect import DialectType
 
     from sqlframe.base._typing import (
@@ -1547,7 +1548,10 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self._group_data(self, grouping_columns, self.last_op)
 
     def collect(self) -> t.List[Row]:
-        return self.session._collect(self._get_expressions(optimize=False))
+        return self._collect()
+
+    def _collect(self, **kwargs) -> t.List[Row]:
+        return self.session._collect(self._get_expressions(optimize=False), **kwargs)
 
     @t.overload
     def head(self) -> t.Optional[Row]: ...
@@ -1805,3 +1809,6 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         col_func = get_func_from_session("col")
 
         return self.select(covar_samp(col_func(col1), col_func(col2))).collect()[0][0]
+
+    def toArrow(self) -> ArrowTable:
+        raise NotImplementedError("Arrow conversion is not supported by this engine")

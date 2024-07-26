@@ -471,6 +471,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,
+        skip_rows: bool = False,
     ) -> t.List[Row]:
         for expression in ensure_list(expressions):
             if isinstance(expression, exp.Expression):
@@ -482,6 +483,8 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             else:
                 sql = expression  # type: ignore
             self._execute(sql)
+        if skip_rows:
+            return []
         result = self._cur.fetchall()
         if not self._cur.description:
             return []

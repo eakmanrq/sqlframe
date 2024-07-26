@@ -175,3 +175,27 @@ def test_reserved_word(duckdb_session: DuckDBSession):
         types.Row(start="2024-01-01", end="2024-05-05"),
         types.Row(start="2024-05-21", end="2024-12-05"),
     ]
+
+
+def test_to_arrow(duckdb_employee: DuckDBDataFrame):
+    arrow_table = duckdb_employee.toArrow()
+    assert arrow_table.num_rows == 5
+    assert arrow_table.num_columns == 5
+    assert arrow_table.column_names == [
+        "employee_id",
+        "fname",
+        "lname",
+        "age",
+        "store_id",
+    ]
+    assert arrow_table.column(0).to_pylist() == [1, 2, 3, 4, 5]
+    assert arrow_table.column(1).to_pylist() == ["Jack", "John", "Kate", "Claire", "Hugo"]
+    assert arrow_table.column(2).to_pylist() == [
+        "Shephard",
+        "Locke",
+        "Austen",
+        "Littleton",
+        "Reyes",
+    ]
+    assert arrow_table.column(3).to_pylist() == [37, 65, 37, 27, 29]
+    assert arrow_table.column(4).to_pylist() == [1, 1, 2, 2, 100]
