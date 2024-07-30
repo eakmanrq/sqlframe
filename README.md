@@ -86,7 +86,7 @@ df = (
 )
 ```
 ```python
->>> df.sql()
+>>> df.sql(optimize=True)
 WITH `t94228` AS (
   SELECT
     `natality`.`year` AS `year`,

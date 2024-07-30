@@ -536,9 +536,6 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
         return [col]
 
-    def _sql(self) -> str:
-        return self.session._to_sql(self.expression, dialect=self.session.execution_dialect)
-
     def _get_expressions(
         self,
         optimize: bool = True,
