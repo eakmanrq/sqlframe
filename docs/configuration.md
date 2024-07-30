@@ -7,7 +7,7 @@ This configuration is ideal if you aim to use the PySpark DataFrame API as if ru
 
 This configuration can be changed to make SQLFrame feel more like a native DataFrame API for the engine you are using.
 
-Example: Using BigQuery
+Example: Using BigQuery to Change Default Behavior
 
 ```python
 from sqlframe.bigquery import BigQuerySession
@@ -52,7 +52,9 @@ SELECT CAST(`a3`.`a` AS BIGINT) AS `a`, CAST(`a3`.`b` AS BIGINT) AS `b` FROM VAL
 
 ### Optimized
 
-Optimized SQL is SQL that has been processed by SQLGlot's optimizer. For complex queries this will significantly reduce the number of CTEs produced and remove extra unused columns. Defaults to `True`.
+Optimized SQL is SQL that has been processed by SQLGlot's optimizer. 
+For complex queries this will significantly reduce the number of CTEs produced and remove extra unused columns. 
+Defaults to `False`.
 
 ```python
 from sqlframe.bigquery import BigQuerySession
@@ -201,7 +203,9 @@ LIMIT 5
 
 ### Override Dialect
 
-The dialect of the generated SQL will be based on the session's dialect. However, you can override the dialect by passing a string to the `dialect` parameter. This is useful when you want to generate SQL for a different database.
+The dialect of the generated SQL will be based on the session's output dialect. 
+However, you can override the dialect by passing a string to the `dialect` parameter. 
+This is useful when you want to generate SQL for a different database.
 
 ```python
 # create session and `df` like normal
