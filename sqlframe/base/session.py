@@ -27,6 +27,7 @@ from sqlframe.base.catalog import _BaseCatalog
 from sqlframe.base.dataframe import _BaseDataFrame
 from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
+from sqlframe.base.udf import _BaseUDFRegistration
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
     normalize_string,
@@ -64,16 +65,18 @@ CATALOG = t.TypeVar("CATALOG", bound=_BaseCatalog)
 READER = t.TypeVar("READER", bound=_BaseDataFrameReader)
 WRITER = t.TypeVar("WRITER", bound=_BaseDataFrameWriter)
 DF = t.TypeVar("DF", bound=_BaseDataFrame)
+UDF_REGISTRATION = t.TypeVar("UDF_REGISTRATION", bound=_BaseUDFRegistration)
 
 _MISSING = "MISSING"
 
 
-class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
+class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION]):
     _instance = None
     _reader: t.Type[READER]
     _writer: t.Type[WRITER]
     _catalog: t.Type[CATALOG]
     _df: t.Type[DF]
+    _udf_registration: t.Type[UDF_REGISTRATION]
 
     SANITIZE_COLUMN_NAMES = False
 
@@ -81,7 +84,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
         self,
         conn: t.Optional[CONN] = None,
         schema: t.Optional[MappingSchema] = None,
-        case_sensitive: bool = False,
         *args,
         **kwargs,
     ):
@@ -91,11 +93,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             self.execution_dialect: Dialect = Dialect.get_or_raise(
                 self.builder.DEFAULT_EXECUTION_DIALECT
             )
-            self.case_sensitive: bool = case_sensitive
-            if self.case_sensitive:
-                self.input_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
-                self.output_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
-                self.execution_dialect.NORMALIZATION_STRATEGY = NormalizationStrategy.CASE_SENSITIVE
             self.known_ids: t.Set[str] = set()
             self.known_branch_ids: t.Set[str] = set()
             self.known_sequence_ids: t.Set[str] = set()
@@ -175,6 +172,13 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
     @property
     def _has_connection(self) -> bool:
         return hasattr(self, "_connection") and bool(self._connection)
+
+    @property
+    def udf(self) -> UDF_REGISTRATION:
+        return self._udf_registration(self)
+
+    def getActiveSession(self) -> Self:
+        return self
 
     def range(self, *args):
         start = 0
@@ -573,53 +577,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             converted_values.append(cls._to_value(value))
         return _create_row(columns, converted_values)
 
-    @property
-    def _is_standalone(self) -> bool:
-        from sqlframe.standalone.session import StandaloneSession
-
-        return isinstance(self, StandaloneSession)
-
-    @property
-    def _is_duckdb(self) -> bool:
-        from sqlframe.duckdb.session import DuckDBSession
-
-        return isinstance(self, DuckDBSession)
-
-    @property
-    def _is_postgres(self) -> bool:
-        from sqlframe.postgres.session import PostgresSession
-
-        return isinstance(self, PostgresSession)
-
-    @property
-    def _is_spark(self) -> bool:
-        from sqlframe.spark.session import SparkSession
-
-        return isinstance(self, SparkSession)
-
-    @property
-    def _is_bigquery(self) -> bool:
-        from sqlframe.bigquery.session import BigQuerySession
-
-        return isinstance(self, BigQuerySession)
-
-    @property
-    def _is_redshift(self) -> bool:
-        from sqlframe.redshift.session import RedshiftSession
-
-        return isinstance(self, RedshiftSession)
-
-    @property
-    def _is_snowflake(self) -> bool:
-        from sqlframe.snowflake.session import SnowflakeSession
-
-        return isinstance(self, SnowflakeSession)
-
     class Builder:
         SQLFRAME_INPUT_DIALECT_KEY = "sqlframe.input.dialect"
         SQLFRAME_OUTPUT_DIALECT_KEY = "sqlframe.output.dialect"
         SQLFRAME_EXECUTION_DIALECT_KEY = "sqlframe.execution.dialect"
-        SQLFRAME_CASE_SENSITIVE_KEY = "spark.sql.caseSensitive"
         SQLFRAME_CONN_KEY = "sqlframe.conn"
         SQLFRAME_SCHEMA_KEY = "sqlframe.schema"
         DEFAULT_INPUT_DIALECT = "spark"
@@ -665,8 +626,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
                     self._session_kwargs["conn"] = value
                 elif key == self.SQLFRAME_SCHEMA_KEY:
                     self._session_kwargs["schema"] = value
-                elif key == self.SQLFRAME_CASE_SENSITIVE_KEY:
-                    self._session_kwargs["case_sensitive"] = value
                 else:
                     self._session_kwargs[key] = value
             if map:
@@ -676,8 +635,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
                     self.output_dialect = map[self.SQLFRAME_OUTPUT_DIALECT_KEY]
                 if self.SQLFRAME_EXECUTION_DIALECT_KEY in map:
                     self.execution_dialect = map[self.SQLFRAME_EXECUTION_DIALECT_KEY]
-                if self.SQLFRAME_CASE_SENSITIVE_KEY in map:
-                    self._session_kwargs["case_sensitive"] = map[self.SQLFRAME_CASE_SENSITIVE_KEY]
                 if self.SQLFRAME_CONN_KEY in map:
                     self._session_kwargs["conn"] = map[self.SQLFRAME_CONN_KEY]
                 if self.SQLFRAME_SCHEMA_KEY in map:
@@ -700,15 +657,5 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN]):
             self.session.execution_dialect = Dialect.get_or_raise(self.execution_dialect)
             if hasattr(self.session, "_connection") and not self.session._connection:
                 self.session._connection = self._conn
-            if self.session.case_sensitive:
-                self.session.input_dialect.NORMALIZATION_STRATEGY = (
-                    NormalizationStrategy.CASE_SENSITIVE
-                )
-                self.session.output_dialect.NORMALIZATION_STRATEGY = (
-                    NormalizationStrategy.CASE_SENSITIVE
-                )
-                self.session.execution_dialect.NORMALIZATION_STRATEGY = (
-                    NormalizationStrategy.CASE_SENSITIVE
-                )
 
     builder = Builder()

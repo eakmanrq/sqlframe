@@ -14,6 +14,7 @@ from sqlframe.spark.readwriter import (
     SparkDataFrameWriter,
 )
 from sqlframe.spark.types import Row
+from sqlframe.spark.udf import SparkUDFRegistration
 
 if t.TYPE_CHECKING:
     import pandas as pd
@@ -32,12 +33,14 @@ class SparkSession(
         SparkDataFrameWriter,
         SparkDataFrame,
         PySparkSession,
+        SparkUDFRegistration,
     ],
 ):
     _catalog = SparkCatalog
     _reader = SparkDataFrameReader
     _writer = SparkDataFrameWriter
     _df = SparkDataFrame
+    _udf_registration = SparkUDFRegistration
 
     def __init__(self, conn: t.Optional[PySparkSession] = None, *args, **kwargs):
         from pyspark.sql.session import DataFrame, SparkSession

@@ -4,6 +4,8 @@ import json
 import typing as t
 import warnings
 
+from sqlframe.snowflake.udf import SnowflakeUDFRegistration
+
 try:
     from snowflake.connector.converter import SnowflakeConverter
 except ImportError:
@@ -50,12 +52,14 @@ class SnowflakeSession(
         SnowflakeDataFrameWriter,
         SnowflakeDataFrame,
         SnowflakeConnection,
+        SnowflakeUDFRegistration,
     ],
 ):
     _catalog = SnowflakeCatalog
     _reader = SnowflakeDataFrameReader
     _writer = SnowflakeDataFrameWriter
     _df = SnowflakeDataFrame
+    _udf_registration = SnowflakeUDFRegistration
 
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):
         import snowflake

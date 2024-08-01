@@ -11,6 +11,7 @@ from sqlframe.postgres.readwriter import (
     PostgresDataFrameReader,
     PostgresDataFrameWriter,
 )
+from sqlframe.postgres.udf import PostgresUDFRegistration
 
 if t.TYPE_CHECKING:
     from psycopg2.extensions import connection as psycopg2_connection
@@ -27,12 +28,14 @@ class PostgresSession(
         PostgresDataFrameWriter,
         PostgresDataFrame,
         psycopg2_connection,
+        PostgresUDFRegistration,
     ],
 ):
     _catalog = PostgresCatalog
     _reader = PostgresDataFrameReader
     _writer = PostgresDataFrameWriter
     _df = PostgresDataFrame
+    _udf_registration = PostgresUDFRegistration
 
     def __init__(self, conn: t.Optional[psycopg2_connection] = None):
         if not hasattr(self, "_conn"):
