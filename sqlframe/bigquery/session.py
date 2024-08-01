@@ -9,6 +9,7 @@ from sqlframe.bigquery.readwriter import (
     BigQueryDataFrameReader,
     BigQueryDataFrameWriter,
 )
+from sqlframe.bigquery.udf import BigQueryUDFRegistration
 
 if t.TYPE_CHECKING:
     from google.cloud.bigquery.client import Client as BigQueryClient
@@ -25,12 +26,14 @@ class BigQuerySession(
         BigQueryDataFrameWriter,
         BigQueryDataFrame,
         BigQueryConnection,
+        BigQueryUDFRegistration,
     ],
 ):
     _catalog = BigQueryCatalog
     _reader = BigQueryDataFrameReader
     _writer = BigQueryDataFrameWriter
     _df = BigQueryDataFrame
+    _udf_registration = BigQueryUDFRegistration
 
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = True
     SANITIZE_COLUMN_NAMES = True

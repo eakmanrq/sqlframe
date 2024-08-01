@@ -9,6 +9,7 @@ from sqlframe.standalone.readwriter import (
     StandaloneDataFrameReader,
     StandaloneDataFrameWriter,
 )
+from sqlframe.standalone.udf import StandaloneUDFRegistration
 
 
 class StandaloneSession(
@@ -18,12 +19,14 @@ class StandaloneSession(
         StandaloneDataFrameWriter,
         StandaloneDataFrame,
         object,
+        StandaloneUDFRegistration,
     ]
 ):  # type: ignore
     _catalog = StandaloneCatalog
     _reader = StandaloneDataFrameReader
     _writer = StandaloneDataFrameWriter
     _df = StandaloneDataFrame
+    _udf_registration = StandaloneUDFRegistration
 
     class Builder(_BaseSession.Builder):
         DEFAULT_INPUT_DIALECT = "spark"

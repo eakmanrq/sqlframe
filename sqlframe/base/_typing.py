@@ -24,6 +24,7 @@ OutputExpressionContainer = t.Union[exp.Select, exp.Create, exp.Insert]
 StorageLevel = str
 PathOrPaths = t.Union[str, t.List[str]]
 OptionalPrimitiveType = t.Optional[PrimitiveType]
+DataTypeOrString = t.Union[DataType, str]
 
 
 class UserDefinedFunctionLike(t.Protocol):

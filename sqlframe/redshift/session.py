@@ -10,6 +10,7 @@ from sqlframe.redshift.readwriter import (
     RedshiftDataFrameReader,
     RedshiftDataFrameWriter,
 )
+from sqlframe.redshift.udf import RedshiftUDFRegistration
 
 if t.TYPE_CHECKING:
     from redshift_connector.core import Connection as RedshiftConnection
@@ -24,12 +25,14 @@ class RedshiftSession(
         RedshiftDataFrameWriter,
         RedshiftDataFrame,
         RedshiftConnection,
+        RedshiftUDFRegistration,
     ],
 ):
     _catalog = RedshiftCatalog
     _reader = RedshiftDataFrameReader
     _writer = RedshiftDataFrameWriter
     _df = RedshiftDataFrame
+    _udf_registration = RedshiftUDFRegistration
 
     def __init__(self, conn: t.Optional[RedshiftConnection] = None):
         warnings.warn(
