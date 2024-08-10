@@ -2070,14 +2070,19 @@ def contains(left: ColumnOrName, right: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(left, "contains", right)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres"])
 def convert_timezone(
     sourceTz: t.Optional[Column], targetTz: Column, sourceTs: ColumnOrName
 ) -> Column:
-    if sourceTz is None:
-        return Column.invoke_anonymous_function(targetTz, "convert_timezone", sourceTs)
-    else:
-        return Column.invoke_anonymous_function(sourceTz, "convert_timezone", targetTz, sourceTs)
+    to_timestamp = get_func_from_session("to_timestamp")
+
+    return Column(
+        expression.ConvertTimezone(
+            timestamp=to_timestamp(Column.ensure_col(sourceTs)).expression,
+            source_tz=sourceTz.expression if sourceTz else None,
+            target_tz=Column.ensure_col(targetTz).expression,
+        )
+    )
 
 
 @meta(unsupported_engines="postgres")

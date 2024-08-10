@@ -3309,9 +3309,18 @@ def test_contains(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.convert_timezone(None, SF.col("cola"), "colb"), "CONVERT_TIMEZONE(cola, colb)"),
-        (SF.convert_timezone(None, SF.col("cola"), SF.col("colb")), "CONVERT_TIMEZONE(cola, colb)"),
-        (SF.convert_timezone(SF.col("colc"), "cola", "colb"), "CONVERT_TIMEZONE(colc, cola, colb)"),
+        (
+            SF.convert_timezone(None, SF.col("cola"), "colb"),
+            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP))",
+        ),
+        (
+            SF.convert_timezone(None, SF.col("cola"), SF.col("colb")),
+            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP))",
+        ),
+        (
+            SF.convert_timezone(SF.col("colc"), "cola", "colb"),
+            "CONVERT_TIMEZONE(colc, cola, CAST(colb AS TIMESTAMP))",
+        ),
     ],
 )
 def test_convert_timezone(expression, expected):
