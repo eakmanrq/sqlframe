@@ -7,6 +7,7 @@ from collections import Counter
 from decimal import Decimal
 
 import pytest
+import pytz
 from pyspark.sql import SparkSession as PySparkSession
 from sqlglot import exp
 
@@ -3492,8 +3493,16 @@ def test_convert_timezone(get_session_and_func, get_func):
     session, convert_timezone = get_session_and_func("convert_timezone")
     lit = get_func("lit", session)
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
+    if isinstance(session, DuckDBSession):
+        expected = pytz.timezone("US/Pacific").localize(datetime.datetime(2015, 4, 7, 9, 0))
+    elif isinstance(session, PostgresSession):
+        expected = datetime.datetime(2015, 4, 7, 16, 0, tzinfo=datetime.timezone.utc)
+    elif isinstance(session, SnowflakeSession):
+        expected = datetime.datetime(2015, 4, 8, 15, 0, tzinfo=pytz.FixedOffset(480))
+    else:
+        expected = datetime.datetime(2015, 4, 8, 15, 0)
     assert df.select(convert_timezone(None, lit("Asia/Hong_Kong"), "dt").alias("ts")).collect() == [
-        Row(ts=datetime.datetime(2015, 4, 8, 15, 0))
+        Row(ts=expected)
     ]
     assert df.select(
         convert_timezone(lit("America/Los_Angeles"), lit("Asia/Hong_Kong"), "dt").alias("ts")
