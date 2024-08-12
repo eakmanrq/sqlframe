@@ -137,3 +137,14 @@ def test_expand_star_table_alias(standalone_employee: StandaloneDataFrame):
         standalone_employee.alias("blah").select("blah.*").sql(pretty=False, optimize=False)
         == "WITH `t51718876` AS (SELECT CAST(`employee_id` AS INT) AS `employee_id`, CAST(`fname` AS STRING) AS `fname`, CAST(`lname` AS STRING) AS `lname`, CAST(`age` AS INT) AS `age`, CAST(`store_id` AS INT) AS `store_id` FROM VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100) AS `a1`(`employee_id`, `fname`, `lname`, `age`, `store_id`)), `t37842204` AS (SELECT `employee_id`, `fname`, `lname`, `age`, `store_id` FROM `t51718876`) SELECT `t37842204`.`employee_id`, `t37842204`.`fname`, `t37842204`.`lname`, `t37842204`.`age`, `t37842204`.`store_id` FROM `t37842204`"
     )
+
+
+def test_lineage(standalone_employee: StandaloneDataFrame):
+    assert (
+        standalone_employee.lineage("age").source.sql()
+        == "SELECT a1.age AS age FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS a1(employee_id, fname, lname, age, store_id)"
+    )
+    assert (
+        standalone_employee.session.sql("SELECT * FROM employee").lineage("age").source.sql()
+        == "SELECT employee.age AS age FROM employee AS employee"
+    )

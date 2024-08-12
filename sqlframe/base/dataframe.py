@@ -17,6 +17,7 @@ import sqlglot
 from prettytable import PrettyTable
 from sqlglot import Dialect
 from sqlglot import expressions as exp
+from sqlglot import lineage as sqlglot_lineage
 from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
 from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
@@ -1612,6 +1613,13 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 column.nullable,
                 0,
             )
+
+    def lineage(self, col: ColumnOrName, optimize: bool = True) -> sqlglot_lineage.Node:
+        return sqlglot_lineage.lineage(
+            column=self._ensure_and_normalize_col(col).alias_or_name,
+            sql=self._get_expressions(optimize=optimize)[0],
+            schema=self.session.catalog._schema,
+        )
 
     def toPandas(self) -> pd.DataFrame:
         return self.session._fetchdf(self._get_expressions(optimize=False))
