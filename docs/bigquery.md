@@ -72,7 +72,7 @@ from sqlframe.bigquery import functions as F
 
 session = BigQuerySession(default_dataset="sqlframe.db1")
 (
-    session.table("bigquery-public-data.samples.natality")
+    session.table('"bigquery-public-data".samples.natality')
     .select(F.call_function("FARM_FINGERPRINT", F.col("source")).alias("source_hash"))
     .show()
 )
@@ -86,7 +86,7 @@ from sqlframe.bigquery import functions as F
 from sqlframe.bigquery import Window
 
 session = BigQuerySession(default_dataset="sqlframe.db1")
-table_path = "bigquery-public-data.samples.natality"
+table_path = '"bigquery-public-data".samples.natality'
 # Get columns in the table
 print(session.catalog.listColumns(table_path))
 # Get the top 5 years with the greatest year-over-year % change in new families with a single child
