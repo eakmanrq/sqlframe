@@ -47,7 +47,7 @@ from sqlframe.bigquery import functions as F
 from sqlframe.bigquery import Window
 
 session = BigQuerySession()
-table_path = "bigquery-public-data.samples.natality"
+table_path = '"bigquery-public-data".samples.natality'
 # Top 5 years with the greatest year-over-year % change in new families with single child
 df = (
     session.table(table_path)

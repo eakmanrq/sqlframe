@@ -39,7 +39,7 @@ from sqlframe.bigquery import Window
 
 # Unique to SQLFrame: Ability to connect directly to BigQuery
 session = BigQuerySession()
-table_path = "bigquery-public-data.samples.natality"
+table_path = '"bigquery-public-data".samples.natality'
 # Get the top 5 years with the greatest year-over-year % change in new families with a single child
 df = (
     session.table(table_path)
