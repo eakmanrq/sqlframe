@@ -19,7 +19,7 @@ setup(
     setup_requires=["setuptools_scm"],
     python_requires=">=3.8",
     install_requires=[
-        "prettytable<3.11.0",
+        "prettytable<3.11.1",
         "sqlglot>=24.0.0,<25.11",
         "typing_extensions>=4.8,<5",
     ],
