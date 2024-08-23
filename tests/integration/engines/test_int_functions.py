@@ -1944,23 +1944,11 @@ def test_regexp_replace(get_session_and_func, get_func):
     session, regexp_replace = get_session_and_func("regexp_replace")
     col = get_func("col", session)
     df = session.createDataFrame([("100-200", r"(\d+)", "--")], ["str", "pattern", "replacement"])
-    # Spark replaces all matches while most just replace the first
-    if isinstance(session, (BigQuerySession, PySparkSession, SparkSession, SnowflakeSession)):
-        assert df.select(regexp_replace("str", r"(\d+)", "--").alias("d")).first()[0] == "-----"
-        assert (
-            df.select(regexp_replace("str", col("pattern"), col("replacement")).alias("d")).first()[
-                0
-            ]
-            == "-----"
-        )
-    else:
-        assert df.select(regexp_replace("str", r"(\d+)", "--").alias("d")).first()[0] == "---200"
-        assert (
-            df.select(regexp_replace("str", col("pattern"), col("replacement")).alias("d")).first()[
-                0
-            ]
-            == "---200"
-        )
+    assert df.select(regexp_replace("str", r"(\d+)", "--").alias("d")).first()[0] == "-----"
+    assert (
+        df.select(regexp_replace("str", col("pattern"), col("replacement")).alias("d")).first()[0]
+        == "-----"
+    )
 
 
 def test_initcap(get_session_and_func):

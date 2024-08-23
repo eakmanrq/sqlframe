@@ -47,6 +47,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     right_cast_len as right,
     position_cast_start as position,
     try_element_at_zero_based as try_element_at,
+    regexp_replace_global_option as regexp_replace,
 )
 from sqlframe.base.functions import (
     abs as abs,
@@ -148,7 +149,6 @@ from sqlframe.base.functions import (
     radians as radians,
     rank as rank,
     regexp_like as regexp_like,
-    regexp_replace as regexp_replace,
     repeat as repeat,
     reverse as reverse,
     rlike as rlike,

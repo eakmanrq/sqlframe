@@ -28,6 +28,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     sequence_from_generate_series as sequence,
     try_element_at_zero_based as try_element_at,
     to_unix_timestamp_include_default_format as to_unix_timestamp,
+    regexp_replace_global_option as regexp_replace,
 )
 from sqlframe.base.functions import (
     abs as abs,
@@ -156,7 +157,6 @@ from sqlframe.base.functions import (
     rank as rank,
     regexp_extract as regexp_extract,
     regexp_like as regexp_like,
-    regexp_replace as regexp_replace,
     repeat as repeat,
     reverse as reverse,
     right as right,
