@@ -52,4 +52,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     array_append_list_append as array_append,
     endswith_with_underscore as endswith,
     last_day_with_cast as last_day,
+    regexp_replace_global_option as regexp_replace,
 )

@@ -69,4 +69,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     _is_string_using_typeof_char_varying as _is_string,
     endswith_using_like as endswith,
     last_day_with_cast as last_day,
+    regexp_replace_global_option as regexp_replace,
 )

@@ -1603,6 +1603,29 @@ def typeof_from_variant(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TYPEOF")
 
 
+def regexp_replace_global_option(
+    str: ColumnOrName, pattern: str, replacement: str, position: t.Optional[int] = None
+) -> Column:
+    lit = get_func_from_session("lit")
+
+    if position is not None:
+        return Column.invoke_expression_over_column(
+            str,
+            expression.RegexpReplace,
+            expression=lit(pattern),
+            replacement=lit(replacement),
+            position=lit(position),
+            modifiers=lit("g"),
+        )
+    return Column.invoke_expression_over_column(
+        str,
+        expression.RegexpReplace,
+        expression=lit(pattern),
+        replacement=lit(replacement),
+        modifiers=lit("g"),
+    )
+
+
 def _is_string_using_typeof_varchar(col: ColumnOrName) -> Column:
     typeof = get_func_from_session("typeof")
     lit = get_func_from_session("lit")
