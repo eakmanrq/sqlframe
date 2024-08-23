@@ -339,7 +339,9 @@ class Column:
         return Column(new_expression)
 
     def cast(
-        self, dataType: t.Union[str, DataType], dialect: t.Optional[t.Union[str, Dialect]] = None
+        self,
+        dataType: t.Union[str, DataType, exp.DataType, exp.DataType.Type],
+        dialect: t.Optional[t.Union[str, Dialect]] = None,
     ) -> Column:
         from sqlframe.base.session import _BaseSession
 
