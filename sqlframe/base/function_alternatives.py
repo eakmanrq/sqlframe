@@ -1593,7 +1593,7 @@ def try_to_timestamp_pgtemp(col: ColumnOrName, format: t.Optional[ColumnOrName] 
 def typeof_pg_typeof(col: ColumnOrName) -> Column:
     return (
         Column.invoke_anonymous_function(col, "pg_typeof")
-        .cast("regtype", dialect="postgres")
+        .cast(expression.DataType.build("regtype", dialect="postgres"))
         .cast("text")
     )
 
