@@ -199,3 +199,56 @@ def test_to_arrow(duckdb_employee: DuckDBDataFrame):
     ]
     assert arrow_table.column(3).to_pylist() == [37, 65, 37, 27, 29]
     assert arrow_table.column(4).to_pylist() == [1, 1, 2, 2, 100]
+
+
+def test_to_arrow_batch(duckdb_employee: DuckDBDataFrame):
+    record_batch_reader = duckdb_employee.toArrow(batch_size=1)
+    first_batch = record_batch_reader.read_next_batch()
+    assert first_batch.num_rows == 1
+    assert first_batch.num_columns == 5
+    assert first_batch.column_names == [
+        "employee_id",
+        "fname",
+        "lname",
+        "age",
+        "store_id",
+    ]
+    assert first_batch.column(0).to_pylist() == [1]
+    assert first_batch.column(1).to_pylist() == ["Jack"]
+    assert first_batch.column(2).to_pylist() == ["Shephard"]
+    assert first_batch.column(3).to_pylist() == [37]
+    assert first_batch.column(4).to_pylist() == [1]
+    second_batch = record_batch_reader.read_next_batch()
+    assert second_batch.num_rows == 1
+    assert second_batch.num_columns == 5
+    assert second_batch.column(0).to_pylist() == [2]
+    assert second_batch.column(1).to_pylist() == ["John"]
+    assert second_batch.column(2).to_pylist() == ["Locke"]
+    assert second_batch.column(3).to_pylist() == [65]
+    assert second_batch.column(4).to_pylist() == [1]
+    third_batch = record_batch_reader.read_next_batch()
+    assert third_batch.num_rows == 1
+    assert third_batch.num_columns == 5
+    assert third_batch.column(0).to_pylist() == [3]
+    assert third_batch.column(1).to_pylist() == ["Kate"]
+    assert third_batch.column(2).to_pylist() == ["Austen"]
+    assert third_batch.column(3).to_pylist() == [37]
+    assert third_batch.column(4).to_pylist() == [2]
+    fourth_batch = record_batch_reader.read_next_batch()
+    assert fourth_batch.num_rows == 1
+    assert fourth_batch.num_columns == 5
+    assert fourth_batch.column(0).to_pylist() == [4]
+    assert fourth_batch.column(1).to_pylist() == ["Claire"]
+    assert fourth_batch.column(2).to_pylist() == ["Littleton"]
+    assert fourth_batch.column(3).to_pylist() == [27]
+    assert fourth_batch.column(4).to_pylist() == [2]
+    fifth_batch = record_batch_reader.read_next_batch()
+    assert fifth_batch.num_rows == 1
+    assert fifth_batch.num_columns == 5
+    assert fifth_batch.column(0).to_pylist() == [5]
+    assert fifth_batch.column(1).to_pylist() == ["Hugo"]
+    assert fifth_batch.column(2).to_pylist() == ["Reyes"]
+    assert fifth_batch.column(3).to_pylist() == [29]
+    assert fifth_batch.column(4).to_pylist() == [100]
+    with pytest.raises(StopIteration):
+        record_batch_reader.read_next_batch()
