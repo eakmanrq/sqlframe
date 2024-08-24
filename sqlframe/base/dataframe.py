@@ -42,6 +42,7 @@ else:
 
 if t.TYPE_CHECKING:
     import pandas as pd
+    from pyarrow import RecordBatchReader
     from pyarrow import Table as ArrowTable
     from sqlglot.dialects.dialect import DialectType
 
@@ -1815,5 +1816,14 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         return self.select(covar_samp(col_func(col1), col_func(col2))).collect()[0][0]
 
-    def toArrow(self) -> ArrowTable:
+    @t.overload
+    def toArrow(self) -> ArrowTable: ...
+
+    @t.overload
+    def toArrow(self, batch_size: int) -> RecordBatchReader: ...
+
+    def toArrow(self, batch_size: t.Optional[int] = None) -> t.Union[ArrowTable, RecordBatchReader]:
+        """
+        `batch_size` and `RecordBatchReader` are not part of the PySpark API
+        """
         raise NotImplementedError("Arrow conversion is not supported by this engine")

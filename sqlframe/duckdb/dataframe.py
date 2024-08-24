@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import typing as t
 
 from sqlframe.base.dataframe import (
@@ -19,8 +18,7 @@ if t.TYPE_CHECKING:
     from sqlframe.duckdb.session import DuckDBSession  # noqa
     from sqlframe.duckdb.readwriter import DuckDBDataFrameWriter  # noqa
     from sqlframe.duckdb.group import DuckDBGroupedData  # noqa
-    from pyarrow import Table as ArrowTable
-
+    from pyarrow import Table as ArrowTable, RecordBatchReader
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +46,14 @@ class DuckDBDataFrame(
     _stat = DuckDBDataFrameStatFunctions
     _group_data = DuckDBGroupedData
 
-    def toArrow(self) -> ArrowTable:
+    @t.overload
+    def toArrow(self) -> ArrowTable: ...
+
+    @t.overload
+    def toArrow(self, batch_size: int) -> RecordBatchReader: ...
+
+    def toArrow(self, batch_size: t.Optional[int] = None) -> t.Union[ArrowTable, RecordBatchReader]:
         self._collect(skip_rows=True)
-        return self.session._last_result.arrow()
+        if not batch_size:
+            return self.session._last_result.arrow()
+        return self.session._last_result.fetch_record_batch(batch_size)
