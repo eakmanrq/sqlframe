@@ -605,6 +605,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
             return _BaseSession(**self._session_kwargs)
 
         def getOrCreate(self) -> _BaseSession:
+            from sqlframe import ACTIVATE_CONFIG
+
+            for k, v in ACTIVATE_CONFIG.items():
+                self._set_config(k, v)
             self._set_session_properties()
             return self.session
 

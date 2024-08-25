@@ -24,6 +24,53 @@ In this configuration, you can use BigQuery syntax for elements such as date for
 
 SQLFrame supports multiple dialects, all of which can be specific as the `input_dialect` and `output_dialect`.
 
+## Activating SQLFrame
+
+SQLFrame can be activated in order to replace `pyspark` imports with `sqlframe` imports for the given engine. 
+This allows you to use SQLFrame as a drop-in replacement for PySpark by just adding two lines of code.
+
+### Activate with Engine
+
+If you just provide an engine to `activate` then it will create a connection for that engine with default settings (if the engine supports it).
+
+```python
+
+from sqlframe import activate
+activate("duckdb")
+
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+# "spark" is not a SQLFrame DuckDBSession and will run directly on DuckDB
+```
+
+### Activate with Connection
+
+If you provide a connection to `activate` then it will use that connection for the engine.
+
+```python
+import duckdb
+from sqlframe import activate
+connection = duckdb.connect("file.duckdb")
+activate("duckdb", conn=connection)
+
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+# "spark" is a SQLFrame DuckDBSession and will run directly on DuckDB using `file.duckdb` for persistence
+```
+
+### Activate with Configuration
+
+If you provide a configuration to `activate` then it will use that configuration to create a connection for the engine.
+
+```python
+from sqlframe import activate
+activate("duckdb", config={"sqlframe.input.dialect": "duckdb"})
+
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+# "spark" is a SQLFrame DuckDBSession and will run directly on DuckDB with input dialect set to DuckDB
+```
+
 ## Generated SQL
 
 ### Pretty

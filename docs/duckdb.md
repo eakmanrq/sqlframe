@@ -6,31 +6,14 @@
 pip install "sqlframe[duckdb]"
 ```
 
-## Creating a Session
+## Enabling SQLFrame
 
-SQLFrame uses the `duckdb` package to connect to DuckDB. 
-A DuckDBSession, which implements the PySpark Session API, can be created by passing in a `duckdb.Connection` object or by allowing SQLFrame to create a connection for you.
-By default, SQLFrame will create a connection to an in-memory database.
+SQLFrame can be used in two ways:
 
+* Directly importing the `sqlframe.duckdb` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
 
-=== "Without Providing Connection"
-
-    ```python
-    from sqlframe.duckdb import DuckDBSession
-    
-    session = DuckDBSession()
-    ```
-
-=== "With Providing Connection"
-
-    ```python
-    import duckdb
-    from sqlframe.duckdb import DuckDBSession
-    
-    conn = duckdb.connect(database=":memory:")
-    session = DuckDBSession(conn=conn)
-    ```
-## Imports
+### Import
 
 If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.duckdb`.
 In addition, many classes will have a `DuckDB` prefix. 
@@ -47,6 +30,70 @@ from sqlframe.duckdb import DuckDBSession
 from sqlframe.duckdb import functions as F
 from sqlframe.duckdb import DuckDBDataFrame
 ```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+from sqlframe import activate
+activate("duckdb")
+
+from pyspark.sql import SparkSession
+```
+
+`SparkSession` will now be a SQLFrame `DuckDBSession` object and everything will be run on DuckDB directly.
+
+See [activate configuration](./configuration.md#activating-sqlframe) for information on how to pass in a connection and config options.
+
+## Creating a Session
+
+SQLFrame uses the `duckdb` package to connect to DuckDB. 
+A DuckDBSession, which implements the PySpark Session API, can be created by passing in a `duckdb.Connection` object or by allowing SQLFrame to create a connection for you.
+By default, SQLFrame will create a connection to an in-memory database.
+
+
+=== "Import + Without Providing Connection"
+
+    ```python
+    from sqlframe.duckdb import DuckDBSession
+    
+    session = DuckDBSession()
+    ```
+
+=== "Import + With Providing Connection"
+
+    ```python
+    import duckdb
+    from sqlframe.duckdb import DuckDBSession
+    
+    conn = duckdb.connect(database=":memory:")
+    session = DuckDBSession(conn=conn)
+    ```
+
+=== "Activate + Without Providing Connection"
+
+    ```python
+    from sqlframe import activate
+    activate("duckdb")
+
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.getOrCreate()
+    ```
+
+=== "Activate + With Providing Connection"
+
+    ```python
+    import duckdb
+    from sqlframe import activate
+    conn = duckdb.connect(database=":memory:")
+    activate("duckdb", conn=conn)
+
+    from pyspark.sql import SparkSession
+
+    session = SparkSession.builder.getOrCreate()
+    ```
 
 ## Using DuckDB Unique Functions
 
@@ -202,6 +249,8 @@ See something that you would like to see supported? [Open an issue](https://gith
 * sql
     * SQLFrame Specific: Get the SQL representation of the WindowSpec
 * [stat](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.stat.html)
+* [toArrow](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toArrow.html)
+  * SQLFrame Specific Argument: `batch_size` sets the number of rows to read per-batch and returns a `RecrodBatchReader`
 * [toDF](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toDF.html)
 * [toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html)
 * [union](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.union.html)

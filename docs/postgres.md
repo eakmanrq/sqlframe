@@ -6,26 +6,14 @@
 pip install "sqlframe[postgres]"
 ```
 
-## Creating a Session
+## Enabling SQLFrame
 
-SQLFrame uses the `psycopg2` package to connect to Postgres. 
-A PostgresSession, which implements the PySpark Session API, is created by passing in a `psycopg2.Connection` object.
+SQLFrame can be used in two ways:
 
-```python
-from psycopg2 import connect
-from sqlframe.postgres import PostgresSession
+* Directly importing the `sqlframe.postgres` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
 
-conn = connect(
-    dbname="postgres",
-    user="postgres",
-    password="password",
-    host="localhost",
-    port="5432",
-)
-session = PostgresSession(conn=conn)
-```
-
-## Imports
+### Import
 
 If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.postgres`.
 In addition, many classes will have a `Postgres` prefix. 
@@ -42,6 +30,69 @@ from sqlframe.postgres import PostgresSession
 from sqlframe.postgres import functions as F
 from sqlframe.postgres import PostgresDataFrame
 ```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+from psycopg2 import connect
+from sqlframe import activate
+conn = connect(
+    dbname="postgres",
+    user="postgres",
+    password="password",
+    host="localhost",
+    port="5432",
+)
+activate("postgres", conn=conn)
+
+from pyspark.sql import SparkSession
+```
+
+`SparkSession` will now be a SQLFrame `PostgresSession` object and everything will be run on Postgres directly.
+
+See [activate configuration](./configuration.md#activating-sqlframe) for information on how to pass in a connection and config options.
+
+## Creating a Session
+
+SQLFrame uses the `psycopg2` package to connect to Postgres. 
+A PostgresSession, which implements the PySpark Session API, is created by passing in a `psycopg2.Connection` object.
+
+=== "Import"
+
+    ```python
+    from psycopg2 import connect
+    from sqlframe.postgres import PostgresSession
+    
+    conn = connect(
+        dbname="postgres",
+        user="postgres",
+        password="password",
+        host="localhost",
+        port="5432",
+    )
+    session = PostgresSession(conn=conn)
+    ```
+
+=== "Activate"
+
+    ```python
+    from sqlframe import activate
+
+    conn = connect(
+        dbname="postgres",
+        user="postgres",
+        password="password",
+        host="localhost",
+        port="5432",
+    )
+    activate("postgres", conn=conn)
+
+    from pyspark.sql import SparkSession
+    session = SparkSession.builder.getOrCreate()
+    ```
+
 
 ## Using Postgres Unique Functions
 

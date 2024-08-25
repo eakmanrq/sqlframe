@@ -6,30 +6,14 @@
 pip install "sqlframe[snowflake]"
 ```
 
-## Creating a Session
+## Enabling SQLFrame
 
-SQLFrame uses the [Snowflake Python Connector](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector) to connect to Snowflake. 
-A SnowflakeQuerySession, which implements the PySpark Session API, can be created by passing in a `snowflake.connector.connection.SnowflakeConnection` object.
+SQLFrame can be used in two ways:
 
-```python
-import os
+* Directly importing the `sqlframe.snowflake` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
 
-from snowflake.connector import connect
-from sqlframe.snowflake import SnowflakeSession
-from sqlframe.snowflake import functions as F
-
-connection = connect(
-    account=os.environ["SNOWFLAKE_ACCOUNT"],
-    user=os.environ["SNOWFLAKE_USER"],
-    password=os.environ["SNOWFLAKE_PASSWORD"],
-    warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
-    database=os.environ["SNOWFLAKE_DATABASE"],
-    schema=os.environ["SNOWFLAKE_SCHEMA"],
-)
-session = SnowflakeSession(conn=connection)
-```
-
-## Imports
+### Import
 
 If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.snowflake`.
 In addition, many classes will have a `Snowflake` prefix. 
@@ -46,6 +30,79 @@ from sqlframe.snowflake import SnowflakeSession
 from sqlframe.snowflake import functions as F
 from sqlframe.snowflake import SnowflakeDataFrame
 ```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+import os
+
+from snowflake.connector import connect
+from sqlframe import activate
+conn = connect(
+    account=os.environ["SNOWFLAKE_ACCOUNT"],
+    user=os.environ["SNOWFLAKE_USER"],
+    password=os.environ["SNOWFLAKE_PASSWORD"],
+    warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
+    database=os.environ["SNOWFLAKE_DATABASE"],
+    schema=os.environ["SNOWFLAKE_SCHEMA"],
+)
+activate("snowflake", conn=conn)
+
+from pyspark.sql import SparkSession
+```
+
+`SparkSession` will now be a SQLFrame `SnowflakeSession` object and everything will be run on Snowflake directly.
+
+See [activate configuration](./configuration.md#activating-sqlframe) for information on how to pass in a connection and config options.
+
+
+## Creating a Session
+
+SQLFrame uses the [Snowflake Python Connector](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector) to connect to Snowflake. 
+A SnowflakeQuerySession, which implements the PySpark Session API, can be created by passing in a `snowflake.connector.connection.SnowflakeConnection` object.
+
+=== "Import"
+
+    ```python
+    import os
+    
+    from snowflake.connector import connect
+    from sqlframe.snowflake import SnowflakeSession
+    from sqlframe.snowflake import functions as F
+    
+    connection = connect(
+        account=os.environ["SNOWFLAKE_ACCOUNT"],
+        user=os.environ["SNOWFLAKE_USER"],
+        password=os.environ["SNOWFLAKE_PASSWORD"],
+        warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
+        database=os.environ["SNOWFLAKE_DATABASE"],
+        schema=os.environ["SNOWFLAKE_SCHEMA"],
+    )
+    session = SnowflakeSession(conn=connection)
+    ```
+
+=== Activate
+
+    ```python
+    import os
+    
+    from snowflake.connector import connect
+    from sqlframe import activate
+    conn = connect(
+        account=os.environ["SNOWFLAKE_ACCOUNT"],
+        user=os.environ["SNOWFLAKE_USER"],
+        password=os.environ["SNOWFLAKE_PASSWORD"],
+        warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
+        database=os.environ["SNOWFLAKE_DATABASE"],
+        schema=os.environ["SNOWFLAKE_SCHEMA"],
+    )
+    activate("snowflake", conn=conn)
+    
+    from pyspark.sql import SparkSession
+    spark = SparkSession.builder.getOrCreate()
+    ```
 
 ## Using Snowflake Unique Functions
 

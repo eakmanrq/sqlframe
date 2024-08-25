@@ -6,6 +6,46 @@
 pip install "sqlframe[bigquery]"
 ```
 
+## Enabling SQLFrame
+
+SQLFrame can be used in two ways:
+
+* Directly importing the `sqlframe.bigquery` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
+
+### Import
+
+If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.bigquery`.
+In addition, many classes will have a `BigQuery` prefix. 
+For example, `BigQueryDataFrame` instead of `DataFrame`.
+
+
+```python
+# PySpark import
+# from pyspark.sql import SparkSession
+# from pyspark.sql import functions as F
+# from pyspark.sql.dataframe import DataFrame
+# SQLFrame import
+from sqlframe.bigquery import BigQuerySession
+from sqlframe.bigquery import functions as F
+from sqlframe.bigquery import BigQueryDataFrame
+```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+from sqlframe import activate
+activate("bigquery", config={"default_dataset": "sqlframe.db1"})
+
+from pyspark.sql import SparkSession
+```
+
+`SparkSession` will now be a SQLFrame `BigQuerySession` object and everything will be run on BigQuery directly.
+
+See [activate configuration](./configuration.md#activating-sqlframe) for information on how to pass in a connection and config options.
+
 ## Creating a Session
 
 SQLFrame uses the [BigQuery DBAPI Connection](https://cloud.google.com/python/docs/reference/bigquery/latest/dbapi#class-googlecloudbigquerydbapiconnectionclientnone-bqstorageclientnone) to connect to BigQuery. 
@@ -13,7 +53,7 @@ A BigQuerySession, which implements the PySpark Session API, can be created by p
 By default, SQLFrame will create a connection by inferring it from the environment (for example using gcloud auth).
 Regardless of approach, it is recommended to configure `default_dataset` in the `BigQuerySession` constructor in order to make it easier to use the catalog methods (see example below).
 
-=== "Without Providing Connection"
+=== "Import + Without Providing Connection"
 
     ```python
     from sqlframe.bigquery import BigQuerySession
@@ -21,7 +61,7 @@ Regardless of approach, it is recommended to configure `default_dataset` in the 
     session = BigQuerySession(default_dataset="sqlframe.db1")
     ```
 
-=== "With Providing Connection"
+=== "Import + With Providing Connection"
 
     ```python
     import google.auth
@@ -43,23 +83,39 @@ Regardless of approach, it is recommended to configure `default_dataset` in the 
     session = BigQuerySession(conn=conn, default_dataset="sqlframe.db1")
     ```
 
-## Imports
+=== "Activate + Without Providing Connection"
 
-If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.bigquery`.
-In addition, many classes will have a `BigQuery` prefix. 
-For example, `BigQueryDataFrame` instead of `DataFrame`.
+    ```python
+    from sqlframe import activate
+    activate("bigquery", config={"default_dataset": "sqlframe.db1"})
+     
+    from pyspark.sql import SparkSession
+    session = SparkSession.builder.getOrCreate()
+    ```
 
+=== "Activate + With Providing Connection"
 
-```python
-# PySpark import
-# from pyspark.sql import SparkSession
-# from pyspark.sql import functions as F
-# from pyspark.sql.dataframe import DataFrame
-# SQLFrame import
-from sqlframe.bigquery import BigQuerySession
-from sqlframe.bigquery import functions as F
-from sqlframe.bigquery import BigQueryDataFrame
-```
+    ```python
+    import google.auth
+    from google.api_core import client_info
+    from google.oauth2 import service_account
+    from google.cloud.bigquery.dbapi import connect
+    from sqlframe import activate
+    creds = service_account.Credentials.from_service_account_file("path/to/credentials.json")
+    
+    client = google.cloud.bigquery.Client(
+        project="my-project",
+        credentials=creds,
+        location="us-central1",
+        client_info=client_info.ClientInfo(user_agent="sqlframe"),
+    )
+    
+    conn = connect(client=client)
+    activate("bigquery", conn=conn, config={"default_dataset": "sqlframe.db1"})
+
+    from pyspark.sql import SparkSession
+    session = SparkSession.builder.getOrCreate()
+    ```
 
 ## Using BigQuery Unique Functions
 

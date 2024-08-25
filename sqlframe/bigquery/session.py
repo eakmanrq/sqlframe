@@ -84,7 +84,6 @@ class BigQuerySession(
             return BigQuerySession(**self._session_kwargs)
 
         def getOrCreate(self) -> BigQuerySession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore
 
     builder = Builder()

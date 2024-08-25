@@ -3,6 +3,7 @@ from sqlframe.standalone.column import Column
 from sqlframe.standalone.dataframe import (
     StandaloneDataFrame,
     StandaloneDataFrameNaFunctions,
+    StandaloneDataFrameStatFunctions,
 )
 from sqlframe.standalone.group import StandaloneGroupedData
 from sqlframe.standalone.readwriter import (
@@ -10,17 +11,22 @@ from sqlframe.standalone.readwriter import (
     StandaloneDataFrameWriter,
 )
 from sqlframe.standalone.session import StandaloneSession
+from sqlframe.standalone.types import Row
+from sqlframe.standalone.udf import StandaloneUDFRegistration
 from sqlframe.standalone.window import Window, WindowSpec
 
 __all__ = [
-    "StandaloneCatalog",
     "Column",
+    "Row",
+    "StandaloneCatalog",
     "StandaloneDataFrame",
     "StandaloneDataFrameNaFunctions",
     "StandaloneGroupedData",
     "StandaloneDataFrameReader",
     "StandaloneDataFrameWriter",
     "StandaloneSession",
+    "StandaloneDataFrameStatFunctions",
+    "StandaloneUDFRegistration",
     "Window",
     "WindowSpec",
 ]

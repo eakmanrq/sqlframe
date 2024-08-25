@@ -69,7 +69,6 @@ class DuckDBSession(
             return DuckDBSession(**self._session_kwargs)
 
         def getOrCreate(self) -> DuckDBSession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore
 
     builder = Builder()

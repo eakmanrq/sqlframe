@@ -6,25 +6,18 @@
 pip install "sqlframe[spark]"
 ```
 
-## Creating a Session
+## Enabling SQLFrame
 
-SQLFrame's SparkSession is created the same way you would normally create a SparkSession.
-The configuration you apply to the builder will be applied the the SparkSession that SQLFrame will create.
- 
-```python
-from sqlframe.spark import SparkSession
+SQLFrame can be used in two ways:
 
-spark = SparkSession.builder.appName("MyApp").getOrCreate()
+* Directly importing the `sqlframe.spark` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
 
-# Now you can use SQLFrame
-```
-
-## Imports
+### Import
 
 If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.spark`.
 In addition, many classes will have a `Spark` prefix. 
 For example, `SparkDataFrame` instead of `DataFrame`.
-
 
 ```python
 # PySpark import
@@ -36,6 +29,59 @@ from sqlframe.spark import SparkSession
 from sqlframe.spark import functions as F
 from sqlframe.spark import SparkDataFrame
 ```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+from sqlframe import activate
+activate("spark")
+
+from pyspark.sql import SparkSession
+```
+
+## Creating a Session
+
+SQLFrame's SparkSession is created the same way you would normally create a SparkSession.
+The configuration you apply to the builder will be applied the the SparkSession that SQLFrame will create.
+
+=== "Import"
+
+    ```python
+    from sqlframe.spark import SparkSession
+    
+    spark = SparkSession.builder.appName("MyApp").getOrCreate()
+    
+    # Now you can use SQLFrame
+    ```
+
+=== "Activate + Without Providing SparkSession"
+
+    ```python
+    from sqlframe import activate
+    activate("spark")
+    
+    from pyspark.sql import SparkSession
+    
+    spark = SparkSession.builder.appName("MyApp").getOrCreate()
+    
+    # Now you can use SQLFrame
+    ```
+
+=== "Activate + Providing SparkSession"
+
+    ```python
+    from pyspark.sql import SparkSession
+    from sqlframe import activate
+    activate("spark", conn=SparkSession.builder.appName("MyApp").getOrCreate())
+    
+    from pyspark.sql import SparkSession
+    
+    spark = SparkSession.getOrCreate()
+    
+    # Now you can use SQLFrame
+    ```
 
 ## Example Usage
 

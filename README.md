@@ -18,10 +18,10 @@ SQLFrame also has a "Standalone" session that be used to generate SQL without an
 
 SQLFrame is great for:
 
-* Users who want to run PySpark DataFrame code without having to use a Spark cluster
+* Users who want a DataFrame API that leverages the full power of their engine to do the processing
+* Users who want to run PySpark code quickly locally without the overhead of starting a Spark session
 * Users who want a SQL representation of their DataFrame code for debugging or sharing with others
-    * See [Spark Engine](https://sqlframe.readthedocs.io/en/stable/spark/) for more details
-* Users who want a DataFrame API that leverages the full power of their engine to do the processing 
+* Users who want to run PySpark DataFrame code without the complexity of using Spark for processing
 
 ## Installation
 
@@ -45,44 +45,72 @@ See specific engine documentation for additional setup instructions.
 ## Configuration
 
 SQLFrame generates consistently accurate yet complex SQL for engine execution. 
-However, when using df.sql(), it produces more human-readable SQL. 
+However, when using df.sql(optimize=True), it produces more human-readable SQL. 
 For details on how to configure this output and leverage OpenAI to enhance the SQL, see [Generated SQL Configuration](https://sqlframe.readthedocs.io/en/stable/configuration/#generated-sql).
 
 SQLFrame by default uses the Spark dialect for input and output.
 This can be changed to make SQLFrame feel more like a native DataFrame API for the engine you are using.
 See [Input and Output Dialect Configuration](https://sqlframe.readthedocs.io/en/stable/configuration/#input-and-output-dialect).
 
+## Activating SQLFrame
+
+SQLFrame can either replace pyspark imports or be used alongside them.
+To replace pyspark imports, use the [activate function](https://sqlframe.readthedocs.io/en/stable/configuration/#activating-sqlframe) to set the engine to use.
+
+```python
+from sqlframe import activate
+
+# Activate SQLFrame to run directly on DuckDB
+activate(engine="duckdb")
+
+from pyspark.sql import SparkSession
+session = SparkSession.builder.getOrCreate()
+```
+
+SQLFrame can also be directly imported which both maintains pyspark imports but also allows for a more engine-native DataFrame API:
+
+```python
+from sqlframe.duckdb import DuckDBSession
+
+session = DuckDBSession.builder.getOrCreate()
+```
+
 ## Example Usage
 
 ```python
-from sqlframe.bigquery import BigQuerySession
-from sqlframe.bigquery import functions as F
-from sqlframe.bigquery import Window
+from sqlframe import activate
 
-session = BigQuerySession()
+# Activate SQLFrame to run directly on BigQuery
+activate(engine="bigquery")
+
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql import Window
+
+session = SparkSession.builder.getOrCreate()
 table_path = '"bigquery-public-data".samples.natality'
 # Top 5 years with the greatest year-over-year % change in new families with single child
 df = (
-    session.table(table_path)
-    .where(F.col("ever_born") == 1)
-    .groupBy("year")
-    .agg(F.count("*").alias("num_single_child_families"))
-    .withColumn(
-        "last_year_num_single_child_families", 
-        F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year"))
-    )
-    .withColumn(
-        "percent_change", 
-        (F.col("num_single_child_families") - F.col("last_year_num_single_child_families")) 
-        / F.col("last_year_num_single_child_families")
-    )
-    .orderBy(F.abs(F.col("percent_change")).desc())
-    .select(
-        F.col("year").alias("year"),
-        F.format_number("num_single_child_families", 0).alias("new families single child"),
-        F.format_number(F.col("percent_change") * 100, 2).alias("percent change"),
-    )
-    .limit(5)
+  session.table(table_path)
+  .where(F.col("ever_born") == 1)
+  .groupBy("year")
+  .agg(F.count("*").alias("num_single_child_families"))
+  .withColumn(
+    "last_year_num_single_child_families",
+    F.lag(F.col("num_single_child_families"), 1).over(Window.orderBy("year"))
+  )
+  .withColumn(
+    "percent_change",
+    (F.col("num_single_child_families") - F.col("last_year_num_single_child_families"))
+    / F.col("last_year_num_single_child_families")
+  )
+  .orderBy(F.abs(F.col("percent_change")).desc())
+  .select(
+    F.col("year").alias("year"),
+    F.format_number("num_single_child_families", 0).alias("new families single child"),
+    F.format_number(F.col("percent_change") * 100, 2).alias("percent change"),
+  )
+  .limit(5)
 )
 ```
 ```python

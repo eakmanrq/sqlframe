@@ -10,21 +10,14 @@ Also any operation that requires an actual connection to the database (like exec
 pip install sqlframe
 ```
 
-## Creating a Session
+## Enabling SQLFrame
 
-Standalone supports defining both an `input_dialect` and an `output_dialect` which can be different from each other.
-`input_dialect` is the dialect used when using the DataFrame API and `output_dialect` is the dialect used when generating the SQL query.
-For example if you want Snowflake behavior of converting lowercase unquoted columns to uppercase, then you would set `input_dialect` to `snowflake`. 
-If you plan on running the query against BigQuery, then you would set `output_dialect` to `bigquery`.
-Default is `spark` for both input and output dialects.
+SQLFrame can be used in two ways:
 
-```python
-from sqlframe.standalone import StandaloneSession
+* Directly importing the `sqlframe.standalone` package 
+* Using the [activate](./configuration.md#activating-sqlframe) function to allow for continuing to use `pyspark.sql` but have it use SQLFrame behind the scenes.
 
-session = StandaloneSession.builder.config(map={"sqlframe.input.dialect": 'duckdb', "sqlframe.output.dialect": 'bigquery'}).getOrCreate()
-```
-
-## Imports
+### Import
 
 If converting a PySpark pipeline, all `pyspark.sql` should be replaced with `sqlframe.standalone`.
 In addition, many classes will have a `Standalone` prefix. 
@@ -41,6 +34,43 @@ from sqlframe.standalone import StandaloneSession
 from sqlframe.standalone import functions as F
 from sqlframe.standalone import StandaloneDataFrame
 ```
+
+### Activate
+
+If you would like to continue using `pyspark.sql` but have it use SQLFrame behind the scenes, you can use the [activate](./configuration.md#activating-sqlframe) function.
+
+```python
+from sqlframe import activate
+activate("standalone")
+
+from pyspark.sql import SparkSession
+```
+
+## Creating a Session
+
+Standalone supports defining both an `input_dialect` and an `output_dialect` which can be different from each other.
+`input_dialect` is the dialect used when using the DataFrame API and `output_dialect` is the dialect used when generating the SQL query.
+For example if you want Snowflake behavior of converting lowercase unquoted columns to uppercase, then you would set `input_dialect` to `snowflake`. 
+If you plan on running the query against BigQuery, then you would set `output_dialect` to `bigquery`.
+Default is `spark` for both input and output dialects.
+
+=== "Import"
+
+    ```python
+    from sqlframe.standalone import StandaloneSession
+    
+    session = StandaloneSession.builder.config(map={"sqlframe.input.dialect": 'duckdb', "sqlframe.output.dialect": 'bigquery'}).getOrCreate()
+    ```
+
+=== "Activate"
+
+    ```python
+    from sqlframe import activate
+    activate("standalone", config={"sqlframe.input.dialect": 'duckdb', "sqlframe.output.dialect": 'duckdb'})
+    
+    from pyspark.sql import SparkSession
+    session = SparkSession.builder.getOrCreate()
+    ```
 
 ## Accessing Tables
 
