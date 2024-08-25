@@ -49,7 +49,6 @@ class RedshiftSession(
             return RedshiftSession(**self._session_kwargs)
 
         def getOrCreate(self) -> RedshiftSession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore
 
     builder = Builder()

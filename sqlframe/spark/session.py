@@ -162,5 +162,4 @@ class SparkSession(
             return SparkSession(**self._session_kwargs)
 
         def getOrCreate(self) -> SparkSession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore

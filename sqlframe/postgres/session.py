@@ -79,7 +79,6 @@ $$ LANGUAGE plpgsql;""")
             return PostgresSession(**self._session_kwargs)
 
         def getOrCreate(self) -> PostgresSession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore
 
     builder = Builder()

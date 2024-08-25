@@ -37,7 +37,6 @@ class StandaloneSession(
             return StandaloneSession()
 
         def getOrCreate(self) -> StandaloneSession:
-            self._set_session_properties()
-            return self.session
+            return super().getOrCreate()  # type: ignore
 
     builder = Builder()

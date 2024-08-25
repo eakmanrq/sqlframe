@@ -30,6 +30,7 @@ setup(
         ],
         "dev": [
             "duckdb>=0.9,<1.1",
+            "findspark>=2,<3",
             "mypy>=1.10.0,<1.12",
             "openai>=1.30,<1.43",
             "pandas>=2,<3",
