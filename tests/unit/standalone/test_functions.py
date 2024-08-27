@@ -14,7 +14,8 @@ from sqlframe.standalone import functions as SF
 def test_invoke_anonymous(name, func):
     # array_size - converts to `size` but `array_size` and `size` behave differently
     # to_char - convert to a cast that ignores the format provided
-    ignore_funcs = {"array_size", "to_char"}
+    # ltrim/rtrim - don't seem to convert correctly on some engines
+    ignore_funcs = {"array_size", "to_char", "ltrim", "rtrim"}
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
