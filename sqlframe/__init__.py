@@ -81,3 +81,19 @@ def activate(
                 sys.modules[f"pyspark.sql.{file}"] = engine_file
                 resolved_files.add(engine_file)
             setattr(engine_file, name_without_prefix, obj)
+
+
+def deactivate() -> None:
+    pyspark_imports = [k for k in sys.modules if k.startswith("pyspark")]
+
+    for k, v in sys.modules.copy().items():
+        if k in pyspark_imports:
+            del sys.modules[k]
+    # Try importing the pyspark imports again and see if pyspark is installed and therefore available
+    # if not then nothing will change
+    for k in pyspark_imports:
+        try:
+            sys.modules[k] = importlib.import_module(k)
+        except ImportError:
+            pass
+    ACTIVATE_CONFIG.clear()
