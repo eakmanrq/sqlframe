@@ -71,6 +71,16 @@ spark = SparkSession.builder.getOrCreate()
 # "spark" is a SQLFrame DuckDBSession and will run directly on DuckDB with input dialect set to DuckDB
 ```
 
+#### Deactivating
+
+If you want to deactivate SQLFrame and revert back to PySpark, you can use the `deactivate` function.
+
+```python
+from sqlframe import deactivate
+
+deactivate()
+```
+
 ## Generated SQL
 
 ### Pretty

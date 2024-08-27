@@ -20,7 +20,7 @@ from sqlframe.standalone import types as StandaloneTypes
 
 
 @pytest.mark.forked
-def test_activate_standalone():
+def test_activate_standalone(check_pyspark_imports):
     check_pyspark_imports(
         "standalone",
         sqlf_session=StandaloneSession,

@@ -20,7 +20,7 @@ from sqlframe.snowflake import types as SnowflakeTypes
 
 
 @pytest.mark.forked
-def test_activate_snowflake():
+def test_activate_snowflake(check_pyspark_imports):
     check_pyspark_imports(
         "snowflake",
         sqlf_session=SnowflakeSession,

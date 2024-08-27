@@ -20,7 +20,7 @@ from sqlframe.duckdb import types as DuckDBTypes
 
 
 @pytest.mark.forked
-def test_activate_duckdb():
+def test_activate_duckdb(check_pyspark_imports):
     check_pyspark_imports(
         "duckdb",
         sqlf_session=DuckDBSession,

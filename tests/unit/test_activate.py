@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import findspark
 import pytest
 
-from sqlframe import activate
+from sqlframe import activate, deactivate
 from sqlframe import testing as SQLFrameTesting
 
 
@@ -35,3 +35,11 @@ def test_activate_no_engine():
     from pyspark import context
 
     assert isinstance(context, MagicMock)
+
+    deactivate()
+
+    from pyspark import context
+
+    assert not isinstance(context, MagicMock)
+    assert context is not MagicMock
+    assert context is not None
