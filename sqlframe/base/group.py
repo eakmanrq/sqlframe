@@ -68,7 +68,7 @@ class _BaseGroupedData(t.Generic[DF]):
                 )
                 group_by_cols.extend(grouping_set)  # type: ignore
             group_by_cols = list(dict.fromkeys(group_by_cols))
-            group_by = exp.Group(grouping_sets=all_grouping_sets)
+            group_by = exp.Group(grouping_sets=[exp.GroupingSets(expressions=all_grouping_sets)])
             expression.set("group", group_by)
         for col in cols:
             # Spark supports having an empty grouping_id which means all of the columns but other dialects
