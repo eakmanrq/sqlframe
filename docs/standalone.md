@@ -84,7 +84,7 @@ from sqlframe.standalone import StandaloneSession
 session = StandaloneSession()
 
 session.catalog.add_table("test_table", column_mapping={"a": "int", "b": "int", "c": "int"})
-df = session.read.table("my_table")
+df = session.read.table("test_table")
 df.sql()
 ```
 
