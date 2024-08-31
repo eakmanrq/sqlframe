@@ -85,7 +85,9 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
                 options["columns"] = "{" + duckdb_columns + "}"
         else:
             select_columns = [exp.Star()]
-        if format:
+        if format == "delta":
+            from_clause = f"delta_scan('{path}')"
+        elif format:
             paths = ",".join([f"'{path}'" for path in ensure_list(path)])
             from_clause = f"read_{format}([{paths}], {to_csv(options)})"
         else:
