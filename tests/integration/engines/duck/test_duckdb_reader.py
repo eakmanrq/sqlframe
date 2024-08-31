@@ -98,3 +98,19 @@ def test_employee_extra_line_csv_multiple(duckdb_session: DuckDBSession):
         ),
         Row(**{"employee_id": 5, "fname": "Hugo", "lname": "Reyes", "age": 29, "store_id": 100}),
     ]
+
+
+def test_employee_delta(duckdb_session: DuckDBSession):
+    df = duckdb_session.read.load(
+        "tests/fixtures/employee_delta",
+        format="delta",
+    )
+    assert df.collect() == [
+        Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
+        Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
+        Row(**{"employee_id": 3, "fname": "Kate", "lname": "Austen", "age": 37, "store_id": 2}),
+        Row(
+            **{"employee_id": 4, "fname": "Claire", "lname": "Littleton", "age": 27, "store_id": 2}
+        ),
+        Row(**{"employee_id": 5, "fname": "Hugo", "lname": "Reyes", "age": 29, "store_id": 100}),
+    ]
