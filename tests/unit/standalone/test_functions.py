@@ -1943,12 +1943,16 @@ def test_split(expression, expected):
     "expression, expected",
     [
         (
-            SF.regexp_extract("cola", r"(\d+)-(\d+)", 1),
-            "REGEXP_EXTRACT(cola, '(\\\\d+)-(\\\\d+)', 1)",
+            SF.regexp_extract("cola", r"(\d+)-(\d+)", 2),
+            "REGEXP_EXTRACT(cola, '(\\\\d+)-(\\\\d+)', 2)",
         ),
         (
-            SF.regexp_extract(SF.col("cola"), r"(\d+)-(\d+)", 1),
-            "REGEXP_EXTRACT(cola, '(\\\\d+)-(\\\\d+)', 1)",
+            SF.regexp_extract(SF.col("cola"), r"(\d+)-(\d+)", 2),
+            "REGEXP_EXTRACT(cola, '(\\\\d+)-(\\\\d+)', 2)",
+        ),
+        (
+            SF.regexp_extract("cola", r"(\d+)-(\d+)", 1),
+            "REGEXP_EXTRACT(cola, '(\\\\d+)-(\\\\d+)')",
         ),
         (
             SF.regexp_extract(SF.col("cola"), r"(\d+)-(\d+)"),

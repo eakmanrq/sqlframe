@@ -2703,7 +2703,7 @@ def inline(col: ColumnOrName) -> Column:
     |  3|  4|
     +---+---+
     """
-    return Column.invoke_anonymous_function(col, "inline")
+    return Column.invoke_expression_over_column(col, expression.Inline)
 
 
 @meta(unsupported_engines="*")
