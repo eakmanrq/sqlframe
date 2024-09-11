@@ -144,6 +144,9 @@ def test_lit(get_session_and_func, arg, expected):
     if isinstance(session, SnowflakeSession):
         if isinstance(arg, Row):
             pytest.skip("Snowflake doesn't support literal row types")
+    if isinstance(session, DuckDBSession):
+        if isinstance(arg, dict):
+            expected = Row(**expected)
     assert session.range(1).select(lit(arg).alias("test")).collect() == [Row(test=expected)]
 
 
@@ -2111,11 +2114,12 @@ def test_create_map(get_session_and_func, get_func):
     session, create_map = get_session_and_func("create_map")
     col = get_func("col", session)
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
-    expected = (
-        [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
-        if isinstance(session, (SparkSession, PySparkSession))
-        else [Row(value={"alice": 2}), Row(value={"bob": 5})]
-    )
+    if isinstance(session, (SparkSession, PySparkSession)):
+        expected = [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
+    elif isinstance(session, DuckDBSession):
+        expected = [Row(value=Row(**{"Alice": 2})), Row(value=Row(**{"Bob": 5}))]
+    else:
+        expected = [Row(value={"alice": 2}), Row(value={"bob": 5})]
     # Added the cast for age for Snowflake so the data type would be correct
     assert df.select(create_map("name", col("age").cast("int")).alias("blah")).collect() == expected
     assert df.select(create_map([df.name, df.age.cast("int")]).alias("blah")).collect() == expected
