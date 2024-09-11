@@ -54,8 +54,14 @@ class DuckDBSession(
 
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
-        if value and isinstance(value, dict) and "key" in value and "value" in value:
-            return dict(zip(value["key"], value["value"]))
+        if value and isinstance(value, dict):
+            # DuckDB < 1.1.0 support
+            if "key" in value and "value" in value:
+                return dict(zip(value["key"], value["value"]))
+            # DuckDB >= 1.1.0 support
+            # If a key is not a string then it must not represent a column and therefore must be a map
+            if len([k for k in value if not isinstance(k, str)]) > 0:
+                return value
         return None
 
     def _execute(self, sql: str) -> None:
