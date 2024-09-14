@@ -2052,7 +2052,7 @@ def cardinality(col: ColumnOrName) -> Column:
 
 @meta()
 def char(col: ColumnOrName) -> Column:
-    return Column.invoke_expression_over_column(col, expression.Chr)
+    return Column(expression.Chr(expressions=Column.ensure_col(col).expression))
 
 
 @meta(unsupported_engines="*")
