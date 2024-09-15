@@ -117,11 +117,7 @@ def spark_session(pyspark_session: PySparkSession) -> SparkSession:
 
 @pytest.fixture(scope="function")
 def duckdb_session() -> DuckDBSession:
-    from duckdb import connect
-
-    # https://github.com/duckdb/duckdb/issues/11404
-    connection = connect()
-    connection.sql("set TimeZone = 'UTC'")
+    connection = duckdb.connect(config={"TimeZone": "UTC"})
     return DuckDBSession(conn=connection)
 
 
