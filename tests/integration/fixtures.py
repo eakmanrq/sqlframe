@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import typing as t
 import warnings
+from decimal import Decimal
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -565,7 +566,9 @@ def compare_frames(pyspark_session: PySparkSession) -> t.Callable:
             assert len(spark_row) == len(sqlf_row)
             for spark_value, sqlf_value in zip(spark_row, sqlf_row):
                 if isinstance(spark_value, float):
-                    assert math.isclose(spark_value, sqlf_value) is True
+                    assert math.isclose(spark_value, sqlf_value)
+                elif isinstance(spark_value, Decimal):
+                    assert math.isclose(spark_value, sqlf_value, abs_tol=10**-5)
                 else:
                     assert spark_value == sqlf_value
         if no_empty:

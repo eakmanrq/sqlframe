@@ -1627,7 +1627,11 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def createOrReplaceTempView(self, name: str) -> None:
         name = normalize_string(name, from_dialect="input")
-        self.session.temp_views[name] = self.copy()._convert_leaf_to_cte()
+        df = self.copy()._convert_leaf_to_cte()
+        self.session.temp_views[name] = df
+        self.session.catalog.add_table(
+            name, [x.alias_or_name for x in self._get_outer_select_columns(df.expression)]
+        )
 
     def count(self) -> int:
         if not self.session._has_connection:

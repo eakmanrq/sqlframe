@@ -569,7 +569,9 @@ class SparkCatalog(
         return [
             Table(
                 name=normalize_string(x.name, from_dialect="execution", to_dialect="output"),
-                catalog=normalize_string(x.catalog, from_dialect="execution", to_dialect="output"),
+                catalog=normalize_string(x.catalog, from_dialect="execution", to_dialect="output")
+                if x.catalog
+                else None,
                 namespace=[
                     normalize_string(y, from_dialect="execution", to_dialect="output")
                     for y in x.namespace

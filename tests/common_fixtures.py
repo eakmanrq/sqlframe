@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import os
 import typing as t
+from pathlib import Path
 
+import duckdb
 import pytest
 from pyspark import SparkConf
 from pyspark.sql import SparkSession as PySparkSession
 from pytest_postgresql.janitor import DatabaseJanitor
 
+from sqlframe.base.session import _BaseSession
 from sqlframe.bigquery.session import BigQuerySession
 from sqlframe.duckdb.session import DuckDBSession
 from sqlframe.postgres.session import PostgresSession
@@ -28,8 +31,57 @@ if t.TYPE_CHECKING:
     from tests.types import EmployeeData
 
 
+def load_tpcds(paths: t.List[Path], session: t.Union[_BaseSession, PySparkSession]):
+    for path in paths:
+        table_name = path.name
+        session.read.parquet(str(path / "*.parquet")).createOrReplaceTempView(table_name)
+
+
 @pytest.fixture(scope="session")
-def pyspark_session(tmp_path_factory) -> PySparkSession:
+def gen_tpcds(tmp_path_factory) -> t.List[Path]:
+    path_root = tmp_path_factory.mktemp("tpcds")
+    results = []
+    tables = [
+        "web_site",
+        "web_sales",
+        "web_returns",
+        "web_page",
+        "warehouse",
+        "time_dim",
+        "store_sales",
+        "store_returns",
+        "store",
+        "ship_mode",
+        "reason",
+        "promotion",
+        "item",
+        "inventory",
+        "income_band",
+        "household_demographics",
+        "date_dim",
+        "customer_demographics",
+        "customer_address",
+        "customer",
+        "catalog_sales",
+        "catalog_returns",
+        "catalog_page",
+        "call_center",
+    ]
+    con = duckdb.connect()
+    con.sql("CALL dsdgen(sf=0.01)")
+    for table in tables:
+        path = path_root / table
+        path.mkdir(parents=True)
+        con.sql(
+            f"COPY (SELECT * FROM {table}) TO '{path}' (FORMAT PARQUET, PER_THREAD_OUTPUT TRUE)"
+        )
+        results.append(path)
+    con.close()
+    return results
+
+
+@pytest.fixture(scope="session")
+def pyspark_session(tmp_path_factory, gen_tpcds: t.List[Path]) -> PySparkSession:
     data_dir = tmp_path_factory.mktemp("spark_connection")
     derby_dir = tmp_path_factory.mktemp("derby")
     spark = (
@@ -49,6 +101,7 @@ def pyspark_session(tmp_path_factory) -> PySparkSession:
     spark.sql("CREATE TABLE db1.table1 (id INTEGER, name STRING)")
     spark.catalog.registerFunction("add", lambda x, y: x + y)
     spark.catalog.setCurrentDatabase("db1")
+    load_tpcds(gen_tpcds, spark)
     return spark
 
 

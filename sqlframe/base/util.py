@@ -306,7 +306,6 @@ def quote_preserving_alias_or_name(col: t.Union[exp.Column, exp.Alias]) -> str:
 def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
     from sqlframe.base import types
 
-    sqlglot_to_spark
     primitive_mapping = {
         exp.DataType.Type.VARCHAR: types.VarcharType,
         exp.DataType.Type.CHAR: types.CharType,
@@ -325,6 +324,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
         exp.DataType.Type.TIMESTAMPLTZ: types.TimestampType,
         exp.DataType.Type.TIMESTAMPNTZ: types.TimestampType,
         exp.DataType.Type.DATE: types.DateType,
+        exp.DataType.Type.JSON: types.StringType,
     }
     if sqlglot_dtype.this in primitive_mapping:
         pyspark_class = primitive_mapping[sqlglot_dtype.this]
