@@ -81,7 +81,9 @@ def test_database_exists_does_not_exist(spark_session: SparkSession):
 
 def test_list_tables_no_args(spark_session: SparkSession):
     assert sorted(
-        spark_session.catalog.listTables(), key=lambda x: (x.catalog, x.database, x.name)
+        # Filter out temporary tables from TPCDS test
+        [x for x in spark_session.catalog.listTables() if x.tableType != "TEMPORARY"],
+        key=lambda x: (x.catalog, x.database, x.name),
     ) == [
         Table(
             name="table1",
@@ -96,7 +98,9 @@ def test_list_tables_no_args(spark_session: SparkSession):
 
 def test_list_tables_db_no_catalog(spark_session: SparkSession):
     assert sorted(
-        spark_session.catalog.listTables("db1"), key=lambda x: (x.catalog, x.database, x.name)
+        # Filter out temporary tables from TPCDS test
+        [x for x in spark_session.catalog.listTables("db1") if x.tableType != "TEMPORARY"],
+        key=lambda x: (x.catalog or "", x.database, x.name),
     ) == [
         Table(
             name="table1",
@@ -111,8 +115,13 @@ def test_list_tables_db_no_catalog(spark_session: SparkSession):
 
 def test_list_tables_db_and_catalog(spark_session: SparkSession):
     assert sorted(
-        spark_session.catalog.listTables("spark_catalog.db1"),
-        key=lambda x: (x.catalog, x.database, x.name),
+        # Filter out temporary tables from TPCDS test
+        [
+            x
+            for x in spark_session.catalog.listTables("spark_catalog.db1")
+            if x.tableType != "TEMPORARY"
+        ],
+        key=lambda x: (x.catalog or "", x.database, x.name),
     ) == [
         Table(
             name="table1",

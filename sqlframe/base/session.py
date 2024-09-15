@@ -391,7 +391,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
         )
         if qualify:
             expression = qualify_func(
-                expression, dialect=dialect, quote_identifiers=False, identify=False
+                expression,
+                dialect=dialect,
+                quote_identifiers=False,
+                identify=False,
+                schema=self.catalog._schema,
             )
         if self.temp_views:
             replacement_mapping = {}

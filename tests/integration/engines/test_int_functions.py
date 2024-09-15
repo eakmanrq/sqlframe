@@ -1498,7 +1498,7 @@ def test_last_day(get_session_and_func):
 def test_from_unixtime(get_session_and_func):
     session, from_unixtime = get_session_and_func("from_unixtime")
     df = session.createDataFrame([(1428476400,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, PostgresSession, SnowflakeSession)):
+    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
         expected = "2015-04-08 07:00:00"
     else:
         expected = "2015-04-08 00:00:00"
@@ -1540,7 +1540,7 @@ def test_to_utc_timestamp(get_session_and_func):
 def test_timestamp_seconds(get_session_and_func):
     session, timestamp_seconds = get_session_and_func("timestamp_seconds")
     df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, PostgresSession, SnowflakeSession)):
+    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
         expected = datetime.datetime(2008, 12, 25, 15, 30, 00)
     else:
         expected = datetime.datetime(2008, 12, 25, 7, 30)

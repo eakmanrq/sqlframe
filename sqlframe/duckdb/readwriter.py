@@ -93,6 +93,8 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
         else:
             from_clause = f"'{path}'"
         df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
+        if select_columns == [exp.Star()]:
+            return self.load(path=path, format=format, schema=df.schema, **options)
         self.session._last_loaded_file = path  # type: ignore
         return df
 
