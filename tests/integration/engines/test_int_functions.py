@@ -18,7 +18,7 @@ from sqlframe.base.util import (
     get_func_from_session as get_func_from_session_without_fallback,
 )
 from sqlframe.bigquery import BigQuerySession
-from sqlframe.duckdb import DuckDBSession
+from sqlframe.duckdb import DuckDBCatalog, DuckDBSession
 from sqlframe.postgres import PostgresDataFrame, PostgresSession
 from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark.session import SparkSession
