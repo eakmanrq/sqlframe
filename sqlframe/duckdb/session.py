@@ -52,6 +52,10 @@ class DuckDBSession(
             super().__init__(conn, *args, **kwargs)
             self._last_result = None
 
+    @cached_property
+    def _cur(self) -> DuckDBPyConnection:  # type: ignore
+        return self._conn
+
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
         if value and isinstance(value, dict):
