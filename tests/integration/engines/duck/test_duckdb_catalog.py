@@ -8,8 +8,7 @@ from sqlframe.duckdb.session import DuckDBSession
 def duckdb_session() -> DuckDBSession:
     import duckdb
 
-    connector = duckdb.connect()
-    connector.sql("set TimeZone = 'UTC'")
+    connector = duckdb.connect(config={"TimeZone": "UTC"})
     session = DuckDBSession(connector)
     session._execute('''ATTACH ':memory:' AS "default"''')
     session._execute('''ATTACH ':memory:' AS "catalog1"''')
