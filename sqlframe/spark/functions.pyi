@@ -2,6 +2,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     percentile_without_disc as percentile,
     add_months_by_multiplication as add_months,
     arrays_overlap_renamed as arrays_overlap,
+    try_element_at_zero_based as try_element_at,
 )
 from sqlframe.base.functions import (
     abs as abs,
@@ -372,7 +373,6 @@ from sqlframe.base.functions import (
     try_aes_decrypt as try_aes_decrypt,
     try_avg as try_avg,
     try_divide as try_divide,
-    try_element_at as try_element_at,
     try_multiply as try_multiply,
     try_subtract as try_subtract,
     try_sum as try_sum,

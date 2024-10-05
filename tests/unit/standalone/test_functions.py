@@ -1823,12 +1823,12 @@ def test_instr(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.overlay("cola", "colb", 3, 7), "OVERLAY(cola, colb, 3, 7)"),
+        (SF.overlay("cola", "colb", 3, 7), "OVERLAY(cola PLACING colb FROM 3 FOR 7)"),
         (
             SF.overlay(SF.col("cola"), SF.col("colb"), SF.lit(3), SF.lit(7)),
-            "OVERLAY(cola, colb, 3, 7)",
+            "OVERLAY(cola PLACING colb FROM 3 FOR 7)",
         ),
-        (SF.overlay("cola", "colb", 3), "OVERLAY(cola, colb, 3)"),
+        (SF.overlay("cola", "colb", 3), "OVERLAY(cola PLACING colb FROM 3)"),
     ],
 )
 def test_overlay(expression, expected):
@@ -2263,8 +2263,8 @@ def test_array_contains(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.arrays_overlap("cola", "colb"), "ARRAY_OVERLAPS(cola, colb)"),
-        (SF.arrays_overlap(SF.col("cola"), SF.col("colb")), "ARRAY_OVERLAPS(cola, colb)"),
+        (SF.arrays_overlap("cola", "colb"), "cola && colb"),
+        (SF.arrays_overlap(SF.col("cola"), SF.col("colb")), "cola && colb"),
     ],
 )
 def test_arrays_overlap(expression, expected):
@@ -4495,9 +4495,9 @@ def test_str_to_map(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.substr("cola", "colb"), "SUBSTR(cola, colb)"),
-        (SF.substr(SF.col("cola"), SF.col("colb")), "SUBSTR(cola, colb)"),
-        (SF.substr("cola", "colb", "colc"), "SUBSTR(cola, colb, colc)"),
+        (SF.substr("cola", "colb"), "SUBSTRING(cola, colb)"),
+        (SF.substr(SF.col("cola"), SF.col("colb")), "SUBSTRING(cola, colb)"),
+        (SF.substr("cola", "colb", "colc"), "SUBSTRING(cola, colb, colc)"),
     ],
 )
 def test_substr(expression, expected):

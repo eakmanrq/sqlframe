@@ -251,6 +251,7 @@ from sqlframe.base.functions import stddev as stddev
 from sqlframe.base.functions import stddev_pop as stddev_pop
 from sqlframe.base.functions import stddev_samp as stddev_samp
 from sqlframe.base.functions import struct as struct
+from sqlframe.base.functions import substr as substr
 from sqlframe.base.functions import substring as substring
 from sqlframe.base.functions import sum as sum
 from sqlframe.base.functions import sum_distinct as sum_distinct

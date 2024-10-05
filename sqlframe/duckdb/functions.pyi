@@ -184,6 +184,7 @@ from sqlframe.base.functions import (
     stddev_samp as stddev_samp,
     struct as struct,
     substring as substring,
+    substr as substr,
     sum as sum,
     sumDistinct as sumDistinct,
     sum_distinct as sum_distinct,
