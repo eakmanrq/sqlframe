@@ -1129,11 +1129,15 @@ def overlay(
     pos: t.Union[ColumnOrName, int],
     len: t.Optional[t.Union[ColumnOrName, int]] = None,
 ) -> Column:
-    pos_value = lit(pos) if isinstance(pos, int) else pos
-    if len is not None:
-        len_value = lit(len) if isinstance(len, int) else len
-        return Column.invoke_anonymous_function(src, "OVERLAY", replace, pos_value, len_value)
-    return Column.invoke_anonymous_function(src, "OVERLAY", replace, pos_value)
+    return Column.invoke_expression_over_column(
+        src,
+        expression.Overlay,
+        **{
+            "expression": Column(replace).expression,
+            "from": lit(pos).expression,
+            "for": lit(len).expression if len is not None else None,
+        },
+    )
 
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
@@ -4834,7 +4838,7 @@ def str_to_map(
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="postgres")
 def substr(str: ColumnOrName, pos: ColumnOrName, len: t.Optional[ColumnOrName] = None) -> Column:
     """
     Returns the substring of `str` that starts at `pos` and is of length `len`,
@@ -4873,10 +4877,7 @@ def substr(str: ColumnOrName, pos: ColumnOrName, len: t.Optional[ColumnOrName] =
     |                   k SQL|
     +------------------------+
     """
-    if len is not None:
-        return Column.invoke_anonymous_function(str, "substr", pos, len)
-    else:
-        return Column.invoke_anonymous_function(str, "substr", pos)
+    return Column.invoke_expression_over_column(str, expression.Substring, start=pos, length=len)
 
 
 @meta(unsupported_engines="*")
