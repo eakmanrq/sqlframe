@@ -42,7 +42,7 @@ setup(
             "pytest-postgresql>=6,<7",
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.5;python_version=='3.8'",
-            "pre-commit>=3.7,<3.9;python_version>='3.9'",
+            "pre-commit>=3.7,<4.1;python_version>='3.9'",
             "ruff>=0.4.4,<0.7",
             "types-psycopg2>=2.9,<3",
         ],
