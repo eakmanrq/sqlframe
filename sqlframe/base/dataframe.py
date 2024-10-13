@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 import sqlglot
 from prettytable import PrettyTable
-from sqlglot import Dialect
+from sqlglot import Dialect, maybe_parse
 from sqlglot import expressions as exp
 from sqlglot import lineage as sqlglot_lineage
 from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
@@ -460,16 +460,40 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         df.expression.ctes[-1].set("cache_storage_level", storage_level)
         return df
 
-    @classmethod
-    def _add_ctes_to_expression(cls, expression: exp.Select, ctes: t.List[exp.CTE]) -> exp.Select:
+    def _add_ctes_to_expression(self, expression: exp.Select, ctes: t.List[exp.CTE]) -> exp.Select:
         expression = expression.copy()
         with_expression = expression.args.get("with")
         if with_expression:
             existing_ctes = with_expression.expressions
-            existsing_cte_names = {x.alias_or_name for x in existing_ctes}
+            existing_cte_counts = {x.alias_or_name: 0 for x in existing_ctes}
+            replaced_cte_names = {}  # type: ignore
             for cte in ctes:
-                if cte.alias_or_name not in existsing_cte_names:
-                    existing_ctes.append(cte)
+                if replaced_cte_names:
+                    cte = cte.transform(replace_id_value, replaced_cte_names)  # type: ignore
+                if cte.alias_or_name in existing_cte_counts:
+                    existing_cte_counts[cte.alias_or_name] += 10
+                    cte.set(
+                        "this",
+                        cte.this.where(
+                            exp.EQ(
+                                this=exp.Literal.number(existing_cte_counts[cte.alias_or_name]),
+                                expression=exp.Literal.number(
+                                    existing_cte_counts[cte.alias_or_name]
+                                ),
+                            )
+                        ),
+                    )
+                    new_cte_alias = self._create_hash_from_expression(cte.this)
+                    replaced_cte_names[cte.args["alias"].this] = maybe_parse(
+                        new_cte_alias, dialect=self.session.input_dialect, into=exp.Identifier
+                    )
+                    cte.set(
+                        "alias",
+                        maybe_parse(
+                            new_cte_alias, dialect=self.session.input_dialect, into=exp.TableAlias
+                        ),
+                    )
+                existing_ctes.append(cte)
         else:
             existing_ctes = ctes
         expression.set("with", exp.With(expressions=existing_ctes))
@@ -843,11 +867,11 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
         other_df = other_df._convert_leaf_to_cte()
+        join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
         # We will determine actual "join on" expression later so we don't provide it at first
-        join_expression = self.expression.join(
-            other_df.latest_cte_name, join_type=how.replace("_", " ")
+        join_expression = join_expression.join(
+            join_expression.ctes[-1].alias, join_type=how.replace("_", " ")
         )
-        join_expression = self._add_ctes_to_expression(join_expression, other_df.expression.ctes)
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)

@@ -2180,3 +2180,59 @@ def test_chained_join_common_key(
     dfs = dfs.join(dfs_height, how="left", on="name").join(dfs_location, how="left", on="name")
 
     compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/185
+def test_chaining_joins_with_selects(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    pyspark_district: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+    is_spark: t.Callable,
+):
+    if is_spark():
+        pytest.skip(
+            "This test is not supported in Spark. This is related to how duplicate columns are handled in Spark"
+        )
+    df = (
+        pyspark_employee.alias("employee")
+        .join(
+            pyspark_store.filter(F.col("store_name") != "test").alias("store"),
+            on=F.col("employee.employee_id") == F.col("store.store_id"),
+        )
+        .join(
+            pyspark_district.alias("district"),
+            on=F.col("store.store_id") == F.col("district.district_id"),
+        )
+        .join(
+            pyspark_district.alias("district2"),
+            on=(F.col("store.store_id") + 1) == F.col("district2.district_id"),
+            how="left",
+        )
+        .select("*")
+    )
+
+    employee = get_df("employee")
+    store = get_df("store")
+    district = get_df("district")
+
+    dfs = (
+        employee.alias("employee")
+        .join(
+            store.filter(SF.col("store_name") != "test").alias("store"),
+            on=SF.col("employee.employee_id") == SF.col("store.store_id"),
+        )
+        .join(
+            district.alias("district"),
+            on=SF.col("store.store_id") == SF.col("district.district_id"),
+        )
+        .join(
+            district.alias("district2"),
+            on=(SF.col("store.store_id") + 1) == SF.col("district2.district_id"),
+            how="left",
+        )
+        .select("*")
+    )
+
+    compare_frames(df, dfs, compare_schema=False)
