@@ -338,6 +338,9 @@ class Column:
         new_expression = exp.Not(this=exp.Is(this=self.column_expression, expression=exp.Null()))
         return Column(new_expression)
 
+    def eqNullSafe(self, other: ColumnOrLiteral) -> Column:
+        return self.binary_op(exp.NullSafeEQ, other)
+
     def cast(
         self,
         dataType: t.Union[str, DataType, exp.DataType, exp.DataType.Type],

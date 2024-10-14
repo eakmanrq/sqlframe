@@ -231,6 +231,17 @@ def test_where_clause_single(
     compare_frames(df_employee, dfs_employee)
 
 
+def test_where_clause_eq_nullsafe(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df_employee = pyspark_employee.where(F.col("age").eqNullSafe(F.lit(37)))
+    dfs_employee = employee.where(SF.col("age") == SF.lit(37))
+    compare_frames(df_employee, dfs_employee)
+
+
 def test_where_clause_multiple_and(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
