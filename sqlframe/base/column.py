@@ -340,7 +340,7 @@ class Column:
 
     def eqNullSafe(self, other: ColumnOrLiteral) -> Column:
         return self.binary_op(exp.NullSafeEQ, other)
-    
+
     def cast(
         self,
         dataType: t.Union[str, DataType, exp.DataType, exp.DataType.Type],

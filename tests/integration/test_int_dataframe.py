@@ -242,7 +242,6 @@ def test_where_clause_eq_nullsafe(
     compare_frames(df_employee, dfs_employee)
 
 
-
 def test_where_clause_multiple_and(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
