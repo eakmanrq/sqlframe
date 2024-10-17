@@ -32,7 +32,7 @@ setup(
             "duckdb>=0.9,<1.2",
             "findspark>=2,<3",
             "mypy>=1.10.0,<1.12",
-            "openai>=1.30,<1.52",
+            "openai>=1.30,<1.53",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
@@ -58,7 +58,7 @@ setup(
             "pandas>=2,<3",
         ],
         "openai": [
-            "openai>=1.30,<1.52",
+            "openai>=1.30,<1.53",
         ],
         "pandas": [
             "pandas>=2,<3",
