@@ -1652,8 +1652,8 @@ def arrays_zip(*cols: ColumnOrName) -> Column:
 def map_concat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     columns = list(flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
     if len(columns) == 1:
-        return Column.invoke_anonymous_function(columns[0], "MAP_CONCAT")
-    return Column.invoke_anonymous_function(columns[0], "MAP_CONCAT", *columns[1:])
+        return Column.invoke_anonymous_function(columns[0], "MAP_CONCAT")  # type: ignore
+    return Column.invoke_anonymous_function(columns[0], "MAP_CONCAT", *columns[1:])  # type: ignore
 
 
 @meta(unsupported_engines="postgres")

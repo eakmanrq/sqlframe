@@ -1320,8 +1320,8 @@ def flatten_using_array_flatten(col: ColumnOrName) -> Column:
 def map_concat_using_map_cat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     columns = list(flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
     if len(columns) == 1:
-        return Column.invoke_anonymous_function(columns[0], "MAP_CAT")
-    return Column.invoke_anonymous_function(columns[0], "MAP_CAT", *columns[1:])
+        return Column.invoke_anonymous_function(columns[0], "MAP_CAT")  # type: ignore
+    return Column.invoke_anonymous_function(columns[0], "MAP_CAT", *columns[1:])  # type: ignore
 
 
 def sequence_from_generate_series(
