@@ -177,6 +177,7 @@ from sqlframe.base.functions import (
     skewness as skewness,
     sort_array as sort_array,
     soundex as soundex,
+    split_part as split_part,
     sqrt as sqrt,
     startswith as startswith,
     stddev as stddev,
