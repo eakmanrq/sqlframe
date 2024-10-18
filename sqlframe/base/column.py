@@ -388,7 +388,7 @@ class Column:
 
     def isin(self, *cols: t.Union[ColumnOrLiteral, t.Iterable[ColumnOrLiteral]]):
         columns = flatten(cols) if isinstance(cols[0], (list, set, tuple)) else cols  # type: ignore
-        expressions = [self._lit(x).expression for x in columns]
+        expressions = [self._lit(x).expression for x in columns]  # type: ignore
         return Column.invoke_expression_over_column(self, exp.In, expressions=expressions)  # type: ignore
 
     def between(
