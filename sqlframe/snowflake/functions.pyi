@@ -187,6 +187,7 @@ from sqlframe.base.functions import (
     sinh as sinh,
     size as size,
     soundex as soundex,
+    split_part as split_part,
     sqrt as sqrt,
     startswith as startswith,
     stddev as stddev,

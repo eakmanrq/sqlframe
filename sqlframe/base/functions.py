@@ -4697,7 +4697,7 @@ def spark_partition_id() -> Column:
     return Column.invoke_anonymous_function(None, "spark_partition_id")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres"])
 def split_part(src: ColumnOrName, delimiter: ColumnOrName, partNum: ColumnOrName) -> Column:
     """
     Splits `str` by delimiter and return requested part of the split (1-based).
@@ -4723,7 +4723,9 @@ def split_part(src: ColumnOrName, delimiter: ColumnOrName, partNum: ColumnOrName
     >>> df.select(split_part(df.a, df.b, df.c).alias('r')).collect()
     [Row(r='13')]
     """
-    return Column.invoke_anonymous_function(src, "split_part", delimiter, partNum)
+    return Column.invoke_expression_over_column(
+        src, expression.SplitPart, delimiter=delimiter, part_index=partNum
+    )
 
 
 @meta()
