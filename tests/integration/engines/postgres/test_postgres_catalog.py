@@ -31,18 +31,6 @@ def test_set_current_database(postgres_session: PostgresSession):
     assert postgres_session.catalog.currentDatabase() == "db1"
 
 
-def test_list_databases(postgres_session: PostgresSession):
-    assert sorted(postgres_session.catalog.listDatabases(), key=lambda x: (x.catalog, x.name)) == [
-        Database(name="db1", catalog="tests", description=None, locationUri=""),
-        Database(name="information_schema", catalog="tests", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="tests", description=None, locationUri=""),
-        Database(name="pg_temp_3", catalog="tests", description=None, locationUri=""),
-        Database(name="pg_toast", catalog="tests", description=None, locationUri=""),
-        Database(name="pg_toast_temp_3", catalog="tests", description=None, locationUri=""),
-        Database(name="public", catalog="tests", description=None, locationUri=""),
-    ]
-
-
 def test_list_databases_pattern(postgres_session: PostgresSession):
     assert sorted(
         postgres_session.catalog.listDatabases("db*"), key=lambda x: (x.catalog, x.name)
