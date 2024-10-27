@@ -37,6 +37,6 @@ jobs:
     - name: Run Style
       run: make style
     - name: Setup Postgres
-      uses: ikalnytskyi/action-setup-postgres@v6
+      uses: ikalnytskyi/action-setup-postgres@v7
     - name: Run tests
       run: make local-test
