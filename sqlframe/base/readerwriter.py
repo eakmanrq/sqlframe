@@ -113,22 +113,6 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
         schema: t.Optional[t.Union[StructType, str]] = None,
         **options: OptionalPrimitiveType,
     ) -> DF:
-        format_to_read = format or self.state_format_to_read
-        if format_to_read is None:
-            raise ValueError("Please specify the format of the data source.")
-        if path is None:
-            raise ValueError("Please specify the path of the data source.")
-        if format_to_read == "json":
-            return self.json(
-                path,
-                schema,
-                **options,  # type: ignore
-            )
-        if format_to_read == "parquet":
-            return self.parquet(
-                *path,
-                **options,  # type: ignore
-            )
         raise NotImplementedError()
 
     def json(

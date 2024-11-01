@@ -75,6 +75,7 @@ class PandasLoaderMixin(_BaseDataFrameReader, t.Generic[SESSION, DF]):
 
         assert path is not None, "path is required"
         assert isinstance(path, str), "path must be a string"
+        format = format or self.state_format_to_read
         format = format or _infer_format(path)
         kwargs = {k: v for k, v in options.items() if v is not None}
         if format == "json":
