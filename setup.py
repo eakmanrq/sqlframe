@@ -19,7 +19,7 @@ setup(
     setup_requires=["setuptools_scm"],
     python_requires=">=3.8",
     install_requires=[
-        "prettytable<3.11.1",
+        "prettytable<3.12.1",
         "sqlglot>=24.0.0,<25.29",
         "typing_extensions>=4.8,<5",
     ],
@@ -32,7 +32,7 @@ setup(
             "duckdb>=0.9,<1.2",
             "findspark>=2,<3",
             "mypy>=1.10.0,<1.14",
-            "openai>=1.30,<1.53",
+            "openai>=1.30,<1.54",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
@@ -58,7 +58,7 @@ setup(
             "pandas>=2,<3",
         ],
         "openai": [
-            "openai>=1.30,<1.53",
+            "openai>=1.30,<1.54",
         ],
         "pandas": [
             "pandas>=2,<3",
