@@ -72,6 +72,7 @@ class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFra
         |100|NULL|
         +---+----+
         """
+        format = format or self.state_format_to_read
         if schema:
             column_mapping = ensure_column_mapping(schema)
             select_column_mapping = column_mapping.copy()

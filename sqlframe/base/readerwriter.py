@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 class _BaseDataFrameReader(t.Generic[SESSION, DF]):
     def __init__(self, spark: SESSION):
         self._session = spark
+        self.state_format_to_read: t.Optional[str] = None
 
     @property
     def session(self) -> SESSION:
@@ -66,6 +67,44 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
             )
             for k, v in column_mapping.items()
         ]
+
+    def format(self, source: str) -> "Self":
+        """Specifies the input data source format.
+
+        .. versionadded:: 1.4.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        source : str
+            string, name of the data source, e.g. 'json', 'parquet'.
+
+        Examples
+        --------
+        >>> spark.read.format('json')
+        <...readwriter.DataFrameReader object ...>
+
+        Write a DataFrame into a JSON file and read it back.
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     # Write a DataFrame into a JSON file
+        ...     spark.createDataFrame(
+        ...         [{"age": 100, "name": "Hyukjin Kwon"}]
+        ...     ).write.mode("overwrite").format("json").save(d)
+        ...
+        ...     # Read the JSON file as a DataFrame.
+        ...     spark.read.format('json').load(d).show()
+        +---+------------+
+        |age|        name|
+        +---+------------+
+        |100|Hyukjin Kwon|
+        +---+------------+
+        """
+        self.state_format_to_read = source
+        return self
 
     def load(
         self,
