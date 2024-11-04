@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class _BaseDataFrameReader(t.Generic[SESSION, DF]):
     def __init__(self, spark: SESSION):
         self._session = spark
-        self.state_format_to_read = None
+        self.state_format_to_read: t.Optional[str] = None
 
     @property
     def session(self) -> SESSION:
