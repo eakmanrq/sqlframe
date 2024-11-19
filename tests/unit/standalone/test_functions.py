@@ -13,9 +13,11 @@ from sqlframe.standalone import functions as SF
 @pytest.mark.parametrize("name,func", inspect.getmembers(SF, inspect.isfunction))
 def test_invoke_anonymous(name, func):
     # array_size - converts to `size` but `array_size` and `size` behave differently
+    # exists - the spark exists takes a lambda function and the exists in SQLGlot seems more basic
+    # make_interval - SQLGlot doesn't support week
     # to_char - convert to a cast that ignores the format provided
     # ltrim/rtrim - don't seem to convert correctly on some engines
-    ignore_funcs = {"array_size", "to_char", "ltrim", "rtrim"}
+    ignore_funcs = {"array_size", "exists", "make_interval", "to_char", "ltrim", "rtrim"}
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
@@ -4224,7 +4226,7 @@ def test_regexp_count(expression, expected):
             SF.regexp_extract_all("cola", "colb", SF.col("colc")),
             "REGEXP_EXTRACT_ALL(cola, colb, colc)",
         ),
-        (SF.regexp_extract_all("cola", "colb", 1), "REGEXP_EXTRACT_ALL(cola, colb, 1)"),
+        (SF.regexp_extract_all("cola", "colb", 2), "REGEXP_EXTRACT_ALL(cola, colb, 2)"),
     ],
 )
 def test_regexp_extract_all(expression, expected):
