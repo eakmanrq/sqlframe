@@ -2069,9 +2069,11 @@ def character_length(str: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "character_length")
 
 
-@meta()
+@meta(unsupported_engines=["bigquery", "postgres"])
 def contains(left: ColumnOrName, right: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(left, "contains", right)
+    return Column.invoke_expression_over_column(
+        left, expression.Contains, expression=Column.ensure_col(right).expression
+    )
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
@@ -3484,7 +3486,7 @@ def mask(
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery"])
 def median(col: ColumnOrName) -> Column:
     """
     Returns the median of the values in a group.
@@ -3520,7 +3522,7 @@ def median(col: ColumnOrName) -> Column:
     |dotNET|         10000.0|
     +------+----------------+
     """
-    return Column.invoke_anonymous_function(col, "median")
+    return Column.invoke_expression_over_column(col, expression.Median)
 
 
 @meta(unsupported_engines="*")
@@ -4106,11 +4108,9 @@ def regexp_extract_all(
     >>> df.select(regexp_extract_all('str', col("regexp")).alias('d')).collect()
     [Row(d=['100', '300'])]
     """
-    if idx is None:
-        return Column.invoke_anonymous_function(str, "regexp_extract_all", regexp)
-    else:
-        idx = lit(idx) if isinstance(idx, int) else idx
-        return Column.invoke_anonymous_function(str, "regexp_extract_all", regexp, idx)
+    return Column.invoke_expression_over_column(
+        str, expression.RegexpExtractAll, expression=regexp, group=idx
+    )
 
 
 @meta(unsupported_engines="*")
@@ -5426,7 +5426,7 @@ def unix_millis(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "unix_millis")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def unix_seconds(col: ColumnOrName) -> Column:
     """Returns the number of seconds since 1970-01-01 00:00:00 UTC.
     Truncates higher levels of precision.
@@ -5441,7 +5441,7 @@ def unix_seconds(col: ColumnOrName) -> Column:
     [Row(n=1437584400)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
-    return Column.invoke_anonymous_function(col, "unix_seconds")
+    return Column.invoke_expression_over_column(col, expression.UnixSeconds)
 
 
 @meta(unsupported_engines="*")
