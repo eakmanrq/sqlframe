@@ -6,6 +6,7 @@ import unicodedata
 
 from sqlglot import expressions as exp
 from sqlglot import parse_one, to_table
+from sqlglot.dialects import DuckDB
 from sqlglot.dialects.dialect import Dialect, DialectType
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify_columns import (
@@ -372,6 +373,12 @@ def normalize_string(
 ) -> str:
     from sqlframe.base.session import _BaseSession
 
+    data_type_replacement_mapping = {
+        DuckDB: {
+            "TIMESTAMP_NS": "TIMESTAMP",
+        }
+    }
+
     session: _BaseSession = _BaseSession()
 
     str_to_dialect = {
@@ -397,6 +404,9 @@ def normalize_string(
         elif is_table:
             value_expression = to_table(value_without_star, dialect=from_dialect)
         elif is_datatype:
+            value_without_star = data_type_replacement_mapping.get(from_dialect, {}).get(  # type: ignore
+                value_without_star, value_without_star
+            )
             value_expression = exp.DataType.build(value_without_star, dialect=from_dialect)
         elif is_column:
             value_expression = exp.to_column(value_without_star, dialect=from_dialect)
