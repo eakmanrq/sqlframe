@@ -1,5 +1,5 @@
 install-dev:
-	pip install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,spark]"
+	pip install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
 
 install-pre-commit:
 	pre-commit install
@@ -33,6 +33,7 @@ stubs:
 	stubgen sqlframe/duckdb/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/postgres/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/snowflake/functions.py --output ./ --inspect-mode
+        stubgen sqlframe/databricks/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/spark/functions.py --output ./ --inspect-mode
 
 package:
