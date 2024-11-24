@@ -75,6 +75,9 @@ setup(
         "spark": [
             "pyspark>=2,<3.6",
         ],
+        "databricks": [
+            "databricks-sql-connector>=3.6,<4",
+        ],
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
