@@ -9,6 +9,7 @@ nav:
   - "Spark": spark.md
   - "Standalone": standalone.md
   - "Configuration": configuration.md
+  - "Redshift (In-Development)": redshift.md
 theme:
   name: material
   logo: images/SF.png
