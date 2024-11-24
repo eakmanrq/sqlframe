@@ -629,10 +629,10 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 # We will drop the "view" if it exists before running the cache table
                 output_expressions.append(exp.Drop(this=cache_table, exists=True, kind="VIEW"))
             elif expression_type == exp.Create:
-                expression = df.output_expression_container.copy()
+                expression = df.output_expression_container.copy()  # type: ignore
                 expression.set("expression", select_expression)
             elif expression_type == exp.Insert:
-                expression = df.output_expression_container.copy()
+                expression = df.output_expression_container.copy()  # type: ignore
                 select_without_ctes = select_expression.copy()
                 select_without_ctes.set("with", None)
                 expression.set("expression", select_without_ctes)
