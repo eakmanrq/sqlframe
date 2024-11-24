@@ -43,7 +43,7 @@ setup(
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.5;python_version=='3.8'",
             "pre-commit>=3.7,<4.1;python_version>='3.9'",
-            "ruff>=0.4.4,<0.8",
+            "ruff>=0.4.4,<0.9",
             "types-psycopg2>=2.9,<3",
         ],
         "docs": [
