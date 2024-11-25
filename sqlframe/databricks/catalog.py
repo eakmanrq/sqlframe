@@ -297,4 +297,4 @@ class DatabricksCatalog(
                     columns[row["col_name"]].isPartition = is_partition
 
 
-        return columns
+        return [v for _, v in columns.items()]
