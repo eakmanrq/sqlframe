@@ -268,29 +268,33 @@ class DatabricksCatalog(
         sql = f"DESCRIBE TABLE {'.'.join(part.name for part in table.parts)}"
         results = self.session._collect(sql)
         is_partition = False
-        columns = []
+        columns = {}
         for row in results:
             if row["col_name"] == "# Partition Information":
                 is_partition = True
             if row["data_type"] != '' and row["data_type"] != "data_type":
-                columns.append(
-                    Column(
-                        name=normalize_string(
-                            row["col_name"],
-                            from_dialect=self.session.execution_dialect,
-                            to_dialect=self.session.output_dialect,
-                        ),
-                        description=row["comment"],
-                        dataType=normalize_string(
-                            row["data_type"],
-                            from_dialect=self.session.execution_dialect,
-                            to_dialect=self.session.output_dialect,
-                            is_datatype=True,
-                        ),
-                        nullable=True,
-                        isPartition=is_partition,
-                        isBucket=False,
+                if row["col_name"] not in columns:
+                    columns[row["col_name"]] = (
+                        Column(
+                            name=normalize_string(
+                                row["col_name"],
+                                from_dialect=self.session.execution_dialect,
+                                to_dialect=self.session.output_dialect,
+                            ),
+                            description=row["comment"],
+                            dataType=normalize_string(
+                                row["data_type"],
+                                from_dialect=self.session.execution_dialect,
+                                to_dialect=self.session.output_dialect,
+                                is_datatype=True,
+                            ),
+                            nullable=True,
+                            isPartition=is_partition,
+                            isBucket=False,
+                        )
                     )
-                )
+                else:
+                    columns[row["col_name"]].isPartition = is_partition
+
 
         return columns
