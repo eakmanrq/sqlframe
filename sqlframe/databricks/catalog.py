@@ -8,12 +8,11 @@ import typing as t
 
 from sqlglot import exp, parse_one
 
-from sqlframe.base.catalog import Function, _BaseCatalog
+from sqlframe.base.catalog import Function, Column, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
-    ListColumnsFromInfoSchemaMixin,
     ListDatabasesFromInfoSchemaMixin,
     ListTablesFromInfoSchemaMixin,
     SetCurrentCatalogFromUseMixin,
@@ -34,7 +33,6 @@ class DatabricksCatalog(
     ListCatalogsFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
     SetCurrentDatabaseFromUseMixin["DatabricksSession", "DatabricksDataFrame"],
     ListTablesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
-    ListColumnsFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
     _BaseCatalog["DatabricksSession", "DatabricksDataFrame"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
@@ -178,3 +176,121 @@ class DatabricksCatalog(
             )
             for row in results if row["data_type"] != '' and row["data_type"] != "data_type"
         }
+
+    def listColumns(
+        self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
+    ) -> t.List[Column]:
+        """Returns a t.List of columns for the given table/view in the specified database.
+
+        .. versionadded:: 2.0.0
+
+        Parameters
+        ----------
+        tableName : str
+            name of the table to t.List columns.
+
+            .. versionchanged:: 3.4.0
+               Allow ``tableName`` to be qualified with catalog name when ``dbName`` is None.
+
+        dbName : str, t.Optional
+            name of the database to find the table to t.List columns.
+
+        Returns
+        -------
+        t.List
+            A t.List of :class:`Column`.
+
+        Notes
+        -----
+        The order of arguments here is different from that of its JVM counterpart
+        because Python does not support method overloading.
+
+        If no database is specified, the current database and catalog
+        are used. This API includes all temporary views.
+
+        Examples
+        --------
+        >>> _ = spark.sql("DROP TABLE IF EXISTS tbl1")
+        >>> _ = spark.sql("CREATE TABLE tblA (name STRING, age INT) USING parquet")
+        >>> spark.catalog.t.listColumns("tblA")
+        [Column(name='name', description=None, dataType='string', nullable=True, ...
+        >>> _ = spark.sql("DROP TABLE tblA")
+        """
+        tableName = normalize_string(
+            tableName, from_dialect=self.session.input_dialect, is_table=True
+        )
+        dbName = (
+            normalize_string(dbName, from_dialect=self.session.input_dialect, is_schema=True)
+            if dbName
+            else None
+        )
+        if df := self.session.temp_views.get(tableName):
+            return [
+                Column(
+                    name=x,
+                    description=None,
+                    dataType="",
+                    nullable=True,
+                    isPartition=False,
+                    isBucket=False,
+                )
+                for x in df.columns
+            ]
+
+        table = exp.to_table(tableName, dialect=self.session.input_dialect)
+        schema = to_schema(dbName, dialect=self.session.input_dialect) if dbName else None
+        if not table.db:
+            if schema and schema.db:
+                table.set("db", schema.args["db"])
+            else:
+                current_database = normalize_string(
+                    self.currentDatabase(),
+                    from_dialect=self.session.output_dialect,
+                    to_dialect=self.session.input_dialect,
+                )
+                table.set(
+                    "db",
+                    exp.parse_identifier(current_database, dialect=self.session.input_dialect),
+                )
+        if not table.catalog:
+            if schema and schema.catalog:
+                table.set("catalog", schema.args["catalog"])
+            else:
+                current_catalog = normalize_string(
+                    self.currentCatalog(),
+                    from_dialect=self.session.output_dialect,
+                    to_dialect=self.session.input_dialect,
+                )
+                table.set(
+                    "catalog",
+                    exp.parse_identifier(current_catalog, dialect=self.session.input_dialect),
+                )
+        sql = f"DESCRIBE TABLE {'.'.join(part.name for part in table.parts)}"
+        results = self.session._collect(sql)
+        is_partition = False
+        columns = []
+        for row in results:
+            if row["col_name"] == "# Partition Information":
+                is_partition = True
+            if row["data_type"] != '' and row["data_type"] != "data_type":
+                columns.append(
+                    Column(
+                        name=normalize_string(
+                            row["col_name"],
+                            from_dialect=self.session.execution_dialect,
+                            to_dialect=self.session.output_dialect,
+                        ),
+                        description=row["comment"],
+                        dataType=normalize_string(
+                            row["data_type"],
+                            from_dialect=self.session.execution_dialect,
+                            to_dialect=self.session.output_dialect,
+                            is_datatype=True,
+                        ),
+                        nullable=True,
+                        isPartition=is_partition,
+                        isBucket=False,
+                    )
+                )
+
+        return columns
