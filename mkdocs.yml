@@ -10,6 +10,7 @@ nav:
   - "Standalone": standalone.md
   - "Configuration": configuration.md
   - "Redshift (In-Development)": redshift.md
+  - "Databricks (In-Development)": databricks.md
 theme:
   name: material
   logo: images/SF.png
