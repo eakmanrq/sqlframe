@@ -309,4 +309,4 @@ class DatabricksCatalog(
                 )
             )
 
-        return [v for _, v in columns.items()]
+        return columns
