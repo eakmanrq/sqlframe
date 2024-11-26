@@ -72,7 +72,11 @@ class DatabricksDataFrameWriter(
                 cluster_by = [clusterBy]
             else:
                 cluster_by = clusterBy
-            properties.append(exp.Cluster(expressions=list(map(sg.to_identifier, cluster_by))))
+            properties.append(
+                exp.Cluster(
+                    expressions=[exp.Tuple(expressions=list(map(sg.to_identifier, cluster_by)))]
+                )
+            )
 
         properties.extend(
             exp.Property(this=sg.to_identifier(name), value=exp.convert(value))
