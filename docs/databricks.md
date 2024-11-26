@@ -130,7 +130,7 @@ session = SparkSession.builder.getOrCreate()
 table_path = "samples.nyctaxi.trips"
 # Get columns in the table
 print(session.catalog.listColumns(table_path))
-# Get the top 5 years with the greatest year-over-year % change in new families with a single child
+# Get the number of rides per hour
 (
     session.table(table_path)
     .where(F.col("tpep_pickup_datetime").between("2016-01-01", "2016-01-16"))
