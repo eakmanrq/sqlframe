@@ -8,7 +8,7 @@ import typing as t
 
 from sqlglot import exp, parse_one
 
-from sqlframe.base.catalog import Function, Column, _BaseCatalog
+from sqlframe.base.catalog import Column, Function, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
@@ -111,9 +111,7 @@ class DatabricksCatalog(
                     schema.catalog, from_dialect="execution", to_dialect="output"
                 ),
                 namespace=[
-                    normalize_string(
-                        schema.db, from_dialect="execution", to_dialect="output"
-                    )
+                    normalize_string(schema.db, from_dialect="execution", to_dialect="output")
                 ],
                 description=None,
                 className="",
@@ -174,7 +172,8 @@ class DatabricksCatalog(
                 dialect=self.session.output_dialect,
                 udt=True,
             )
-            for row in results if row["data_type"] != '' and row["data_type"] != "data_type"
+            for row in results
+            if row["data_type"] != "" and row["data_type"] != "data_type"
         }
 
     def listColumns(
@@ -267,34 +266,37 @@ class DatabricksCatalog(
                 )
         sql = f"DESCRIBE TABLE {'.'.join(part.name for part in table.parts)}"
         results = self.session._collect(sql)
+
         is_partition = False
-        columns = {}
+        partitions = set([])
         for row in results:
             if row["col_name"] == "# Partition Information":
                 is_partition = True
-            if row["data_type"] != '' and row["data_type"] != "data_type":
-                if row["col_name"] not in columns:
-                    columns[row["col_name"]] = (
-                        Column(
-                            name=normalize_string(
-                                row["col_name"],
-                                from_dialect=self.session.execution_dialect,
-                                to_dialect=self.session.output_dialect,
-                            ),
-                            description=row["comment"],
-                            dataType=normalize_string(
-                                row["data_type"],
-                                from_dialect=self.session.execution_dialect,
-                                to_dialect=self.session.output_dialect,
-                                is_datatype=True,
-                            ),
-                            nullable=True,
-                            isPartition=is_partition,
-                            isBucket=False,
-                        )
-                    )
-                else:
-                    columns[row["col_name"]].isPartition = is_partition
+            if is_partition and row["data_type"] != "" and row["data_type"] != "data_type":
+                partitions.add(row["col_name"])
 
+        columns = []
+        for row in results:
+            if row["data_type"] == "" or row["data_type"] == "data_type":
+                break
+            columns.append(
+                Column(
+                    name=normalize_string(
+                        row["col_name"],
+                        from_dialect=self.session.execution_dialect,
+                        to_dialect=self.session.output_dialect,
+                    ),
+                    description=row["comment"],
+                    dataType=normalize_string(
+                        row["data_type"],
+                        from_dialect=self.session.execution_dialect,
+                        to_dialect=self.session.output_dialect,
+                        is_datatype=True,
+                    ),
+                    nullable=True,
+                    isPartition=True if row["col_name"] in partitions else False,
+                    isBucket=False,
+                )
+            )
 
-        return [v for _, v in columns.items()]
+        return columns

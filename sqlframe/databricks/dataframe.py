@@ -51,9 +51,14 @@ class DatabricksDataFrame(
         for row in self.session._collect(r"DESCRIBE QUERY ({sql})".format(sql=sql)):
             columns.append(
                 CatalogColumn(
-                    name=normalize_string(row.col_name, from_dialect="execution", to_dialect="output"),
+                    name=normalize_string(
+                        row.col_name, from_dialect="execution", to_dialect="output"
+                    ),
                     dataType=normalize_string(
-                        row.data_type, from_dialect="execution", to_dialect="output", is_datatype=True
+                        row.data_type,
+                        from_dialect="execution",
+                        to_dialect="output",
+                        is_datatype=True,
                     ),
                     nullable=True,
                     description=row.comment,

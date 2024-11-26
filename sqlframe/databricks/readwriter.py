@@ -4,20 +4,21 @@ from __future__ import annotations
 
 import sys
 import typing as t
-from sqlglot import exp
+
 import sqlglot as sg
+from sqlglot import exp
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
-from sqlframe.base.util import normalize_string
 from sqlframe.base.mixins.readwriter_mixins import PandasLoaderMixin, PandasWriterMixin
 from sqlframe.base.readerwriter import (
     _BaseDataFrameReader,
     _BaseDataFrameWriter,
 )
+from sqlframe.base.util import normalize_string
 
 if t.TYPE_CHECKING:
     from sqlframe.databricks.session import DatabricksSession  # noqa
@@ -55,7 +56,7 @@ class DatabricksDataFrameWriter(
             replace = True
         name = normalize_string(name, from_dialect="input", is_table=True)
 
-        properties = []
+        properties: t.List[exp.Expression] = []
         if partitionBy is not None:
             if isinstance(partitionBy, str):
                 partition_by = [partitionBy]
@@ -63,9 +64,7 @@ class DatabricksDataFrameWriter(
                 partition_by = partitionBy
             properties.append(
                 exp.PartitionedByProperty(
-                    this=exp.Tuple(
-                        expressions=list(map(sg.to_identifier, partition_by))
-                    )
+                    this=exp.Tuple(expressions=list(map(sg.to_identifier, partition_by)))
                 )
             )
         if clusterBy is not None:
@@ -73,9 +72,7 @@ class DatabricksDataFrameWriter(
                 cluster_by = [clusterBy]
             else:
                 cluster_by = clusterBy
-            properties.append(
-                exp.Cluster(expressions=list(map(sg.to_identifier, cluster_by)))
-            )
+            properties.append(exp.Cluster(expressions=list(map(sg.to_identifier, cluster_by))))
 
         properties.extend(
             exp.Property(this=sg.to_identifier(name), value=exp.convert(value))

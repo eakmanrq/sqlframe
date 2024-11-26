@@ -3,9 +3,6 @@ from __future__ import annotations
 import typing as t
 import warnings
 
-from sqlframe.databricks.udf import DatabricksUDFRegistration
-
-
 from sqlframe.base.session import _BaseSession
 from sqlframe.databricks.catalog import DatabricksCatalog
 from sqlframe.databricks.dataframe import DatabricksDataFrame
@@ -13,11 +10,13 @@ from sqlframe.databricks.readwriter import (
     DatabricksDataFrameReader,
     DatabricksDataFrameWriter,
 )
+from sqlframe.databricks.udf import DatabricksUDFRegistration
 
 if t.TYPE_CHECKING:
     from databricks.sql.client import Connection as DatabricksConnection
 else:
     DatabricksConnection = t.Any
+
 
 class DatabricksSession(
     _BaseSession[  # type: ignore
@@ -36,11 +35,11 @@ class DatabricksSession(
     _udf_registration = DatabricksUDFRegistration
 
     def __init__(
-            self,
-            conn: t.Optional[DatabricksConnection] = None,
-            server_hostname: t.Optional[str] = None,
-            http_path: t.Optional[str] = None,
-            access_token: t.Optional[str] = None,
+        self,
+        conn: t.Optional[DatabricksConnection] = None,
+        server_hostname: t.Optional[str] = None,
+        http_path: t.Optional[str] = None,
+        access_token: t.Optional[str] = None,
     ):
         from databricks import sql
 
