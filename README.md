@@ -15,6 +15,7 @@ SQLFrame currently supports the following engines (many more in development):
 There are also two engines in development. These engines lack test coverage and robust documentation, but are available for early testing:
 
 * [Redshift](https://sqlframe.readthedocs.io/en/stable/redshift)
+* [Databricks](https://sqlframe.readthedocs.io/en/stable/databricks)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
 
@@ -42,6 +43,8 @@ pip install "sqlframe[snowflake]"
 pip install "sqlframe[spark]"
 # Redshift (in development)
 pip install "sqlframe[redshift]"
+# Databricks (in development)
+pip install "sqlframe[databricks]"
 # Standalone
 pip install sqlframe
 ```

@@ -15,6 +15,7 @@ ENGINE_TO_PREFIX = {
     "redshift": "Redshift",
     "snowflake": "Snowflake",
     "spark": "Spark",
+    "databricks": "Databricks",
     "standalone": "Standalone",
 }
 
