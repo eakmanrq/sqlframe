@@ -9,6 +9,7 @@ from sqlframe.bigquery.readwriter import (
     BigQueryDataFrameReader,
     BigQueryDataFrameWriter,
 )
+from sqlframe.bigquery.table import BigQueryTable
 from sqlframe.bigquery.udf import BigQueryUDFRegistration
 
 if t.TYPE_CHECKING:
@@ -25,6 +26,7 @@ class BigQuerySession(
         BigQueryDataFrameReader,
         BigQueryDataFrameWriter,
         BigQueryDataFrame,
+        BigQueryTable,
         BigQueryConnection,
         BigQueryUDFRegistration,
     ],
@@ -33,6 +35,7 @@ class BigQuerySession(
     _reader = BigQueryDataFrameReader
     _writer = BigQueryDataFrameWriter
     _df = BigQueryDataFrame
+    _table = BigQueryTable
     _udf_registration = BigQueryUDFRegistration
 
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = True

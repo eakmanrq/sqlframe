@@ -21,19 +21,20 @@ else:
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import OptionalPrimitiveType, PathOrPaths
     from sqlframe.base.column import Column
-    from sqlframe.base.session import DF, _BaseSession
+    from sqlframe.base.session import DF, TABLE, _BaseSession
     from sqlframe.base.types import StructType
 
     SESSION = t.TypeVar("SESSION", bound=_BaseSession)
 else:
     SESSION = t.TypeVar("SESSION")
     DF = t.TypeVar("DF")
+    TABLE = t.TypeVar("TABLE")
 
 
 logger = logging.getLogger(__name__)
 
 
-class _BaseDataFrameReader(t.Generic[SESSION, DF]):
+class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
     def __init__(self, spark: SESSION):
         self._session = spark
         self.state_format_to_read: t.Optional[str] = None
@@ -42,7 +43,7 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
     def session(self) -> SESSION:
         return self._session
 
-    def table(self, tableName: str) -> DF:
+    def table(self, tableName: str) -> TABLE:
         tableName = normalize_string(tableName, from_dialect="input", is_table=True)
         if df := self.session.temp_views.get(tableName):
             return df
@@ -50,7 +51,7 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF]):
         self.session.catalog.add_table(table)
         columns = self.session.catalog.get_columns_from_schema(table)
 
-        return self.session._create_df(
+        return self.session._create_table(
             exp.Select()
             .from_(tableName, dialect=self.session.input_dialect)
             .select(*columns, dialect=self.session.input_dialect)

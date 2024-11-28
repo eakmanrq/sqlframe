@@ -13,11 +13,12 @@ from sqlframe.base.readerwriter import (
 if t.TYPE_CHECKING:
     from sqlframe.bigquery.session import BigQuerySession  # noqa
     from sqlframe.bigquery.dataframe import BigQueryDataFrame  # noqa
+    from sqlframe.bigquery.table import BigQueryTable  # noqa
 
 
 class BigQueryDataFrameReader(
     PandasLoaderMixin["BigQuerySession", "BigQueryDataFrame"],
-    _BaseDataFrameReader["BigQuerySession", "BigQueryDataFrame"],
+    _BaseDataFrameReader["BigQuerySession", "BigQueryDataFrame", "BigQueryTable"],
 ):
     pass
 

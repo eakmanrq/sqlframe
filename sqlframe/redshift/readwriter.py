@@ -13,11 +13,12 @@ from sqlframe.base.readerwriter import (
 if t.TYPE_CHECKING:
     from sqlframe.redshift.session import RedshiftSession  # noqa
     from sqlframe.redshift.dataframe import RedshiftDataFrame  # noqa
+    from sqlframe.redshift.table import RedshiftTable  # noqa
 
 
 class RedshiftDataFrameReader(
     PandasLoaderMixin["RedshiftSession", "RedshiftDataFrame"],
-    _BaseDataFrameReader["RedshiftSession", "RedshiftDataFrame"],
+    _BaseDataFrameReader["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
 ):
     pass
 

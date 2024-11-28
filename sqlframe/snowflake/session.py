@@ -18,6 +18,7 @@ from sqlframe.snowflake.readwriter import (
     SnowflakeDataFrameReader,
     SnowflakeDataFrameWriter,
 )
+from sqlframe.snowflake.table import SnowflakeTable
 
 if t.TYPE_CHECKING:
     from snowflake.connector import SnowflakeConnection
@@ -51,6 +52,7 @@ class SnowflakeSession(
         SnowflakeDataFrameReader,
         SnowflakeDataFrameWriter,
         SnowflakeDataFrame,
+        SnowflakeTable,
         SnowflakeConnection,
         SnowflakeUDFRegistration,
     ],
@@ -59,6 +61,7 @@ class SnowflakeSession(
     _reader = SnowflakeDataFrameReader
     _writer = SnowflakeDataFrameWriter
     _df = SnowflakeDataFrame
+    _table = SnowflakeTable
     _udf_registration = SnowflakeUDFRegistration
 
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):

@@ -27,6 +27,7 @@ from sqlframe.base.catalog import _BaseCatalog
 from sqlframe.base.dataframe import _BaseDataFrame
 from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
+from sqlframe.base.table import _BaseTable
 from sqlframe.base.udf import _BaseUDFRegistration
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
@@ -65,17 +66,19 @@ CATALOG = t.TypeVar("CATALOG", bound=_BaseCatalog)
 READER = t.TypeVar("READER", bound=_BaseDataFrameReader)
 WRITER = t.TypeVar("WRITER", bound=_BaseDataFrameWriter)
 DF = t.TypeVar("DF", bound=_BaseDataFrame)
+TABLE = t.TypeVar("TABLE", bound=_BaseTable)
 UDF_REGISTRATION = t.TypeVar("UDF_REGISTRATION", bound=_BaseUDFRegistration)
 
 _MISSING = "MISSING"
 
 
-class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION]):
+class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGISTRATION]):
     _instance = None
     _reader: t.Type[READER]
     _writer: t.Type[WRITER]
     _catalog: t.Type[CATALOG]
     _df: t.Type[DF]
+    _table: t.Type[TABLE]
     _udf_registration: t.Type[UDF_REGISTRATION]
 
     SANITIZE_COLUMN_NAMES = False
@@ -158,11 +161,14 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
             return name.replace("(", "_").replace(")", "_")
         return name
 
-    def table(self, tableName: str) -> DF:
+    def table(self, tableName: str) -> TABLE:
         return self.read.table(tableName)
 
     def _create_df(self, *args, **kwargs) -> DF:
         return self._df(self, *args, **kwargs)
+
+    def _create_table(self, *args, **kwargs) -> TABLE:
+        return self._table(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
         if _BaseSession._instance is None:

@@ -9,9 +9,12 @@ from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWrite
 if t.TYPE_CHECKING:
     from sqlframe.standalone.dataframe import StandaloneDataFrame
     from sqlframe.standalone.session import StandaloneSession
+    from sqlframe.standalone.table import StandaloneTable
 
 
-class StandaloneDataFrameReader(_BaseDataFrameReader["StandaloneSession", "StandaloneDataFrame"]):
+class StandaloneDataFrameReader(
+    _BaseDataFrameReader["StandaloneSession", "StandaloneDataFrame", "StandaloneTable"]
+):
     pass
 
 

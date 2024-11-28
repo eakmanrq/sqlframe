@@ -10,6 +10,7 @@ from sqlframe.databricks.readwriter import (
     DatabricksDataFrameReader,
     DatabricksDataFrameWriter,
 )
+from sqlframe.databricks.table import DatabricksTable
 from sqlframe.databricks.udf import DatabricksUDFRegistration
 
 if t.TYPE_CHECKING:
@@ -24,6 +25,7 @@ class DatabricksSession(
         DatabricksDataFrameReader,
         DatabricksDataFrameWriter,
         DatabricksDataFrame,
+        DatabricksTable,
         DatabricksConnection,
         DatabricksUDFRegistration,
     ],
@@ -32,6 +34,7 @@ class DatabricksSession(
     _reader = DatabricksDataFrameReader
     _writer = DatabricksDataFrameWriter
     _df = DatabricksDataFrame
+    _table = DatabricksTable
     _udf_registration = DatabricksUDFRegistration
 
     def __init__(

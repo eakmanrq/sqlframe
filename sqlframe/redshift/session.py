@@ -10,6 +10,7 @@ from sqlframe.redshift.readwriter import (
     RedshiftDataFrameReader,
     RedshiftDataFrameWriter,
 )
+from sqlframe.redshift.table import RedshiftTable
 from sqlframe.redshift.udf import RedshiftUDFRegistration
 
 if t.TYPE_CHECKING:
@@ -24,6 +25,7 @@ class RedshiftSession(
         RedshiftDataFrameReader,
         RedshiftDataFrameWriter,
         RedshiftDataFrame,
+        RedshiftTable,
         RedshiftConnection,
         RedshiftUDFRegistration,
     ],
@@ -32,6 +34,7 @@ class RedshiftSession(
     _reader = RedshiftDataFrameReader
     _writer = RedshiftDataFrameWriter
     _df = RedshiftDataFrame
+    _table = RedshiftTable
     _udf_registration = RedshiftUDFRegistration
 
     def __init__(self, conn: t.Optional[RedshiftConnection] = None):
