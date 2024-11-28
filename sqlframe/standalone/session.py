@@ -9,6 +9,7 @@ from sqlframe.standalone.readwriter import (
     StandaloneDataFrameReader,
     StandaloneDataFrameWriter,
 )
+from sqlframe.standalone.table import StandaloneTable
 from sqlframe.standalone.udf import StandaloneUDFRegistration
 
 
@@ -18,6 +19,7 @@ class StandaloneSession(
         StandaloneDataFrameReader,
         StandaloneDataFrameWriter,
         StandaloneDataFrame,
+        StandaloneTable,
         object,
         StandaloneUDFRegistration,
     ]
@@ -26,6 +28,7 @@ class StandaloneSession(
     _reader = StandaloneDataFrameReader
     _writer = StandaloneDataFrameWriter
     _df = StandaloneDataFrame
+    _table = StandaloneTable
     _udf_registration = StandaloneUDFRegistration
 
     @property

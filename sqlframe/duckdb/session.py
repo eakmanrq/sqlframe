@@ -11,6 +11,7 @@ from sqlframe.duckdb.readwriter import (
     DuckDBDataFrameReader,
     DuckDBDataFrameWriter,
 )
+from sqlframe.duckdb.table import DuckDBTable
 from sqlframe.duckdb.udf import DuckDBUDFRegistration
 
 if t.TYPE_CHECKING:
@@ -26,6 +27,7 @@ class DuckDBSession(
         DuckDBDataFrameReader,
         DuckDBDataFrameWriter,
         DuckDBDataFrame,
+        DuckDBTable,
         DuckDBPyConnection,
         DuckDBUDFRegistration,
     ]
@@ -34,6 +36,7 @@ class DuckDBSession(
     _reader = DuckDBDataFrameReader
     _writer = DuckDBDataFrameWriter
     _df = DuckDBDataFrame
+    _table = DuckDBTable
     _udf_registration = DuckDBUDFRegistration
 
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):

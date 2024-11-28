@@ -13,11 +13,12 @@ from sqlframe.base.readerwriter import (
 if t.TYPE_CHECKING:
     from sqlframe.snowflake.session import SnowflakeSession  # noqa
     from sqlframe.snowflake.dataframe import SnowflakeDataFrame  # noqa
+    from sqlframe.snowflake.table import SnowflakeTable  # noqa
 
 
 class SnowflakeDataFrameReader(
     PandasLoaderMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    _BaseDataFrameReader["SnowflakeSession", "SnowflakeDataFrame"],
+    _BaseDataFrameReader["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
 ):
     pass
 

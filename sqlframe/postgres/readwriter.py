@@ -13,11 +13,12 @@ from sqlframe.base.readerwriter import (
 if t.TYPE_CHECKING:
     from sqlframe.postgres.session import PostgresSession  # noqa
     from sqlframe.postgres.dataframe import PostgresDataFrame  # noqa
+    from sqlframe.postgres.table import PostgresTable  # noqa
 
 
 class PostgresDataFrameReader(
     PandasLoaderMixin["PostgresSession", "PostgresDataFrame"],
-    _BaseDataFrameReader["PostgresSession", "PostgresDataFrame"],
+    _BaseDataFrameReader["PostgresSession", "PostgresDataFrame", "PostgresTable"],
 ):
     pass
 
