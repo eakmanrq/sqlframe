@@ -2254,7 +2254,12 @@ def test_self_join(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
     compare_frames: t.Callable,
+    is_spark: t.Callable,
 ):
+    if is_spark():
+        pytest.skip(
+            "This test is not supported in Spark. This is related to how duplicate columns are handled in Spark"
+        )
     df_filtered = pyspark_employee.where(F.col("age") > 40)
     df_joined = pyspark_employee.join(
         df_filtered,

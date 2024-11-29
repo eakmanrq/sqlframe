@@ -866,24 +866,6 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if on is None:
             logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
-        on_cols = self._ensure_list_of_columns(on)
-        # If we are joining in another dataframe that comes from the same branch, we need to treat the other dataframe
-        # as a new branch so we properly differentiate the two dataframes in the final SQL output.
-        if self.branch_id == other_df.branch_id:
-            new_branch_id = self.session._random_branch_id
-            replacement_mapping = {
-                exp.to_identifier(other_df.branch_id): exp.to_identifier(new_branch_id)
-            }
-            other_df.branch_id = new_branch_id
-            other_df.expression = other_df.expression.transform(
-                replace_id_value, replacement_mapping
-            ).assert_is(exp.Select)
-            for col in on_cols:
-                # We only want to update one side of the join if EQ so we find all EQs and update the right side
-                for eq in col.expression.find_all(exp.EQ):
-                    eq.set(
-                        "expression", eq.expression.transform(replace_id_value, replacement_mapping)
-                    )
 
         other_df = other_df._convert_leaf_to_cte()
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
@@ -893,7 +875,14 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         )
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
-        join_columns = self._ensure_and_normalize_cols(on_cols)
+        join_columns = self._ensure_and_normalize_cols(on)
+        # If the two dataframes being joined come from the same branch and reference the same table,
+        # then really one of the tables was supposed to reference the other dataframe so we update it to do that.
+        if self.branch_id == other_df.branch_id:
+            for col in join_columns:
+                for eq in col.expression.find_all(exp.EQ):
+                    if eq.this.table == eq.expression.table:
+                        eq.expression.set("table", exp.to_identifier(other_df.latest_cte_name))
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
         if how != "cross":
