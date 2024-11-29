@@ -2247,3 +2247,33 @@ def test_chaining_joins_with_selects(
     )
 
     compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/210
+def test_self_join(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], _BaseDataFrame],
+    compare_frames: t.Callable,
+    is_spark: t.Callable,
+):
+    if is_spark():
+        pytest.skip(
+            "This test is not supported in Spark. This is related to how duplicate columns are handled in Spark"
+        )
+    df_filtered = pyspark_employee.where(F.col("age") > 40)
+    df_joined = pyspark_employee.join(
+        df_filtered,
+        pyspark_employee["employee_id"] == df_filtered["employee_id"],
+        how="inner",
+    )
+
+    employee = get_df("employee")
+
+    dfs_filtered = employee.where(SF.col("age") > 40)
+    dfs_joined = employee.join(
+        dfs_filtered,
+        employee["employee_id"] == dfs_filtered["employee_id"],
+        how="inner",
+    )
+
+    compare_frames(df_joined, dfs_joined, compare_schema=False)

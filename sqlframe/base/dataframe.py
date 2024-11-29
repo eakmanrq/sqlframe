@@ -866,6 +866,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if on is None:
             logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
+
         other_df = other_df._convert_leaf_to_cte()
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
         # We will determine actual "join on" expression later so we don't provide it at first
@@ -875,6 +876,13 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)
+        # If the two dataframes being joined come from the same branch and reference the same table,
+        # then really one of the tables was supposed to reference the other dataframe so we update it to do that.
+        if self.branch_id == other_df.branch_id:
+            for col in join_columns:
+                for eq in col.expression.find_all(exp.EQ):
+                    if eq.this.table == eq.expression.table:
+                        eq.expression.set("table", exp.to_identifier(other_df.latest_cte_name))
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
         if how != "cross":
