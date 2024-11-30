@@ -2250,6 +2250,7 @@ def test_chaining_joins_with_selects(
 
 
 # https://github.com/eakmanrq/sqlframe/issues/210
+# https://github.com/eakmanrq/sqlframe/issues/212
 def test_self_join(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], _BaseDataFrame],
@@ -2263,16 +2264,16 @@ def test_self_join(
     df_filtered = pyspark_employee.where(F.col("age") > 40)
     df_joined = pyspark_employee.join(
         df_filtered,
-        pyspark_employee["employee_id"] == df_filtered["employee_id"],
+        pyspark_employee["employee_id"].eqNullSafe(df_filtered["employee_id"]),
         how="inner",
     )
 
     employee = get_df("employee")
 
-    dfs_filtered = employee.where(SF.col("age") > 40)
+    dfs_filtered = employee.alias("dfs_filtered").where(SF.col("age") > 40)
     dfs_joined = employee.join(
         dfs_filtered,
-        employee["employee_id"] == dfs_filtered["employee_id"],
+        employee["employee_id"].eqNullSafe(dfs_filtered["employee_id"]),
         how="inner",
     )
 

@@ -12,6 +12,7 @@ import typing as t
 import zlib
 from copy import copy
 from dataclasses import dataclass
+from uuid import uuid4
 
 import sqlglot
 from prettytable import PrettyTable
@@ -208,6 +209,8 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         expression: exp.Select,
         branch_id: t.Optional[str] = None,
         sequence_id: t.Optional[str] = None,
+        join_on_uuid: t.Optional[str] = None,
+        known_uuids: t.Optional[t.Set[str]] = None,
         last_op: Operation = Operation.INIT,
         pending_hints: t.Optional[t.List[exp.Expression]] = None,
         output_expression_container: t.Optional[OutputExpressionContainer] = None,
@@ -217,6 +220,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self.expression: exp.Select = expression
         self.branch_id = branch_id or self.session._random_branch_id
         self.sequence_id = sequence_id or self.session._random_sequence_id
+        self.join_on_uuid = join_on_uuid or str(uuid4())
+        self.known_uuids = known_uuids or set()
+        self.known_uuids.add(self.join_on_uuid)
         self.last_op = last_op
         self.pending_hints = pending_hints or []
         self.output_expression_container = output_expression_container or exp.Select()
@@ -228,10 +234,12 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def __getitem__(self, column_name: str) -> Column:
         from sqlframe.base.util import get_func_from_session
 
-        col = get_func_from_session("col", self.session)
+        col_func = get_func_from_session("col", self.session)
 
         column_name = f"{self.branch_id}.{column_name}"
-        return col(column_name)
+        col = col_func(column_name)
+        col.expression.meta["join_on_uuid"] = self.join_on_uuid
+        return col
 
     def __copy__(self):
         return self.copy()
@@ -715,6 +723,7 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return ";\n".join(results)
 
     def copy(self, **kwargs) -> Self:
+        kwargs["join_on_uuid"] = str(uuid4())
         return self.__class__(**object_to_dict(self, **kwargs))
 
     @operation(Operation.SELECT)
@@ -876,13 +885,21 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)
-        # If the two dataframes being joined come from the same branch and reference the same table,
-        # then really one of the tables was supposed to reference the other dataframe so we update it to do that.
+        # If the two dataframes being joined come from the same branch, we then check if they have any columns that
+        # were created using the "branch_id" (df["column_name"]). If so, we know that we need to differentiate
+        # the two columns since they would end up with the same table name. We do this by checking for the unique
+        # uuids in the other df and finding columns that have metadata on them that match the uuids. If so, we know
+        # it comes from the other df and we change the table name to the other df's table name.
+        # See `test_self_join` for an example of this.
         if self.branch_id == other_df.branch_id:
+            other_df_unique_uuids = other_df.known_uuids - self.known_uuids
             for col in join_columns:
-                for eq in col.expression.find_all(exp.EQ):
-                    if eq.this.table == eq.expression.table:
-                        eq.expression.set("table", exp.to_identifier(other_df.latest_cte_name))
+                for col_expr in col.expression.find_all(exp.Column):
+                    if (
+                        "join_on_uuid" in col_expr.meta
+                        and col_expr.meta["join_on_uuid"] in other_df_unique_uuids
+                    ):
+                        col_expr.set("table", exp.to_identifier(other_df.latest_cte_name))
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
         if how != "cross":
