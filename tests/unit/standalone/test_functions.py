@@ -1408,8 +1408,8 @@ def test_to_date(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.to_timestamp("cola"), "CAST(cola AS TIMESTAMP)"),
-        (SF.to_timestamp(SF.col("cola")), "CAST(cola AS TIMESTAMP)"),
+        (SF.to_timestamp("cola"), "CAST(cola AS TIMESTAMP_LTZ)"),
+        (SF.to_timestamp(SF.col("cola")), "CAST(cola AS TIMESTAMP_LTZ)"),
         (SF.to_timestamp("cola", "yyyy-MM-dd"), "TO_TIMESTAMP(cola, 'yyyy-MM-dd')"),
     ],
 )
@@ -3318,15 +3318,15 @@ def test_contains(expression, expected):
     [
         (
             SF.convert_timezone(None, SF.col("cola"), "colb"),
-            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP))",
+            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP_LTZ))",
         ),
         (
             SF.convert_timezone(None, SF.col("cola"), SF.col("colb")),
-            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP))",
+            "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP_LTZ))",
         ),
         (
             SF.convert_timezone(SF.col("colc"), "cola", "colb"),
-            "CONVERT_TIMEZONE(colc, cola, CAST(colb AS TIMESTAMP))",
+            "CONVERT_TIMEZONE(colc, cola, CAST(colb AS TIMESTAMP_LTZ))",
         ),
     ],
 )

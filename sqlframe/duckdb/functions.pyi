@@ -29,6 +29,7 @@ from sqlframe.base.function_alternatives import (  # noqa
     try_element_at_zero_based as try_element_at,
     to_unix_timestamp_include_default_format as to_unix_timestamp,
     regexp_replace_global_option as regexp_replace,
+    to_timestamp_tz as to_timestamp,
 )
 from sqlframe.base.functions import (
     abs as abs,

@@ -570,6 +570,8 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
             return cls._to_row(list(value.keys()), list(value.values()))
         elif isinstance(value, (list, set, tuple)) and value:
             return [cls._to_value(x) for x in value]
+        elif isinstance(value, datetime.datetime):
+            return value.replace(tzinfo=None)
         return value
 
     @classmethod

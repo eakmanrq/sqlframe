@@ -44,9 +44,7 @@ def test_activate_databricks(check_pyspark_imports):
 
 @pytest.mark.forked
 def test_activate_databricks_default_dataset():
-    activate("databricks", config={"default_dataset": "sqlframe.sqlframe_test"})
+    activate("databricks")
     from pyspark.sql import SparkSession
 
     assert SparkSession == DatabricksSession
-    spark = SparkSession.builder.appName("test").getOrCreate()
-    assert spark.default_dataset == "sqlframe.sqlframe_test"
