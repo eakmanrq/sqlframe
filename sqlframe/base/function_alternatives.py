@@ -64,6 +64,28 @@ def first_always_ignore_nulls(col: ColumnOrName, ignorenulls: t.Optional[bool] =
     return first(col)
 
 
+def to_timestamp_without_time_zone(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    if format is not None:
+        return Column.invoke_expression_over_column(
+            col, expression.StrToTime, format=_BaseSession().format_time(format)
+        )
+
+    return Column.ensure_col(col).cast("timestamp without time zone", dialect="postgres")
+
+
+def to_timestamp_just_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    if format is not None:
+        return Column.invoke_expression_over_column(
+            col, expression.StrToTime, format=_BaseSession().format_time(format)
+        )
+
+    return Column.ensure_col(col).cast("datetime", dialect="bigquery")
+
+
 def bitwise_not_from_bitnot(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "BITNOT")
 
