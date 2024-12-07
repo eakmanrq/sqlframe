@@ -177,7 +177,7 @@ def test_col(get_session_and_func, input, output):
         ([1, 2, 3], "array<bigint>"),
         (Row(a=1), "struct<a:bigint>"),
         (datetime.date(2022, 1, 1), "date"),
-        (datetime.datetime(2022, 1, 1, 0, 0, 0), "timestamp"),
+        (datetime.datetime(2022, 1, 1, 0, 0, 0), "timestamptz"),
         (datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc), "timestamptz"),
         (True, "boolean"),
         (bytes("test", "utf-8"), "binary"),
@@ -193,9 +193,6 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
         if isinstance(session, PySparkSession)
         else dialect_to_string(session.execution_dialect)
     )
-    if isinstance(session, (SparkSession, PySparkSession)):
-        if expected == "timestamptz":
-            expected = "timestamp"
     if isinstance(session, DuckDBSession):
         if expected == "binary":
             pytest.skip("DuckDB doesn't support binary")
@@ -207,8 +204,6 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             expected = expected.split("<")[0]
         if expected == "binary":
             pytest.skip("BigQuery doesn't support binary")
-        if expected == "timestamp":
-            expected = "datetime"
     if isinstance(session, PostgresSession):
         if expected.startswith("map"):
             pytest.skip("Postgres doesn't support map types")
@@ -225,8 +220,6 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             expected = "object"
         elif expected.startswith("array"):
             pytest.skip("Snowflake doesn't handle arrays properly in values clause")
-        elif expected == "timestamp":
-            expected = "timestampntz"
     result = df.select(typeof("col").alias("test")).first()[0]
     assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(
         expected, dialect=dialect

@@ -118,9 +118,9 @@ def spark_session(pyspark_session: PySparkSession) -> SparkSession:
 @pytest.fixture(scope="function")
 def duckdb_session() -> DuckDBSession:
     connector = duckdb.connect()
-    connector.execute("set TimeZone = 'UTC'")
+    connector.execute("set TimeZone = 'America/Los_Angeles'")
     connector.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")
-    assert connector.fetchone()[1] == "UTC"  # type: ignore
+    assert connector.fetchone()[1] == "America/Los_Angeles"  # type: ignore
     return DuckDBSession(conn=connector)
 
 
