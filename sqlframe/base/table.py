@@ -21,8 +21,6 @@ if t.TYPE_CHECKING:
 
 
 class Clause(IntEnum):
-    INIT = -1
-    NO_OP = 0
     UPDATE = 1
     UPDATE_ALL = 2
     DELETE = 3
