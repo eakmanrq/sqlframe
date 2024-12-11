@@ -11,7 +11,6 @@ class DuckDBTable(
     DuckDBDataFrame,
     UpdateSupportMixin["DuckDBDataFrame"],
     DeleteSupportMixin["DuckDBDataFrame"],
-    MergeSupportMixin["DuckDBDataFrame"],
     _BaseTable["DuckDBDataFrame"],
 ):
     _df = DuckDBDataFrame

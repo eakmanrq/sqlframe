@@ -134,6 +134,11 @@ class DeleteSupportMixin(_BaseTable, t.Generic[DF]):
 
 
 class MergeSupportMixin(_BaseTable, t.Generic[DF]):
+    _merge_supported_clauses: t.Iterable[
+        t.Union[t.Type[WhenMatched], t.Type[WhenNotMatched], t.Type[WhenNotMatchedBySource]]
+    ]
+    _merge_support_star: bool
+
     @ensure_cte()
     def merge(
         self,
@@ -160,6 +165,10 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
 
         merge_expressions = []
         for clause in clauses:
+            if not isinstance(clause, tuple(self._merge_supported_clauses)):
+                raise ValueError(
+                    f"Unsupported clause type {type(clause.clause)} for merge operation"
+                )
             expression = None
 
             if clause.clause.condition is not None:
@@ -192,6 +201,8 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     ),
                 )
             if clause.clause.clause_type == Clause.UPDATE_ALL:
+                if not self._support_star:
+                    raise ValueError("Merge operation does not support UPDATE_ALL")
                 expression = exp.When(
                     matched=clause.clause.matched,
                     source=clause.clause.by_source,
@@ -212,6 +223,8 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     ),
                 )
             elif clause.clause.clause_type == Clause.INSERT_ALL:
+                if not self._support_star:
+                    raise ValueError("Merge operation does not support INSERT_ALL")
                 expression = exp.When(
                     matched=clause.clause.matched,
                     source=clause.clause.by_source,
