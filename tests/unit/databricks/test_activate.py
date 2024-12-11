@@ -1,6 +1,7 @@
 import pytest
 
 from sqlframe import activate
+from sqlframe.databricks import Column as DatabricksColumn
 from sqlframe.databricks import (
     DatabricksCatalog,
     DatabricksDataFrame,
@@ -12,7 +13,6 @@ from sqlframe.databricks import (
     DatabricksSession,
     DatabricksUDFRegistration,
 )
-from sqlframe.databricks import Column as DatabricksColumn
 from sqlframe.databricks import Row as DatabricksRow
 from sqlframe.databricks import Window as DatabricksWindow
 from sqlframe.databricks import WindowSpec as DatabricksWindowSpec
