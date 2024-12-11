@@ -536,11 +536,11 @@ def databricks_employee(
 ) -> DatabricksDataFrame:
     databricks_employee_schema = DatabricksTypes.StructType(
         [
-            SnowflakeTypes.StructField("employee_id", DatabricksTypes.IntegerType(), False),
-            SnowflakeTypes.StructField("fname", DatabricksTypes.StringType(), False),
-            SnowflakeTypes.StructField("lname", DatabricksTypes.StringType(), False),
-            SnowflakeTypes.StructField("age", DatabricksTypes.IntegerType(), False),
-            SnowflakeTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("employee_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("fname", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("lname", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("age", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
         ]
     )
     df = databricks_session.createDataFrame(data=_employee_data, schema=databricks_employee_schema)
@@ -554,10 +554,10 @@ def databricks_store(
 ) -> DatabricksDataFrame:
     databricks_store_schema = DatabricksTypes.StructType(
         [
-            SnowflakeTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
-            SnowflakeTypes.StructField("store_name", DatabricksTypes.StringType(), False),
-            SnowflakeTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
-            SnowflakeTypes.StructField("num_sales", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("store_name", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("num_sales", DatabricksTypes.IntegerType(), False),
         ]
     )
     df = databricks_session.createDataFrame(data=_store_data, schema=databricks_store_schema)
@@ -571,8 +571,8 @@ def databricks_district(
 ) -> DatabricksDataFrame:
     databricks_district_schema = DatabricksTypes.StructType(
         [
-            SnowflakeTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
-            SnowflakeTypes.StructField("district_name", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("district_name", DatabricksTypes.StringType(), False),
         ]
     )
     df = databricks_session.createDataFrame(data=_district_data, schema=databricks_district_schema)
