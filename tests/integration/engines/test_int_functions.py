@@ -147,9 +147,9 @@ def test_lit(get_session_and_func, arg, expected):
             pytest.skip("Snowflake doesn't support literal row types")
     if isinstance(session, DatabricksSession):
         if isinstance(arg, dict):
-            pytest.skip("Databricks doesn't literal dict types")
+            expected = list(map(list, expected.items()))
         if isinstance(arg, Row):
-            pytest.skip("Databricks doesn't support literal row types")
+            expected = expected.asDict()
         if isinstance(arg, datetime.datetime) and arg.tzinfo is None:
             expected = expected.replace(tzinfo=datetime.timezone.utc)
     if isinstance(session, DuckDBSession):
@@ -2536,7 +2536,7 @@ def test_from_json(get_session_and_func, get_types, get_func):
     if isinstance(session, DatabricksSession):
         expected = [Row(json=[{"a": 1}])]
     else:
-        expected = [Row(json=Row(a=1))]
+        expected = [Row(json=[Row(a=1)])]
     assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
     schema = schema_of_json(lit("""{"a": 0}"""))
     # Databricks returns a different type than Spark
