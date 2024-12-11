@@ -22,6 +22,9 @@ duckdb-test:
 snowflake-test:
 	pytest -n auto -m "snowflake"
 
+databricks-test:
+	pytest -n auto -m "databricks"
+
 style:
 	pre-commit run --all-files
 

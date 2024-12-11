@@ -12,6 +12,7 @@ from pytest_postgresql.janitor import DatabaseJanitor
 
 from sqlframe.base.session import _BaseSession
 from sqlframe.bigquery.session import BigQuerySession
+from sqlframe.databricks.session import DatabricksSession
 from sqlframe.duckdb.session import DuckDBSession
 from sqlframe.postgres.session import PostgresSession
 from sqlframe.redshift.session import RedshiftSession
@@ -22,6 +23,7 @@ from sqlframe.standalone.dataframe import StandaloneDataFrame
 from sqlframe.standalone.session import StandaloneSession
 
 if t.TYPE_CHECKING:
+    from databricks.sql import Connection as DatabricksConnection
     from google.cloud.bigquery.dbapi.connection import (
         Connection as BigQueryConnection,
     )
@@ -228,6 +230,31 @@ def snowflake_session(snowflake_connection: SnowflakeConnection) -> SnowflakeSes
     session._execute(
         "CREATE OR REPLACE FUNCTION db1.add(x INT, y INT) RETURNS INT IMMUTABLE AS $$ select x + y $$"
     )
+    return session
+
+
+@pytest.fixture(scope="session")
+def databricks_connection() -> DatabricksConnection:
+    from databricks.sql import connect
+
+    conn = connect(
+        server_hostname=os.environ["SQLFRAME_DATABRICKS_SERVER_HOSTNAME"],
+        http_path=os.environ["SQLFRAME_DATABRICKS_HTTP_PATH"],
+        access_token=os.environ["SQLFRAME_DATABRICKS_ACCESS_TOKEN"],
+        auth_type="access_token",
+        catalog=os.environ["SQLFRAME_DATABRICKS_CATALOG"],
+        schema=os.environ["SQLFRAME_DATABRICKS_SCHEMA"],
+        _disable_pandas=True,
+    )
+    return conn
+
+
+@pytest.fixture
+def databricks_session(databricks_connection: DatabricksConnection) -> DatabricksSession:
+    session = DatabricksSession(databricks_connection)
+    session._execute("CREATE SCHEMA IF NOT EXISTS db1")
+    session._execute("CREATE TABLE IF NOT EXISTS db1.table1 (id INTEGER, name VARCHAR(100))")
+    session._execute("CREATE OR REPLACE FUNCTION db1.add(x INT, y INT) RETURNS INT RETURN x + y")
     return session
 
 

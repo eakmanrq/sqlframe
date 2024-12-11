@@ -53,7 +53,7 @@ class DatabricksDataFrame(
                 CatalogColumn(
                     name=normalize_string(
                         row.col_name, from_dialect="execution", to_dialect="output"
-                    ),
+                    ).replace("`", ""),
                     dataType=normalize_string(
                         row.data_type,
                         from_dialect="execution",
