@@ -18,6 +18,7 @@ from sqlframe.base.util import (
     get_func_from_session as get_func_from_session_without_fallback,
 )
 from sqlframe.bigquery import BigQuerySession
+from sqlframe.databricks import DatabricksSession
 from sqlframe.duckdb import DuckDBCatalog, DuckDBSession
 from sqlframe.postgres import PostgresDataFrame, PostgresSession
 from sqlframe.snowflake import SnowflakeSession
@@ -144,6 +145,13 @@ def test_lit(get_session_and_func, arg, expected):
     if isinstance(session, SnowflakeSession):
         if isinstance(arg, Row):
             pytest.skip("Snowflake doesn't support literal row types")
+    if isinstance(session, DatabricksSession):
+        if isinstance(arg, dict):
+            pytest.skip("Databricks doesn't literal dict types")
+        if isinstance(arg, Row):
+            pytest.skip("Databricks doesn't support literal row types")
+        if isinstance(arg, datetime.datetime) and arg.tzinfo is None:
+            expected = expected.replace(tzinfo=datetime.timezone.utc)
     if isinstance(session, DuckDBSession):
         if isinstance(arg, dict):
             expected = Row(**expected)
@@ -193,7 +201,7 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
         if isinstance(session, PySparkSession)
         else dialect_to_string(session.execution_dialect)
     )
-    if isinstance(session, (SparkSession, PySparkSession)):
+    if isinstance(session, (SparkSession, PySparkSession, DatabricksSession)):
         if expected == "timestamptz":
             expected = "timestamp"
     if isinstance(session, DuckDBSession):
@@ -239,7 +247,15 @@ def test_alias(get_session_and_func):
     assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
     if isinstance(
-        session, (DuckDBSession, BigQuerySession, PostgresSession, SnowflakeSession, SparkSession)
+        session,
+        (
+            DuckDBSession,
+            BigQuerySession,
+            PostgresSession,
+            SnowflakeSession,
+            SparkSession,
+            DatabricksSession,
+        ),
     ):
         assert space_result == "`a space in new name`"
     else:
@@ -1078,7 +1094,7 @@ def test_struct(get_session_and_func):
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
     expected = (
         [Row(value=Row(age=2, name="Alice")), Row(value=Row(age=5, name="Bob"))]
-        if not isinstance(session, SnowflakeSession)
+        if not isinstance(session, (SnowflakeSession, DatabricksSession))
         else [Row(value={"age": 2, "name": "Alice"}), Row(value={"age": 5, "name": "Bob"})]
     )
     assert df.select(struct("age", "name").alias("struct")).collect() == expected
@@ -1429,7 +1445,10 @@ def test_to_timestamp(get_session_and_func):
     session, to_timestamp = get_session_and_func("to_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     result = df.select(to_timestamp(df.t).alias("dt")).first()[0]
-    assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    if isinstance(session, DatabricksSession):
+        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
+    else:
+        assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[0]
     if isinstance(session, (BigQuerySession, DuckDBSession)):
         assert result == datetime.datetime(
@@ -1440,7 +1459,7 @@ def test_to_timestamp(get_session_and_func):
             30,
             tzinfo=datetime.timezone.utc if isinstance(session, BigQuerySession) else None,
         )
-    elif isinstance(session, PostgresSession):
+    elif isinstance(session, (PostgresSession, DatabricksSession)):
         assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
     elif isinstance(session, SnowflakeSession):
         assert result == datetime.datetime(
@@ -1467,14 +1486,18 @@ def test_trunc(get_session_and_func):
 def test_date_trunc(get_session_and_func):
     session, date_trunc = get_session_and_func("date_trunc")
     df = session.createDataFrame([("1997-02-28 05:02:11",)], ["t"])
-    assert df.select(date_trunc("year", df.t).alias("year")).first()[0] == datetime.datetime(
+    assert df.select(date_trunc("year", df.t).alias("year")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(
         1997,
         1,
         1,
         0,
         0,
     )
-    assert df.select(date_trunc("month", df.t).alias("month")).first()[0] == datetime.datetime(
+    assert df.select(date_trunc("month", df.t).alias("month")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(
         1997,
         2,
         1,
@@ -1498,7 +1521,10 @@ def test_last_day(get_session_and_func):
 def test_from_unixtime(get_session_and_func):
     session, from_unixtime = get_session_and_func("from_unixtime")
     df = session.createDataFrame([(1428476400,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
+    if isinstance(
+        session,
+        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
+    ):
         expected = "2015-04-08 07:00:00"
     else:
         expected = "2015-04-08 00:00:00"
@@ -1509,7 +1535,10 @@ def test_unix_timestamp(get_session_and_func):
     session, unix_timestamp = get_session_and_func("unix_timestamp")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
     result = df.select(unix_timestamp("dt", "yyyy-MM-dd").alias("unix_time")).first()[0]
-    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
+    if isinstance(
+        session,
+        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
+    ):
         assert result == 1428451200
     else:
         assert result == 1428476400
@@ -1518,29 +1547,32 @@ def test_unix_timestamp(get_session_and_func):
 def test_from_utc_timestamp(get_session_and_func):
     session, from_utc_timestamp = get_session_and_func("from_utc_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00", "JST")], ["ts", "tz"])
-    assert df.select(from_utc_timestamp(df.ts, "PST").alias("local_time")).first()[
-        0
-    ] == datetime.datetime(1997, 2, 28, 2, 30)
-    assert df.select(from_utc_timestamp(df.ts, df.tz).alias("local_time")).first()[
-        0
-    ] == datetime.datetime(1997, 2, 28, 19, 30)
+    assert df.select(from_utc_timestamp(df.ts, "PST").alias("local_time")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(1997, 2, 28, 2, 30)
+    assert df.select(from_utc_timestamp(df.ts, df.tz).alias("local_time")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(1997, 2, 28, 19, 30)
 
 
 def test_to_utc_timestamp(get_session_and_func):
     session, to_utc_timestamp = get_session_and_func("to_utc_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00", "JST")], ["ts", "tz"])
-    assert df.select(to_utc_timestamp(df.ts, "PST").alias("utc_time")).first()[
-        0
-    ] == datetime.datetime(1997, 2, 28, 18, 30)
-    assert df.select(to_utc_timestamp(df.ts, df.tz).alias("utc_time")).first()[
-        0
-    ] == datetime.datetime(1997, 2, 28, 1, 30)
+    assert df.select(to_utc_timestamp(df.ts, "PST").alias("utc_time")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(1997, 2, 28, 18, 30)
+    assert df.select(to_utc_timestamp(df.ts, df.tz).alias("utc_time")).first()[0].replace(
+        tzinfo=None
+    ) == datetime.datetime(1997, 2, 28, 1, 30)
 
 
 def test_timestamp_seconds(get_session_and_func):
     session, timestamp_seconds = get_session_and_func("timestamp_seconds")
     df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(session, (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession)):
+    if isinstance(
+        session,
+        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
+    ):
         expected = datetime.datetime(2008, 12, 25, 15, 30, 00)
     else:
         expected = datetime.datetime(2008, 12, 25, 7, 30)
@@ -1553,11 +1585,16 @@ def test_timestamp_seconds(get_session_and_func):
 def test_window(get_session_and_func, get_func):
     session, window = get_session_and_func("window")
     sum = get_func("sum", session)
+    col = get_func("col", session)
     df = session.createDataFrame([(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)]).toDF("date", "val")
-    w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    w = (
+        df.withColumn("window", window("date", "5 seconds"))
+        .groupBy("window")
+        .agg(sum("val").alias("sum"))
+    )
     result = w.select(
-        w.window.start.cast("string").alias("start"),
-        w.window.end.cast("string").alias("end"),
+        col("window.start").cast("string").alias("start"),
+        col("window.end").cast("string").alias("end"),
         "sum",
     ).collect()
     assert result == [
@@ -1568,20 +1605,29 @@ def test_window(get_session_and_func, get_func):
 def test_session_window(get_session_and_func, get_func):
     session, session_window = get_session_and_func("session_window")
     sum = get_func("sum", session)
+    col = get_func("col", session)
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-03-11 09:00:07", 1)]).toDF("date", "val")
-    w = df.groupBy(session_window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    w = (
+        df.withColumn("session_window", session_window("date", "5 seconds"))
+        .groupBy("session_window")
+        .agg(sum("val").alias("sum"))
+    )
     assert w.select(
-        w.session_window.start.cast("string").alias("start"),
-        w.session_window.end.cast("string").alias("end"),
+        col("session_window.start").cast("string").alias("start"),
+        col("session_window.end").cast("string").alias("end"),
         "sum",
     ).collect() == [
         Row(start="2016-03-11 09:00:07", end="2016-03-11 09:00:12", sum=1),
     ]
-    w = df.groupBy(session_window("date", lit("5 seconds"))).agg(sum("val").alias("sum"))
+    w = (
+        df.withColumn("session_window", session_window("date", lit("5 seconds")))
+        .groupBy("session_window")
+        .agg(sum("val").alias("sum"))
+    )
     assert w.select(
-        w.session_window.start.cast("string").alias("start"),
-        w.session_window.end.cast("string").alias("end"),
+        col("session_window.start").cast("string").alias("start"),
+        col("session_window.end").cast("string").alias("end"),
         "sum",
     ).collect() == [Row(start="2016-03-11 09:00:07", end="2016-03-11 09:00:12", sum=1)]
 
@@ -2116,6 +2162,8 @@ def test_create_map(get_session_and_func, get_func):
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
     if isinstance(session, (SparkSession, PySparkSession)):
         expected = [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
+    elif isinstance(session, DatabricksSession):
+        expected = [Row(value=[["Alice", 2]]), Row(value=[["Bob", 5]])]
     elif isinstance(session, DuckDBSession):
         expected = [Row(value=Row(**{"Alice": 2})), Row(value=Row(**{"Bob": 5}))]
     else:
@@ -2128,10 +2176,11 @@ def test_create_map(get_session_and_func, get_func):
 def test_map_from_arrays(get_session_and_func):
     session, map_from_arrays = get_session_and_func("map_from_arrays")
     df = session.createDataFrame([([2, 5], ["a", "b"])], ["k", "v"])
-    assert df.select(map_from_arrays(df.k, df.v).alias("col")).first()[0] == {
-        2: "a",
-        5: "b",
-    }
+    if isinstance(session, DatabricksSession):
+        expected = [[2, "a"], [5, "b"]]
+    else:
+        expected = {2: "a", 5: "b"}
+    assert df.select(map_from_arrays(df.k, df.v).alias("col")).first()[0] == expected
 
 
 def test_array_contains(get_session_and_func, get_func):
@@ -2338,6 +2387,41 @@ def test_explode_outer(get_session_and_func, get_func):
             Row(id=2, an_array=[], key=None, value=None),
             Row(id=3, an_array=None, key=None, value=None),
         ]
+    # Databricks returns different types for arrays and maps
+    elif isinstance(session, DatabricksSession):
+        df = (
+            session.range(1)
+            .select(
+                lit(1).alias("id"),
+                lit(["foo", "bar"]).alias("an_array"),
+                lit({"x": 1.0}).alias("a_map"),
+            )
+            .union(
+                session.range(1).select(
+                    lit(2).alias("id"),
+                    lit([]).alias("an_array"),
+                    lit({}).alias("a_map"),
+                )
+            )
+            .union(
+                session.range(1).select(
+                    lit(3).alias("id"),
+                    lit(None).alias("an_array"),
+                    lit(None).alias("a_map"),
+                )
+            )
+        )
+        assert df.select("id", "a_map", explode_outer("an_array")).collect() == [
+            Row(id=1, a_map=[["x", Decimal("1.0")]], col="foo"),
+            Row(id=1, a_map=[["x", Decimal("1.0")]], col="bar"),
+            Row(id=2, a_map=[], col=None),
+            Row(id=3, a_map=None, col=None),
+        ]
+        assert df.select("id", "an_array", explode_outer("a_map")).collect() == [
+            Row(id=1, an_array=["foo", "bar"], key="x", value=1.0),
+            Row(id=2, an_array=[], key=None, value=None),
+            Row(id=3, an_array=None, key=None, value=None),
+        ]
     else:
         df = (
             session.range(1)
@@ -2433,17 +2517,34 @@ def test_from_json(get_session_and_func, get_types, get_func):
     types = get_types(session)
     schema = types.StructType([types.StructField("a", types.IntegerType())])
     df = session.createDataFrame(data, ("key", "value"))
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=Row(a=1))]
-    assert df.select(from_json(df.value, "a INT").alias("json")).collect() == [Row(json=Row(a=1))]
-    assert df.select(from_json(df.value, "MAP<STRING,INT>").alias("json")).collect() == [
-        Row(json={"a": 1})
-    ]
+    # Databricks returns a different type than Spark
+    if isinstance(session, DatabricksSession):
+        expected = [Row(json={"a": 1})]
+    else:
+        expected = [Row(json=Row(a=1))]
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
+    assert df.select(from_json(df.value, "a INT").alias("json")).collect() == expected
+    if isinstance(session, DatabricksSession):
+        expected = [Row(json=[["a", 1]])]
+    else:
+        expected = [Row(json={"a": 1})]
+    assert df.select(from_json(df.value, "MAP<STRING,INT>").alias("json")).collect() == expected
     data = [(1, """[{"a": 1}]""")]
     schema = types.ArrayType(types.StructType([types.StructField("a", types.IntegerType())]))
     df = session.createDataFrame(data, ("key", "value"))
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=[Row(a=1)])]
+    # Databricks returns a different type than Spark
+    if isinstance(session, DatabricksSession):
+        expected = [Row(json=[{"a": 1}])]
+    else:
+        expected = [Row(json=Row(a=1))]
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
     schema = schema_of_json(lit("""{"a": 0}"""))
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=Row(a=None))]
+    # Databricks returns a different type than Spark
+    if isinstance(session, DatabricksSession):
+        expected = [Row(json={"a": None})]
+    else:
+        expected = [Row(json=Row(a=None))]
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
     data = [(1, """[1, 2, 3]""")]
     schema = types.ArrayType(types.IntegerType())
     df = session.createDataFrame(data, ("key", "value"))
@@ -2732,16 +2833,21 @@ def test_map_values(get_session_and_func):
 def test_map_entries(get_session_and_func):
     session, map_entries = get_session_and_func("map_entries")
     df = session.sql("SELECT map(1, 'a', 2, 'b') as data")
-    assert df.select(map_entries("data").alias("entries")).first()[0] == [
-        Row(key=1, value="a"),
-        Row(key=2, value="b"),
-    ]
+    if isinstance(session, DatabricksSession):
+        expected = [{"key": 1, "value": "a"}, {"key": 2, "value": "b"}]
+    else:
+        expected = [Row(key=1, value="a"), Row(key=2, value="b")]
+    assert df.select(map_entries("data").alias("entries")).first()[0] == expected
 
 
 def test_map_from_entries(get_session_and_func):
     session, map_from_entries = get_session_and_func("map_from_entries")
     df = session.sql("SELECT array(struct(1, 'a'), struct(2, 'b')) as data")
-    assert df.select(map_from_entries("data").alias("map")).first()[0] == {1: "a", 2: "b"}
+    if isinstance(session, DatabricksSession):
+        expected = [[1, "a"], [2, "b"]]
+    else:
+        expected = {1: "a", 2: "b"}
+    assert df.select(map_from_entries("data").alias("map")).first()[0] == expected
 
 
 def test_array_repeat(get_session_and_func):
@@ -2753,11 +2859,21 @@ def test_array_repeat(get_session_and_func):
 def test_arrays_zip(get_session_and_func):
     session, arrays_zip = get_session_and_func("arrays_zip")
     df = session.createDataFrame([([1, 2, 3], [2, 4, 6], [3, 6])], ["vals1", "vals2", "vals3"])
-    assert df.select(arrays_zip(df.vals1, df.vals2, df.vals3).alias("zipped")).first()[0] == [
-        Row(vals1=1, vals2=2, vals3=3),
-        Row(vals1=2, vals2=4, vals3=6),
-        Row(vals1=3, vals2=6, vals3=None),
-    ]
+    if isinstance(session, DatabricksSession):
+        expected = [
+            {"vals1": 1, "vals2": 2, "vals3": 3},
+            {"vals1": 2, "vals2": 4, "vals3": 6},
+            {"vals1": 3, "vals2": 6, "vals3": None},
+        ]
+    else:
+        expected = [
+            Row(vals1=1, vals2=2, vals3=3),
+            Row(vals1=2, vals2=4, vals3=6),
+            Row(vals1=3, vals2=6, vals3=None),
+        ]
+    assert (
+        df.select(arrays_zip(df.vals1, df.vals2, df.vals3).alias("zipped")).first()[0] == expected
+    )
 
 
 def test_map_concat(get_session_and_func):
@@ -2765,6 +2881,9 @@ def test_map_concat(get_session_and_func):
     if isinstance(session, SnowflakeSession):
         sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as map1, {'c': 3}::MAP(VARCHAR, NUMBER) as map2"
         expected = {"a": 1, "b": 2, "c": 3}
+    elif isinstance(session, DatabricksSession):
+        sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
+        expected = [[1, "a"], [2, "b"], [3, "c"]]
     else:
         sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
         expected = {1: "a", 2: "b", 3: "c"}
@@ -2787,19 +2906,25 @@ def test_from_csv(get_session_and_func, get_func):
     schema_of_csv = get_func("schema_of_csv", session)
     data = [("1,2,3",)]
     df = session.createDataFrame(data, ("value",))
-    assert df.select(from_csv(df.value, "a INT, b INT, c INT").alias("csv")).collect() == [
-        Row(csv=Row(a=1, b=2, c=3))
-    ]
+    if isinstance(session, DatabricksSession):
+        expected = [Row(csv={"a": 1, "b": 2, "c": 3})]
+    else:
+        expected = [Row(csv=Row(a=1, b=2, c=3))]
+    assert df.select(from_csv(df.value, "a INT, b INT, c INT").alias("csv")).collect() == expected
     value = data[0][0]
-    assert df.select(from_csv(df.value, schema_of_csv(value)).alias("csv")).collect() == [
-        Row(csv=Row(_c0=1, _c1=2, _c2=3))
-    ]
+    if isinstance(session, DatabricksSession):
+        expected = [Row(csv={"_c0": 1, "_c1": 2, "_c2": 3})]
+    else:
+        expected = [Row(csv=Row(_c0=1, _c1=2, _c2=3))]
+    assert df.select(from_csv(df.value, schema_of_csv(value)).alias("csv")).collect() == expected
     data = [("   abc",)]
     df = session.createDataFrame(data, ("value",))
     options = {"ignoreLeadingWhiteSpace": True}
-    assert df.select(from_csv(df.value, "s string", options).alias("csv")).collect() == [
-        Row(csv=Row(s="abc"))
-    ]
+    if isinstance(session, DatabricksSession):
+        expected = [Row(csv={"s": "abc"})]
+    else:
+        expected = [Row(csv=Row(s="abc"))]
+    assert df.select(from_csv(df.value, "s string", options).alias("csv")).collect() == expected
 
 
 def test_aggregate(get_session_and_func, get_func):
@@ -2911,7 +3036,10 @@ def test_transform_keys(get_session_and_func, get_func):
     upper = get_func("upper", session)
     df = session.createDataFrame([(1, {"foo": -2.0, "bar": 2.0})], ("id", "data"))
     row = df.select(transform_keys("data", lambda k, _: upper(k)).alias("data_upper")).head()
-    assert sorted(row["data_upper"].items()) == [("BAR", 2.0), ("FOO", -2.0)]
+    if isinstance(session, DatabricksSession):
+        assert sorted(row["data_upper"]) == [["BAR", 2.0], ["FOO", -2.0]]
+    else:
+        assert sorted(row["data_upper"].items()) == [("BAR", 2.0), ("FOO", -2.0)]
 
 
 def test_transform_values(get_session_and_func, get_func):
@@ -2923,14 +3051,20 @@ def test_transform_values(get_session_and_func, get_func):
             "data", lambda k, v: when(k.isin("IT", "OPS"), v + 10.0).otherwise(v)
         ).alias("new_data")
     ).head()
-    assert sorted(row["new_data"].items()) == [("IT", 20.0), ("OPS", 34.0), ("SALES", 2.0)]
+    if isinstance(session, DatabricksSession):
+        assert sorted(row["new_data"]) == [["IT", 20.0], ["OPS", 34.0], ["SALES", 2.0]]
+    else:
+        assert sorted(row["new_data"].items()) == [("IT", 20.0), ("OPS", 34.0), ("SALES", 2.0)]
 
 
 def test_map_filter(get_session_and_func, get_func):
     session, map_filter = get_session_and_func("map_filter")
     df = session.createDataFrame([(1, {"foo": 42.0, "bar": 1.0, "baz": 32.0})], ("id", "data"))
     row = df.select(map_filter("data", lambda _, v: v > 30.0).alias("data_filtered")).head()
-    assert sorted(row["data_filtered"].items()) == [("baz", 32.0), ("foo", 42.0)]
+    if isinstance(session, DatabricksSession):
+        assert sorted(row["data_filtered"]) == [["baz", 32.0], ["foo", 42.0]]
+    else:
+        assert sorted(row["data_filtered"].items()) == [("baz", 32.0), ("foo", 42.0)]
 
 
 def test_map_zip_with(get_session_and_func, get_func):
@@ -2942,7 +3076,10 @@ def test_map_zip_with(get_session_and_func, get_func):
     row = df.select(
         map_zip_with("base", "ratio", lambda k, v1, v2: round(v1 * v2, 2)).alias("updated_data")
     ).head()
-    assert sorted(row["updated_data"].items()) == [("IT", 48.0), ("SALES", 16.8)]
+    if isinstance(session, DatabricksSession):
+        assert sorted(row["updated_data"]) == [["IT", 48.0], ["SALES", 16.8]]
+    else:
+        assert sorted(row["updated_data"].items()) == [("IT", 48.0), ("SALES", 16.8)]
 
 
 def test_nullif(get_session_and_func):
@@ -3153,7 +3290,7 @@ def test_try_to_number(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("$78.12",)], ["e"])
     actual = df.select(try_to_number(df.e, lit("$99.99")).alias("r")).first()[0]
-    if isinstance(session, SparkSession):
+    if isinstance(session, (SparkSession, DatabricksSession)):
         expected = 78.12
     else:
         expected = Decimal("78.12")
@@ -3388,7 +3525,7 @@ def test_approx_percentile(get_session_and_func, get_func):
     assert df.select(approx_percentile("value", [0.25, 0.5, 0.75], 1000000)).collect() == [
         Row(value=[0.7264430125286507, 9.98975299938167, 19.335304783039014])
     ]
-    assert df.groupBy("key").agg(approx_percentile("value", 0.5, 1000000)).collect() == [
+    assert sorted(df.groupBy("key").agg(approx_percentile("value", 0.5, 1000000)).collect()) == [
         Row(key=0, value=-0.03519435193070876),
         Row(key=1, value=9.990389751837329),
         Row(key=2, value=19.967859769284075),
@@ -3491,6 +3628,8 @@ def test_convert_timezone(get_session_and_func, get_func):
         expected = datetime.datetime(2015, 4, 7, 16, 0, tzinfo=datetime.timezone.utc)
     elif isinstance(session, SnowflakeSession):
         expected = datetime.datetime(2015, 4, 8, 15, 0, tzinfo=pytz.FixedOffset(480))
+    elif isinstance(session, DatabricksSession):
+        expected = datetime.datetime(2015, 4, 8, 8, 0)
     else:
         expected = datetime.datetime(2015, 4, 8, 15, 0)
     assert df.select(convert_timezone(None, lit("Asia/Hong_Kong"), "dt").alias("ts")).collect() == [
@@ -3532,7 +3671,10 @@ def test_current_user(get_session_and_func, get_func):
 
 def test_current_catalog(get_session_and_func, get_func):
     session, current_catalog = get_session_and_func("current_catalog")
-    assert session.range(1).select(current_catalog()).first()[0] == "spark_catalog"
+    if isinstance(session, DatabricksSession):
+        assert session.range(1).select(current_catalog()).first()[0] == "sqlframe"
+    else:
+        assert session.range(1).select(current_catalog()).first()[0] == "spark_catalog"
 
 
 def test_current_database(get_session_and_func, get_func):
@@ -3766,9 +3908,22 @@ def test_histogram_numeric(get_session_and_func, get_func):
     session, histogram_numeric = get_session_and_func("histogram_numeric")
     lit = get_func("lit", session)
     df = session.createDataFrame([("a", 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
-    assert df.select(histogram_numeric("c2", lit(5))).collect() == [
-        Row(value=[Row(x=1, y=1.0), Row(x=2, y=2.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
-    ]
+    if isinstance(session, DatabricksSession):
+        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+            Row(
+                value=[
+                    {"x": 1, "y": 1.0},
+                    {"x": 2, "y": 1.0},
+                    {"x": 2, "y": 1.0},
+                    {"x": 3, "y": 1.0},
+                    {"x": 8, "y": 1.0},
+                ]
+            )
+        ]
+    else:
+        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+            Row(value=[Row(x=1, y=1.0), Row(x=2, y=2.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
+        ]
 
 
 def test_hll_sketch_agg(get_session_and_func, get_func):
@@ -3993,12 +4148,24 @@ def test_make_timestamp(get_session_and_func, get_func):
         [[2014, 12, 28, 6, 30, 45.887, "CET"]],
         ["year", "month", "day", "hour", "min", "sec", "timezone"],
     )
-    assert df.select(
-        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias("r")
-    ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
-    assert df.select(
-        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
-    ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+    if isinstance(session, DatabricksSession):
+        assert df.select(
+            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias(
+                "r"
+            )
+        ).first()[0].replace(tzinfo=None) == datetime.datetime(2014, 12, 28, 5, 30, 45, 887000)
+        assert df.select(
+            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+        ).first()[0].replace(tzinfo=None) == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+    else:
+        assert df.select(
+            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias(
+                "r"
+            )
+        ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
+        assert df.select(
+            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+        ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
 
 
 def test_make_timestamp_ltz(get_session_and_func, get_func):
@@ -4105,9 +4272,14 @@ def test_named_struct(get_session_and_func, get_func):
     session, named_struct = get_session_and_func("named_struct")
     lit = get_func("lit", session)
     df = session.createDataFrame([(1, 2, 3)], ["a", "b", "c"])
-    assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
-        Row(r=Row(x=1, y=2))
-    ]
+    if isinstance(session, DatabricksSession):
+        assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
+            Row(r={"x": 1, "y": 2})
+        ]
+    else:
+        assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
+            Row(r=Row(x=1, y=2))
+        ]
 
 
 def test_negative(get_session_and_func, get_func):
@@ -4474,7 +4646,7 @@ def test_regr_intercept(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_intercept("y", "x")).first()[0] == -0.04961745990969568
+    assert math.isclose(df.select(regr_intercept("y", "x")).first()[0], -0.04961745990969568)
 
 
 def test_regr_r2(get_session_and_func, get_func):
@@ -4484,7 +4656,7 @@ def test_regr_r2(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_r2("y", "x")).first()[0] == 0.9851908293645436
+    assert math.isclose(df.select(regr_r2("y", "x")).first()[0], 0.9851908293645436)
 
 
 def test_regr_slope(get_session_and_func, get_func):
@@ -4494,7 +4666,7 @@ def test_regr_slope(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_slope("y", "x")).first()[0] == 10.040390844891048
+    assert math.isclose(df.select(regr_slope("y", "x")).first()[0], 10.040390844891048)
 
 
 def test_regr_sxx(get_session_and_func, get_func):
@@ -4504,7 +4676,7 @@ def test_regr_sxx(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_sxx("y", "x")).first()[0] == 666.9989999999996
+    assert math.isclose(df.select(regr_sxx("y", "x")).first()[0], 666.9989999999996)
 
 
 def test_regr_sxy(get_session_and_func, get_func):
@@ -4514,7 +4686,7 @@ def test_regr_sxy(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_sxy("y", "x")).first()[0] == 6696.93065315148
+    assert math.isclose(df.select(regr_sxy("y", "x")).first()[0], 6696.93065315148)
 
 
 def test_regr_syy(get_session_and_func, get_func):
@@ -4524,7 +4696,7 @@ def test_regr_syy(get_session_and_func, get_func):
     x = (col("id") % 3).alias("x")
     y = (randn(42) + x * 10).alias("y")
     df = session.range(0, 1000, 1, 1).select(x, y)
-    assert df.select(regr_syy("y", "x")).first()[0] == 68250.53503811295
+    assert math.isclose(df.select(regr_syy("y", "x")).first()[0], 68250.53503811295)
 
 
 def test_replace(get_session_and_func, get_func):
@@ -4658,19 +4830,15 @@ def test_str_to_map(get_session_and_func, get_func):
     session, str_to_map = get_session_and_func("str_to_map")
     lit = get_func("lit", session)
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    assert df.select(str_to_map(df.e, lit(","), lit(":")).alias("r")).first()[0] == {
-        "a": "1",
-        "b": "2",
-        "c": "3",
-    }
+    if isinstance(session, DatabricksSession):
+        expected = [["a", "1"], ["b", "2"], ["c", "3"]]
+    else:
+        expected = {"a": "1", "b": "2", "c": "3"}
+    assert df.select(str_to_map(df.e, lit(","), lit(":")).alias("r")).first()[0] == expected
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    assert df.select(str_to_map(df.e, lit(",")).alias("r")).first()[0] == {
-        "a": "1",
-        "b": "2",
-        "c": "3",
-    }
+    assert df.select(str_to_map(df.e, lit(",")).alias("r")).first()[0] == expected
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    assert df.select(str_to_map(df.e).alias("r")).first()[0] == {"a": "1", "b": "2", "c": "3"}
+    assert df.select(str_to_map(df.e).alias("r")).first()[0] == expected
 
 
 def test_substr(get_session_and_func, get_func):
@@ -4710,17 +4878,27 @@ def test_substr(get_session_and_func, get_func):
 def test_timestamp_micros(get_session_and_func, get_func):
     session, timestamp_micros = get_session_and_func("timestamp_micros")
     time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[
-        0
-    ] == datetime.datetime(1969, 12, 31, 16, 20, 30, 219000)
+    if isinstance(session, DatabricksSession):
+        assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[0].replace(
+            tzinfo=None
+        ) == datetime.datetime(1970, 1, 1, 0, 20, 30, 219000)
+    else:
+        assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[
+            0
+        ] == datetime.datetime(1969, 12, 31, 16, 20, 30, 219000)
 
 
 def test_timestamp_millis(get_session_and_func, get_func):
     session, timestamp_millis = get_session_and_func("timestamp_millis")
     time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[
-        0
-    ] == datetime.datetime(1970, 1, 14, 21, 43, 39)
+    if isinstance(session, DatabricksSession):
+        assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[0].replace(
+            tzinfo=None
+        ) == datetime.datetime(1970, 1, 15, 5, 43, 39)
+    else:
+        assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[
+            0
+        ] == datetime.datetime(1970, 1, 14, 21, 43, 39)
 
 
 def test_to_char(get_session_and_func, get_func):
@@ -4772,7 +4950,7 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-04-08",)], ["e"])
     result = df.select(to_unix_timestamp(df.e, lit("yyyy-MM-dd")).alias("r")).first()[0]
-    if isinstance(session, DuckDBSession):
+    if isinstance(session, (DuckDBSession, DatabricksSession)):
         assert result == 1460073600.0
     else:
         assert result == 1460098800
@@ -4866,12 +5044,12 @@ def test_try_to_timestamp(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     result = df.select(try_to_timestamp(df.t).alias("dt")).first()[0]
-    if isinstance(session, BigQuerySession):
+    if isinstance(session, (BigQuerySession, DatabricksSession)):
         assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
     else:
         assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(try_to_timestamp(df.t, lit("yyyy-MM-dd HH:mm:ss")).alias("dt")).first()[0]
-    if isinstance(session, BigQuerySession):
+    if isinstance(session, (BigQuerySession, DatabricksSession)):
         assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
     else:
         assert result == datetime.datetime(1997, 2, 28, 10, 30)
@@ -4894,21 +5072,30 @@ def test_unix_micros(get_session_and_func, get_func):
     session, unix_micros = get_session_and_func("unix_micros")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000000
+    if isinstance(session, DatabricksSession):
+        assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
+    else:
+        assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000000
 
 
 def test_unix_millis(get_session_and_func, get_func):
     session, unix_millis = get_session_and_func("unix_millis")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000
+    if isinstance(session, DatabricksSession):
+        assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000
+    else:
+        assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000
 
 
 def test_unix_seconds(get_session_and_func, get_func):
     session, unix_seconds = get_session_and_func("unix_seconds")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400
+    if isinstance(session, DatabricksSession):
+        assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200
+    else:
+        assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400
 
 
 def test_url_decode(get_session_and_func, get_func):
@@ -4954,12 +5141,17 @@ def test_window_time(get_session_and_func, get_func):
     session, window_time = get_session_and_func("window_time")
     window = get_func("window", session)
     sum = get_func("sum", session)
+    col = get_func("col", session)
     df = session.createDataFrame(
         [(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)],
     ).toDF("date", "val")
-    w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    w = (
+        df.withColumn("window", window("date", "5 seconds"))
+        .groupBy("window")
+        .agg(sum("val").alias("sum"))
+    )
     assert w.select(
-        w.window.end.cast("string").alias("end"),
+        col("window.end").cast("string").alias("end"),
         window_time(w.window).cast("string").alias("window_time"),
         "sum",
     ).collect() == [Row(end="2016-03-11 09:00:10", window_time="2016-03-11 09:00:09.999999", sum=1)]
