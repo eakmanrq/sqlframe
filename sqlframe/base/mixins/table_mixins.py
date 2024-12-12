@@ -173,7 +173,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
 
             if clause.clause.condition is not None:
                 cond_clause = self._ensure_and_normalize_condition(
-                    clause.clause.condition, other_df
+                    clause.clause.condition, other_df, True
                 )
                 for col_expr in cond_clause.expression.find_all(exp.Column):
                     if col_expr.table == self.expression.args["from"].this.alias_or_name:
@@ -252,7 +252,10 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         return LazyExpression(merge_expr, self.session)
 
     def _ensure_and_normalize_condition(
-        self, condition: t.Union[str, t.List[str], Column, t.List[Column]], other_df: DF
+        self,
+        condition: t.Union[str, t.List[str], Column, t.List[Column]],
+        other_df: DF,
+        clause: t.Optional[bool] = False,
     ):
         join_expression = self._add_ctes_to_expression(
             self.expression, other_df.expression.copy().ctes
@@ -269,7 +272,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     ):
                         col_expr.set("table", exp.to_identifier(other_df.latest_cte_name))
 
-        if isinstance(condition[0].expression, exp.Column):
+        if isinstance(condition[0].expression, exp.Column) and not clause:
             """
             Unique characteristics of join on column names only:
             * The column names are put at the front of the select list
