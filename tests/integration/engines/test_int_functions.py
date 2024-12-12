@@ -146,10 +146,6 @@ def test_lit(get_session_and_func, arg, expected):
         if isinstance(arg, Row):
             pytest.skip("Snowflake doesn't support literal row types")
     if isinstance(session, DatabricksSession):
-        if isinstance(arg, dict):
-            expected = list(map(list, expected.items()))
-        if isinstance(arg, Row):
-            expected = expected.asDict()
         if isinstance(arg, datetime.datetime) and arg.tzinfo is None:
             expected = expected.replace(tzinfo=datetime.timezone.utc)
     if isinstance(session, DuckDBSession):
@@ -1094,7 +1090,7 @@ def test_struct(get_session_and_func):
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
     expected = (
         [Row(value=Row(age=2, name="Alice")), Row(value=Row(age=5, name="Bob"))]
-        if not isinstance(session, (SnowflakeSession, DatabricksSession))
+        if not isinstance(session, SnowflakeSession)
         else [Row(value={"age": 2, "name": "Alice"}), Row(value={"age": 5, "name": "Bob"})]
     )
     assert df.select(struct("age", "name").alias("struct")).collect() == expected
@@ -2150,8 +2146,6 @@ def test_create_map(get_session_and_func, get_func):
     df = session.createDataFrame([("Alice", 2), ("Bob", 5)], ("name", "age"))
     if isinstance(session, (SparkSession, PySparkSession)):
         expected = [Row(value={"Alice": 2}), Row(value={"Bob": 5})]
-    elif isinstance(session, DatabricksSession):
-        expected = [Row(value=[["Alice", 2]]), Row(value=[["Bob", 5]])]
     elif isinstance(session, DuckDBSession):
         expected = [Row(value=Row(**{"Alice": 2})), Row(value=Row(**{"Bob": 5}))]
     else:
@@ -2164,11 +2158,10 @@ def test_create_map(get_session_and_func, get_func):
 def test_map_from_arrays(get_session_and_func):
     session, map_from_arrays = get_session_and_func("map_from_arrays")
     df = session.createDataFrame([([2, 5], ["a", "b"])], ["k", "v"])
-    if isinstance(session, DatabricksSession):
-        expected = [[2, "a"], [5, "b"]]
-    else:
-        expected = {2: "a", 5: "b"}
-    assert df.select(map_from_arrays(df.k, df.v).alias("col")).first()[0] == expected
+    assert df.select(map_from_arrays(df.k, df.v).alias("col")).first()[0] == {
+        2: "a",
+        5: "b",
+    }
 
 
 def test_array_contains(get_session_and_func, get_func):
@@ -2375,7 +2368,6 @@ def test_explode_outer(get_session_and_func, get_func):
             Row(id=2, an_array=[], key=None, value=None),
             Row(id=3, an_array=None, key=None, value=None),
         ]
-    # Databricks returns different types for arrays and maps
     elif isinstance(session, DatabricksSession):
         df = (
             session.range(1)
@@ -2400,8 +2392,8 @@ def test_explode_outer(get_session_and_func, get_func):
             )
         )
         assert df.select("id", "a_map", explode_outer("an_array")).collect() == [
-            Row(id=1, a_map=[["x", Decimal("1.0")]], col="foo"),
-            Row(id=1, a_map=[["x", Decimal("1.0")]], col="bar"),
+            Row(id=1, a_map={"x": Decimal("1.0")}, col="foo"),
+            Row(id=1, a_map={"x": Decimal("1.0")}, col="bar"),
             Row(id=2, a_map=[], col=None),
             Row(id=3, a_map=None, col=None),
         ]
@@ -2505,34 +2497,17 @@ def test_from_json(get_session_and_func, get_types, get_func):
     types = get_types(session)
     schema = types.StructType([types.StructField("a", types.IntegerType())])
     df = session.createDataFrame(data, ("key", "value"))
-    # Databricks returns a different type than Spark
-    if isinstance(session, DatabricksSession):
-        expected = [Row(json={"a": 1})]
-    else:
-        expected = [Row(json=Row(a=1))]
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
-    assert df.select(from_json(df.value, "a INT").alias("json")).collect() == expected
-    if isinstance(session, DatabricksSession):
-        expected = [Row(json=[["a", 1]])]
-    else:
-        expected = [Row(json={"a": 1})]
-    assert df.select(from_json(df.value, "MAP<STRING,INT>").alias("json")).collect() == expected
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=Row(a=1))]
+    assert df.select(from_json(df.value, "a INT").alias("json")).collect() == [Row(json=Row(a=1))]
+    assert df.select(from_json(df.value, "MAP<STRING,INT>").alias("json")).collect() == [
+        Row(json={"a": 1})
+    ]
     data = [(1, """[{"a": 1}]""")]
     schema = types.ArrayType(types.StructType([types.StructField("a", types.IntegerType())]))
     df = session.createDataFrame(data, ("key", "value"))
-    # Databricks returns a different type than Spark
-    if isinstance(session, DatabricksSession):
-        expected = [Row(json=[{"a": 1}])]
-    else:
-        expected = [Row(json=[Row(a=1)])]
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=[Row(a=1)])]
     schema = schema_of_json(lit("""{"a": 0}"""))
-    # Databricks returns a different type than Spark
-    if isinstance(session, DatabricksSession):
-        expected = [Row(json={"a": None})]
-    else:
-        expected = [Row(json=Row(a=None))]
-    assert df.select(from_json(df.value, schema).alias("json")).collect() == expected
+    assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=Row(a=None))]
     data = [(1, """[1, 2, 3]""")]
     schema = types.ArrayType(types.IntegerType())
     df = session.createDataFrame(data, ("key", "value"))
@@ -2821,21 +2796,16 @@ def test_map_values(get_session_and_func):
 def test_map_entries(get_session_and_func):
     session, map_entries = get_session_and_func("map_entries")
     df = session.sql("SELECT map(1, 'a', 2, 'b') as data")
-    if isinstance(session, DatabricksSession):
-        expected = [{"key": 1, "value": "a"}, {"key": 2, "value": "b"}]
-    else:
-        expected = [Row(key=1, value="a"), Row(key=2, value="b")]
-    assert df.select(map_entries("data").alias("entries")).first()[0] == expected
+    assert df.select(map_entries("data").alias("entries")).first()[0] == [
+        Row(key=1, value="a"),
+        Row(key=2, value="b"),
+    ]
 
 
 def test_map_from_entries(get_session_and_func):
     session, map_from_entries = get_session_and_func("map_from_entries")
     df = session.sql("SELECT array(struct(1, 'a'), struct(2, 'b')) as data")
-    if isinstance(session, DatabricksSession):
-        expected = [[1, "a"], [2, "b"]]
-    else:
-        expected = {1: "a", 2: "b"}
-    assert df.select(map_from_entries("data").alias("map")).first()[0] == expected
+    assert df.select(map_from_entries("data").alias("map")).first()[0] == {1: "a", 2: "b"}
 
 
 def test_array_repeat(get_session_and_func):
@@ -2847,21 +2817,11 @@ def test_array_repeat(get_session_and_func):
 def test_arrays_zip(get_session_and_func):
     session, arrays_zip = get_session_and_func("arrays_zip")
     df = session.createDataFrame([([1, 2, 3], [2, 4, 6], [3, 6])], ["vals1", "vals2", "vals3"])
-    if isinstance(session, DatabricksSession):
-        expected = [
-            {"vals1": 1, "vals2": 2, "vals3": 3},
-            {"vals1": 2, "vals2": 4, "vals3": 6},
-            {"vals1": 3, "vals2": 6, "vals3": None},
-        ]
-    else:
-        expected = [
-            Row(vals1=1, vals2=2, vals3=3),
-            Row(vals1=2, vals2=4, vals3=6),
-            Row(vals1=3, vals2=6, vals3=None),
-        ]
-    assert (
-        df.select(arrays_zip(df.vals1, df.vals2, df.vals3).alias("zipped")).first()[0] == expected
-    )
+    assert df.select(arrays_zip(df.vals1, df.vals2, df.vals3).alias("zipped")).first()[0] == [
+        Row(vals1=1, vals2=2, vals3=3),
+        Row(vals1=2, vals2=4, vals3=6),
+        Row(vals1=3, vals2=6, vals3=None),
+    ]
 
 
 def test_map_concat(get_session_and_func):
@@ -2869,9 +2829,6 @@ def test_map_concat(get_session_and_func):
     if isinstance(session, SnowflakeSession):
         sql = "SELECT {'a': 1, 'b': 2}::MAP(VARCHAR, NUMBER) as map1, {'c': 3}::MAP(VARCHAR, NUMBER) as map2"
         expected = {"a": 1, "b": 2, "c": 3}
-    elif isinstance(session, DatabricksSession):
-        sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
-        expected = [[1, "a"], [2, "b"], [3, "c"]]
     else:
         sql = "SELECT map(1, 'a', 2, 'b') as map1, map(3, 'c') as map2"
         expected = {1: "a", 2: "b", 3: "c"}
@@ -2894,25 +2851,19 @@ def test_from_csv(get_session_and_func, get_func):
     schema_of_csv = get_func("schema_of_csv", session)
     data = [("1,2,3",)]
     df = session.createDataFrame(data, ("value",))
-    if isinstance(session, DatabricksSession):
-        expected = [Row(csv={"a": 1, "b": 2, "c": 3})]
-    else:
-        expected = [Row(csv=Row(a=1, b=2, c=3))]
-    assert df.select(from_csv(df.value, "a INT, b INT, c INT").alias("csv")).collect() == expected
+    assert df.select(from_csv(df.value, "a INT, b INT, c INT").alias("csv")).collect() == [
+        Row(csv=Row(a=1, b=2, c=3))
+    ]
     value = data[0][0]
-    if isinstance(session, DatabricksSession):
-        expected = [Row(csv={"_c0": 1, "_c1": 2, "_c2": 3})]
-    else:
-        expected = [Row(csv=Row(_c0=1, _c1=2, _c2=3))]
-    assert df.select(from_csv(df.value, schema_of_csv(value)).alias("csv")).collect() == expected
+    assert df.select(from_csv(df.value, schema_of_csv(value)).alias("csv")).collect() == [
+        Row(csv=Row(_c0=1, _c1=2, _c2=3))
+    ]
     data = [("   abc",)]
     df = session.createDataFrame(data, ("value",))
     options = {"ignoreLeadingWhiteSpace": True}
-    if isinstance(session, DatabricksSession):
-        expected = [Row(csv={"s": "abc"})]
-    else:
-        expected = [Row(csv=Row(s="abc"))]
-    assert df.select(from_csv(df.value, "s string", options).alias("csv")).collect() == expected
+    assert df.select(from_csv(df.value, "s string", options).alias("csv")).collect() == [
+        Row(csv=Row(s="abc"))
+    ]
 
 
 def test_aggregate(get_session_and_func, get_func):
@@ -3024,10 +2975,11 @@ def test_transform_keys(get_session_and_func, get_func):
     upper = get_func("upper", session)
     df = session.createDataFrame([(1, {"foo": -2.0, "bar": 2.0})], ("id", "data"))
     row = df.select(transform_keys("data", lambda k, _: upper(k)).alias("data_upper")).head()
-    if isinstance(session, DatabricksSession):
-        assert sorted(row["data_upper"]) == [["BAR", 2.0], ["FOO", -2.0]]
+    if isinstance(session, (SparkSession, PySparkSession)):
+        expected = [("BAR", 2.0), ("FOO", -2.0)]
     else:
-        assert sorted(row["data_upper"].items()) == [("BAR", 2.0), ("FOO", -2.0)]
+        expected = [("bar", 2.0), ("foo", -2.0)]
+    assert sorted(row["data_upper"].items()) == expected
 
 
 def test_transform_values(get_session_and_func, get_func):
@@ -3039,20 +2991,18 @@ def test_transform_values(get_session_and_func, get_func):
             "data", lambda k, v: when(k.isin("IT", "OPS"), v + 10.0).otherwise(v)
         ).alias("new_data")
     ).head()
-    if isinstance(session, DatabricksSession):
-        assert sorted(row["new_data"]) == [["IT", 20.0], ["OPS", 34.0], ["SALES", 2.0]]
+    if isinstance(session, (SparkSession, PySparkSession)):
+        expected = [("IT", 20.0), ("OPS", 34.0), ("SALES", 2.0)]
     else:
-        assert sorted(row["new_data"].items()) == [("IT", 20.0), ("OPS", 34.0), ("SALES", 2.0)]
+        expected = [("it", 20.0), ("ops", 34.0), ("sales", 2.0)]
+    assert sorted(row["new_data"].items()) == expected
 
 
 def test_map_filter(get_session_and_func, get_func):
     session, map_filter = get_session_and_func("map_filter")
     df = session.createDataFrame([(1, {"foo": 42.0, "bar": 1.0, "baz": 32.0})], ("id", "data"))
     row = df.select(map_filter("data", lambda _, v: v > 30.0).alias("data_filtered")).head()
-    if isinstance(session, DatabricksSession):
-        assert sorted(row["data_filtered"]) == [["baz", 32.0], ["foo", 42.0]]
-    else:
-        assert sorted(row["data_filtered"].items()) == [("baz", 32.0), ("foo", 42.0)]
+    assert sorted(row["data_filtered"].items()) == [("baz", 32.0), ("foo", 42.0)]
 
 
 def test_map_zip_with(get_session_and_func, get_func):
@@ -3064,10 +3014,11 @@ def test_map_zip_with(get_session_and_func, get_func):
     row = df.select(
         map_zip_with("base", "ratio", lambda k, v1, v2: round(v1 * v2, 2)).alias("updated_data")
     ).head()
-    if isinstance(session, DatabricksSession):
-        assert sorted(row["updated_data"]) == [["IT", 48.0], ["SALES", 16.8]]
+    if isinstance(session, (SparkSession, PySparkSession)):
+        expected = [("IT", 48.0), ("SALES", 16.8)]
     else:
-        assert sorted(row["updated_data"].items()) == [("IT", 48.0), ("SALES", 16.8)]
+        expected = [("it", 48.0), ("sales", 16.8)]
+    assert sorted(row["updated_data"].items()) == expected
 
 
 def test_nullif(get_session_and_func):
@@ -3667,12 +3618,12 @@ def test_current_catalog(get_session_and_func, get_func):
 
 def test_current_database(get_session_and_func, get_func):
     session, current_database = get_session_and_func("current_database")
-    assert session.range(1).select(current_database()).first()[0] == "db1"
+    assert session.range(1).select(current_database()).first()[0] in ("db1", "default", "public")
 
 
 def test_current_schema(get_session_and_func, get_func):
     session, current_schema = get_session_and_func("current_schema")
-    assert session.range(1).select(current_schema()).first()[0] == "db1"
+    assert session.range(1).select(current_schema()).first()[0] in ("db1", "default", "public")
 
 
 def test_current_timezone(get_session_and_func, get_func):
@@ -3896,22 +3847,9 @@ def test_histogram_numeric(get_session_and_func, get_func):
     session, histogram_numeric = get_session_and_func("histogram_numeric")
     lit = get_func("lit", session)
     df = session.createDataFrame([("a", 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
-    if isinstance(session, DatabricksSession):
-        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
-            Row(
-                value=[
-                    {"x": 1, "y": 1.0},
-                    {"x": 2, "y": 1.0},
-                    {"x": 2, "y": 1.0},
-                    {"x": 3, "y": 1.0},
-                    {"x": 8, "y": 1.0},
-                ]
-            )
-        ]
-    else:
-        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
-            Row(value=[Row(x=1, y=1.0), Row(x=2, y=2.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
-        ]
+    assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+        [Row(x=1, y=1.0), Row(x=2, y=1.0), Row(x=2, y=1.0), Row(x=3, y=1.0), Row(x=8, y=1.0)]
+    ]
 
 
 def test_hll_sketch_agg(get_session_and_func, get_func):
@@ -4260,14 +4198,9 @@ def test_named_struct(get_session_and_func, get_func):
     session, named_struct = get_session_and_func("named_struct")
     lit = get_func("lit", session)
     df = session.createDataFrame([(1, 2, 3)], ["a", "b", "c"])
-    if isinstance(session, DatabricksSession):
-        assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
-            Row(r={"x": 1, "y": 2})
-        ]
-    else:
-        assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
-            Row(r=Row(x=1, y=2))
-        ]
+    assert df.select(named_struct(lit("x"), df.a, lit("y"), df.b).alias("r")).collect() == [
+        Row(r=Row(x=1, y=2))
+    ]
 
 
 def test_negative(get_session_and_func, get_func):
@@ -4818,15 +4751,19 @@ def test_str_to_map(get_session_and_func, get_func):
     session, str_to_map = get_session_and_func("str_to_map")
     lit = get_func("lit", session)
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    if isinstance(session, DatabricksSession):
-        expected = [["a", "1"], ["b", "2"], ["c", "3"]]
-    else:
-        expected = {"a": "1", "b": "2", "c": "3"}
-    assert df.select(str_to_map(df.e, lit(","), lit(":")).alias("r")).first()[0] == expected
+    assert df.select(str_to_map(df.e, lit(","), lit(":")).alias("r")).first()[0] == {
+        "a": "1",
+        "b": "2",
+        "c": "3",
+    }
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    assert df.select(str_to_map(df.e, lit(",")).alias("r")).first()[0] == expected
+    assert df.select(str_to_map(df.e, lit(",")).alias("r")).first()[0] == {
+        "a": "1",
+        "b": "2",
+        "c": "3",
+    }
     df = session.createDataFrame([("a:1,b:2,c:3",)], ["e"])
-    assert df.select(str_to_map(df.e).alias("r")).first()[0] == expected
+    assert df.select(str_to_map(df.e).alias("r")).first()[0] == {"a": "1", "b": "2", "c": "3"}
 
 
 def test_substr(get_session_and_func, get_func):

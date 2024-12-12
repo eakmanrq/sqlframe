@@ -46,6 +46,17 @@ class DatabricksSession(
         if not hasattr(self, "_conn"):
             super().__init__(conn or sql.connect(server_hostname, http_path, access_token))
 
+    @classmethod
+    def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
+        if (
+            value
+            and isinstance(value, list)
+            and all(isinstance(item, tuple) for item in value)
+            and all(len(item) == 2 for item in value)
+        ):
+            return dict(value)
+        return None
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "databricks"
 

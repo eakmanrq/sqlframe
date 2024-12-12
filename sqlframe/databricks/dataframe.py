@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import typing as t
 
 from sqlframe.base.catalog import Column as CatalogColumn
