@@ -52,8 +52,8 @@ class DatabricksDataFrame(
             columns.append(
                 CatalogColumn(
                     name=normalize_string(
-                        row.col_name, from_dialect="execution", to_dialect="output"
-                    ).replace("`", ""),
+                        row.col_name, from_dialect="execution", to_dialect="output",
+                    ),
                     dataType=normalize_string(
                         row.data_type,
                         from_dialect="execution",

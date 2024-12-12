@@ -71,16 +71,16 @@ root
  |-- bigint_col: bigint (nullable = true)
  |-- double_col: double (nullable = true)
  |-- string_col: string (nullable = true)
- |-- map<string,bigint>_col: map<string, bigint> (nullable = true)
+ |-- `map<string,bigint>_col`: map<string, bigint> (nullable = true)
  |    |-- key: string (nullable = true)
  |    |-- value: bigint (nullable = true)
- |-- array<struct<a:bigint,b:bigint>>: array<struct<a: bigint, b: bigint>> (nullable = true)
+ |-- `array<struct<a:bigint,b:bigint>>`: array<struct<a: bigint, b: bigint>> (nullable = true)
  |    |-- element: struct<a: bigint, b: bigint> (nullable = true)
  |    |    |-- a: bigint (nullable = true)
  |    |    |-- b: bigint (nullable = true)
- |-- array<bigint>_col: array<bigint> (nullable = true)
+ |-- `array<bigint>_col`: array<bigint> (nullable = true)
  |    |-- element: bigint (nullable = true)
- |-- struct<a:bigint>_col: struct<a: bigint> (nullable = true)
+ |-- `struct<a:bigint>_col`: struct<a: bigint> (nullable = true)
  |    |-- a: bigint (nullable = true)
  |-- date_col: date (nullable = true)
  |-- timestamp_col: timestamp (nullable = true)
@@ -126,12 +126,12 @@ def test_schema_nested(databricks_datatypes: DatabricksDataFrame):
     assert struct_fields[1].dataType == types.DoubleType()
     assert struct_fields[2].name == "string_col"
     assert struct_fields[2].dataType == types.StringType()
-    assert struct_fields[3].name == "map<string,bigint>_col"
+    assert struct_fields[3].name == "`map<string,bigint>_col`"
     assert struct_fields[3].dataType == types.MapType(
         types.StringType(),
         types.LongType(),
     )
-    assert struct_fields[4].name == "array<struct<a:bigint,b:bigint>>"
+    assert struct_fields[4].name == "`array<struct<a:bigint,b:bigint>>`"
     assert struct_fields[4].dataType == types.ArrayType(
         types.StructType(
             [
@@ -146,11 +146,11 @@ def test_schema_nested(databricks_datatypes: DatabricksDataFrame):
             ]
         ),
     )
-    assert struct_fields[5].name == "array<bigint>_col"
+    assert struct_fields[5].name == "`array<bigint>_col`"
     assert struct_fields[5].dataType == types.ArrayType(
         types.LongType(),
     )
-    assert struct_fields[6].name == "struct<a:bigint>_col"
+    assert struct_fields[6].name == "`struct<a:bigint>_col`"
     assert struct_fields[6].dataType == types.StructType(
         [
             types.StructField(
