@@ -3847,9 +3847,14 @@ def test_histogram_numeric(get_session_and_func, get_func):
     session, histogram_numeric = get_session_and_func("histogram_numeric")
     lit = get_func("lit", session)
     df = session.createDataFrame([("a", 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"])
-    assert df.select(histogram_numeric("c2", lit(5))).collect() == [
-        [Row(x=1, y=1.0), Row(x=2, y=1.0), Row(x=2, y=1.0), Row(x=3, y=1.0), Row(x=8, y=1.0)]
-    ]
+    if isinstance(session, DatabricksSession):
+        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+            Row(value=[Row(x=1, y=1.0), Row(x=2, y=1.0), Row(x=2, y=1.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
+        ]
+    else:
+        assert df.select(histogram_numeric("c2", lit(5))).collect() == [
+            Row(value=[Row(x=1, y=1.0), Row(x=2, y=2.0), Row(x=3, y=1.0), Row(x=8, y=1.0)])
+        ]
 
 
 def test_hll_sketch_agg(get_session_and_func, get_func):
