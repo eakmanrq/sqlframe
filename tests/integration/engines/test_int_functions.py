@@ -1587,11 +1587,7 @@ def test_window(get_session_and_func, get_func):
     sum = get_func("sum", session)
     col = get_func("col", session)
     df = session.createDataFrame([(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)]).toDF("date", "val")
-    w = (
-        df.withColumn("window", window("date", "5 seconds"))
-        .groupBy("window")
-        .agg(sum("val").alias("sum"))
-    )
+    w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
     result = w.select(
         col("window.start").cast("string").alias("start"),
         col("window.end").cast("string").alias("end"),
@@ -1608,11 +1604,7 @@ def test_session_window(get_session_and_func, get_func):
     col = get_func("col", session)
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-03-11 09:00:07", 1)]).toDF("date", "val")
-    w = (
-        df.withColumn("session_window", session_window("date", "5 seconds"))
-        .groupBy("session_window")
-        .agg(sum("val").alias("sum"))
-    )
+    w = df.groupBy(session_window("date", "5 seconds")).agg(sum("val").alias("sum"))
     assert w.select(
         col("session_window.start").cast("string").alias("start"),
         col("session_window.end").cast("string").alias("end"),
@@ -1620,11 +1612,7 @@ def test_session_window(get_session_and_func, get_func):
     ).collect() == [
         Row(start="2016-03-11 09:00:07", end="2016-03-11 09:00:12", sum=1),
     ]
-    w = (
-        df.withColumn("session_window", session_window("date", lit("5 seconds")))
-        .groupBy("session_window")
-        .agg(sum("val").alias("sum"))
-    )
+    w = df.groupBy(session_window("date", lit("5 seconds"))).agg(sum("val").alias("sum"))
     assert w.select(
         col("session_window.start").cast("string").alias("start"),
         col("session_window.end").cast("string").alias("end"),
@@ -5145,11 +5133,7 @@ def test_window_time(get_session_and_func, get_func):
     df = session.createDataFrame(
         [(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)],
     ).toDF("date", "val")
-    w = (
-        df.withColumn("window", window("date", "5 seconds"))
-        .groupBy("window")
-        .agg(sum("val").alias("sum"))
-    )
+    w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
     assert w.select(
         col("window.end").cast("string").alias("end"),
         window_time(w.window).cast("string").alias("window_time"),
