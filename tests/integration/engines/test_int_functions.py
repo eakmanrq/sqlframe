@@ -1584,6 +1584,8 @@ def test_window(get_session_and_func, get_func):
     col = get_func("col", session)
     df = session.createDataFrame([(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)]).toDF("date", "val")
     w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    # SQLFrame does not support the "dot notation" for struct columns so the "col" function was used instead.
+    # https://spark.apache.org/docs/3.4.0/api/python/reference/pyspark.sql/api/pyspark.sql.functions.window.html
     result = w.select(
         col("window.start").cast("string").alias("start"),
         col("window.end").cast("string").alias("end"),
@@ -1601,6 +1603,8 @@ def test_session_window(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("2016-03-11 09:00:07", 1)]).toDF("date", "val")
     w = df.groupBy(session_window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    # SQLFrame does not support the "dot notation" for struct columns so the "col" function was used instead.
+    # https://spark.apache.org/docs/3.4.0/api/python/reference/pyspark.sql/api/pyspark.sql.functions.session_window.html
     assert w.select(
         col("session_window.start").cast("string").alias("start"),
         col("session_window.end").cast("string").alias("end"),
@@ -2977,7 +2981,9 @@ def test_transform_keys(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([(1, {"foo": -2.0, "bar": 2.0})], ("id", "data"))
     if isinstance(session, DatabricksSession):
-        row = df.select(transform_keys("data", lambda k, _: concat_ws("_", k, lit("a"))).alias("data_upper")).head()
+        row = df.select(
+            transform_keys("data", lambda k, _: concat_ws("_", k, lit("a"))).alias("data_upper")
+        ).head()
         expected = [("bar_a", 2.0), ("foo_a", -2.0)]
         assert sorted(row["data_upper"].items()) == expected
     else:
@@ -5088,6 +5094,8 @@ def test_window_time(get_session_and_func, get_func):
         [(datetime.datetime(2016, 3, 11, 9, 0, 7), 1)],
     ).toDF("date", "val")
     w = df.groupBy(window("date", "5 seconds")).agg(sum("val").alias("sum"))
+    # SQLFrame does not support the "dot notation" for struct columns so the "col" function was used instead.
+    # https://spark.apache.org/docs/3.4.0/api/python/reference/pyspark.sql/api/pyspark.sql.functions.window_time.html
     assert w.select(
         col("window.end").cast("string").alias("end"),
         window_time(w.window).cast("string").alias("window_time"),
