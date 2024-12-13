@@ -2973,13 +2973,17 @@ def test_zip_with(get_session_and_func, get_func):
 def test_transform_keys(get_session_and_func, get_func):
     session, transform_keys = get_session_and_func("transform_keys")
     upper = get_func("upper", session)
+    concat_ws = get_func("concat_ws", session)
+    lit = get_func("lit", session)
     df = session.createDataFrame([(1, {"foo": -2.0, "bar": 2.0})], ("id", "data"))
-    row = df.select(transform_keys("data", lambda k, _: upper(k)).alias("data_upper")).head()
-    if isinstance(session, (SparkSession, PySparkSession)):
-        expected = [("BAR", 2.0), ("FOO", -2.0)]
+    if isinstance(session, DatabricksSession):
+        row = df.select(transform_keys("data", lambda k, _: concat_ws("_", k, lit("a"))).alias("data_upper")).head()
+        expected = [("bar_a", 2.0), ("foo_a", -2.0)]
+        assert sorted(row["data_upper"].items()) == expected
     else:
-        expected = [("bar", 2.0), ("foo", -2.0)]
-    assert sorted(row["data_upper"].items()) == expected
+        row = df.select(transform_keys("data", lambda k, _: upper(k)).alias("data_upper")).head()
+        expected = [("BAR", 2.0), ("FOO", -2.0)]
+        assert sorted(row["data_upper"].items()) == expected
 
 
 def test_transform_values(get_session_and_func, get_func):
