@@ -1220,6 +1220,11 @@ def get_json_object_cast_object(col: ColumnOrName, path: str) -> Column:
     return get_json_object(col_func(col).cast("variant"), path)
 
 
+def get_json_object_using_function(col: ColumnOrName, path: str) -> Column:
+    lit = get_func_from_session("lit")
+    return Column.invoke_anonymous_function(col, "GET_JSON_OBJECT", lit(path))
+
+
 def create_map_with_cast(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
     from sqlframe.base.functions import create_map
 

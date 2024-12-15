@@ -21,9 +21,12 @@ def cleanup_session(get_session: t.Callable[[], _BaseSession]) -> t.Iterator[_Ba
 def test_session(cleanup_session: _BaseSession):
     session = cleanup_session
     session._execute("DROP TABLE IF EXISTS test_table")
+    sql = "CREATE TABLE test_table (cola INT, colb STRING, `col with space` STRING)"
+    if session.execution_dialect == Dialect.get_or_raise("databricks"):
+        sql += " TBLPROPERTIES('delta.columnMapping.mode' = 'name');"
     session._collect(
         parse_one(
-            "CREATE TABLE test_table (cola INT, colb STRING, `col with space` STRING)",
+            sql,
             dialect="spark",
         )
     )

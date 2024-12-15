@@ -19,4 +19,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     arrays_overlap_renamed as arrays_overlap,
     _is_string_using_typeof_string_lcase as _is_string,
     try_element_at_zero_based as try_element_at,
+    get_json_object_using_function as get_json_object,
 )
