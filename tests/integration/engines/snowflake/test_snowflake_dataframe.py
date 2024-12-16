@@ -54,8 +54,8 @@ def test_print_schema_basic(snowflake_employee: SnowflakeDataFrame, capsys):
         == """
 root
  |-- employee_id: decimal(38, 0) (nullable = true)
- |-- fname: string (nullable = true)
- |-- lname: string (nullable = true)
+ |-- fname: varchar(16777216) (nullable = true)
+ |-- lname: varchar(16777216) (nullable = true)
  |-- age: decimal(38, 0) (nullable = true)
  |-- store_id: decimal(38, 0) (nullable = true)""".strip()
     )
@@ -70,9 +70,9 @@ def test_print_schema_nested(snowflake_datatypes: SnowflakeDataFrame, capsys):
 root
  |-- bigint_col: decimal(38, 0) (nullable = true)
  |-- double_col: float (nullable = true)
- |-- string_col: string (nullable = true)
- |-- map_string_bigint__col: map<string, decimal(38, 0)> (nullable = true)
- |    |-- key: string (nullable = true)
+ |-- string_col: varchar(16777216) (nullable = true)
+ |-- map_string_bigint__col: map<varchar(16777216), decimal(38, 0)> (nullable = true)
+ |    |-- key: varchar(16777216) (nullable = true)
  |    |-- value: decimal(38, 0) (nullable = true)
  |-- array_struct_a_bigint_b_bigint__: array<object<a decimal(38, 0), b decimal(38, 0)>> (nullable = true)
  |    |-- element: object<a decimal(38, 0), b decimal(38, 0)> (nullable = true)
@@ -83,7 +83,7 @@ root
  |-- struct_a_bigint__col: object<a decimal(38, 0)> (nullable = true)
  |    |-- a: decimal(38, 0) (nullable = true)
  |-- date_col: date (nullable = true)
- |-- timestamp_col: timestamp_ntz (nullable = true)
+ |-- timestamp_col: timestamp (nullable = true)
  |-- timestamptz_col: timestamp (nullable = true)
  |-- boolean_col: boolean (nullable = true)""".strip()
     )
@@ -96,9 +96,9 @@ def test_schema(snowflake_employee: SnowflakeDataFrame):
     assert struct_fields[0].name == "employee_id"
     assert struct_fields[0].dataType == types.DecimalType(38, 0)
     assert struct_fields[1].name == "fname"
-    assert struct_fields[1].dataType == types.StringType()
+    assert struct_fields[1].dataType == types.VarcharType(16777216)
     assert struct_fields[2].name == "lname"
-    assert struct_fields[2].dataType == types.StringType()
+    assert struct_fields[2].dataType == types.VarcharType(16777216)
     assert struct_fields[3].name == "age"
     assert struct_fields[3].dataType == types.DecimalType(38, 0)
     assert struct_fields[4].name == "store_id"
@@ -114,10 +114,10 @@ def test_schema_nested(snowflake_datatypes: SnowflakeDataFrame):
     assert struct_fields[1].name == "double_col"
     assert struct_fields[1].dataType == types.FloatType()
     assert struct_fields[2].name == "string_col"
-    assert struct_fields[2].dataType == types.StringType()
+    assert struct_fields[2].dataType == types.VarcharType(16777216)
     assert struct_fields[3].name == "map_string_bigint__col"
     assert struct_fields[3].dataType == types.MapType(
-        types.StringType(),
+        types.VarcharType(16777216),
         types.DecimalType(38, 0),
     )
     assert struct_fields[4].name == "array_struct_a_bigint_b_bigint__"

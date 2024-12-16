@@ -116,7 +116,7 @@ def get_types() -> t.Callable:
         (datetime.datetime(2022, 1, 1, 1, 1, 1), datetime.datetime(2022, 1, 1, 1, 1, 1)),
         (
             datetime.datetime(2022, 1, 1, 1, 1, 1, tzinfo=datetime.timezone.utc),
-            datetime.datetime(2022, 1, 1, 1, 1, 1, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2022, 1, 1, 1, 1, 1),
         ),
         ({"cola": 1}, {"cola": 1}),
         (Row(**{"cola": 1, "colb": "test"}), Row(**{"cola": 1, "colb": "test"})),
@@ -134,20 +134,12 @@ def test_lit(get_session_and_func, arg, expected):
             pytest.skip("PySpark doesn't literal dict types")
         if isinstance(arg, Row):
             pytest.skip("PySpark doesn't support literal row types")
-        if isinstance(arg, datetime.datetime) and arg.tzinfo is not None:
-            pytest.skip("PySpark doesn't preserve timezone information in datetime literals")
     if isinstance(session, BigQuerySession):
         if isinstance(arg, dict):
             pytest.skip("BigQuery doesn't support map types")
-    if isinstance(session, SparkSession):
-        if isinstance(arg, datetime.datetime) and arg.tzinfo is not None:
-            pytest.skip("Spark doesn't preserve timezone information in datetime literals")
     if isinstance(session, SnowflakeSession):
         if isinstance(arg, Row):
             pytest.skip("Snowflake doesn't support literal row types")
-    if isinstance(session, DatabricksSession):
-        if isinstance(arg, datetime.datetime) and arg.tzinfo is None:
-            expected = expected.replace(tzinfo=datetime.timezone.utc)
     if isinstance(session, DuckDBSession):
         if isinstance(arg, dict):
             expected = Row(**expected)
@@ -181,7 +173,7 @@ def test_col(get_session_and_func, input, output):
         ([1, 2, 3], "array<bigint>"),
         (Row(a=1), "struct<a:bigint>"),
         (datetime.date(2022, 1, 1), "date"),
-        (datetime.datetime(2022, 1, 1, 0, 0, 0), "timestamp"),
+        (datetime.datetime(2022, 1, 1, 0, 0, 0), "timestamptz"),
         (datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc), "timestamptz"),
         (True, "boolean"),
         (bytes("test", "utf-8"), "binary"),
@@ -211,8 +203,6 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             expected = expected.split("<")[0]
         if expected == "binary":
             pytest.skip("BigQuery doesn't support binary")
-        if expected == "timestamp":
-            expected = "datetime"
     if isinstance(session, PostgresSession):
         if expected.startswith("map"):
             pytest.skip("Postgres doesn't support map types")
@@ -229,8 +219,6 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
             expected = "object"
         elif expected.startswith("array"):
             pytest.skip("Snowflake doesn't handle arrays properly in values clause")
-        elif expected == "timestamp":
-            expected = "timestampntz"
     result = df.select(typeof("col").alias("test")).first()[0]
     assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(
         expected, dialect=dialect
@@ -1250,23 +1238,17 @@ def test_current_date(get_session_and_func):
     session, current_date = get_session_and_func("current_date")
     df = session.range(1)
     # The current date can depend on how the connection is configured so we check for dates around today
-    assert df.select(current_date()).first()[0] in (
-        datetime.date.today() - datetime.timedelta(days=1),
-        datetime.date.today(),
-        datetime.date.today() + datetime.timedelta(days=1),
-    )
+    assert df.select(current_date()).first()[0] == datetime.date.today()
 
 
 def test_current_timestamp(get_session_and_func):
     session, current_timestamp = get_session_and_func("current_timestamp")
     df = session.range(1)
-    # The current date can depend on how the connection is configured so we check for dates around today
+    now = datetime.datetime.now(pytz.timezone("UTC")).replace(tzinfo=None)
     result = df.select(current_timestamp()).first()[0]
     assert isinstance(result, datetime.datetime)
-    assert result.date() in (
-        datetime.date.today() - datetime.timedelta(days=1),
-        datetime.date.today(),
-        datetime.date.today() + datetime.timedelta(days=1),
+    assert result >= now - datetime.timedelta(minutes=1) and result <= now + datetime.timedelta(
+        minutes=1
     )
 
 
@@ -1441,32 +1423,9 @@ def test_to_timestamp(get_session_and_func):
     session, to_timestamp = get_session_and_func("to_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     result = df.select(to_timestamp(df.t).alias("dt")).first()[0]
-    if isinstance(session, DatabricksSession):
-        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
-    else:
-        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[0]
-    if isinstance(session, (BigQuerySession, DuckDBSession)):
-        assert result == datetime.datetime(
-            1997,
-            2,
-            28,
-            10,
-            30,
-            tzinfo=datetime.timezone.utc if isinstance(session, BigQuerySession) else None,
-        )
-    elif isinstance(session, (PostgresSession, DatabricksSession)):
-        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
-    elif isinstance(session, SnowflakeSession):
-        assert result == datetime.datetime(
-            1997,
-            2,
-            28,
-            10,
-            30,
-        )
-    else:
-        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    assert result == datetime.datetime(1997, 2, 28, 10, 30)
 
 
 def test_trunc(get_session_and_func):
@@ -1482,18 +1441,14 @@ def test_trunc(get_session_and_func):
 def test_date_trunc(get_session_and_func):
     session, date_trunc = get_session_and_func("date_trunc")
     df = session.createDataFrame([("1997-02-28 05:02:11",)], ["t"])
-    assert df.select(date_trunc("year", df.t).alias("year")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(
+    assert df.select(date_trunc("year", df.t).alias("year")).first()[0] == datetime.datetime(
         1997,
         1,
         1,
         0,
         0,
     )
-    assert df.select(date_trunc("month", df.t).alias("month")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(
+    assert df.select(date_trunc("month", df.t).alias("month")).first()[0] == datetime.datetime(
         1997,
         2,
         1,
@@ -1517,13 +1472,7 @@ def test_last_day(get_session_and_func):
 def test_from_unixtime(get_session_and_func):
     session, from_unixtime = get_session_and_func("from_unixtime")
     df = session.createDataFrame([(1428476400,)], ["unix_time"])
-    if isinstance(
-        session,
-        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
-    ):
-        expected = "2015-04-08 07:00:00"
-    else:
-        expected = "2015-04-08 00:00:00"
+    expected = "2015-04-08 07:00:00"
     assert df.select(from_unixtime("unix_time").alias("ts")).first()[0] == expected
 
 
@@ -1531,47 +1480,35 @@ def test_unix_timestamp(get_session_and_func):
     session, unix_timestamp = get_session_and_func("unix_timestamp")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
     result = df.select(unix_timestamp("dt", "yyyy-MM-dd").alias("unix_time")).first()[0]
-    if isinstance(
-        session,
-        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
-    ):
-        assert result == 1428451200
-    else:
-        assert result == 1428476400
+    assert result == 1428451200
 
 
 def test_from_utc_timestamp(get_session_and_func):
     session, from_utc_timestamp = get_session_and_func("from_utc_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00", "JST")], ["ts", "tz"])
-    assert df.select(from_utc_timestamp(df.ts, "PST").alias("local_time")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(1997, 2, 28, 2, 30)
-    assert df.select(from_utc_timestamp(df.ts, df.tz).alias("local_time")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(1997, 2, 28, 19, 30)
+    assert df.select(from_utc_timestamp(df.ts, "PST").alias("local_time")).first()[
+        0
+    ] == datetime.datetime(1997, 2, 28, 2, 30)
+    assert df.select(from_utc_timestamp(df.ts, df.tz).alias("local_time")).first()[
+        0
+    ] == datetime.datetime(1997, 2, 28, 19, 30)
 
 
 def test_to_utc_timestamp(get_session_and_func):
     session, to_utc_timestamp = get_session_and_func("to_utc_timestamp")
     df = session.createDataFrame([("1997-02-28 10:30:00", "JST")], ["ts", "tz"])
-    assert df.select(to_utc_timestamp(df.ts, "PST").alias("utc_time")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(1997, 2, 28, 18, 30)
-    assert df.select(to_utc_timestamp(df.ts, df.tz).alias("utc_time")).first()[0].replace(
-        tzinfo=None
-    ) == datetime.datetime(1997, 2, 28, 1, 30)
+    assert df.select(to_utc_timestamp(df.ts, "PST").alias("utc_time")).first()[
+        0
+    ] == datetime.datetime(1997, 2, 28, 18, 30)
+    assert df.select(to_utc_timestamp(df.ts, df.tz).alias("utc_time")).first()[
+        0
+    ] == datetime.datetime(1997, 2, 28, 1, 30)
 
 
 def test_timestamp_seconds(get_session_and_func):
     session, timestamp_seconds = get_session_and_func("timestamp_seconds")
     df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(
-        session,
-        (BigQuerySession, DuckDBSession, PostgresSession, SnowflakeSession, DatabricksSession),
-    ):
-        expected = datetime.datetime(2008, 12, 25, 15, 30, 00)
-    else:
-        expected = datetime.datetime(2008, 12, 25, 7, 30)
+    expected = datetime.datetime(2008, 12, 25, 15, 30, 00)
     assert (
         df.select(timestamp_seconds(df.unix_time).alias("ts")).first()[0].replace(tzinfo=None)
         == expected
@@ -3571,16 +3508,7 @@ def test_convert_timezone(get_session_and_func, get_func):
     session, convert_timezone = get_session_and_func("convert_timezone")
     lit = get_func("lit", session)
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
-    if isinstance(session, DuckDBSession):
-        expected = pytz.timezone("US/Pacific").localize(datetime.datetime(2015, 4, 7, 9, 0))
-    elif isinstance(session, PostgresSession):
-        expected = datetime.datetime(2015, 4, 7, 16, 0, tzinfo=datetime.timezone.utc)
-    elif isinstance(session, SnowflakeSession):
-        expected = datetime.datetime(2015, 4, 8, 15, 0, tzinfo=pytz.FixedOffset(480))
-    elif isinstance(session, DatabricksSession):
-        expected = datetime.datetime(2015, 4, 8, 8, 0)
-    else:
-        expected = datetime.datetime(2015, 4, 8, 15, 0)
+    expected = datetime.datetime(2015, 4, 8, 8, 0)
     assert df.select(convert_timezone(None, lit("Asia/Hong_Kong"), "dt").alias("ts")).collect() == [
         Row(ts=expected)
     ]
@@ -3638,7 +3566,7 @@ def test_current_schema(get_session_and_func, get_func):
 
 def test_current_timezone(get_session_and_func, get_func):
     session, current_timezone = get_session_and_func("current_timezone")
-    assert session.range(1).select(current_timezone()).first()[0] == "America/Los_Angeles"
+    assert session.range(1).select(current_timezone()).first()[0] == "UTC"
 
 
 def test_date_from_unix_date(get_session_and_func, get_func):
@@ -4097,24 +4025,12 @@ def test_make_timestamp(get_session_and_func, get_func):
         [[2014, 12, 28, 6, 30, 45.887, "CET"]],
         ["year", "month", "day", "hour", "min", "sec", "timezone"],
     )
-    if isinstance(session, DatabricksSession):
-        assert df.select(
-            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias(
-                "r"
-            )
-        ).first()[0].replace(tzinfo=None) == datetime.datetime(2014, 12, 28, 5, 30, 45, 887000)
-        assert df.select(
-            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
-        ).first()[0].replace(tzinfo=None) == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
-    else:
-        assert df.select(
-            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias(
-                "r"
-            )
-        ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
-        assert df.select(
-            make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
-        ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+    assert df.select(
+        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone).alias("r")
+    ).first()[0] == datetime.datetime(2014, 12, 28, 5, 30, 45, 887000)
+    assert df.select(
+        make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+    ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
 
 
 def test_make_timestamp_ltz(get_session_and_func, get_func):
@@ -4125,7 +4041,7 @@ def test_make_timestamp_ltz(get_session_and_func, get_func):
     )
     assert df.select(
         make_timestamp_ltz(df.year, df.month, df.day, df.hour, df.min, df.sec, df.timezone)
-    ).first()[0] == datetime.datetime(2014, 12, 27, 21, 30, 45, 887000)
+    ).first()[0] == datetime.datetime(2014, 12, 28, 5, 30, 45, 887000)
     assert df.select(
         make_timestamp_ltz(df.year, df.month, df.day, df.hour, df.min, df.sec)
     ).first()[0] == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
@@ -4826,27 +4742,17 @@ def test_substr(get_session_and_func, get_func):
 def test_timestamp_micros(get_session_and_func, get_func):
     session, timestamp_micros = get_session_and_func("timestamp_micros")
     time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(session, DatabricksSession):
-        assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[0].replace(
-            tzinfo=None
-        ) == datetime.datetime(1970, 1, 1, 0, 20, 30, 219000)
-    else:
-        assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[
-            0
-        ] == datetime.datetime(1969, 12, 31, 16, 20, 30, 219000)
+    assert time_df.select(timestamp_micros(time_df.unix_time).alias("ts")).first()[
+        0
+    ] == datetime.datetime(1970, 1, 1, 0, 20, 30, 219000)
 
 
 def test_timestamp_millis(get_session_and_func, get_func):
     session, timestamp_millis = get_session_and_func("timestamp_millis")
     time_df = session.createDataFrame([(1230219000,)], ["unix_time"])
-    if isinstance(session, DatabricksSession):
-        assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[0].replace(
-            tzinfo=None
-        ) == datetime.datetime(1970, 1, 15, 5, 43, 39)
-    else:
-        assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[
-            0
-        ] == datetime.datetime(1970, 1, 14, 21, 43, 39)
+    assert time_df.select(timestamp_millis(time_df.unix_time).alias("ts")).first()[
+        0
+    ] == datetime.datetime(1970, 1, 15, 5, 43, 39)
 
 
 def test_to_char(get_session_and_func, get_func):
@@ -4901,7 +4807,7 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
     if isinstance(session, (DuckDBSession, DatabricksSession)):
         assert result == 1460073600.0
     else:
-        assert result == 1460098800
+        assert result == 1460073600
     # DuckDB requires the value to match the format which the default format is "yyyy-MM-dd HH:mm:ss".
     # https://spark.apache.org/docs/latest/api/sql/#to_unix_timestamp
     if isinstance(session, DuckDBSession):
@@ -4992,15 +4898,9 @@ def test_try_to_timestamp(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.createDataFrame([("1997-02-28 10:30:00",)], ["t"])
     result = df.select(try_to_timestamp(df.t).alias("dt")).first()[0]
-    if isinstance(session, (BigQuerySession, DatabricksSession)):
-        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
-    else:
-        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(try_to_timestamp(df.t, lit("yyyy-MM-dd HH:mm:ss")).alias("dt")).first()[0]
-    if isinstance(session, (BigQuerySession, DatabricksSession)):
-        assert result == datetime.datetime(1997, 2, 28, 10, 30, tzinfo=datetime.timezone.utc)
-    else:
-        assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    assert result == datetime.datetime(1997, 2, 28, 10, 30)
 
 
 def test_ucase(get_session_and_func, get_func):
@@ -5020,30 +4920,21 @@ def test_unix_micros(get_session_and_func, get_func):
     session, unix_micros = get_session_and_func("unix_micros")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    if isinstance(session, DatabricksSession):
-        assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
-    else:
-        assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000000
+    assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
 
 
 def test_unix_millis(get_session_and_func, get_func):
     session, unix_millis = get_session_and_func("unix_millis")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    if isinstance(session, DatabricksSession):
-        assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000
-    else:
-        assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400000
+    assert df.select(unix_millis(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000
 
 
 def test_unix_seconds(get_session_and_func, get_func):
     session, unix_seconds = get_session_and_func("unix_seconds")
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
-    if isinstance(session, DatabricksSession):
-        assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200
-    else:
-        assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437584400
+    assert df.select(unix_seconds(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200
 
 
 def test_url_decode(get_session_and_func, get_func):
