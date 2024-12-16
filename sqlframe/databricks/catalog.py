@@ -26,7 +26,6 @@ if t.TYPE_CHECKING:
 
 
 class DatabricksCatalog(
-    SetCurrentCatalogFromUseMixin["DatabricksSession", "DatabricksDataFrame"],
     GetCurrentCatalogFromFunctionMixin["DatabricksSession", "DatabricksDataFrame"],
     GetCurrentDatabaseFromFunctionMixin["DatabricksSession", "DatabricksDataFrame"],
     ListDatabasesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
@@ -37,6 +36,15 @@ class DatabricksCatalog(
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
     UPPERCASE_INFO_SCHEMA = True
+
+    def setCurrentCatalog(self, catalogName: str) -> None:
+        self.session._collect(
+            exp.Use(
+                kind=exp.Var(this=exp.to_identifier("CATALOG")),
+                this=exp.parse_identifier(catalogName, dialect=self.session.input_dialect),
+            ),
+            quote_identifiers=False,
+        )
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
@@ -106,7 +114,9 @@ class DatabricksCatalog(
         )
         functions = [
             Function(
-                name=normalize_string(x["function"], from_dialect="execution", to_dialect="output"),
+                name=normalize_string(
+                    x["function"].split(".")[-1], from_dialect="execution", to_dialect="output"
+                ),
                 catalog=normalize_string(
                     schema.catalog, from_dialect="execution", to_dialect="output"
                 ),

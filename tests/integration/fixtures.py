@@ -23,6 +23,9 @@ from sqlframe.base.util import (
 from sqlframe.bigquery import types as BigQueryTypes
 from sqlframe.bigquery.dataframe import BigQueryDataFrame
 from sqlframe.bigquery.session import BigQuerySession
+from sqlframe.databricks import types as DatabricksTypes
+from sqlframe.databricks.dataframe import DatabricksDataFrame
+from sqlframe.databricks.session import DatabricksSession
 from sqlframe.duckdb import types as DuckDBTypes
 from sqlframe.duckdb.dataframe import DuckDBDataFrame
 from sqlframe.duckdb.session import DuckDBSession
@@ -95,6 +98,15 @@ ENGINE_PARAMETERS = [
             pytest.mark.remote,
             # Set xdist group in order to serialize tests
             pytest.mark.xdist_group("snowflake_tests"),
+        ],
+    ),
+    pytest.param(
+        "databricks",
+        marks=[
+            pytest.mark.databricks,
+            pytest.mark.remote,
+            # Set xdist group in order to serialize tests
+            pytest.mark.xdist_group("databricks_tests"),
         ],
     ),
     pytest.param(
@@ -519,6 +531,56 @@ def snowflake_district(
 
 
 @pytest.fixture
+def databricks_employee(
+    databricks_session: DatabricksSession, _employee_data: EmployeeData
+) -> DatabricksDataFrame:
+    databricks_employee_schema = DatabricksTypes.StructType(
+        [
+            DatabricksTypes.StructField("employee_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("fname", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("lname", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("age", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
+        ]
+    )
+    df = databricks_session.createDataFrame(data=_employee_data, schema=databricks_employee_schema)
+    df.createOrReplaceTempView("employee")
+    return df
+
+
+@pytest.fixture
+def databricks_store(
+    databricks_session: DatabricksSession, _store_data: StoreData
+) -> DatabricksDataFrame:
+    databricks_store_schema = DatabricksTypes.StructType(
+        [
+            DatabricksTypes.StructField("store_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("store_name", DatabricksTypes.StringType(), False),
+            DatabricksTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("num_sales", DatabricksTypes.IntegerType(), False),
+        ]
+    )
+    df = databricks_session.createDataFrame(data=_store_data, schema=databricks_store_schema)
+    df.createOrReplaceTempView("store")
+    return df
+
+
+@pytest.fixture
+def databricks_district(
+    databricks_session: DatabricksSession, _district_data: DistrictData
+) -> DatabricksDataFrame:
+    databricks_district_schema = DatabricksTypes.StructType(
+        [
+            DatabricksTypes.StructField("district_id", DatabricksTypes.IntegerType(), False),
+            DatabricksTypes.StructField("district_name", DatabricksTypes.StringType(), False),
+        ]
+    )
+    df = databricks_session.createDataFrame(data=_district_data, schema=databricks_district_schema)
+    df.createOrReplaceTempView("district")
+    return df
+
+
+@pytest.fixture
 def compare_frames(pyspark_session: PySparkSession) -> t.Callable:
     def _make_function(
         df: PySparkDataFrame,
@@ -713,3 +775,11 @@ def is_spark(request: FixtureRequest) -> t.Callable:
         return request.node.name.endswith("[spark]")
 
     return _is_spark
+
+
+@pytest.fixture
+def is_databricks(request: FixtureRequest) -> t.Callable:
+    def _is_databricks() -> bool:
+        return request.node.name.endswith("[databricks]")
+
+    return _is_databricks

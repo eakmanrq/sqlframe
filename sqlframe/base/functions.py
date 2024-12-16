@@ -900,7 +900,7 @@ def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
             col, expression.StrToTime, format=_BaseSession().format_time(format)
         )
 
-    return Column.ensure_col(col).cast("timestamp")
+    return Column.ensure_col(col).cast("timestampltz")
 
 
 @meta()
@@ -2173,7 +2173,7 @@ def current_database() -> Column:
 current_schema = current_database
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def current_timezone() -> Column:
     return Column.invoke_anonymous_function(None, "current_timezone")
 
@@ -2261,7 +2261,7 @@ def get(col: ColumnOrName, index: t.Union[ColumnOrName, int]) -> Column:
     return Column.invoke_anonymous_function(col, "get", index)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def get_active_spark_context() -> SparkContext:
     """Raise RuntimeError if SparkContext is not initialized,
     otherwise, returns the active SparkContext."""
@@ -2778,7 +2778,7 @@ def isnotnull(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "isnotnull")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def java_method(*cols: ColumnOrName) -> Column:
     """
     Calls a method with reflection.
@@ -3050,7 +3050,7 @@ def ln(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Ln)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def localtimestamp() -> Column:
     """
     Returns the current timestamp without time zone at the start of query evaluation
@@ -3080,7 +3080,7 @@ def localtimestamp() -> Column:
     return Column.invoke_anonymous_function(None, "localtimestamp")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def make_dt_interval(
     days: t.Optional[ColumnOrName] = None,
     hours: t.Optional[ColumnOrName] = None,
@@ -3227,7 +3227,7 @@ def make_timestamp(
         )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def make_timestamp_ltz(
     years: ColumnOrName,
     months: ColumnOrName,
@@ -3354,7 +3354,7 @@ def make_timestamp_ntz(
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def make_ym_interval(
     years: t.Optional[ColumnOrName] = None,
     months: t.Optional[ColumnOrName] = None,
@@ -3922,7 +3922,7 @@ def printf(format: ColumnOrName, *cols: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(format, "printf", *cols)
 
 
-@meta(unsupported_engines=["*", "spark"])
+@meta(unsupported_engines=["*", "spark", "databricks"])
 def product(col: ColumnOrName) -> Column:
     """
     Aggregate function: returns the product of the values in a group.
@@ -3961,7 +3961,7 @@ def product(col: ColumnOrName) -> Column:
 reduce = aggregate
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def reflect(*cols: ColumnOrName) -> Column:
     """
     Calls a method with reflection.
@@ -5046,7 +5046,7 @@ def to_str(value: t.Any) -> t.Optional[str]:
         return str(value)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["*", "databricks"])
 def to_timestamp_ltz(
     timestamp: ColumnOrName,
     format: t.Optional[ColumnOrName] = None,

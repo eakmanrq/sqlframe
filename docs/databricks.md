@@ -1,5 +1,3 @@
-from test import auth_type
-
 # Databricks (In Development)
 
 ## Installation
