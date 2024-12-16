@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "prettytable<3.12.1",
-        "sqlglot>=24.0.0,<25.33",
+        "sqlglot>=24.0.0,<25.35",
         "typing_extensions>=4.8,<5",
     ],
     extras_require={
@@ -39,6 +39,7 @@ setup(
             "pyarrow>=10,<19",
             "pyspark>=2,<3.6",
             "pytest>=8.2.0,<8.4",
+            "pytest-forked",
             "pytest-postgresql>=6,<7",
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.5;python_version=='3.8'",

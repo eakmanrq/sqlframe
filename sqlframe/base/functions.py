@@ -900,7 +900,7 @@ def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
             col, expression.StrToTime, format=_BaseSession().format_time(format)
         )
 
-    return Column.ensure_col(col).cast("timestamp")
+    return Column.ensure_col(col).cast("timestampltz")
 
 
 @meta()

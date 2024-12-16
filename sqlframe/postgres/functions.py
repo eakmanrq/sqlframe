@@ -70,4 +70,5 @@ from sqlframe.base.function_alternatives import (  # noqa
     endswith_using_like as endswith,
     last_day_with_cast as last_day,
     regexp_replace_global_option as regexp_replace,
+    to_timestamp_with_time_zone as to_timestamp,
 )

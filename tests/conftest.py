@@ -16,7 +16,7 @@ def pytest_collection_modifyitems(items, *args, **kwargs):
 def set_tz():
     import os
 
-    os.environ["TZ"] = "US/Pacific"
+    os.environ["TZ"] = "UTC"
     time.tzset()
     yield
     del os.environ["TZ"]

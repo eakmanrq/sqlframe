@@ -92,7 +92,7 @@ def pyspark_session(tmp_path_factory, gen_tpcds: t.List[Path]) -> PySparkSession
         .config("spark.sql.warehouse.dir", data_dir)
         .config("spark.driver.extraJavaOptions", f"-Dderby.system.home={derby_dir}")
         .config("spark.sql.shuffle.partitions", 1)
-        .config("spark.sql.session.timeZone", "America/Los_Angeles")
+        .config("spark.sql.session.timeZone", "UTC")
         .master("local[1]")
         .appName("Unit-tests")
         .getOrCreate()
@@ -225,6 +225,7 @@ def snowflake_connection() -> SnowflakeConnection:
 @pytest.fixture
 def snowflake_session(snowflake_connection: SnowflakeConnection) -> SnowflakeSession:
     session = SnowflakeSession(snowflake_connection)
+    session._execute("ALTER SESSION SET TIMEZONE = 'UTC'")
     session._execute("CREATE SCHEMA IF NOT EXISTS db1")
     session._execute("CREATE TABLE IF NOT EXISTS db1.table1 (id INTEGER, name VARCHAR(100))")
     session._execute(
