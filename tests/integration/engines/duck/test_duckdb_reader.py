@@ -1,5 +1,6 @@
 from sqlframe.base.types import Row
 from sqlframe.duckdb import DuckDBSession
+from sqlframe.duckdb import functions as F
 
 pytest_plugins = ["tests.common_fixtures"]
 
@@ -114,3 +115,10 @@ def test_employee_delta(duckdb_session: DuckDBSession):
         ),
         Row(**{"employee_id": 5, "fname": "Hugo", "lname": "Reyes", "age": 29, "store_id": 100}),
     ]
+
+
+def test_issue_219(duckdb_session: DuckDBSession):
+    df1 = duckdb_session.read.csv("tests/fixtures/issue_219.csv")
+    df2 = df1.groupBy("kind", "make").agg(F.min("price"))
+    # Just making sure this doesn't raise like it did before
+    df2.show()
