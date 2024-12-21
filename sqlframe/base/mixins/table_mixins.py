@@ -153,6 +153,9 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
 
         other_df = other_df._convert_leaf_to_cte()
 
+        if condition is None:
+            raise ValueError("condition cannot be None")
+
         condition_columns: Column = self._ensure_and_normalize_condition(condition, other_df)
         other_name = self._create_hash_from_expression(other_df.expression)
         other_expr = exp.Subquery(
@@ -248,7 +251,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             *merge_expressions,
             into=self_expr,
             using=other_expr,
-            on=condition_columns.expression if condition else None,
+            on=condition_columns.expression,
         )
 
         return LazyExpression(merge_expr, self.session)
