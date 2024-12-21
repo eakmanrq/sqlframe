@@ -1,0 +1,10 @@
+kind,price,make
+standard,30,emcsquare
+capsule,40,emcsquare
+candle,10,emcsquare
+standard,20,maxwells
+capsule,45,maxwells
+candle,11,maxwells
+standard,90,voltaires
+capsule,95,voltaires
+candle,80,voltaires
