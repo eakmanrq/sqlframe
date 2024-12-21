@@ -6,7 +6,7 @@ import typing as t
 import pytest
 from pyspark.sql import SparkSession as PySparkSession
 
-from sqlframe.base.table import _BaseTable, WhenMatched, WhenNotMatched
+from sqlframe.base.table import WhenMatched, WhenNotMatched, _BaseTable
 from sqlframe.base.types import Row
 from sqlframe.bigquery.session import BigQuerySession
 from sqlframe.databricks import DatabricksSession
