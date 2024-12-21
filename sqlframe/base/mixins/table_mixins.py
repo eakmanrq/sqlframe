@@ -64,6 +64,8 @@ class UpdateSupportMixin(_BaseTable, t.Generic[DF]):
 
         update_set = self._ensure_and_normalize_update_set(_set)
 
+        # exp.update
+
         update_expr = exp.Update(
             this=self_expr,
             expressions=[
@@ -242,11 +244,11 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             if expression:
                 merge_expressions.append(expression)
 
-        merge_expr = exp.Merge(
-            this=self_expr,
+        merge_expr = exp.merge(
+            *merge_expressions,
+            into=self_expr,
             using=other_expr,
             on=condition_columns.expression if condition else None,
-            expressions=merge_expressions,
         )
 
         return LazyExpression(merge_expr, self.session)
