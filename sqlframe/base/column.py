@@ -9,6 +9,7 @@ import typing as t
 import sqlglot
 from sqlglot import Dialect
 from sqlglot import expressions as exp
+from sqlglot.expressions import paren
 from sqlglot.helper import flatten, is_iterable
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
@@ -63,10 +64,10 @@ class Column:
         return self.binary_op(exp.LTE, other)
 
     def __and__(self, other: ColumnOrLiteral) -> Column:
-        return self.binary_op(exp.And, other)
+        return self.binary_op(exp.And, other, paren=True)
 
     def __or__(self, other: ColumnOrLiteral) -> Column:
-        return self.binary_op(exp.Or, other)
+        return self.binary_op(exp.Or, other, paren=True)
 
     def __mod__(self, other: ColumnOrLiteral) -> Column:
         return self.binary_op(exp.Mod, other, paren=True)

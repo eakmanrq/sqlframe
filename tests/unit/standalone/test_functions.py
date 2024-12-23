@@ -2611,7 +2611,7 @@ def test_sort_array(expression, expected):
                     SF.length(y) - SF.length(x)
                 ),
             ),
-            "ARRAY_SORT(cola, (x, y) -> CASE WHEN x IS NULL OR y IS NULL THEN 0 ELSE (LENGTH(y) - LENGTH(x)) END)",
+            "ARRAY_SORT(cola, (x, y) -> CASE WHEN (x IS NULL OR y IS NULL) THEN 0 ELSE (LENGTH(y) - LENGTH(x)) END)",
         ),
     ],
 )
