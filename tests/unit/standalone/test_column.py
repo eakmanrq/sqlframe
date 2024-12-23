@@ -31,13 +31,13 @@ def test_ge():
 def test_and():
     assert (
         (F.col("cola") == F.col("colb")) & (F.col("colc") == F.col("cold"))
-    ).sql() == "cola = colb AND colc = cold"
+    ).sql() == "(cola = colb AND colc = cold)"
 
 
 def test_or():
     assert (
         (F.col("cola") == F.col("colb")) | (F.col("colc") == F.col("cold"))
-    ).sql() == "cola = colb OR colc = cold"
+    ).sql() == "(cola = colb OR colc = cold)"
 
 
 def test_mod():
@@ -89,7 +89,7 @@ def test_invert():
 
 
 def test_invert_conjuction():
-    assert (~(F.col("cola") | F.col("colb"))).sql() == "NOT (cola OR colb)"
+    assert (~(F.col("cola") | F.col("colb"))).sql() == "NOT ((cola OR colb))"
 
 
 def test_paren():
