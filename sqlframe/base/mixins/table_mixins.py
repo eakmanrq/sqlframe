@@ -3,6 +3,13 @@ import logging
 import typing as t
 
 from sqlglot import exp
+
+try:
+    from sqlglot.expressions import Whens
+
+    whens: t.Union[t.Type["Whens"], None] = Whens
+except ImportError:
+    whens = None
 from sqlglot.helper import object_to_dict
 
 from sqlframe.base.column import Column
@@ -247,12 +254,20 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             if expression:
                 merge_expressions.append(expression)
 
-        merge_expr = exp.merge(
-            *merge_expressions,
-            into=self_expr,
-            using=other_expr,
-            on=condition_columns.expression,
-        )
+        if whens is None:
+            merge_expr = exp.merge(
+                *merge_expressions,
+                into=self_expr,
+                using=other_expr,
+                on=condition_columns.expression,
+            )
+        else:
+            merge_expr = exp.merge(
+                whens(expressions=merge_expressions),
+                into=self_expr,
+                using=other_expr,
+                on=condition_columns.expression,
+            )
 
         return LazyExpression(merge_expr, self.session)
 
