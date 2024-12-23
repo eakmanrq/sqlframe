@@ -6,10 +6,8 @@ from sqlglot import exp
 
 try:
     from sqlglot.expressions import Whens
-
-    whens: t.Union[t.Type["Whens"], None] = Whens
 except ImportError:
-    whens = None
+    Whens = None  # type: ignore
 from sqlglot.helper import object_to_dict
 
 from sqlframe.base.column import Column
@@ -254,7 +252,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             if expression:
                 merge_expressions.append(expression)
 
-        if whens is None:
+        if Whens is None:
             merge_expr = exp.merge(
                 *merge_expressions,
                 into=self_expr,
@@ -263,7 +261,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             )
         else:
             merge_expr = exp.merge(
-                whens(expressions=merge_expressions),
+                Whens(expressions=merge_expressions),
                 into=self_expr,
                 using=other_expr,
                 on=condition_columns.expression,
