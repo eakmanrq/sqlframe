@@ -74,7 +74,9 @@ def least(*cols: ColumnOrName) -> Column:
 def count_distinct(col: ColumnOrName, *cols: ColumnOrName) -> Column:
     columns = [Column.ensure_col(x) for x in [col] + list(cols)]
     return Column(
-        expression.Count(this=expression.Distinct(expressions=[x.expression for x in columns]))
+        expression.Count(
+            this=expression.Distinct(expressions=[x.column_expression for x in columns])
+        )
     )
 
 
@@ -157,7 +159,9 @@ mean = avg
 @meta()
 def sumDistinct(col: ColumnOrName) -> Column:
     return Column(
-        expression.Sum(this=expression.Distinct(expressions=[Column.ensure_col(col).expression]))
+        expression.Sum(
+            this=expression.Distinct(expressions=[Column.ensure_col(col).column_expression])
+        )
     )
 
 
@@ -891,7 +895,7 @@ def date_format(col: ColumnOrName, format: str) -> Column:
     from sqlframe.base.session import _BaseSession
 
     return Column.invoke_expression_over_column(
-        Column(expression.TimeStrToTime(this=Column.ensure_col(col).expression)),
+        Column(expression.TimeStrToTime(this=Column.ensure_col(col).column_expression)),
         expression.TimeToStr,
         format=_BaseSession().format_time(format),
     )
@@ -907,7 +911,8 @@ def year(col: ColumnOrName) -> Column:
         return year_from_extract(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)), expression.Year
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
+        expression.Year,
     )
 
 
@@ -923,7 +928,7 @@ def quarter(col: ColumnOrName) -> Column:
     return Column(
         expression.Anonymous(
             this="QUARTER",
-            expressions=[expression.TsOrDsToDate(this=Column.ensure_col(col).expression)],
+            expressions=[expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)],
         )
     )
 
@@ -938,7 +943,8 @@ def month(col: ColumnOrName) -> Column:
         return month_from_extract(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)), expression.Month
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
+        expression.Month,
     )
 
 
@@ -958,7 +964,7 @@ def dayofweek(col: ColumnOrName) -> Column:
         return dayofweek_from_extract_with_isodow(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
         expression.DayOfWeek,
     )
 
@@ -973,7 +979,7 @@ def dayofmonth(col: ColumnOrName) -> Column:
         return dayofmonth_from_extract_with_day(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
         expression.DayOfMonth,
     )
 
@@ -994,7 +1000,7 @@ def dayofyear(col: ColumnOrName) -> Column:
         return dayofyear_from_extract_doy(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
         expression.DayOfYear,
     )
 
@@ -1051,7 +1057,7 @@ def weekofyear(col: ColumnOrName) -> Column:
         return weekofyear_from_extract_as_week(col)
 
     return Column.invoke_expression_over_column(
-        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
+        Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
         expression.WeekOfYear,
     )
 
@@ -1195,19 +1201,21 @@ def add_months(
         if months < 0:
             end_col = Column(
                 expression.Interval(
-                    this=lit(months * -1).expression, unit=expression.Var(this="MONTH")
+                    this=lit(months * -1).column_expression, unit=expression.Var(this="MONTH")
                 )
             )
             result = start_col - end_col
         else:
             end_col = Column(
-                expression.Interval(this=lit(months).expression, unit=expression.Var(this="MONTH"))
+                expression.Interval(
+                    this=lit(months).column_expression, unit=expression.Var(this="MONTH")
+                )
             )
             result = start_col + end_col
     else:
         end_col = Column(
             expression.Interval(
-                this=Column.ensure_col(months).expression, unit=expression.Var(this="MONTH")
+                this=Column.ensure_col(months).column_expression, unit=expression.Var(this="MONTH")
             )
         )
         result = start_col + end_col
@@ -1218,7 +1226,7 @@ def add_months(
             if isinstance(original_months, int)
             else Column.ensure_col(original_months)
         )
-        result = Column.ensure_col(result.expression.unnest()) * multiple_value
+        result = Column.ensure_col(result.column_expression.unnest()) * multiple_value
 
     if cast_as_date:
         return result.cast("date")
@@ -1681,9 +1689,9 @@ def overlay(
         src,
         expression.Overlay,
         **{
-            "expression": Column(replace).expression,
-            "from": lit(pos).expression,
-            "for": lit(len).expression if len is not None else None,
+            "expression": Column(replace).column_expression,
+            "from": lit(pos).column_expression,
+            "for": lit(len).column_expression if len is not None else None,
         },
     )
 
@@ -1732,14 +1740,14 @@ def levenshtein(
         return levenshtein_edit_distance(left, right, threshold)
 
     value: t.Union[expression.Case, expression.Levenshtein] = expression.Levenshtein(
-        this=Column.ensure_col(left).expression,
-        expression=Column.ensure_col(right).expression,
+        this=Column.ensure_col(left).column_expression,
+        expression=Column.ensure_col(right).column_expression,
     )
     if threshold is not None:
         value = (
             expression.case()
-            .when(expression.LTE(this=value, expression=lit(threshold).expression), value)
-            .else_(lit(-1).expression)
+            .when(expression.LTE(this=value, expression=lit(threshold).column_expression), value)
+            .else_(lit(-1).column_expression)
         )
     return Column(value)
 
@@ -1758,9 +1766,9 @@ def locate(substr: str, str: ColumnOrName, pos: t.Optional[int] = None) -> Colum
 def lpad(col: ColumnOrName, len: int, pad: str) -> Column:
     return Column(
         expression.Pad(
-            this=Column.ensure_col(col).expression,
-            expression=lit(len).expression,
-            fill_pattern=lit(pad).expression,
+            this=Column.ensure_col(col).column_expression,
+            expression=lit(len).column_expression,
+            fill_pattern=lit(pad).column_expression,
             # We can use `invoke_expression_over_column` because this is an actual bool instead of literal bool
             is_left=True,
         )
@@ -1771,9 +1779,9 @@ def lpad(col: ColumnOrName, len: int, pad: str) -> Column:
 def rpad(col: ColumnOrName, len: int, pad: str) -> Column:
     return Column(
         expression.Pad(
-            this=Column.ensure_col(col).expression,
-            expression=lit(len).expression,
-            fill_pattern=lit(pad).expression,
+            this=Column.ensure_col(col).column_expression,
+            expression=lit(len).column_expression,
+            fill_pattern=lit(pad).column_expression,
             # We can use `invoke_expression_over_column` because this is an actual bool instead of literal bool
             is_left=False,
         )
@@ -2038,8 +2046,8 @@ def create_map(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column
     result = Column.invoke_expression_over_column(
         None,
         expression.VarMap,
-        keys=array(*cols[::2]).expression,
-        values=array(*cols[1::2]).expression,
+        keys=array(*cols[::2]).column_expression,
+        values=array(*cols[1::2]).column_expression,
     )
     if not session._is_snowflake:
         return result
@@ -2070,7 +2078,7 @@ def array_contains(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
         value = value.cast("variant")
 
     return Column.invoke_expression_over_column(
-        col, expression.ArrayContains, expression=value.expression
+        col, expression.ArrayContains, expression=value.column_expression
     )
 
 
@@ -2528,9 +2536,9 @@ def sequence(
 
     return Column(
         expression.GenerateSeries(
-            start=Column.ensure_col(start).expression,
-            end=Column.ensure_col(stop).expression,
-            step=Column.ensure_col(step).expression if step is not None else None,
+            start=Column.ensure_col(start).column_expression,
+            end=Column.ensure_col(stop).column_expression,
+            step=Column.ensure_col(step).column_expression if step is not None else None,
         )
     )
 
@@ -2810,7 +2818,7 @@ def any_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] 
 
     column = Column.invoke_expression_over_column(col, expression.AnyValue)
     if ignoreNulls:
-        return Column(expression.IgnoreNulls(this=column.expression))
+        return Column(expression.IgnoreNulls(this=column.column_expression))
     return column
 
 
@@ -2951,7 +2959,7 @@ def cardinality(col: ColumnOrName) -> Column:
 
 @meta()
 def char(col: ColumnOrName) -> Column:
-    return Column(expression.Chr(expressions=Column.ensure_col(col).expression))
+    return Column(expression.Chr(expressions=Column.ensure_col(col).column_expression))
 
 
 @meta(unsupported_engines="*")
@@ -2967,7 +2975,7 @@ def character_length(str: ColumnOrName) -> Column:
 @meta(unsupported_engines=["bigquery", "postgres"])
 def contains(left: ColumnOrName, right: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(
-        left, expression.Contains, expression=Column.ensure_col(right).expression
+        left, expression.Contains, expression=Column.ensure_col(right).column_expression
     )
 
 
@@ -2979,9 +2987,9 @@ def convert_timezone(
 
     return Column(
         expression.ConvertTimezone(
-            timestamp=to_timestamp(Column.ensure_col(sourceTs)).expression,
-            source_tz=sourceTz.expression if sourceTz else None,
-            target_tz=Column.ensure_col(targetTz).expression,
+            timestamp=to_timestamp(Column.ensure_col(sourceTs)).column_expression,
+            source_tz=sourceTz.column_expression if sourceTz else None,
+            target_tz=Column.ensure_col(targetTz).column_expression,
         )
     )
 
@@ -3185,7 +3193,7 @@ def first_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]
     column = Column.invoke_expression_over_column(col, expression.FirstValue)
 
     if ignoreNulls:
-        return Column(expression.IgnoreNulls(this=column.expression))
+        return Column(expression.IgnoreNulls(this=column.column_expression))
     return column
 
 
@@ -3600,8 +3608,8 @@ def ilike(
     if escapeChar is not None:
         return Column(
             expression.Escape(
-                this=column.expression,
-                expression=Column.ensure_col(escapeChar).expression,
+                this=column.column_expression,
+                expression=Column.ensure_col(escapeChar).column_expression,
             )
         )
     return column
@@ -3848,7 +3856,7 @@ def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]]
     column = Column.invoke_expression_over_column(col, expression.LastValue)
 
     if ignoreNulls:
-        return Column(expression.IgnoreNulls(this=column.expression))
+        return Column(expression.IgnoreNulls(this=column.column_expression))
     return column
 
 
@@ -3954,8 +3962,8 @@ def like(
     if escapeChar is not None:
         return Column(
             expression.Escape(
-                this=column.expression,
-                expression=Column.ensure_col(escapeChar).expression,
+                this=column.column_expression,
+                expression=Column.ensure_col(escapeChar).column_expression,
             )
         )
     return column
@@ -6284,15 +6292,15 @@ def try_element_at(col: ColumnOrName, extraction: ColumnOrName) -> Column:
         lit = get_func_from_session("lit")
         extraction = Column.ensure_col(extraction)
         if (
-            isinstance(extraction.expression, expression.Literal)
-            and extraction.expression.is_number
+            isinstance(extraction.column_expression, expression.Literal)
+            and extraction.column_expression.is_number
         ):
             extraction = extraction - lit(1)
 
     return Column(
         expression.Bracket(
-            this=Column.ensure_col(col).expression,
-            expressions=[Column.ensure_col(extraction).expression],
+            this=Column.ensure_col(col).column_expression,
+            expressions=[Column.ensure_col(extraction).column_expression],
             safe=True,
         )
     )
@@ -6908,7 +6916,7 @@ def _get_lambda_from_func(lambda_expression: t.Callable):
         for x in lambda_expression.__code__.co_varnames
     ]
     return expression.Lambda(
-        this=lambda_expression(*[Column(x) for x in variables]).expression,
+        this=lambda_expression(*[Column(x) for x in variables]).column_expression,
         expressions=variables,
     )
 
