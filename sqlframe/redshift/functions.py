@@ -1,7 +1,7 @@
 import inspect
 import sys
 
-import sqlframe.base.functions
+import sqlframe.base.functions  # noqa
 
 module = sys.modules["sqlframe.base.functions"]
 globals().update(
@@ -13,6 +13,3 @@ globals().update(
         and "*" not in func.unsupported_engines
     }
 )
-
-
-from sqlframe.base.function_alternatives import e_literal as e  # noqa

@@ -59,6 +59,10 @@ class DatabricksSession(
             return dict(value)
         return None
 
+    @property
+    def _is_databricks(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "databricks"
 

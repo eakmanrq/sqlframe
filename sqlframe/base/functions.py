@@ -21,10 +21,16 @@ if t.TYPE_CHECKING:
     from pyspark.sql.session import SparkContext
 
     from sqlframe.base._typing import ColumnOrLiteral, ColumnOrName
-    from sqlframe.base.session import DF
+    from sqlframe.base.session import DF, _BaseSession
     from sqlframe.base.types import ArrayType, StructType
 
 logger = logging.getLogger(__name__)
+
+
+def _get_session() -> _BaseSession:
+    from sqlframe.base.session import _BaseSession
+
+    return _BaseSession()
 
 
 @meta()
@@ -237,6 +243,19 @@ def csc(col: ColumnOrName) -> Column:
 
 @meta()
 def e() -> Column:
+    from sqlframe.base.function_alternatives import e_literal
+
+    session = _get_session()
+
+    if (
+        session._is_bigquery
+        or session._is_duckdb
+        or session._is_postgres
+        or session._is_redshift
+        or session._is_snowflake
+    ):
+        return e_literal()
+
     return Column(expression.Anonymous(this="e"))
 
 
@@ -247,11 +266,31 @@ def exp(col: ColumnOrName) -> Column:
 
 @meta()
 def expm1(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import expm1_from_exp
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return expm1_from_exp(col)
+
     return Column.invoke_anonymous_function(col, "EXPM1")
 
 
 @meta()
 def factorial(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        factorial_ensure_int,
+        factorial_from_case_statement,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return factorial_ensure_int(col)
+
+    if session._is_bigquery:
+        return factorial_from_case_statement(col)
+
     return Column.invoke_anonymous_function(col, "FACTORIAL")
 
 
@@ -267,6 +306,13 @@ def log10(col: ColumnOrName) -> Column:
 
 @meta()
 def log1p(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import log1p_from_log
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return log1p_from_log(col)
+
     return Column.invoke_anonymous_function(col, "LOG1P")
 
 
@@ -286,6 +332,13 @@ def log(arg1: t.Union[ColumnOrName, float], arg2: t.Optional[ColumnOrName] = Non
 
 @meta()
 def rint(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import rint_from_round
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return rint_from_round(col)
+
     return Column.invoke_anonymous_function(col, "RINT")
 
 
@@ -321,6 +374,13 @@ def tanh(col: ColumnOrName) -> Column:
 
 @meta()
 def degrees(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import degrees_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return degrees_bgutil(col)
+
     return Column.invoke_anonymous_function(col, "DEGREES")
 
 
@@ -329,6 +389,13 @@ toDegrees = degrees
 
 @meta()
 def radians(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import radians_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return radians_bgutil(col)
+
     return Column.invoke_anonymous_function(col, "RADIANS")
 
 
@@ -342,6 +409,13 @@ def bitwiseNOT(col: ColumnOrName) -> Column:
 
 @meta()
 def bitwise_not(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import bitwise_not_from_bitnot
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return bitwise_not_from_bitnot(col)
+
     return Column.invoke_expression_over_column(col, expression.BitwiseNot)
 
 
@@ -397,11 +471,25 @@ def var_pop(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def skewness(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import skewness_from_skew
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return skewness_from_skew(col)
+
     return Column.invoke_anonymous_function(col, "SKEWNESS")
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def kurtosis(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import kurtosis_from_kurtosis_pop
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return kurtosis_from_kurtosis_pop(col)
+
     return Column.invoke_anonymous_function(col, "KURTOSIS")
 
 
@@ -412,6 +500,13 @@ def collect_list(col: ColumnOrName) -> Column:
 
 @meta()
 def collect_set(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import collect_set_from_list_distinct
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres:
+        return collect_set_from_list_distinct(col)
+
     return Column.invoke_expression_over_column(col, expression.ArrayUniqueAgg)
 
 
@@ -495,6 +590,11 @@ def covar_samp(col1: ColumnOrName, col2: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def first(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
+    session = _get_session()
+
+    if session._is_duckdb:
+        ignorenulls = None
+
     this = Column.invoke_expression_over_column(col, expression.First)
     if ignorenulls:
         return Column.invoke_expression_over_column(this, expression.IgnoreNulls)
@@ -519,11 +619,25 @@ def input_file_name() -> Column:
 
 @meta()
 def isnan(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import isnan_using_equal
+
+    session = _get_session()
+
+    if session._is_postgres or session._is_snowflake:
+        return isnan_using_equal(col)
+
     return Column.invoke_expression_over_column(col, expression.IsNan)
 
 
 @meta()
 def isnull(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import isnull_using_equal
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return isnull_using_equal(col)
+
     return Column.invoke_anonymous_function(col, "ISNULL")
 
 
@@ -542,6 +656,13 @@ def monotonically_increasing_id() -> Column:
 
 @meta()
 def nanvl(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import nanvl_as_case
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return nanvl_as_case(col1, col2)
+
     return Column.invoke_anonymous_function(col1, "NANVL", col2)
 
 
@@ -551,6 +672,24 @@ def percentile_approx(
     percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
     accuracy: t.Optional[t.Union[ColumnOrLiteral, int]] = None,
 ) -> Column:
+    from sqlframe.base.function_alternatives import (
+        percentile_approx_without_accuracy_and_max_array,
+        percentile_approx_without_accuracy_and_plural,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return percentile_approx_without_accuracy_and_plural(col, percentage, accuracy)  # type: ignore
+
+    if session._is_duckdb:
+        if accuracy:
+            logger.warning("Accuracy is ignored since it is not supported in this dialect")
+        accuracy = None
+
+    if session._is_snowflake and isinstance(percentage, (list, tuple)):
+        return percentile_approx_without_accuracy_and_max_array(col, percentage, accuracy)  # type: ignore
+
     if accuracy:
         return Column.invoke_expression_over_column(
             col, expression.ApproxQuantile, quantile=lit(percentage), accuracy=accuracy
@@ -566,6 +705,13 @@ def percentile(
     percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
     frequency: t.Optional[ColumnOrLiteral] = None,
 ) -> Column:
+    from sqlframe.base.function_alternatives import percentile_without_disc
+
+    session = _get_session()
+
+    if session._is_databricks or session._is_spark:
+        return percentile_without_disc(col, percentage, frequency)
+
     if frequency:
         logger.warning("Frequency is not supported in all engines")
     return Column.invoke_expression_over_column(
@@ -575,6 +721,13 @@ def percentile(
 
 @meta()
 def rand(seed: t.Optional[int] = None) -> Column:
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres:
+        if seed:
+            logger.warning("Seed is ignored since it is not supported in this dialect")
+        seed = None
+
     if seed is not None:
         return Column.invoke_expression_over_column(None, expression.Rand, this=lit(seed))
     return Column.invoke_expression_over_column(None, expression.Rand)
@@ -589,6 +742,11 @@ def randn(seed: t.Optional[int] = None) -> Column:
 
 @meta()
 def round(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
+    session = _get_session()
+
+    if session._is_postgres:
+        col = Column.ensure_col(col).cast("numeric")
+
     if scale is not None:
         return Column.invoke_expression_over_column(col, expression.Round, decimals=scale)
     return Column.invoke_expression_over_column(col, expression.Round)
@@ -596,6 +754,19 @@ def round(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres"])
 def bround(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
+    from sqlframe.base.function_alternatives import (
+        bround_bgutil,
+        bround_using_half_even,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return bround_bgutil(col, scale)
+
+    if session._is_snowflake:
+        return bround_using_half_even(col, scale)
+
     if scale is not None:
         return Column.invoke_anonymous_function(col, "BROUND", lit(scale))
     return Column.invoke_anonymous_function(col, "BROUND")
@@ -603,6 +774,13 @@ def bround(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
 
 @meta()
 def shiftleft(col: ColumnOrName, numBits: int) -> Column:
+    from sqlframe.base.function_alternatives import shiftleft_from_bitshiftleft
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return shiftleft_from_bitshiftleft(col, numBits)
+
     return Column.invoke_expression_over_column(
         col, expression.BitwiseLeftShift, expression=lit(numBits)
     )
@@ -613,6 +791,13 @@ shiftLeft = shiftleft
 
 @meta()
 def shiftright(col: ColumnOrName, numBits: int) -> Column:
+    from sqlframe.base.function_alternatives import shiftright_from_bitshiftright
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return shiftright_from_bitshiftright(col, numBits)
+
     return Column.invoke_expression_over_column(
         col, expression.BitwiseRightShift, expression=lit(numBits)
     )
@@ -638,6 +823,13 @@ def expr(str: str) -> Column:
 
 @meta(unsupported_engines=["postgres"])
 def struct(col: t.Union[ColumnOrName, t.Iterable[ColumnOrName]], *cols: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import struct_with_eq
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return struct_with_eq(col, *cols)
+
     columns = ensure_list(col) + list(cols)
     return Column.invoke_expression_over_column(None, expression.Struct, expressions=columns)
 
@@ -707,6 +899,13 @@ def date_format(col: ColumnOrName, format: str) -> Column:
 
 @meta()
 def year(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import year_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return year_from_extract(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)), expression.Year
     )
@@ -714,6 +913,13 @@ def year(col: ColumnOrName) -> Column:
 
 @meta()
 def quarter(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import quarter_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return quarter_from_extract(col)
+
     return Column(
         expression.Anonymous(
             this="QUARTER",
@@ -724,6 +930,13 @@ def quarter(col: ColumnOrName) -> Column:
 
 @meta()
 def month(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import month_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return month_from_extract(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)), expression.Month
     )
@@ -731,6 +944,19 @@ def month(col: ColumnOrName) -> Column:
 
 @meta()
 def dayofweek(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        dayofweek_from_extract,
+        dayofweek_from_extract_with_isodow,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return dayofweek_from_extract(col)
+
+    if session._is_postgres:
+        return dayofweek_from_extract_with_isodow(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
         expression.DayOfWeek,
@@ -739,6 +965,13 @@ def dayofweek(col: ColumnOrName) -> Column:
 
 @meta()
 def dayofmonth(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import dayofmonth_from_extract_with_day
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return dayofmonth_from_extract_with_day(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
         expression.DayOfMonth,
@@ -747,6 +980,19 @@ def dayofmonth(col: ColumnOrName) -> Column:
 
 @meta()
 def dayofyear(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        dayofyear_from_extract,
+        dayofyear_from_extract_doy,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return dayofyear_from_extract(col)
+
+    if session._is_postgres:
+        return dayofyear_from_extract_doy(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
         expression.DayOfYear,
@@ -755,21 +1001,55 @@ def dayofyear(col: ColumnOrName) -> Column:
 
 @meta()
 def hour(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import hour_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return hour_from_extract(col)
+
     return Column.invoke_anonymous_function(col, "HOUR")
 
 
 @meta()
 def minute(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import minute_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return minute_from_extract(col)
+
     return Column.invoke_anonymous_function(col, "MINUTE")
 
 
 @meta()
 def second(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import second_from_extract
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_postgres:
+        return second_from_extract(col)
+
     return Column.invoke_anonymous_function(col, "SECOND")
 
 
 @meta()
 def weekofyear(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        weekofyear_from_extract_as_isoweek,
+        weekofyear_from_extract_as_week,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return weekofyear_from_extract_as_isoweek(col)
+
+    if session._is_postgres:
+        return weekofyear_from_extract_as_week(col)
+
     return Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).expression)),
         expression.WeekOfYear,
@@ -778,6 +1058,24 @@ def weekofyear(col: ColumnOrName) -> Column:
 
 @meta()
 def make_date(year: ColumnOrName, month: ColumnOrName, day: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        make_date_date_from_parts,
+        make_date_from_date_func,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return make_date_from_date_func(year, month, day)
+
+    if session._is_postgres:
+        year = Column.ensure_col(year).cast("integer")
+        month = Column.ensure_col(month).cast("integer")
+        day = Column.ensure_col(day).cast("integer")
+
+    if session._is_snowflake:
+        return make_date_date_from_parts(year, month, day)
+
     return Column.invoke_anonymous_function(year, "MAKE_DATE", month, day)
 
 
@@ -785,9 +1083,22 @@ def make_date(year: ColumnOrName, month: ColumnOrName, day: ColumnOrName) -> Col
 def date_add(
     col: ColumnOrName, days: t.Union[ColumnOrName, int], cast_as_date: bool = True
 ) -> Column:
+    from sqlframe.base.function_alternatives import date_add_no_date_sub
+
+    session = _get_session()
+    date_sub_func = get_func_from_session("date_sub")
+    original_days = None
+
+    if session._is_postgres and not isinstance(days, int):
+        original_days = days
+        days = 1
+
+    if session._is_snowflake:
+        return date_add_no_date_sub(col, days, cast_as_date)
+
     if isinstance(days, int):
         if days < 0:
-            return date_sub(col, days * -1)
+            return date_sub_func(col, days * -1)
         days = lit(days)
     result = Column.invoke_expression_over_column(
         Column.ensure_col(col).cast("date"),
@@ -795,6 +1106,10 @@ def date_add(
         expression=days,
         unit=expression.Var(this="DAY"),
     )
+
+    if session._is_postgres and original_days is not None:
+        result = result * Column.ensure_col(original_days)
+
     if cast_as_date:
         return result.cast("date")
     return result
@@ -807,9 +1122,22 @@ def date_sub(
     """
     Non-standard argument: cast_as_date
     """
+    from sqlframe.base.function_alternatives import date_sub_by_date_add
+
+    session = _get_session()
+    date_add_func = get_func_from_session("date_add")
+    original_days = None
+
+    if session._is_postgres and not isinstance(days, int):
+        original_days = days
+        days = 1
+
+    if session._is_snowflake:
+        return date_sub_by_date_add(col, days, cast_as_date)
+
     if isinstance(days, int):
         if days < 0:
-            return date_add(col, days * -1)
+            return date_add_func(col, days * -1)
         days = lit(days)
     result = Column.invoke_expression_over_column(
         Column.ensure_col(col).cast("date"),
@@ -817,6 +1145,10 @@ def date_sub(
         expression=days,
         unit=expression.Var(this="DAY"),
     )
+
+    if session._is_postgres and original_days is not None:
+        result = result * Column.ensure_col(original_days)
+
     if cast_as_date:
         return result.cast("date")
     return result
@@ -824,6 +1156,13 @@ def date_sub(
 
 @meta()
 def date_diff(end: ColumnOrName, start: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import date_diff_with_subtraction
+
+    session = _get_session()
+
+    if session._is_postgres:
+        return date_diff_with_subtraction(end, start)
+
     return Column.invoke_expression_over_column(
         Column.ensure_col(end).cast("date"),
         expression.DateDiff,
@@ -838,6 +1177,18 @@ def add_months(
     """
     Non-standard argument: cast_as_date
     """
+    from sqlframe.base.function_alternatives import add_months_using_func
+
+    lit = get_func_from_session("lit")
+    session = _get_session()
+    original_months = months
+
+    if session._is_databricks or session._is_postgres or session._is_spark:
+        months = 1
+
+    if session._is_snowflake:
+        return add_months_using_func(start, months, cast_as_date)
+
     start_col = Column(start).cast("date")
 
     if isinstance(months, int):
@@ -860,6 +1211,15 @@ def add_months(
             )
         )
         result = start_col + end_col
+
+    if session._is_databricks or session._is_postgres or session._is_spark:
+        multiple_value = (
+            lit(original_months)
+            if isinstance(original_months, int)
+            else Column.ensure_col(original_months)
+        )
+        result = Column.ensure_col(result.expression.unnest()) * multiple_value
+
     if cast_as_date:
         return result.cast("date")
     return result
@@ -869,35 +1229,79 @@ def add_months(
 def months_between(
     date1: ColumnOrName, date2: ColumnOrName, roundOff: t.Optional[bool] = None
 ) -> Column:
+    from sqlframe.base.function_alternatives import (
+        months_between_bgutils,
+        months_between_from_age_and_extract,
+    )
+
+    session = _get_session()
+    original_roundoff = roundOff
+
+    if session._is_bigquery:
+        return months_between_bgutils(date1, date2, roundOff)
+
+    if session._is_postgres:
+        return months_between_from_age_and_extract(date1, date2, roundOff)
+
+    if session._is_snowflake:
+        date1 = Column.ensure_col(date1).cast("date")
+        date2 = Column.ensure_col(date2).cast("date")
+        roundOff = None
+
     if roundOff is None:
-        return Column.invoke_expression_over_column(
+        result = Column.invoke_expression_over_column(
             date1, expression.MonthsBetween, expression=date2
         )
+    else:
+        result = Column.invoke_expression_over_column(
+            date1, expression.MonthsBetween, expression=date2, roundoff=lit(roundOff)
+        )
 
-    return Column.invoke_expression_over_column(
-        date1, expression.MonthsBetween, expression=date2, roundoff=lit(roundOff)
-    )
+    if session._is_snowflake and original_roundoff:
+        return result.cast("bigint")
+    return result
 
 
 @meta()
 def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.session import _BaseSession
+    session = _get_session()
 
-    # format = lit(format or spark_default_date_format())
+    if session._is_bigquery:
+        to_timestamp_func = get_func_from_session("to_timestamp")
+        col = to_timestamp_func(col, format)
+
+    if session._is_snowflake:
+        format = format or session.default_time_format
+
     if format is not None:
         return Column.invoke_expression_over_column(
-            col, expression.TsOrDsToDate, format=_BaseSession().format_time(format)
+            col, expression.TsOrDsToDate, format=session.format_time(format)
         )
     return Column.invoke_expression_over_column(col, expression.TsOrDsToDate)
 
 
 @meta()
 def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.session import _BaseSession
+    from sqlframe.base.function_alternatives import (
+        to_timestamp_just_timestamp,
+        to_timestamp_tz,
+        to_timestamp_with_time_zone,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return to_timestamp_tz(col, format)
+
+    if session._is_bigquery:
+        return to_timestamp_just_timestamp(col, format)
+
+    if session._is_postgres:
+        return to_timestamp_with_time_zone(col, format)
 
     if format is not None:
         return Column.invoke_expression_over_column(
-            col, expression.StrToTime, format=_BaseSession().format_time(format)
+            col, expression.StrToTime, format=session.format_time(format)
         )
 
     return Column.ensure_col(col).cast("timestampltz")
@@ -919,22 +1323,45 @@ def date_trunc(format: str, timestamp: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres"])
 def next_day(col: ColumnOrName, dayOfWeek: str) -> Column:
+    from sqlframe.base.function_alternatives import next_day_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return next_day_bgutil(col, dayOfWeek)
+
     return Column.invoke_anonymous_function(col, "NEXT_DAY", lit(dayOfWeek))
 
 
 @meta()
 def last_day(col: ColumnOrName) -> Column:
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        col = Column.ensure_col(col).cast("date")
+
     return Column.invoke_expression_over_column(col, expression.LastDay)
 
 
 @meta()
 def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.session import _BaseSession
+    from sqlframe.base.function_alternatives import (
+        from_unixtime_bigutil,
+        from_unixtime_from_timestamp,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return from_unixtime_bigutil(col, format)
+
+    if session._is_postgres or session._is_snowflake:
+        return from_unixtime_from_timestamp(col, format)
 
     return Column.invoke_expression_over_column(
         col,
         expression.UnixToStr,
-        format=_BaseSession().format_time(format),
+        format=session.format_time(format),
     )
 
 
@@ -942,12 +1369,23 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
-    from sqlframe.base.session import _BaseSession
+    from sqlframe.base.function_alternatives import (
+        unix_timestamp_bgutil,
+        unix_timestamp_from_extract,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return unix_timestamp_bgutil(timestamp, format)
+
+    if session._is_postgres or session._is_snowflake:
+        return unix_timestamp_from_extract(timestamp, format)
 
     return Column.invoke_expression_over_column(
         timestamp,
         expression.StrToUnix,
-        format=_BaseSession().format_time(format),
+        format=session.format_time(format),
     ).cast("bigint")
 
 
@@ -1010,6 +1448,13 @@ def md5(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres"])
 def sha1(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import sha1_force_sha1_and_to_hex
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return sha1_force_sha1_and_to_hex(col)
+
     return Column.invoke_expression_over_column(col, expression.SHA)
 
 
@@ -1020,6 +1465,13 @@ def sha2(col: ColumnOrName, numBits: int) -> Column:
 
 @meta(unsupported_engines=["postgres"])
 def hash(*cols: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import hash_from_farm_fingerprint
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return hash_from_farm_fingerprint(*cols)
+
     args = cols[1:] if len(cols) > 1 else []
     return Column.invoke_anonymous_function(cols[0], "HASH", *args)
 
@@ -1061,11 +1513,41 @@ def ascii(col: ColumnOrName) -> Column:
 
 @meta()
 def base64(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        base64_from_base64_encode,
+        base64_from_blob,
+        base64_from_encode,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb:
+        return base64_from_blob(col)
+
+    if session._is_postgres:
+        return base64_from_encode(col)
+
+    if session._is_snowflake:
+        return base64_from_base64_encode(col)
+
     return Column.invoke_expression_over_column(col, expression.ToBase64)
 
 
 @meta()
 def unbase64(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        unbase64_from_base64_decode_string,
+        unbase64_from_decode,
+    )
+
+    session = _get_session()
+
+    if session._is_postgres:
+        return unbase64_from_decode(col)
+
+    if session._is_snowflake:
+        return unbase64_from_base64_decode_string(col)
+
     return Column.invoke_expression_over_column(col, expression.FromBase64)
 
 
@@ -1086,6 +1568,13 @@ def trim(col: ColumnOrName) -> Column:
 
 @meta()
 def concat_ws(sep: str, *cols: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import concat_ws_from_array_to_string
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return concat_ws_from_array_to_string(sep, *cols)
+
     return Column.invoke_expression_over_column(
         None, expression.ConcatWs, expressions=[lit(sep)] + list(cols)
     )
@@ -1093,6 +1582,19 @@ def concat_ws(sep: str, *cols: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "snowflake"])
 def decode(col: ColumnOrName, charset: str) -> Column:
+    from sqlframe.base.function_alternatives import (
+        decode_from_blob,
+        decode_from_convert_from,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return decode_from_blob(col, charset)
+
+    if session._is_postgres:
+        return decode_from_convert_from(col, charset)
+
     return Column.invoke_expression_over_column(
         col, expression.Decode, charset=expression.Literal.string(charset)
     )
@@ -1100,6 +1602,13 @@ def decode(col: ColumnOrName, charset: str) -> Column:
 
 @meta(unsupported_engines=["bigquery", "snowflake"])
 def encode(col: ColumnOrName, charset: str) -> Column:
+    from sqlframe.base.function_alternatives import encode_from_convert_to
+
+    session = _get_session()
+
+    if session._is_postgres:
+        return encode_from_convert_to(col, charset)
+
     return Column.invoke_expression_over_column(
         col, expression.Encode, charset=expression.Literal.string(charset)
     )
@@ -1107,11 +1616,37 @@ def encode(col: ColumnOrName, charset: str) -> Column:
 
 @meta(unsupported_engines="duckdb")
 def format_number(col: ColumnOrName, d: int) -> Column:
+    from sqlframe.base.function_alternatives import (
+        format_number_bgutil,
+        format_number_from_to_char,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return format_number_bgutil(col, d)
+
+    if session._is_postgres or session._is_snowflake:
+        return format_number_from_to_char(col, d)
+
     return Column.invoke_anonymous_function(col, "FORMAT_NUMBER", lit(d))
 
 
 @meta(unsupported_engines="snowflake")
 def format_string(format: str, *cols: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        format_string_with_format,
+        format_string_with_pipes,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return format_string_with_pipes(format, *cols)
+
+    if session._is_bigquery or session._is_postgres:
+        return format_string_with_format(format, *cols)
+
     format_col = lit(format)
     columns = [Column.ensure_col(x) for x in cols]
     return Column.invoke_anonymous_function(format_col, "FORMAT_STRING", *columns)
@@ -1119,6 +1654,13 @@ def format_string(format: str, *cols: ColumnOrName) -> Column:
 
 @meta()
 def instr(col: ColumnOrName, substr: str) -> Column:
+    from sqlframe.base.function_alternatives import instr_using_strpos
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return instr_using_strpos(col, substr)
+
     return Column.invoke_expression_over_column(col, expression.StrPosition, substr=lit(substr))
 
 
@@ -1129,6 +1671,12 @@ def overlay(
     pos: t.Union[ColumnOrName, int],
     len: t.Optional[t.Union[ColumnOrName, int]] = None,
 ) -> Column:
+    from sqlframe.base.function_alternatives import overlay_from_substr
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_snowflake:
+        return overlay_from_substr(src, replace, pos, len)
     return Column.invoke_expression_over_column(
         src,
         expression.Overlay,
@@ -1162,6 +1710,13 @@ def substring(str: ColumnOrName, pos: int, len: int) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def substring_index(str: ColumnOrName, delim: str, count: int) -> Column:
+    from sqlframe.base.function_alternatives import substring_index_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return substring_index_bgutil(str, delim, count)
+
     return Column.invoke_anonymous_function(str, "SUBSTRING_INDEX", lit(delim), lit(count))
 
 
@@ -1169,6 +1724,13 @@ def substring_index(str: ColumnOrName, delim: str, count: int) -> Column:
 def levenshtein(
     left: ColumnOrName, right: ColumnOrName, threshold: t.Optional[int] = None
 ) -> Column:
+    from sqlframe.base.function_alternatives import levenshtein_edit_distance
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return levenshtein_edit_distance(left, right, threshold)
+
     value: t.Union[expression.Case, expression.Levenshtein] = expression.Levenshtein(
         this=Column.ensure_col(left).expression,
         expression=Column.ensure_col(right).expression,
@@ -1225,6 +1787,24 @@ def repeat(col: ColumnOrName, n: int) -> Column:
 
 @meta()
 def split(str: ColumnOrName, pattern: str, limit: t.Optional[int] = None) -> Column:
+    from sqlframe.base.function_alternatives import (
+        split_from_regex_split_to_array,
+        split_with_split,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        if limit is not None:
+            logger.warning("Limit is ignored since it is not supported in this dialect")
+        limit = None
+
+    if session._is_bigquery or session._is_snowflake:
+        return split_with_split(str, pattern, limit)
+
+    if session._is_postgres:
+        return split_from_regex_split_to_array(str, pattern, limit)
+
     if limit is not None:
         return Column.invoke_expression_over_column(
             str, expression.RegexpSplit, expression=lit(pattern), limit=lit(limit)
@@ -1236,22 +1816,39 @@ def split(str: ColumnOrName, pattern: str, limit: t.Optional[int] = None) -> Col
 
 @meta(unsupported_engines="postgres")
 def regexp_extract(str: ColumnOrName, pattern: str, idx: t.Optional[int] = None) -> Column:
+    session = _get_session()
+
     if idx is not None:
-        return Column.invoke_expression_over_column(
+        result = Column.invoke_expression_over_column(
             str,
             expression.RegexpExtract,
             expression=lit(pattern),
             group=lit(idx),
         )
-    return Column.invoke_expression_over_column(
-        str, expression.RegexpExtract, expression=lit(pattern)
-    )
+    else:
+        result = Column.invoke_expression_over_column(
+            str, expression.RegexpExtract, expression=lit(pattern)
+        )
+
+    if session._is_snowflake:
+        coalesce_func = get_func_from_session("coalesce")
+
+        result = coalesce_func(result, lit(""))
+
+    return result
 
 
 @meta()
 def regexp_replace(
     str: ColumnOrName, pattern: str, replacement: str, position: t.Optional[int] = None
 ) -> Column:
+    from sqlframe.base.function_alternatives import regexp_replace_global_option
+
+    session = _get_session()
+
+    if session._is_duckdb or session._is_postgres:
+        return regexp_replace_global_option(str, pattern, replacement, position)
+
     if position is not None:
         return Column.invoke_expression_over_column(
             str,
@@ -1280,16 +1877,43 @@ def soundex(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["postgres", "snowflake"])
 def bin(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import bin_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return bin_bgutil(col)
+
     return Column.invoke_anonymous_function(col, "BIN")
 
 
 @meta(unsupported_engines="postgres")
 def hex(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        hex_casted_as_bytes,
+        hex_using_encode,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return hex_casted_as_bytes(col)
+
+    if session._is_snowflake:
+        return hex_using_encode(col)
+
     return Column.invoke_expression_over_column(col, expression.Hex)
 
 
 @meta(unsupported_engines="postgres")
 def unhex(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import unhex_hex_decode_str
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return unhex_hex_decode_str(col)
+
     return Column.invoke_expression_over_column(col, expression.Unhex)
 
 
@@ -1305,6 +1929,13 @@ def octet_length(col: ColumnOrName) -> Column:
 
 @meta()
 def bit_length(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import bit_length_from_length
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return bit_length_from_length(col)
+
     return Column.invoke_anonymous_function(col, "BIT_LENGTH")
 
 
@@ -1326,6 +1957,19 @@ def array_agg(col: ColumnOrName) -> Column:
 
 @meta()
 def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_append_list_append,
+        array_append_using_array_cat,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_append_using_array_cat(col, value)
+
+    if session._is_duckdb:
+        return array_append_list_append(col, value)
+
     value = value if isinstance(value, Column) else lit(value)
     return Column.invoke_anonymous_function(col, "ARRAY_APPEND", value)
 
@@ -1388,13 +2032,21 @@ def getbit(col: ColumnOrName, pos: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def create_map(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
+    session = _get_session()
+
     cols = list(_flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
-    return Column.invoke_expression_over_column(
+    result = Column.invoke_expression_over_column(
         None,
         expression.VarMap,
         keys=array(*cols[::2]).expression,
         values=array(*cols[1::2]).expression,
     )
+    if not session._is_snowflake:
+        return result
+
+    col1_dtype = col(cols[0]).dtype or "VARCHAR"
+    col2_dtype = col(cols[1]).dtype or "VARCHAR"
+    return result.cast(f"MAP({col1_dtype}, {col2_dtype})")
 
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
@@ -1404,14 +2056,43 @@ def map_from_arrays(col1: ColumnOrName, col2: ColumnOrName) -> Column:
 
 @meta()
 def array_contains(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    value_col = value if isinstance(value, Column) else lit(value)
+    from sqlframe.base.function_alternatives import array_contains_any
+
+    session = _get_session()
+    lit_func = get_func_from_session("lit")
+
+    if session._is_postgres:
+        return array_contains_any(col, value)
+
+    value = value if isinstance(value, Column) else lit_func(value)
+
+    if session._is_snowflake:
+        value = value.cast("variant")
+
     return Column.invoke_expression_over_column(
-        col, expression.ArrayContains, expression=value_col.expression
+        col, expression.ArrayContains, expression=value.expression
     )
 
 
 @meta(unsupported_engines="bigquery")
 def arrays_overlap(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        arrays_overlap_as_plural,
+        arrays_overlap_renamed,
+        arrays_overlap_using_intersect,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return arrays_overlap_using_intersect(col1, col2)
+
+    if session._is_databricks or session._is_spark:
+        return arrays_overlap_renamed(col1, col2)
+
+    if session._is_snowflake:
+        return arrays_overlap_as_plural(col1, col2)
+
     return Column.invoke_expression_over_column(col1, expression.ArrayOverlaps, expression=col2)
 
 
@@ -1419,6 +2100,27 @@ def arrays_overlap(col1: ColumnOrName, col2: ColumnOrName) -> Column:
 def slice(
     x: ColumnOrName, start: t.Union[ColumnOrName, int], length: t.Union[ColumnOrName, int]
 ) -> Column:
+    from sqlframe.base.function_alternatives import (
+        slice_as_array_slice,
+        slice_as_list_slice,
+        slice_bgutil,
+        slice_with_brackets,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return slice_bgutil(x, start, length)
+
+    if session._is_duckdb:
+        return slice_as_list_slice(x, start, length)
+
+    if session._is_postgres:
+        return slice_with_brackets(x, start, length)
+
+    if session._is_snowflake:
+        return slice_as_array_slice(x, start, length)
+
     start_col = lit(start) if isinstance(start, int) else start
     length_col = lit(length) if isinstance(length, int) else length
     return Column.invoke_anonymous_function(x, "SLICE", start_col, length_col)
@@ -1428,6 +2130,13 @@ def slice(
 def array_join(
     col: ColumnOrName, delimiter: str, null_replacement: t.Optional[str] = None
 ) -> Column:
+    session = _get_session()
+
+    if session._is_snowflake:
+        if null_replacement is not None:
+            logger.warning("Null replacement is ignored since it is not supported in this dialect")
+        null_replacement = None
+
     if null_replacement is not None:
         return Column.invoke_expression_over_column(
             col, expression.ArrayToString, expression=lit(delimiter), null=lit(null_replacement)
@@ -1444,6 +2153,19 @@ def concat(*cols: ColumnOrName) -> Column:
 
 @meta()
 def array_position(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_position_bgutil,
+        array_position_cast_variant_and_flip,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_position_bgutil(col, value)
+
+    if session._is_snowflake:
+        return array_position_cast_variant_and_flip(col, value)
+
     value_col = value if isinstance(value, Column) else lit(value)
     # Some engines return NULL if item is not found but Spark expects 0 so we coalesce to 0
     return coalesce(Column.invoke_anonymous_function(col, "ARRAY_POSITION", value_col), lit(0))
@@ -1451,28 +2173,75 @@ def array_position(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta()
 def element_at(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.function_alternatives import element_at_using_brackets
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
+        return element_at_using_brackets(col, value)
+
     value_col = value if isinstance(value, Column) else lit(value)
     return Column.invoke_anonymous_function(col, "ELEMENT_AT", value_col)
 
 
 @meta()
 def array_remove(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_remove_bgutil,
+        array_remove_using_filter,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_remove_bgutil(col, value)
+
+    if session._is_duckdb:
+        return array_remove_using_filter(col, value)
+
     value_col = value if isinstance(value, Column) else lit(value)
     return Column.invoke_anonymous_function(col, "ARRAY_REMOVE", value_col)
 
 
 @meta(unsupported_engines="postgres")
 def array_distinct(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import array_distinct_bgutil
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_distinct_bgutil(col)
+
     return Column.invoke_anonymous_function(col, "ARRAY_DISTINCT")
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def array_intersect(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import array_intersect_using_intersection
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return array_intersect_using_intersection(col1, col2)
+
     return Column.invoke_anonymous_function(col1, "ARRAY_INTERSECT", Column.ensure_col(col2))
 
 
 @meta(unsupported_engines=["postgres"])
 def array_union(col1: ColumnOrName, col2: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_union_using_array_concat,
+        array_union_using_list_concat,
+    )
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        return array_union_using_list_concat(col1, col2)
+
+    if session._is_bigquery or session._is_snowflake:
+        return array_union_using_array_concat(col1, col2)
+
     return Column.invoke_anonymous_function(col1, "ARRAY_UNION", Column.ensure_col(col2))
 
 
@@ -1504,6 +2273,19 @@ def posexplode_outer(col: ColumnOrName) -> Column:
 # Snowflake doesn't support JSONPath which is what this function uses
 @meta(unsupported_engines="snowflake")
 def get_json_object(col: ColumnOrName, path: str) -> Column:
+    from sqlframe.base.function_alternatives import (
+        get_json_object_using_arrow_op,
+        get_json_object_using_function,
+    )
+
+    session = _get_session()
+
+    if session._is_databricks:
+        return get_json_object_using_function(col, path)
+
+    if session._is_postgres:
+        return get_json_object_using_arrow_op(col, path)
+
     return Column.invoke_expression_over_column(col, expression.JSONExtract, expression=lit(path))
 
 
@@ -1572,16 +2354,63 @@ def size(col: ColumnOrName) -> Column:
 
 @meta()
 def array_min(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_min_bgutil,
+        array_min_from_sort,
+        array_min_from_subquery,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_min_bgutil(col)
+
+    if session._is_duckdb:
+        return array_min_from_sort(col)
+
+    if session._is_postgres:
+        return array_min_from_subquery(col)
+
     return Column.invoke_anonymous_function(col, "ARRAY_MIN")
 
 
 @meta()
 def array_max(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        array_max_bgutil,
+        array_max_from_sort,
+        array_max_from_subquery,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return array_max_bgutil(col)
+
+    if session._is_duckdb:
+        return array_max_from_sort(col)
+
+    if session._is_postgres:
+        return array_max_from_subquery(col)
+
     return Column.invoke_anonymous_function(col, "ARRAY_MAX")
 
 
 @meta(unsupported_engines="postgres")
 def sort_array(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
+    from sqlframe.base.function_alternatives import (
+        sort_array_bgutil,
+        sort_array_using_array_sort,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return sort_array_bgutil(col, asc)
+
+    if session._is_snowflake:
+        return sort_array_using_array_sort(col, asc)
+
     if asc is not None:
         return Column.invoke_expression_over_column(col, expression.SortArray, asc=lit(asc))
     return Column.invoke_expression_over_column(col, expression.SortArray)
@@ -1592,6 +2421,12 @@ def array_sort(
     col: ColumnOrName,
     comparator: t.Optional[t.Union[t.Callable[[Column, Column], Column]]] = None,
 ) -> Column:
+    session = _get_session()
+    sort_array_func = get_func_from_session("sort_array")
+
+    if session._is_bigquery:
+        return sort_array_func(col, comparator)
+
     if comparator is not None:
         f_expression = _get_lambda_from_func(comparator)
         return Column.invoke_expression_over_column(
@@ -1612,6 +2447,13 @@ def reverse(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def flatten(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import flatten_using_array_flatten
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return flatten_using_array_flatten(col)
+
     return Column.invoke_expression_over_column(col, expression.Flatten)
 
 
@@ -1650,6 +2492,13 @@ def arrays_zip(*cols: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def map_concat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
+    from sqlframe.base.function_alternatives import map_concat_using_map_cat
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return map_concat_using_map_cat(*cols)
+
     columns = list(flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols  # type: ignore
     if len(columns) == 1:
         return Column.invoke_anonymous_function(columns[0], "MAP_CONCAT")  # type: ignore
@@ -1660,6 +2509,23 @@ def map_concat(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column
 def sequence(
     start: ColumnOrName, stop: ColumnOrName, step: t.Optional[ColumnOrName] = None
 ) -> Column:
+    from sqlframe.base.function_alternatives import (
+        sequence_from_array_generate_range,
+        sequence_from_generate_array,
+        sequence_from_generate_series,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return sequence_from_generate_array(start, stop, step)
+
+    if session._is_duckdb:
+        return sequence_from_generate_series(start, stop, step)
+
+    if session._is_snowflake:
+        return sequence_from_array_generate_range(start, stop, step)
+
     return Column(
         expression.GenerateSeries(
             start=Column.ensure_col(start).expression,
@@ -1778,6 +2644,23 @@ def map_zip_with(
 
 @meta()
 def typeof(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        typeof_bgutil,
+        typeof_from_variant,
+        typeof_pg_typeof,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return typeof_bgutil(col)
+
+    if session._is_postgres:
+        return typeof_pg_typeof(col)
+
+    if session._is_snowflake:
+        return typeof_from_variant(col)
+
     return Column.invoke_anonymous_function(col, "TYPEOF")
 
 
@@ -1913,6 +2796,18 @@ def to_binary(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Col
 
 @meta()
 def any_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
+    session = _get_session()
+
+    if session._is_duckdb:
+        if not ignoreNulls:
+            logger.warning("Nulls are always ignored when using `ANY_VALUE` on this engine")
+        ignoreNulls = None
+
+    if session._is_bigquery or session._is_postgres or session._is_snowflake:
+        if ignoreNulls:
+            logger.warning("Ignoring nulls is not supported in this dialect")
+        ignoreNulls = None
+
     column = Column.invoke_expression_over_column(col, expression.AnyValue)
     if ignoreNulls:
         return Column(expression.IgnoreNulls(this=column.expression))
@@ -2180,6 +3075,13 @@ def current_timezone() -> Column:
 
 @meta()
 def current_user() -> Column:
+    from sqlframe.base.function_alternatives import current_user_from_session_user
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return current_user_from_session_user()
+
     return Column.invoke_expression_over_column(None, expression.CurrentUser)
 
 
@@ -2204,6 +3106,21 @@ def datepart(field: ColumnOrName, source: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def day(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import day_with_try_to_timestamp
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        try_to_timestamp = get_func_from_session("try_to_timestamp")
+        to_date = get_func_from_session("to_date")
+        when = get_func_from_session("when")
+        _is_string = get_func_from_session("_is_string")
+        coalesce = get_func_from_session("coalesce")
+        col = when(
+            _is_string(col),
+            coalesce(try_to_timestamp(col), to_date(col)),
+        ).otherwise(col)
+
     return Column.invoke_expression_over_column(col, expression.Day)
 
 
@@ -2222,6 +3139,19 @@ def elt(*inputs: ColumnOrName) -> Column:
 
 @meta()
 def endswith(str: ColumnOrName, suffix: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        endswith_using_like,
+        endswith_with_underscore,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery or session._is_duckdb:
+        return endswith_with_underscore(str, suffix)
+
+    if session._is_postgres:
+        return endswith_using_like(str, suffix)
+
     return Column.invoke_anonymous_function(str, "endswith", suffix)
 
 
@@ -2237,6 +3167,11 @@ def every(col: ColumnOrName) -> Column:
 
 @meta()
 def extract(field: ColumnOrName, source: ColumnOrName) -> Column:
+    session = _get_session()
+
+    if session._is_bigquery:
+        field = expression.Var(this=Column.ensure_col(field).alias_or_name)  # type: ignore
+
     return Column.invoke_expression_over_column(field, expression.Extract, expression=source)
 
 
@@ -2963,6 +3898,11 @@ def left(str: ColumnOrName, len: ColumnOrName) -> Column:
     >>> df.select(left(df.a, df.b).alias('r')).collect()
     [Row(r='Spa')]
     """
+    session = _get_session()
+
+    if session._is_postgres:
+        len = Column.ensure_col(len).cast("integer")
+
     return Column.invoke_expression_over_column(str, expression.Left, expression=len)
 
 
@@ -3853,6 +4793,16 @@ def position(
     |                4|
     +-----------------+
     """
+    from sqlframe.base.function_alternatives import position_as_strpos
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return position_as_strpos(substr, str, start)
+
+    if session._is_postgres:
+        start = Column.ensure_col(start).cast("integer") if start else None
+
     if start is not None:
         return Column.invoke_expression_over_column(
             str, expression.StrPosition, substr=substr, position=start
@@ -4038,6 +4988,13 @@ def regexp(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     |               true|
     +-------------------+
     """
+    from sqlframe.base.function_alternatives import regexp_extract_only_one_group
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return regexp_extract_only_one_group(str, regexp)  # type: ignore
+
     return Column.invoke_anonymous_function(str, "regexp", regexp)
 
 
@@ -4575,6 +5532,11 @@ def right(str: ColumnOrName, len: ColumnOrName) -> Column:
     >>> df.select(right(df.a, df.b).alias('r')).collect()
     [Row(r='SQL')]
     """
+    session = _get_session()
+
+    if session._is_postgres:
+        len = Column.ensure_col(len).cast("integer")
+
     return Column.invoke_expression_over_column(str, expression.Right, expression=len)
 
 
@@ -5030,6 +5992,13 @@ def to_number(col: ColumnOrName, format: ColumnOrName) -> Column:
     >>> df.select(to_number(df.e, lit("$99.99")).alias('r')).collect()
     [Row(r=Decimal('78.12'))]
     """
+    from sqlframe.base.function_alternatives import to_number_using_to_double
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return to_number_using_to_double(col, format)
+
     return Column.invoke_expression_over_column(col, expression.ToNumber, format=format)
 
 
@@ -5149,11 +6118,14 @@ def to_unix_timestamp(
     [Row(r=None)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
-    from sqlframe.base.session import _BaseSession
+    session = _get_session()
+
+    if session._is_duckdb:
+        format = format or _BaseSession().default_time_format
 
     if format is not None:
         return Column.invoke_expression_over_column(
-            timestamp, expression.StrToUnix, format=_BaseSession().format_time(format)
+            timestamp, expression.StrToUnix, format=session.format_time(format)
         )
     else:
         return Column.invoke_expression_over_column(timestamp, expression.StrToUnix)
@@ -5306,6 +6278,17 @@ def try_element_at(col: ColumnOrName, extraction: ColumnOrName) -> Column:
     >>> df.select(try_element_at(df.data, lit("a")).alias('r')).collect()
     [Row(r=1.0)]
     """
+    session = _get_session()
+
+    if session._is_databricks or session._is_duckdb or session._is_postgres or session._is_spark:
+        lit = get_func_from_session("lit")
+        extraction = Column.ensure_col(extraction)
+        if (
+            isinstance(extraction.expression, expression.Literal)
+            and extraction.expression.is_number
+        ):
+            extraction = extraction - lit(1)
+
     return Column(
         expression.Bracket(
             this=Column.ensure_col(col).expression,
@@ -5340,12 +6323,27 @@ def try_to_timestamp(col: ColumnOrName, format: t.Optional[ColumnOrName] = None)
     >>> df.select(try_to_timestamp(df.t, lit('yyyy-MM-dd HH:mm:ss')).alias('dt')).collect()
     [Row(dt=datetime.datetime(1997, 2, 28, 10, 30))]
     """
-    from sqlframe.base.session import _BaseSession
+    from sqlframe.base.function_alternatives import (
+        try_to_timestamp_pgtemp,
+        try_to_timestamp_safe,
+        try_to_timestamp_strptime,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return try_to_timestamp_safe(col, format)
+
+    if session._is_duckdb:
+        return try_to_timestamp_strptime(col, format)
+
+    if session._is_postgres:
+        return try_to_timestamp_pgtemp(col, format)
 
     return Column.invoke_anonymous_function(
         col,
         "try_to_timestamp",
-        _BaseSession().format_execution_time(format),  # type: ignore
+        session.format_execution_time(format),  # type: ignore
     )
 
 
@@ -5841,6 +6839,27 @@ def years(col: ColumnOrName) -> Column:
 # SQLFrame specific
 @meta()
 def _is_string(col: ColumnOrName) -> Column:
+    from sqlframe.base.function_alternatives import (
+        _is_string_using_typeof_char_varying,
+        _is_string_using_typeof_string,
+        _is_string_using_typeof_string_lcase,
+        _is_string_using_typeof_varchar,
+    )
+
+    session = _get_session()
+
+    if session._is_bigquery:
+        return _is_string_using_typeof_string(col)
+
+    if session._is_duckdb:
+        return _is_string_using_typeof_varchar(col)
+
+    if session._is_postgres:
+        return _is_string_using_typeof_char_varying(col)
+
+    if session._is_databricks or session._is_spark:
+        return _is_string_using_typeof_string_lcase(col)
+
     col = Column.invoke_anonymous_function(col, "TO_VARIANT")
     return Column.invoke_anonymous_function(col, "IS_VARCHAR")
 
