@@ -2603,7 +2603,9 @@ def test_array_sort(get_session_and_func, get_func):
             Row(r=[1, 2, 3]),
             Row(r=[1]),
         ]
-        assert df.select(array_sort(df.data, asc=False).alias("r")).collect() == [
+        # ASC/DESC is strange on BigQuery but it is from a legacy bug.
+        # Should be updated to no share the `sort_array` function
+        assert df.select(array_sort(df.data, comparator=False).alias("r")).collect() == [
             Row(r=[3, 2, 1]),
             Row(r=[1]),
         ]

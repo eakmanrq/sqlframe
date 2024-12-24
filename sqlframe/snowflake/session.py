@@ -78,6 +78,10 @@ class SnowflakeSession(
             else:
                 self._conn._converter_class = JsonLoadsSnowflakeConverter  # type: ignore
 
+    @property
+    def _is_snowflake(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "snowflake"
 

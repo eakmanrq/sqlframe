@@ -28,6 +28,10 @@ class StandaloneSession(
     _df = StandaloneDataFrame
     _udf_registration = StandaloneUDFRegistration
 
+    @property
+    def _is_standalone(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_INPUT_DIALECT = "spark"
         DEFAULT_OUTPUT_DIALECT = "spark"

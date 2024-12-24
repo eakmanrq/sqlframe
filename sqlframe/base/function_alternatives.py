@@ -58,12 +58,6 @@ def collect_set_from_list_distinct(col: ColumnOrName) -> Column:
     return collect_list(Column(expression.Distinct(expressions=[Column(col).expression])))
 
 
-def first_always_ignore_nulls(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
-    from sqlframe.base.functions import first
-
-    return first(col)
-
-
 def to_timestamp_with_time_zone(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
@@ -225,18 +219,6 @@ def nanvl_as_case(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return when(~isnan(col1), col(col1)).otherwise(col(col2))
 
 
-def percentile_approx_without_accuracy(
-    col: ColumnOrName,
-    percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
-    accuracy: t.Optional[float] = None,
-) -> Column:
-    from sqlframe.base.functions import percentile_approx
-
-    if accuracy:
-        logger.warning("Accuracy is ignored since it is not supported in this dialect")
-    return percentile_approx(col, percentage)
-
-
 def percentile_approx_without_accuracy_and_plural(
     col: ColumnOrName,
     percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
@@ -269,8 +251,6 @@ def percentile_approx_without_accuracy_and_max_array(
     percentage: t.Union[ColumnOrLiteral, t.List[float], t.Tuple[float]],
     accuracy: t.Optional[float] = None,
 ) -> Column:
-    from sqlframe.base.functions import percentile_approx
-
     lit = get_func_from_session("lit")
     array = get_func_from_session("array")
     col_func = get_func_from_session("col")
@@ -283,9 +263,8 @@ def percentile_approx_without_accuracy_and_max_array(
 
     if accuracy:
         logger.warning("Accuracy is ignored since it is not supported in this dialect")
-    if isinstance(percentage, (list, tuple)):
-        return array(*[make_approx_percentile(p) for p in percentage])
-    return percentile_approx(col, percentage)
+
+    return array(*[make_approx_percentile(p) for p in percentage])  # type: ignore
 
 
 def percentile_without_disc(
@@ -309,22 +288,6 @@ def percentile_without_disc(
             expressions=func_expressions,
         )
     )
-
-
-def rand_no_seed(seed: t.Optional[ColumnOrLiteral] = None) -> Column:
-    from sqlframe.base.functions import rand
-
-    if seed:
-        logger.warning("Seed is ignored since it is not supported in this dialect")
-    return rand()
-
-
-def round_cast_as_numeric(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
-    from sqlframe.base.functions import round
-
-    col_func = get_func_from_session("col")
-
-    return round(col_func(col).cast("numeric"), scale)
 
 
 def bround_using_half_even(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
@@ -428,16 +391,6 @@ def dayofweek_from_extract_with_isodow(col: ColumnOrName) -> Column:
     )
 
 
-def dayofmonth_from_extract(col: ColumnOrName) -> Column:
-    col_func = get_func_from_session("col")
-
-    return Column(
-        expression.Extract(
-            this=expression.Var(this="dayofmonth"), expression=col_func(col).cast("date").expression
-        )
-    )
-
-
 def dayofmonth_from_extract_with_day(col: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
@@ -512,20 +465,6 @@ def weekofyear_from_extract_as_isoweek(col: ColumnOrName) -> Column:
     )
 
 
-def make_date_casted_as_integer(
-    year: ColumnOrName, month: ColumnOrName, day: ColumnOrName
-) -> Column:
-    from sqlframe.base.functions import make_date
-
-    col_func = get_func_from_session("col")
-
-    return make_date(
-        col_func(year).cast("integer"),
-        col_func(month).cast("integer"),
-        col_func(day).cast("integer"),
-    )
-
-
 def make_date_from_date_func(year: ColumnOrName, month: ColumnOrName, day: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
@@ -584,29 +523,6 @@ def date_sub_by_date_add(
     return date_add_func(col, days * lit_func(-1), cast_as_date)
 
 
-def to_date_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.functions import to_date
-
-    to_timestamp = get_func_from_session("to_timestamp")
-
-    return to_date(to_timestamp(col, format))
-
-
-def to_date_time_format(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
-    from sqlframe.base.functions import to_date
-    from sqlframe.base.session import _BaseSession
-
-    return to_date(col, format=format or _BaseSession().default_time_format)
-
-
-def last_day_with_cast(col: ColumnOrName) -> Column:
-    from sqlframe.base.functions import last_day
-
-    col_func = get_func_from_session("col")
-
-    return last_day(col_func(col).cast("date"))
-
-
 def sha1_force_sha1_and_to_hex(col: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
@@ -637,57 +553,10 @@ def hash_from_farm_fingerprint(*cols: ColumnOrName) -> Column:
     )
 
 
-def date_add_by_multiplication(
-    col: ColumnOrName, days: t.Union[ColumnOrName, int], cast_as_date: bool = True
-) -> Column:
-    from sqlframe.base.functions import date_add
-
-    col_func = get_func_from_session("col")
-
-    if isinstance(days, int):
-        value = date_add(col, days)
-    else:
-        value = date_add(col, 1, cast_as_date=False) * col_func(days)
-    if cast_as_date:
-        return value.cast("date")
-    return value
-
-
-def date_sub_by_multiplication(
-    col: ColumnOrName, days: t.Union[ColumnOrName, int], cast_as_date: bool = True
-) -> Column:
-    from sqlframe.base.functions import date_sub
-
-    col_func = get_func_from_session("col")
-
-    if isinstance(days, int):
-        value = date_sub(col, days)
-    else:
-        value = date_sub(col, 1, cast_as_date=False) * col_func(days)
-    if cast_as_date:
-        return value.cast("date")
-    return value
-
-
 def date_diff_with_subtraction(end: ColumnOrName, start: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
     return col_func(end).cast("date") - col_func(start).cast("date")
-
-
-def add_months_by_multiplication(
-    start: ColumnOrName, months: t.Union[ColumnOrName, int], cast_as_date: bool = True
-) -> Column:
-    from sqlframe.base.functions import add_months
-
-    col_func = get_func_from_session("col")
-    lit = get_func_from_session("lit")
-
-    multiple_value = lit(months) if isinstance(months, int) else col_func(months)
-    value = col_func(add_months(start, 1, cast_as_date=False).expression.unnest()) * multiple_value
-    if cast_as_date:
-        return value.cast("date")
-    return value
 
 
 def add_months_using_func(
@@ -740,23 +609,6 @@ def months_between_from_age_and_extract(
     ).cast("bigint")
 
 
-def months_between_cast_as_date_cast_roundoff(
-    date1: ColumnOrName, date2: ColumnOrName, roundOff: t.Optional[bool] = None
-) -> Column:
-    from sqlframe.base.functions import months_between
-
-    col_func = get_func_from_session("col")
-
-    date1 = col_func(date1).cast("date")
-    date2 = col_func(date2).cast("date")
-
-    value = months_between(date1, date2)
-
-    if roundOff:
-        return value.cast("bigint")
-    return value
-
-
 def from_unixtime_from_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
@@ -790,7 +642,7 @@ def base64_from_blob(col: ColumnOrLiteral) -> Column:
     return Column.invoke_expression_over_column(Column(col).cast("blob"), expression.ToBase64)
 
 
-def bas64_from_encode(col: ColumnOrLiteral) -> Column:
+def base64_from_encode(col: ColumnOrLiteral) -> Column:
     return Column(
         expression.Encode(
             this=Column(col).cast("bytea").expression, charset=expression.Literal.string("base64")
@@ -955,16 +807,6 @@ def levenshtein_edit_distance(
     )
 
 
-def split_no_limit(str: ColumnOrName, pattern: str, limit: t.Optional[int] = None) -> Column:
-    from sqlframe.base.functions import split
-
-    col_func = get_func_from_session("col")
-
-    if limit is not None:
-        logger.warning("Limit is ignored since it is not supported in this dialect")
-    return split(col_func(str), pattern)
-
-
 def split_from_regex_split_to_array(
     str: ColumnOrName, pattern: str, limit: t.Optional[int] = None
 ) -> Column:
@@ -995,17 +837,6 @@ def split_with_split(str: ColumnOrName, pattern: str, limit: t.Optional[int] = N
             expressions=[col_func(str).expression, lit(pattern).expression],
         )
     )
-
-
-def regexp_extract_coalesce_empty_str(
-    str: ColumnOrName, pattern: str, idx: t.Optional[int] = None
-) -> Column:
-    from sqlframe.base.functions import regexp_extract
-
-    coalesce = get_func_from_session("coalesce")
-    lit_func = get_func_from_session("lit")
-
-    return coalesce(regexp_extract(str, pattern, idx), lit_func(""))
 
 
 def array_contains_any(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
@@ -1078,54 +909,6 @@ def slice_with_brackets(
             ],
         )
     )
-
-
-def array_join_no_null_replacement(
-    col: ColumnOrName, delimiter: str, null_replacement: t.Optional[str] = None
-) -> Column:
-    from sqlframe.base.functions import array_join
-
-    if null_replacement is None:
-        logger.warning("Null replacement is ignored since it is not supported in this dialect")
-    return array_join(col, delimiter)
-
-
-def array_join_null_replacement_with_transform(
-    col: ColumnOrName, delimiter: str, null_replacement: t.Optional[str] = None
-) -> Column:
-    from sqlframe.base.functions import array_join
-
-    col_func = get_func_from_session("col")
-
-    if null_replacement is None:
-        return array_join(col, delimiter, null_replacement)
-    col = Column(
-        expression.Anonymous(
-            this="LIST_TRANSFORM",
-            expressions=[
-                col_func(col).expression,
-                expression.Lambda(
-                    this=expression.Coalesce(
-                        this=expression.Cast(
-                            this=expression.Identifier(this="x"),
-                            to=expression.DataType.build("STRING"),
-                        ),
-                        expressions=[expression.Literal.string(null_replacement)],
-                    ),
-                    expressions=[expression.Identifier(this="x")],
-                ),
-            ],
-        )
-    )
-    return array_join(col, delimiter)
-
-
-def array_contains_cast_variant(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    from sqlframe.base.functions import array_contains
-
-    lit = get_func_from_session("lit")
-    value_col = value if isinstance(value, Column) else lit(value)
-    return array_contains(col, value_col.cast("variant"))
 
 
 def arrays_overlap_as_plural(col1: ColumnOrName, col2: ColumnOrName) -> Column:
@@ -1245,28 +1028,9 @@ def get_json_object_using_arrow_op(col: ColumnOrName, path: str) -> Column:
     )
 
 
-def get_json_object_cast_object(col: ColumnOrName, path: str) -> Column:
-    from sqlframe.base.functions import get_json_object
-
-    col_func = get_func_from_session("col")
-
-    return get_json_object(col_func(col).cast("variant"), path)
-
-
 def get_json_object_using_function(col: ColumnOrName, path: str) -> Column:
     lit = get_func_from_session("lit")
     return Column.invoke_anonymous_function(col, "GET_JSON_OBJECT", lit(path))
-
-
-def create_map_with_cast(*cols: t.Union[ColumnOrName, t.Iterable[ColumnOrName]]) -> Column:
-    from sqlframe.base.functions import create_map
-
-    col = get_func_from_session("col")
-
-    columns = list(_flatten(cols)) if not isinstance(cols[0], (str, Column)) else cols
-    col1_dtype = col(columns[0]).dtype or "VARCHAR"
-    col2_dtype = col(columns[1]).dtype or "VARCHAR"
-    return create_map(*cols).cast(f"MAP({col1_dtype}, {col2_dtype})")
 
 
 def array_min_from_sort(col: ColumnOrName) -> Column:
@@ -1468,58 +1232,8 @@ def bit_length_from_length(col: ColumnOrName) -> Column:
     return Column(expression.Length(this=col_func(col).expression)) * lit(8)
 
 
-def any_value_always_ignore_nulls(
-    col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None
-) -> Column:
-    from sqlframe.base.functions import any_value
-
-    if not ignoreNulls:
-        logger.warning("Nulls are always ignored when using `ANY_VALUE` on this engine")
-    return any_value(col)
-
-
-def any_value_ignore_nulls_not_supported(
-    col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None
-) -> Column:
-    from sqlframe.base.functions import any_value
-
-    if ignoreNulls:
-        logger.warning("Ignoring nulls is not supported in this dialect")
-    return any_value(col)
-
-
 def current_user_from_session_user() -> Column:
     return Column(expression.Anonymous(this="SESSION_USER"))
-
-
-def extract_convert_to_var(field: ColumnOrName, source: ColumnOrName) -> Column:
-    from sqlframe.base.functions import extract
-
-    field = expression.Var(this=Column.ensure_col(field).alias_or_name)  # type: ignore
-    return extract(field, source)  # type: ignore
-
-
-def left_cast_len(str: ColumnOrName, len: ColumnOrName) -> Column:
-    from sqlframe.base.functions import left
-
-    len = Column.ensure_col(len).cast("integer")
-    return left(str, len)
-
-
-def right_cast_len(str: ColumnOrName, len: ColumnOrName) -> Column:
-    from sqlframe.base.functions import right
-
-    len = Column.ensure_col(len).cast("integer")
-    return right(str, len)
-
-
-def position_cast_start(
-    substr: ColumnOrName, str: ColumnOrName, start: t.Optional[ColumnOrName] = None
-) -> Column:
-    from sqlframe.base.functions import position
-
-    start = Column.ensure_col(start).cast("integer") if start else None
-    return position(substr, str, start)
 
 
 def position_as_strpos(
@@ -1538,26 +1252,6 @@ def position_as_strpos(
 
 def to_number_using_to_double(col: ColumnOrName, format: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TO_DOUBLE", format)
-
-
-def try_element_at_zero_based(col: ColumnOrName, extraction: ColumnOrName) -> Column:
-    from sqlframe.base.functions import try_element_at
-
-    lit = get_func_from_session("lit")
-    index = Column.ensure_col(extraction)
-    if isinstance(index.expression, expression.Literal) and index.expression.is_number:
-        index = index - lit(1)
-    return try_element_at(col, index)
-
-
-def to_unix_timestamp_include_default_format(
-    timestamp: ColumnOrName,
-    format: t.Optional[ColumnOrName] = None,
-) -> Column:
-    from sqlframe.base.functions import to_unix_timestamp
-    from sqlframe.base.session import _BaseSession
-
-    return to_unix_timestamp(timestamp, format or _BaseSession().default_time_format)
 
 
 def array_append_list_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
@@ -1641,6 +1335,14 @@ def typeof_from_variant(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TYPEOF")
 
 
+def typeof_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.typeof", expressions=[Column.ensure_col(col).expression]
+        )
+    )
+
+
 def regexp_replace_global_option(
     str: ColumnOrName, pattern: str, replacement: str, position: t.Optional[int] = None
 ) -> Column:
@@ -1662,6 +1364,295 @@ def regexp_replace_global_option(
         replacement=lit(replacement),
         modifiers=lit("g"),
     )
+
+
+def degrees_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.degrees", expressions=[Column.ensure_col(col).expression]
+        )
+    )
+
+
+def radians_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.radians", expressions=[Column.ensure_col(col).expression]
+        )
+    )
+
+
+def bround_bgutil(col: ColumnOrName, scale: t.Optional[int] = None) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    lit = get_func_from_session("lit", _BaseSession())
+
+    expressions = [Column.ensure_col(col).cast("bignumeric").expression]
+    if scale is not None:
+        expressions.append(lit(scale).expression)
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_round_half_even",
+            expressions=expressions,
+        )
+    )
+
+
+def months_between_bgutils(
+    date1: ColumnOrName, date2: ColumnOrName, roundOff: t.Optional[bool] = None
+) -> Column:
+    roundOff = True if roundOff is None else roundOff
+    round = get_func_from_session("round")
+    lit = get_func_from_session("lit")
+
+    value = Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_months_between",
+            expressions=[
+                Column.ensure_col(date1).cast("datetime").expression,
+                Column.ensure_col(date2).cast("datetime").expression,
+            ],
+        )
+    )
+    if roundOff:
+        value = round(value, lit(8))
+    return value
+
+
+def next_day_bgutil(col: ColumnOrName, dayOfWeek: str) -> Column:
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_next_day",
+            expressions=[Column.ensure_col(col).cast("date").expression, lit(dayOfWeek).expression],
+        )
+    )
+
+
+def from_unixtime_bigutil(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    session: _BaseSession = _BaseSession()
+
+    expressions = [Column.ensure_col(col).expression]
+    return Column(
+        expression.Anonymous(
+            this="FORMAT_TIMESTAMP",
+            expressions=[
+                session.format_time(format),
+                Column(
+                    expression.Anonymous(this="TIMESTAMP_SECONDS", expressions=expressions)
+                ).expression,
+            ],
+        )
+    )
+
+
+def unix_timestamp_bgutil(
+    timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
+) -> Column:
+    from sqlframe.base.session import _BaseSession
+
+    lit = get_func_from_session("lit")
+    return Column(
+        expression.Anonymous(
+            this="UNIX_SECONDS",
+            expressions=[
+                expression.Anonymous(
+                    this="PARSE_TIMESTAMP",
+                    expressions=[
+                        _BaseSession().format_time(format),
+                        Column.ensure_col(timestamp).expression,
+                        lit("UTC").expression,
+                    ],
+                )
+            ],
+        )
+    )
+
+
+def format_number_bgutil(col: ColumnOrName, d: int) -> Column:
+    round = get_func_from_session("round")
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="FORMAT",
+            expressions=[
+                lit(f"%'.{d}f").expression,
+                round(Column.ensure_col(col).cast("float"), d).expression,
+            ],
+        )
+    )
+
+
+def substring_index_bgutil(str: ColumnOrName, delim: str, count: int) -> Column:
+    lit = get_func_from_session("lit")
+
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_substring_index",
+            expressions=[
+                Column.ensure_col(str).expression,
+                lit(delim).expression,
+                lit(count).expression,
+            ],
+        )
+    )
+
+
+def bin_bgutil(col: ColumnOrName) -> Column:
+    return (
+        Column(
+            expression.Anonymous(
+                this="bqutil.fn.to_binary",
+                expressions=[Column.ensure_col(col).expression],
+            )
+        )
+        .cast("int")
+        .cast("string")
+    )
+
+
+def slice_bgutil(
+    x: ColumnOrName, start: t.Union[ColumnOrName, int], length: t.Union[ColumnOrName, int]
+) -> Column:
+    lit = get_func_from_session("lit")
+
+    start_col = start if isinstance(start, Column) else lit(start)
+    length_col = length if isinstance(length, Column) else lit(length)
+
+    subquery = (
+        expression.select(
+            expression.column("x"),
+        )
+        .from_(
+            expression.Unnest(
+                expressions=[Column.ensure_col(x).expression],
+                alias=expression.TableAlias(
+                    columns=[expression.to_identifier("x")],
+                ),
+                offset=expression.to_identifier("offset"),
+            )
+        )
+        .where(
+            expression.Between(
+                this=expression.column("offset"),
+                low=(start_col - lit(1)).expression,
+                high=(start_col + length_col).expression,
+            )
+        )
+    )
+
+    return Column(
+        expression.Anonymous(
+            this="ARRAY",
+            expressions=[subquery],
+        )
+    )
+
+
+def array_position_bgutil(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    lit = get_func_from_session("lit")
+
+    value_col = value if isinstance(value, Column) else lit(value)
+
+    return Column(
+        expression.Coalesce(
+            this=expression.Anonymous(
+                this="bqutil.fn.find_in_set",
+                expressions=[
+                    value_col.expression,
+                    expression.Anonymous(
+                        this="ARRAY_TO_STRING",
+                        expressions=[Column.ensure_col(col).expression, lit(",").expression],
+                    ),
+                ],
+            ),
+            expressions=[lit(0).expression],
+        )
+    )
+
+
+def array_remove_bgutil(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
+    lit = get_func_from_session("lit")
+
+    value_col = value if isinstance(value, Column) else lit(value)
+
+    filter_subquery = expression.select(
+        "*",
+    ).from_(
+        expression.Unnest(
+            expressions=[Column.ensure_col(col).expression],
+            alias=expression.TableAlias(
+                columns=[expression.to_identifier("x")],
+            ),
+        )
+    )
+
+    agg_subquery = (
+        expression.select(
+            expression.Anonymous(
+                this="ARRAY_AGG",
+                expressions=[expression.column("x")],
+            ),
+        )
+        .from_(filter_subquery.subquery("t"))
+        .where(
+            expression.NEQ(
+                this=expression.column("x", "t"),
+                expression=value_col.expression,
+            )
+        )
+    )
+
+    return Column(agg_subquery.subquery())
+
+
+def array_distinct_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_array_distinct",
+            expressions=[Column.ensure_col(col).expression],
+        )
+    )
+
+
+def array_min_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_array_min",
+            expressions=[Column.ensure_col(col).expression],
+        )
+    )
+
+
+def array_max_bgutil(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Anonymous(
+            this="bqutil.fn.cw_array_max",
+            expressions=[Column.ensure_col(col).expression],
+        )
+    )
+
+
+def sort_array_bgutil(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
+    order = "ASC" if asc or asc is None else "DESC"
+    subquery = (
+        expression.select("x")
+        .from_(
+            expression.Unnest(
+                expressions=[Column.ensure_col(col).expression],
+                alias=expression.TableAlias(
+                    columns=[expression.to_identifier("x")],
+                ),
+            )
+        )
+        .order_by(f"x {order}")
+    )
+
+    return Column(expression.Anonymous(this="ARRAY", expressions=[subquery]))
 
 
 def _is_string_using_typeof_varchar(col: ColumnOrName) -> Column:

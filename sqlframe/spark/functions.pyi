@@ -1,416 +1,414 @@
-from sqlframe.base.function_alternatives import (  # noqa
-    percentile_without_disc as percentile,
-    add_months_by_multiplication as add_months,
-    arrays_overlap_renamed as arrays_overlap,
-    try_element_at_zero_based as try_element_at,
-)
+from sqlframe.base.functions import abs as abs
+from sqlframe.base.functions import acos as acos
+from sqlframe.base.functions import acosh as acosh
+from sqlframe.base.functions import add_months as add_months
+from sqlframe.base.functions import aes_decrypt as aes_decrypt
+from sqlframe.base.functions import aes_encrypt as aes_encrypt
+from sqlframe.base.functions import aggregate as aggregate
+from sqlframe.base.functions import any_value as any_value
+from sqlframe.base.functions import approx_count_distinct as approx_count_distinct
+from sqlframe.base.functions import approx_percentile as approx_percentile
+from sqlframe.base.functions import approxCountDistinct as approxCountDistinct
+from sqlframe.base.functions import array as array
+from sqlframe.base.functions import array_agg as array_agg
+from sqlframe.base.functions import array_append as array_append
+from sqlframe.base.functions import array_compact as array_compact
+from sqlframe.base.functions import array_contains as array_contains
+from sqlframe.base.functions import array_distinct as array_distinct
+from sqlframe.base.functions import array_except as array_except
+from sqlframe.base.functions import array_insert as array_insert
+from sqlframe.base.functions import array_intersect as array_intersect
+from sqlframe.base.functions import array_join as array_join
+from sqlframe.base.functions import array_max as array_max
+from sqlframe.base.functions import array_min as array_min
+from sqlframe.base.functions import array_position as array_position
+from sqlframe.base.functions import array_prepend as array_prepend
+from sqlframe.base.functions import array_remove as array_remove
+from sqlframe.base.functions import array_repeat as array_repeat
+from sqlframe.base.functions import array_size as array_size
+from sqlframe.base.functions import array_sort as array_sort
+from sqlframe.base.functions import array_union as array_union
+from sqlframe.base.functions import arrays_overlap as arrays_overlap
+from sqlframe.base.functions import arrays_zip as arrays_zip
+from sqlframe.base.functions import asc as asc
+from sqlframe.base.functions import asc_nulls_first as asc_nulls_first
+from sqlframe.base.functions import asc_nulls_last as asc_nulls_last
+from sqlframe.base.functions import ascii as ascii
+from sqlframe.base.functions import asin as asin
+from sqlframe.base.functions import asinh as asinh
+from sqlframe.base.functions import assert_true as assert_true
+from sqlframe.base.functions import atan as atan
+from sqlframe.base.functions import atan2 as atan2
+from sqlframe.base.functions import atanh as atanh
+from sqlframe.base.functions import avg as avg
+from sqlframe.base.functions import base64 as base64
+from sqlframe.base.functions import bin as bin
+from sqlframe.base.functions import bit_and as bit_and
+from sqlframe.base.functions import bit_count as bit_count
+from sqlframe.base.functions import bit_get as bit_get
+from sqlframe.base.functions import bit_length as bit_length
+from sqlframe.base.functions import bit_or as bit_or
+from sqlframe.base.functions import bit_xor as bit_xor
+from sqlframe.base.functions import bitmap_bit_position as bitmap_bit_position
+from sqlframe.base.functions import bitmap_bucket_number as bitmap_bucket_number
+from sqlframe.base.functions import bitmap_construct_agg as bitmap_construct_agg
+from sqlframe.base.functions import bitmap_count as bitmap_count
+from sqlframe.base.functions import bitmap_or_agg as bitmap_or_agg
+from sqlframe.base.functions import bitwise_not as bitwise_not
+from sqlframe.base.functions import bitwiseNOT as bitwiseNOT
+from sqlframe.base.functions import bool_and as bool_and
+from sqlframe.base.functions import bool_or as bool_or
+from sqlframe.base.functions import broadcast as broadcast
+from sqlframe.base.functions import bround as bround
+from sqlframe.base.functions import btrim as btrim
+from sqlframe.base.functions import bucket as bucket
+from sqlframe.base.functions import call_function as call_function
+from sqlframe.base.functions import cardinality as cardinality
+from sqlframe.base.functions import cbrt as cbrt
+from sqlframe.base.functions import ceil as ceil
+from sqlframe.base.functions import ceiling as ceiling
+from sqlframe.base.functions import char as char
+from sqlframe.base.functions import char_length as char_length
+from sqlframe.base.functions import character_length as character_length
+from sqlframe.base.functions import coalesce as coalesce
+from sqlframe.base.functions import col as col
+from sqlframe.base.functions import collect_list as collect_list
+from sqlframe.base.functions import collect_set as collect_set
+from sqlframe.base.functions import concat as concat
+from sqlframe.base.functions import concat_ws as concat_ws
+from sqlframe.base.functions import contains as contains
+from sqlframe.base.functions import conv as conv
+from sqlframe.base.functions import convert_timezone as convert_timezone
+from sqlframe.base.functions import corr as corr
+from sqlframe.base.functions import cos as cos
+from sqlframe.base.functions import cosh as cosh
+from sqlframe.base.functions import cot as cot
+from sqlframe.base.functions import count as count
+from sqlframe.base.functions import count_distinct as count_distinct
+from sqlframe.base.functions import count_if as count_if
+from sqlframe.base.functions import count_min_sketch as count_min_sketch
+from sqlframe.base.functions import countDistinct as countDistinct
+from sqlframe.base.functions import covar_pop as covar_pop
+from sqlframe.base.functions import covar_samp as covar_samp
+from sqlframe.base.functions import crc32 as crc32
+from sqlframe.base.functions import create_map as create_map
+from sqlframe.base.functions import csc as csc
+from sqlframe.base.functions import cume_dist as cume_dist
+from sqlframe.base.functions import curdate as curdate
+from sqlframe.base.functions import current_catalog as current_catalog
+from sqlframe.base.functions import current_database as current_database
+from sqlframe.base.functions import current_date as current_date
+from sqlframe.base.functions import current_schema as current_schema
+from sqlframe.base.functions import current_timestamp as current_timestamp
+from sqlframe.base.functions import current_timezone as current_timezone
+from sqlframe.base.functions import current_user as current_user
+from sqlframe.base.functions import date_add as date_add
+from sqlframe.base.functions import date_diff as date_diff
+from sqlframe.base.functions import date_format as date_format
+from sqlframe.base.functions import date_from_unix_date as date_from_unix_date
+from sqlframe.base.functions import date_part as date_part
+from sqlframe.base.functions import date_sub as date_sub
+from sqlframe.base.functions import date_trunc as date_trunc
+from sqlframe.base.functions import dateadd as dateadd
+from sqlframe.base.functions import datediff as datediff
+from sqlframe.base.functions import datepart as datepart
+from sqlframe.base.functions import day as day
+from sqlframe.base.functions import dayofmonth as dayofmonth
+from sqlframe.base.functions import dayofweek as dayofweek
+from sqlframe.base.functions import dayofyear as dayofyear
+from sqlframe.base.functions import days as days
+from sqlframe.base.functions import decode as decode
+from sqlframe.base.functions import degrees as degrees
+from sqlframe.base.functions import dense_rank as dense_rank
+from sqlframe.base.functions import desc as desc
+from sqlframe.base.functions import desc_nulls_first as desc_nulls_first
+from sqlframe.base.functions import desc_nulls_last as desc_nulls_last
+from sqlframe.base.functions import e as e
+from sqlframe.base.functions import element_at as element_at
+from sqlframe.base.functions import elt as elt
+from sqlframe.base.functions import encode as encode
+from sqlframe.base.functions import endswith as endswith
+from sqlframe.base.functions import equal_null as equal_null
+from sqlframe.base.functions import every as every
+from sqlframe.base.functions import exists as exists
+from sqlframe.base.functions import exp as exp
+from sqlframe.base.functions import explode as explode
+from sqlframe.base.functions import explode_outer as explode_outer
+from sqlframe.base.functions import expm1 as expm1
+from sqlframe.base.functions import expr as expr
+from sqlframe.base.functions import extract as extract
+from sqlframe.base.functions import factorial as factorial
+from sqlframe.base.functions import filter as filter
+from sqlframe.base.functions import find_in_set as find_in_set
+from sqlframe.base.functions import first as first
+from sqlframe.base.functions import first_value as first_value
+from sqlframe.base.functions import flatten as flatten
+from sqlframe.base.functions import floor as floor
+from sqlframe.base.functions import forall as forall
+from sqlframe.base.functions import format_number as format_number
+from sqlframe.base.functions import format_string as format_string
+from sqlframe.base.functions import from_csv as from_csv
+from sqlframe.base.functions import from_json as from_json
+from sqlframe.base.functions import from_unixtime as from_unixtime
+from sqlframe.base.functions import from_utc_timestamp as from_utc_timestamp
+from sqlframe.base.functions import get as get
+from sqlframe.base.functions import get_active_spark_context as get_active_spark_context
+from sqlframe.base.functions import get_json_object as get_json_object
+from sqlframe.base.functions import getbit as getbit
+from sqlframe.base.functions import greatest as greatest
+from sqlframe.base.functions import grouping as grouping
+from sqlframe.base.functions import grouping_id as grouping_id
+from sqlframe.base.functions import hash as hash
+from sqlframe.base.functions import hex as hex
+from sqlframe.base.functions import histogram_numeric as histogram_numeric
+from sqlframe.base.functions import hll_sketch_agg as hll_sketch_agg
+from sqlframe.base.functions import hll_sketch_estimate as hll_sketch_estimate
+from sqlframe.base.functions import hll_union as hll_union
+from sqlframe.base.functions import hll_union_agg as hll_union_agg
+from sqlframe.base.functions import hour as hour
+from sqlframe.base.functions import hours as hours
+from sqlframe.base.functions import hypot as hypot
+from sqlframe.base.functions import ifnull as ifnull
+from sqlframe.base.functions import ilike as ilike
+from sqlframe.base.functions import initcap as initcap
+from sqlframe.base.functions import inline as inline
+from sqlframe.base.functions import inline_outer as inline_outer
+from sqlframe.base.functions import input_file_name as input_file_name
+from sqlframe.base.functions import instr as instr
+from sqlframe.base.functions import isnan as isnan
+from sqlframe.base.functions import isnotnull as isnotnull
+from sqlframe.base.functions import isnull as isnull
+from sqlframe.base.functions import java_method as java_method
+from sqlframe.base.functions import json_array_length as json_array_length
+from sqlframe.base.functions import json_object_keys as json_object_keys
+from sqlframe.base.functions import json_tuple as json_tuple
+from sqlframe.base.functions import kurtosis as kurtosis
+from sqlframe.base.functions import lag as lag
+from sqlframe.base.functions import last as last
+from sqlframe.base.functions import last_day as last_day
+from sqlframe.base.functions import last_value as last_value
+from sqlframe.base.functions import lcase as lcase
+from sqlframe.base.functions import lead as lead
+from sqlframe.base.functions import least as least
+from sqlframe.base.functions import left as left
+from sqlframe.base.functions import length as length
+from sqlframe.base.functions import levenshtein as levenshtein
+from sqlframe.base.functions import like as like
+from sqlframe.base.functions import lit as lit
+from sqlframe.base.functions import ln as ln
+from sqlframe.base.functions import localtimestamp as localtimestamp
+from sqlframe.base.functions import locate as locate
+from sqlframe.base.functions import log as log
+from sqlframe.base.functions import log1p as log1p
+from sqlframe.base.functions import log2 as log2
+from sqlframe.base.functions import log10 as log10
+from sqlframe.base.functions import lower as lower
+from sqlframe.base.functions import lpad as lpad
+from sqlframe.base.functions import ltrim as ltrim
+from sqlframe.base.functions import make_date as make_date
+from sqlframe.base.functions import make_dt_interval as make_dt_interval
+from sqlframe.base.functions import make_interval as make_interval
+from sqlframe.base.functions import make_timestamp as make_timestamp
+from sqlframe.base.functions import make_timestamp_ltz as make_timestamp_ltz
+from sqlframe.base.functions import make_timestamp_ntz as make_timestamp_ntz
+from sqlframe.base.functions import make_ym_interval as make_ym_interval
+from sqlframe.base.functions import map_concat as map_concat
+from sqlframe.base.functions import map_contains_key as map_contains_key
+from sqlframe.base.functions import map_entries as map_entries
+from sqlframe.base.functions import map_filter as map_filter
+from sqlframe.base.functions import map_from_arrays as map_from_arrays
+from sqlframe.base.functions import map_from_entries as map_from_entries
+from sqlframe.base.functions import map_keys as map_keys
+from sqlframe.base.functions import map_values as map_values
+from sqlframe.base.functions import map_zip_with as map_zip_with
+from sqlframe.base.functions import mask as mask
+from sqlframe.base.functions import max as max
+from sqlframe.base.functions import max_by as max_by
+from sqlframe.base.functions import md5 as md5
+from sqlframe.base.functions import mean as mean
+from sqlframe.base.functions import median as median
+from sqlframe.base.functions import min as min
+from sqlframe.base.functions import min_by as min_by
+from sqlframe.base.functions import minute as minute
+from sqlframe.base.functions import mode as mode
 from sqlframe.base.functions import (
-    abs as abs,
-    acos as acos,
-    acosh as acosh,
-    aes_decrypt as aes_decrypt,
-    aes_encrypt as aes_encrypt,
-    aggregate as aggregate,
-    any_value as any_value,
-    approxCountDistinct as approxCountDistinct,
-    approx_count_distinct as approx_count_distinct,
-    approx_percentile as approx_percentile,
-    array as array,
-    array_agg as array_agg,
-    array_append as array_append,
-    array_compact as array_compact,
-    array_contains as array_contains,
-    array_distinct as array_distinct,
-    array_except as array_except,
-    array_insert as array_insert,
-    array_intersect as array_intersect,
-    array_join as array_join,
-    array_max as array_max,
-    array_min as array_min,
-    array_position as array_position,
-    array_prepend as array_prepend,
-    array_remove as array_remove,
-    array_repeat as array_repeat,
-    array_size as array_size,
-    array_sort as array_sort,
-    array_union as array_union,
-    arrays_zip as arrays_zip,
-    asc as asc,
-    asc_nulls_first as asc_nulls_first,
-    asc_nulls_last as asc_nulls_last,
-    ascii as ascii,
-    asin as asin,
-    asinh as asinh,
-    assert_true as assert_true,
-    atan as atan,
-    atan2 as atan2,
-    atanh as atanh,
-    avg as avg,
-    base64 as base64,
-    bin as bin,
-    bit_and as bit_and,
-    bit_count as bit_count,
-    bit_get as bit_get,
-    bit_length as bit_length,
-    bit_or as bit_or,
-    bit_xor as bit_xor,
-    bitmap_bit_position as bitmap_bit_position,
-    bitmap_bucket_number as bitmap_bucket_number,
-    bitmap_construct_agg as bitmap_construct_agg,
-    bitmap_count as bitmap_count,
-    bitmap_or_agg as bitmap_or_agg,
-    bitwiseNOT as bitwiseNOT,
-    bitwise_not as bitwise_not,
-    bool_and as bool_and,
-    bool_or as bool_or,
-    broadcast as broadcast,
-    bround as bround,
-    btrim as btrim,
-    bucket as bucket,
-    call_function as call_function,
-    cardinality as cardinality,
-    cbrt as cbrt,
-    ceil as ceil,
-    ceiling as ceiling,
-    char as char,
-    char_length as char_length,
-    character_length as character_length,
-    coalesce as coalesce,
-    col as col,
-    collect_list as collect_list,
-    collect_set as collect_set,
-    concat as concat,
-    concat_ws as concat_ws,
-    contains as contains,
-    conv as conv,
-    convert_timezone as convert_timezone,
-    corr as corr,
-    cos as cos,
-    cosh as cosh,
-    cot as cot,
-    count as count,
-    countDistinct as countDistinct,
-    count_distinct as count_distinct,
-    count_if as count_if,
-    count_min_sketch as count_min_sketch,
-    covar_pop as covar_pop,
-    covar_samp as covar_samp,
-    crc32 as crc32,
-    create_map as create_map,
-    csc as csc,
-    cume_dist as cume_dist,
-    curdate as curdate,
-    current_catalog as current_catalog,
-    current_database as current_database,
-    current_date as current_date,
-    current_schema as current_schema,
-    current_timestamp as current_timestamp,
-    current_timezone as current_timezone,
-    current_user as current_user,
-    date_add as date_add,
-    date_diff as date_diff,
-    date_format as date_format,
-    date_from_unix_date as date_from_unix_date,
-    date_part as date_part,
-    date_sub as date_sub,
-    date_trunc as date_trunc,
-    dateadd as dateadd,
-    datediff as datediff,
-    datepart as datepart,
-    day as day,
-    dayofmonth as dayofmonth,
-    dayofweek as dayofweek,
-    dayofyear as dayofyear,
-    days as days,
-    decode as decode,
-    degrees as degrees,
-    dense_rank as dense_rank,
-    desc as desc,
-    desc_nulls_first as desc_nulls_first,
-    desc_nulls_last as desc_nulls_last,
-    e as e,
-    element_at as element_at,
-    elt as elt,
-    encode as encode,
-    endswith as endswith,
-    equal_null as equal_null,
-    every as every,
-    exists as exists,
-    exp as exp,
-    explode as explode,
-    explode_outer as explode_outer,
-    expm1 as expm1,
-    expr as expr,
-    extract as extract,
-    factorial as factorial,
-    filter as filter,
-    find_in_set as find_in_set,
-    first as first,
-    first_value as first_value,
-    flatten as flatten,
-    floor as floor,
-    forall as forall,
-    format_number as format_number,
-    format_string as format_string,
-    from_csv as from_csv,
-    from_json as from_json,
-    from_unixtime as from_unixtime,
-    from_utc_timestamp as from_utc_timestamp,
-    get as get,
-    get_active_spark_context as get_active_spark_context,
-    get_json_object as get_json_object,
-    getbit as getbit,
-    greatest as greatest,
-    grouping as grouping,
-    grouping_id as grouping_id,
-    hash as hash,
-    hex as hex,
-    histogram_numeric as histogram_numeric,
-    hll_sketch_agg as hll_sketch_agg,
-    hll_sketch_estimate as hll_sketch_estimate,
-    hll_union as hll_union,
-    hll_union_agg as hll_union_agg,
-    hour as hour,
-    hours as hours,
-    hypot as hypot,
-    ifnull as ifnull,
-    ilike as ilike,
-    initcap as initcap,
-    inline as inline,
-    inline_outer as inline_outer,
-    input_file_name as input_file_name,
-    instr as instr,
-    isnan as isnan,
-    isnotnull as isnotnull,
-    isnull as isnull,
-    java_method as java_method,
-    json_array_length as json_array_length,
-    json_object_keys as json_object_keys,
-    json_tuple as json_tuple,
-    kurtosis as kurtosis,
-    lag as lag,
-    last as last,
-    last_day as last_day,
-    last_value as last_value,
-    lcase as lcase,
-    lead as lead,
-    least as least,
-    left as left,
-    length as length,
-    levenshtein as levenshtein,
-    like as like,
-    lit as lit,
-    ln as ln,
-    localtimestamp as localtimestamp,
-    locate as locate,
-    log as log,
-    log10 as log10,
-    log1p as log1p,
-    log2 as log2,
-    lower as lower,
-    lpad as lpad,
-    ltrim as ltrim,
-    make_date as make_date,
-    make_dt_interval as make_dt_interval,
-    make_interval as make_interval,
-    make_timestamp as make_timestamp,
-    make_timestamp_ltz as make_timestamp_ltz,
-    make_timestamp_ntz as make_timestamp_ntz,
-    make_ym_interval as make_ym_interval,
-    map_concat as map_concat,
-    map_contains_key as map_contains_key,
-    map_entries as map_entries,
-    map_filter as map_filter,
-    map_from_arrays as map_from_arrays,
-    map_from_entries as map_from_entries,
-    map_keys as map_keys,
-    map_values as map_values,
-    map_zip_with as map_zip_with,
-    mask as mask,
-    max as max,
-    max_by as max_by,
-    md5 as md5,
-    mean as mean,
-    median as median,
-    min as min,
-    min_by as min_by,
-    minute as minute,
-    mode as mode,
     monotonically_increasing_id as monotonically_increasing_id,
-    month as month,
-    months as months,
-    months_between as months_between,
-    named_struct as named_struct,
-    nanvl as nanvl,
-    negate as negate,
-    negative as negative,
-    next_day as next_day,
-    now as now,
-    nth_value as nth_value,
-    ntile as ntile,
-    nullif as nullif,
-    nvl as nvl,
-    nvl2 as nvl2,
-    octet_length as octet_length,
-    overlay as overlay,
-    parse_url as parse_url,
-    percent_rank as percent_rank,
-    percentile_approx as percentile_approx,
-    pi as pi,
-    pmod as pmod,
-    posexplode as posexplode,
-    posexplode_outer as posexplode_outer,
-    position as position,
-    positive as positive,
-    pow as pow,
-    power as power,
-    printf as printf,
-    quarter as quarter,
-    radians as radians,
-    raise_error as raise_error,
-    rand as rand,
-    randn as randn,
-    rank as rank,
-    reduce as reduce,
-    reflect as reflect,
-    regexp as regexp,
-    regexp_count as regexp_count,
-    regexp_extract as regexp_extract,
-    regexp_extract_all as regexp_extract_all,
-    regexp_instr as regexp_instr,
-    regexp_like as regexp_like,
-    regexp_replace as regexp_replace,
-    regexp_substr as regexp_substr,
-    regr_avgx as regr_avgx,
-    regr_avgy as regr_avgy,
-    regr_count as regr_count,
-    regr_intercept as regr_intercept,
-    regr_r2 as regr_r2,
-    regr_slope as regr_slope,
-    regr_sxx as regr_sxx,
-    regr_sxy as regr_sxy,
-    regr_syy as regr_syy,
-    repeat as repeat,
-    replace as replace,
-    reverse as reverse,
-    right as right,
-    rint as rint,
-    rlike as rlike,
-    round as round,
-    row_number as row_number,
-    rpad as rpad,
-    rtrim as rtrim,
-    schema_of_csv as schema_of_csv,
-    schema_of_json as schema_of_json,
-    sec as sec,
-    second as second,
-    sentences as sentences,
-    sequence as sequence,
-    sha as sha,
-    sha1 as sha1,
-    sha2 as sha2,
-    shiftLeft as shiftLeft,
-    shiftRight as shiftRight,
-    shiftRightUnsigned as shiftRightUnsigned,
-    shiftleft as shiftleft,
-    shiftright as shiftright,
-    shiftrightunsigned as shiftrightunsigned,
-    shuffle as shuffle,
-    sign as sign,
-    signum as signum,
-    sin as sin,
-    sinh as sinh,
-    size as size,
-    skewness as skewness,
-    slice as slice,
-    some as some,
-    sort_array as sort_array,
-    soundex as soundex,
-    spark_partition_id as spark_partition_id,
-    split as split,
-    split_part as split_part,
-    sqrt as sqrt,
-    stack as stack,
-    startswith as startswith,
-    std as std,
-    stddev as stddev,
-    stddev_pop as stddev_pop,
-    stddev_samp as stddev_samp,
-    str_to_map as str_to_map,
-    struct as struct,
-    substr as substr,
-    substring as substring,
-    substring_index as substring_index,
-    sum as sum,
-    sumDistinct as sumDistinct,
-    sum_distinct as sum_distinct,
-    tan as tan,
-    tanh as tanh,
-    timestamp_micros as timestamp_micros,
-    timestamp_millis as timestamp_millis,
-    timestamp_seconds as timestamp_seconds,
-    toDegrees as toDegrees,
-    toRadians as toRadians,
-    to_binary as to_binary,
-    to_char as to_char,
-    to_csv as to_csv,
-    to_date as to_date,
-    to_json as to_json,
-    to_number as to_number,
-    to_timestamp as to_timestamp,
-    to_timestamp_ltz as to_timestamp_ltz,
-    to_timestamp_ntz as to_timestamp_ntz,
-    to_unix_timestamp as to_unix_timestamp,
-    to_utc_timestamp as to_utc_timestamp,
-    to_varchar as to_varchar,
-    transform as transform,
-    transform_keys as transform_keys,
-    transform_values as transform_values,
-    translate as translate,
-    trim as trim,
-    trunc as trunc,
-    try_add as try_add,
-    try_aes_decrypt as try_aes_decrypt,
-    try_avg as try_avg,
-    try_divide as try_divide,
-    try_multiply as try_multiply,
-    try_subtract as try_subtract,
-    try_sum as try_sum,
-    try_to_binary as try_to_binary,
-    try_to_number as try_to_number,
-    try_to_timestamp as try_to_timestamp,
-    typeof as typeof,
-    ucase as ucase,
-    unbase64 as unbase64,
-    unhex as unhex,
-    unix_date as unix_date,
-    unix_micros as unix_micros,
-    unix_millis as unix_millis,
-    unix_seconds as unix_seconds,
-    unix_timestamp as unix_timestamp,
-    upper as upper,
-    url_decode as url_decode,
-    url_encode as url_encode,
-    user as user,
-    var_pop as var_pop,
-    var_samp as var_samp,
-    variance as variance,
-    version as version,
-    weekday as weekday,
-    weekofyear as weekofyear,
-    when as when,
-    width_bucket as width_bucket,
-    xpath as xpath,
-    xpath_boolean as xpath_boolean,
-    xpath_double as xpath_double,
-    xpath_float as xpath_float,
-    xpath_int as xpath_int,
-    xpath_long as xpath_long,
-    xpath_number as xpath_number,
-    xpath_short as xpath_short,
-    xpath_string as xpath_string,
-    xxhash64 as xxhash64,
-    year as year,
-    years as years,
-    zip_with as zip_with,
 )
+from sqlframe.base.functions import month as month
+from sqlframe.base.functions import months as months
+from sqlframe.base.functions import months_between as months_between
+from sqlframe.base.functions import named_struct as named_struct
+from sqlframe.base.functions import nanvl as nanvl
+from sqlframe.base.functions import negate as negate
+from sqlframe.base.functions import negative as negative
+from sqlframe.base.functions import next_day as next_day
+from sqlframe.base.functions import now as now
+from sqlframe.base.functions import nth_value as nth_value
+from sqlframe.base.functions import ntile as ntile
+from sqlframe.base.functions import nullif as nullif
+from sqlframe.base.functions import nvl as nvl
+from sqlframe.base.functions import nvl2 as nvl2
+from sqlframe.base.functions import octet_length as octet_length
+from sqlframe.base.functions import overlay as overlay
+from sqlframe.base.functions import parse_url as parse_url
+from sqlframe.base.functions import percent_rank as percent_rank
+from sqlframe.base.functions import percentile as percentile
+from sqlframe.base.functions import percentile_approx as percentile_approx
+from sqlframe.base.functions import pi as pi
+from sqlframe.base.functions import pmod as pmod
+from sqlframe.base.functions import posexplode as posexplode
+from sqlframe.base.functions import posexplode_outer as posexplode_outer
+from sqlframe.base.functions import position as position
+from sqlframe.base.functions import positive as positive
+from sqlframe.base.functions import pow as pow
+from sqlframe.base.functions import power as power
+from sqlframe.base.functions import printf as printf
+from sqlframe.base.functions import quarter as quarter
+from sqlframe.base.functions import radians as radians
+from sqlframe.base.functions import raise_error as raise_error
+from sqlframe.base.functions import rand as rand
+from sqlframe.base.functions import randn as randn
+from sqlframe.base.functions import rank as rank
+from sqlframe.base.functions import reduce as reduce
+from sqlframe.base.functions import reflect as reflect
+from sqlframe.base.functions import regexp as regexp
+from sqlframe.base.functions import regexp_count as regexp_count
+from sqlframe.base.functions import regexp_extract as regexp_extract
+from sqlframe.base.functions import regexp_extract_all as regexp_extract_all
+from sqlframe.base.functions import regexp_instr as regexp_instr
+from sqlframe.base.functions import regexp_like as regexp_like
+from sqlframe.base.functions import regexp_replace as regexp_replace
+from sqlframe.base.functions import regexp_substr as regexp_substr
+from sqlframe.base.functions import regr_avgx as regr_avgx
+from sqlframe.base.functions import regr_avgy as regr_avgy
+from sqlframe.base.functions import regr_count as regr_count
+from sqlframe.base.functions import regr_intercept as regr_intercept
+from sqlframe.base.functions import regr_r2 as regr_r2
+from sqlframe.base.functions import regr_slope as regr_slope
+from sqlframe.base.functions import regr_sxx as regr_sxx
+from sqlframe.base.functions import regr_sxy as regr_sxy
+from sqlframe.base.functions import regr_syy as regr_syy
+from sqlframe.base.functions import repeat as repeat
+from sqlframe.base.functions import replace as replace
+from sqlframe.base.functions import reverse as reverse
+from sqlframe.base.functions import right as right
+from sqlframe.base.functions import rint as rint
+from sqlframe.base.functions import rlike as rlike
+from sqlframe.base.functions import round as round
+from sqlframe.base.functions import row_number as row_number
+from sqlframe.base.functions import rpad as rpad
+from sqlframe.base.functions import rtrim as rtrim
+from sqlframe.base.functions import schema_of_csv as schema_of_csv
+from sqlframe.base.functions import schema_of_json as schema_of_json
+from sqlframe.base.functions import sec as sec
+from sqlframe.base.functions import second as second
+from sqlframe.base.functions import sentences as sentences
+from sqlframe.base.functions import sequence as sequence
+from sqlframe.base.functions import sha as sha
+from sqlframe.base.functions import sha1 as sha1
+from sqlframe.base.functions import sha2 as sha2
+from sqlframe.base.functions import shiftLeft as shiftLeft
+from sqlframe.base.functions import shiftleft as shiftleft
+from sqlframe.base.functions import shiftRight as shiftRight
+from sqlframe.base.functions import shiftright as shiftright
+from sqlframe.base.functions import shiftRightUnsigned as shiftRightUnsigned
+from sqlframe.base.functions import shiftrightunsigned as shiftrightunsigned
+from sqlframe.base.functions import shuffle as shuffle
+from sqlframe.base.functions import sign as sign
+from sqlframe.base.functions import signum as signum
+from sqlframe.base.functions import sin as sin
+from sqlframe.base.functions import sinh as sinh
+from sqlframe.base.functions import size as size
+from sqlframe.base.functions import skewness as skewness
+from sqlframe.base.functions import slice as slice
+from sqlframe.base.functions import some as some
+from sqlframe.base.functions import sort_array as sort_array
+from sqlframe.base.functions import soundex as soundex
+from sqlframe.base.functions import spark_partition_id as spark_partition_id
+from sqlframe.base.functions import split as split
+from sqlframe.base.functions import split_part as split_part
+from sqlframe.base.functions import sqrt as sqrt
+from sqlframe.base.functions import stack as stack
+from sqlframe.base.functions import startswith as startswith
+from sqlframe.base.functions import std as std
+from sqlframe.base.functions import stddev as stddev
+from sqlframe.base.functions import stddev_pop as stddev_pop
+from sqlframe.base.functions import stddev_samp as stddev_samp
+from sqlframe.base.functions import str_to_map as str_to_map
+from sqlframe.base.functions import struct as struct
+from sqlframe.base.functions import substr as substr
+from sqlframe.base.functions import substring as substring
+from sqlframe.base.functions import substring_index as substring_index
+from sqlframe.base.functions import sum as sum
+from sqlframe.base.functions import sum_distinct as sum_distinct
+from sqlframe.base.functions import sumDistinct as sumDistinct
+from sqlframe.base.functions import tan as tan
+from sqlframe.base.functions import tanh as tanh
+from sqlframe.base.functions import timestamp_micros as timestamp_micros
+from sqlframe.base.functions import timestamp_millis as timestamp_millis
+from sqlframe.base.functions import timestamp_seconds as timestamp_seconds
+from sqlframe.base.functions import to_binary as to_binary
+from sqlframe.base.functions import to_char as to_char
+from sqlframe.base.functions import to_csv as to_csv
+from sqlframe.base.functions import to_date as to_date
+from sqlframe.base.functions import to_json as to_json
+from sqlframe.base.functions import to_number as to_number
+from sqlframe.base.functions import to_timestamp as to_timestamp
+from sqlframe.base.functions import to_timestamp_ltz as to_timestamp_ltz
+from sqlframe.base.functions import to_timestamp_ntz as to_timestamp_ntz
+from sqlframe.base.functions import to_unix_timestamp as to_unix_timestamp
+from sqlframe.base.functions import to_utc_timestamp as to_utc_timestamp
+from sqlframe.base.functions import to_varchar as to_varchar
+from sqlframe.base.functions import toDegrees as toDegrees
+from sqlframe.base.functions import toRadians as toRadians
+from sqlframe.base.functions import transform as transform
+from sqlframe.base.functions import transform_keys as transform_keys
+from sqlframe.base.functions import transform_values as transform_values
+from sqlframe.base.functions import translate as translate
+from sqlframe.base.functions import trim as trim
+from sqlframe.base.functions import trunc as trunc
+from sqlframe.base.functions import try_add as try_add
+from sqlframe.base.functions import try_aes_decrypt as try_aes_decrypt
+from sqlframe.base.functions import try_avg as try_avg
+from sqlframe.base.functions import try_divide as try_divide
+from sqlframe.base.functions import try_element_at as try_element_at
+from sqlframe.base.functions import try_multiply as try_multiply
+from sqlframe.base.functions import try_subtract as try_subtract
+from sqlframe.base.functions import try_sum as try_sum
+from sqlframe.base.functions import try_to_binary as try_to_binary
+from sqlframe.base.functions import try_to_number as try_to_number
+from sqlframe.base.functions import try_to_timestamp as try_to_timestamp
+from sqlframe.base.functions import typeof as typeof
+from sqlframe.base.functions import ucase as ucase
+from sqlframe.base.functions import unbase64 as unbase64
+from sqlframe.base.functions import unhex as unhex
+from sqlframe.base.functions import unix_date as unix_date
+from sqlframe.base.functions import unix_micros as unix_micros
+from sqlframe.base.functions import unix_millis as unix_millis
+from sqlframe.base.functions import unix_seconds as unix_seconds
+from sqlframe.base.functions import unix_timestamp as unix_timestamp
+from sqlframe.base.functions import upper as upper
+from sqlframe.base.functions import url_decode as url_decode
+from sqlframe.base.functions import url_encode as url_encode
+from sqlframe.base.functions import user as user
+from sqlframe.base.functions import var_pop as var_pop
+from sqlframe.base.functions import var_samp as var_samp
+from sqlframe.base.functions import variance as variance
+from sqlframe.base.functions import version as version
+from sqlframe.base.functions import weekday as weekday
+from sqlframe.base.functions import weekofyear as weekofyear
+from sqlframe.base.functions import when as when
+from sqlframe.base.functions import width_bucket as width_bucket
+from sqlframe.base.functions import xpath as xpath
+from sqlframe.base.functions import xpath_boolean as xpath_boolean
+from sqlframe.base.functions import xpath_double as xpath_double
+from sqlframe.base.functions import xpath_float as xpath_float
+from sqlframe.base.functions import xpath_int as xpath_int
+from sqlframe.base.functions import xpath_long as xpath_long
+from sqlframe.base.functions import xpath_number as xpath_number
+from sqlframe.base.functions import xpath_short as xpath_short
+from sqlframe.base.functions import xpath_string as xpath_string
+from sqlframe.base.functions import xxhash64 as xxhash64
+from sqlframe.base.functions import year as year
+from sqlframe.base.functions import years as years
+from sqlframe.base.functions import zip_with as zip_with

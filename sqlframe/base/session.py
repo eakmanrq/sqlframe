@@ -583,6 +583,38 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
             converted_values.append(cls._to_value(value))
         return _create_row(columns, converted_values)
 
+    @property
+    def _is_bigquery(self) -> bool:
+        return False
+
+    @property
+    def _is_databricks(self) -> bool:
+        return False
+
+    @property
+    def _is_duckdb(self) -> bool:
+        return False
+
+    @property
+    def _is_postgres(self) -> bool:
+        return False
+
+    @property
+    def _is_redshift(self) -> bool:
+        return False
+
+    @property
+    def _is_snowflake(self) -> bool:
+        return False
+
+    @property
+    def _is_spark(self) -> bool:
+        return False
+
+    @property
+    def _is_standalone(self) -> bool:
+        return False
+
     class Builder:
         SQLFRAME_INPUT_DIALECT_KEY = "sqlframe.input.dialect"
         SQLFRAME_OUTPUT_DIALECT_KEY = "sqlframe.output.dialect"
