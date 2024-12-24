@@ -1624,7 +1624,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             raise NotImplementedError("Vertical show is not yet supported")
         if truncate:
             logger.warning("Truncate is ignored so full results will be displayed")
-        result = self.limit(n).collect()
+        # Make sure that the limit we add doesn't affect the results
+        df = self._convert_leaf_to_cte()
+        result = df.limit(n).collect()
         table = PrettyTable()
         if row := seq_get(result, 0):
             table.field_names = row._unique_field_names

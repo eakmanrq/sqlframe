@@ -45,7 +45,7 @@ def test_invoke_anonymous(name, func):
     ],
 )
 def test_lit(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_lit(expression, expected):
     ],
 )
 def test_col(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -70,7 +70,7 @@ def test_col(expression, expected):
     ],
 )
 def test_alias(expression, expected):
-    assert expression.sql() == expected
+    assert expression.expression.sql(dialect="spark") == expected
 
 
 def test_asc():
@@ -89,7 +89,7 @@ def test_asc():
     ],
 )
 def test_desc(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_desc(expression, expected):
     ],
 )
 def test_sqrt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -111,7 +111,7 @@ def test_sqrt(expression, expected):
     ],
 )
 def test_abs(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -122,7 +122,7 @@ def test_abs(expression, expected):
     ],
 )
 def test_max(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -133,7 +133,7 @@ def test_max(expression, expected):
     ],
 )
 def test_min(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -144,7 +144,7 @@ def test_min(expression, expected):
     ],
 )
 def test_max_by(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -155,7 +155,7 @@ def test_max_by(expression, expected):
     ],
 )
 def test_min_by(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -166,7 +166,7 @@ def test_min_by(expression, expected):
     ],
 )
 def test_count(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -177,7 +177,7 @@ def test_count(expression, expected):
     ],
 )
 def test_sum(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -188,7 +188,7 @@ def test_sum(expression, expected):
     ],
 )
 def test_avg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -199,7 +199,7 @@ def test_avg(expression, expected):
     ],
 )
 def test_mean(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -210,7 +210,7 @@ def test_mean(expression, expected):
     ],
 )
 def test_sum_distinct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -221,7 +221,7 @@ def test_sum_distinct(expression, expected):
     ],
 )
 def test_acos(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -232,7 +232,7 @@ def test_acos(expression, expected):
     ],
 )
 def test_acosh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -243,7 +243,7 @@ def test_acosh(expression, expected):
     ],
 )
 def test_asin(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -254,7 +254,7 @@ def test_asin(expression, expected):
     ],
 )
 def test_asinh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -265,7 +265,7 @@ def test_asinh(expression, expected):
     ],
 )
 def test_atan(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -278,7 +278,7 @@ def test_atan(expression, expected):
     ],
 )
 def test_atan2(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -289,7 +289,7 @@ def test_atan2(expression, expected):
     ],
 )
 def test_atanh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -300,7 +300,7 @@ def test_atanh(expression, expected):
     ],
 )
 def test_cbrt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -311,7 +311,7 @@ def test_cbrt(expression, expected):
     ],
 )
 def test_ceil(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -322,7 +322,7 @@ def test_ceil(expression, expected):
     ],
 )
 def test_cos(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -333,7 +333,7 @@ def test_cos(expression, expected):
     ],
 )
 def test_cosh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -344,7 +344,7 @@ def test_cosh(expression, expected):
     ],
 )
 def test_cot(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -355,11 +355,11 @@ def test_cot(expression, expected):
     ],
 )
 def test_csc(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 def test_e():
-    assert SF.e().sql() == "E()"
+    assert SF.e().column_expression.sql(dialect="spark") == "E()"
 
 
 @pytest.mark.parametrize(
@@ -370,7 +370,7 @@ def test_e():
     ],
 )
 def test_exp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -381,7 +381,7 @@ def test_exp(expression, expected):
     ],
 )
 def test_expm1(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -392,7 +392,7 @@ def test_expm1(expression, expected):
     ],
 )
 def test_floor(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -404,7 +404,7 @@ def test_floor(expression, expected):
     ],
 )
 def test_log(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -415,7 +415,7 @@ def test_log(expression, expected):
     ],
 )
 def test_log10(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -426,7 +426,7 @@ def test_log10(expression, expected):
     ],
 )
 def test_log1p(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -437,7 +437,7 @@ def test_log1p(expression, expected):
     ],
 )
 def test_log2(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -448,7 +448,7 @@ def test_log2(expression, expected):
     ],
 )
 def test_rint(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -459,7 +459,7 @@ def test_rint(expression, expected):
     ],
 )
 def test_sec(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -470,7 +470,7 @@ def test_sec(expression, expected):
     ],
 )
 def test_signum(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -481,7 +481,7 @@ def test_signum(expression, expected):
     ],
 )
 def test_sin(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -492,7 +492,7 @@ def test_sin(expression, expected):
     ],
 )
 def test_sinh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -503,7 +503,7 @@ def test_sinh(expression, expected):
     ],
 )
 def test_tan(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -514,7 +514,7 @@ def test_tan(expression, expected):
     ],
 )
 def test_tanh(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -526,7 +526,7 @@ def test_tanh(expression, expected):
     ],
 )
 def test_degrees(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -538,7 +538,7 @@ def test_degrees(expression, expected):
     ],
 )
 def test_radians(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -550,7 +550,7 @@ def test_radians(expression, expected):
     ],
 )
 def test_bitwise_not(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -562,7 +562,7 @@ def test_bitwise_not(expression, expected):
 )
 def test_asc_nulls_first(expression, expected):
     assert isinstance(expression.expression, exp.Ordered)
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -574,7 +574,7 @@ def test_asc_nulls_first(expression, expected):
 )
 def test_asc_nulls_last(expression, expected):
     assert isinstance(expression.expression, exp.Ordered)
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -586,7 +586,7 @@ def test_asc_nulls_last(expression, expected):
 )
 def test_desc_nulls_first(expression, expected):
     assert isinstance(expression.expression, exp.Ordered)
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -598,7 +598,7 @@ def test_desc_nulls_first(expression, expected):
 )
 def test_desc_nulls_last(expression, expected):
     assert isinstance(expression.expression, exp.Ordered)
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -609,7 +609,7 @@ def test_desc_nulls_last(expression, expected):
     ],
 )
 def test_stddev(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -620,7 +620,7 @@ def test_stddev(expression, expected):
     ],
 )
 def test_stddev_samp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -631,7 +631,7 @@ def test_stddev_samp(expression, expected):
     ],
 )
 def test_stddev_pop(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -642,7 +642,7 @@ def test_stddev_pop(expression, expected):
     ],
 )
 def test_variance(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -653,7 +653,7 @@ def test_variance(expression, expected):
     ],
 )
 def test_var_samp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -664,7 +664,7 @@ def test_var_samp(expression, expected):
     ],
 )
 def test_var_pop(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -675,7 +675,7 @@ def test_var_pop(expression, expected):
     ],
 )
 def test_skewness(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -686,7 +686,7 @@ def test_skewness(expression, expected):
     ],
 )
 def test_kurtosis(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -697,7 +697,7 @@ def test_kurtosis(expression, expected):
     ],
 )
 def test_collect_list(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -708,7 +708,7 @@ def test_collect_list(expression, expected):
     ],
 )
 def test_collect_set(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -721,7 +721,7 @@ def test_collect_set(expression, expected):
     ],
 )
 def test_hypot(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -734,7 +734,7 @@ def test_hypot(expression, expected):
     ],
 )
 def test_pow(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -747,7 +747,7 @@ def test_pow(expression, expected):
     ],
 )
 def test_power(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -758,7 +758,7 @@ def test_power(expression, expected):
     ],
 )
 def test_row_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -769,7 +769,7 @@ def test_row_number(expression, expected):
     ],
 )
 def test_dense_rank(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -780,7 +780,7 @@ def test_dense_rank(expression, expected):
     ],
 )
 def test_rank(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -791,7 +791,7 @@ def test_rank(expression, expected):
     ],
 )
 def test_cume_dist(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -802,7 +802,7 @@ def test_cume_dist(expression, expected):
     ],
 )
 def test_percent_rank(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -816,7 +816,7 @@ def test_percent_rank(expression, expected):
     ],
 )
 def test_approx_count_distinct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -828,7 +828,7 @@ def test_approx_count_distinct(expression, expected):
     ],
 )
 def test_coalesce(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -839,7 +839,7 @@ def test_coalesce(expression, expected):
     ],
 )
 def test_corr(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -850,7 +850,7 @@ def test_corr(expression, expected):
     ],
 )
 def test_covar_pop(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -861,7 +861,7 @@ def test_covar_pop(expression, expected):
     ],
 )
 def test_covar_samp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -874,7 +874,7 @@ def test_covar_samp(expression, expected):
     ],
 )
 def test_count_distinct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -886,7 +886,7 @@ def test_count_distinct(expression, expected):
     ],
 )
 def test_first(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -899,7 +899,7 @@ def test_first(expression, expected):
     ],
 )
 def test_grouping_id(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 def test_input_file_name():
@@ -914,7 +914,7 @@ def test_input_file_name():
     ],
 )
 def test_isnan(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -925,7 +925,7 @@ def test_isnan(expression, expected):
     ],
 )
 def test_isnull(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -937,7 +937,7 @@ def test_isnull(expression, expected):
     ],
 )
 def test_last(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -947,7 +947,7 @@ def test_last(expression, expected):
     ],
 )
 def test_monotonically_increasing_id(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -958,7 +958,7 @@ def test_monotonically_increasing_id(expression, expected):
     ],
 )
 def test_nanvl(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -976,7 +976,7 @@ def test_nanvl(expression, expected):
     ],
 )
 def test_percentile_approx(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -987,7 +987,7 @@ def test_percentile_approx(expression, expected):
     ],
 )
 def test_rand(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -998,7 +998,7 @@ def test_rand(expression, expected):
     ],
 )
 def test_randn(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1010,7 +1010,7 @@ def test_randn(expression, expected):
     ],
 )
 def test_round(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1022,7 +1022,7 @@ def test_round(expression, expected):
     ],
 )
 def test_bround(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1034,7 +1034,7 @@ def test_bround(expression, expected):
     ],
 )
 def test_shiftleft(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1046,7 +1046,7 @@ def test_shiftleft(expression, expected):
     ],
 )
 def test_shiftright(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1058,11 +1058,11 @@ def test_shiftright(expression, expected):
     ],
 )
 def test_shiftrightunsigned(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 def test_expr():
-    assert SF.expr("LENGTH(name)").sql() == "LENGTH(name)"
+    assert SF.expr("LENGTH(name)").column_expression.sql(dialect="spark") == "LENGTH(name)"
 
 
 @pytest.mark.parametrize(
@@ -1075,7 +1075,7 @@ def test_expr():
     ],
 )
 def test_struct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1090,7 +1090,7 @@ def test_struct(expression, expected):
     ],
 )
 def test_greatest(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1102,7 +1102,7 @@ def test_greatest(expression, expected):
     ],
 )
 def test_least(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1116,7 +1116,7 @@ def test_least(expression, expected):
     ],
 )
 def test_when(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1127,7 +1127,7 @@ def test_when(expression, expected):
     ],
 )
 def test_conv(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1138,7 +1138,7 @@ def test_conv(expression, expected):
     ],
 )
 def test_factorial(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1151,7 +1151,7 @@ def test_factorial(expression, expected):
     ],
 )
 def test_lag(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1164,7 +1164,7 @@ def test_lag(expression, expected):
     ],
 )
 def test_lead(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1177,19 +1177,19 @@ def test_lead(expression, expected):
     ],
 )
 def test_nth_value(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 def test_ntile():
-    assert SF.ntile(2).sql() == "NTILE(2)"
+    assert SF.ntile(2).column_expression.sql(dialect="spark") == "NTILE(2)"
 
 
 def test_current_date():
-    assert SF.current_date().sql() == "CURRENT_DATE"
+    assert SF.current_date().column_expression.sql(dialect="spark") == "CURRENT_DATE"
 
 
 def test_current_timestamp():
-    assert SF.current_timestamp().sql() == "CURRENT_TIMESTAMP()"
+    assert SF.current_timestamp().column_expression.sql(dialect="spark") == "CURRENT_TIMESTAMP()"
 
 
 @pytest.mark.parametrize(
@@ -1203,7 +1203,7 @@ def test_current_timestamp():
     ],
 )
 def test_date_format(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1214,7 +1214,7 @@ def test_date_format(expression, expected):
     ],
 )
 def test_year(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1225,7 +1225,7 @@ def test_year(expression, expected):
     ],
 )
 def test_quarter(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1236,7 +1236,7 @@ def test_quarter(expression, expected):
     ],
 )
 def test_month(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1247,7 +1247,7 @@ def test_month(expression, expected):
     ],
 )
 def test_dayofweek(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1258,7 +1258,7 @@ def test_dayofweek(expression, expected):
     ],
 )
 def test_dayofmonth(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1269,7 +1269,7 @@ def test_dayofmonth(expression, expected):
     ],
 )
 def test_dayofyear(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1280,7 +1280,7 @@ def test_dayofyear(expression, expected):
     ],
 )
 def test_hour(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1291,7 +1291,7 @@ def test_hour(expression, expected):
     ],
 )
 def test_minute(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1302,7 +1302,7 @@ def test_minute(expression, expected):
     ],
 )
 def test_second(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1313,7 +1313,7 @@ def test_second(expression, expected):
     ],
 )
 def test_weekofyear(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1324,7 +1324,7 @@ def test_weekofyear(expression, expected):
     ],
 )
 def test_make_date(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1340,7 +1340,7 @@ def test_make_date(expression, expected):
     ],
 )
 def test_date_add(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1352,7 +1352,7 @@ def test_date_add(expression, expected):
     ],
 )
 def test_date_sub(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1366,7 +1366,7 @@ def test_date_sub(expression, expected):
     ],
 )
 def test_date_diff(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1378,7 +1378,7 @@ def test_date_diff(expression, expected):
     ],
 )
 def test_add_months(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1390,7 +1390,7 @@ def test_add_months(expression, expected):
     ],
 )
 def test_months_between(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1402,7 +1402,7 @@ def test_months_between(expression, expected):
     ],
 )
 def test_to_date(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1414,7 +1414,7 @@ def test_to_date(expression, expected):
     ],
 )
 def test_to_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1425,7 +1425,7 @@ def test_to_timestamp(expression, expected):
     ],
 )
 def test_trunc(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1442,7 +1442,7 @@ def test_trunc(expression, expected):
     ],
 )
 def test_date_trunc(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1453,7 +1453,7 @@ def test_date_trunc(expression, expected):
     ],
 )
 def test_next_day(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1464,7 +1464,7 @@ def test_next_day(expression, expected):
     ],
 )
 def test_last_day(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1476,7 +1476,7 @@ def test_last_day(expression, expected):
     ],
 )
 def test_from_unixtime(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1492,7 +1492,7 @@ def test_from_unixtime(expression, expected):
     ],
 )
 def test_unix_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1504,7 +1504,7 @@ def test_unix_timestamp(expression, expected):
     ],
 )
 def test_from_utc_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1516,7 +1516,7 @@ def test_from_utc_timestamp(expression, expected):
     ],
 )
 def test_to_utc_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1527,7 +1527,7 @@ def test_to_utc_timestamp(expression, expected):
     ],
 )
 def test_timestamp_seconds(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1550,7 +1550,7 @@ def test_timestamp_seconds(expression, expected):
     ],
 )
 def test_window(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1564,7 +1564,7 @@ def test_window(expression, expected):
     ],
 )
 def test_session_window(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1575,7 +1575,7 @@ def test_session_window(expression, expected):
     ],
 )
 def test_crc32(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1586,7 +1586,7 @@ def test_crc32(expression, expected):
     ],
 )
 def test_md5(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1597,7 +1597,7 @@ def test_md5(expression, expected):
     ],
 )
 def test_sha1(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1608,7 +1608,7 @@ def test_sha1(expression, expected):
     ],
 )
 def test_sha2(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1619,7 +1619,7 @@ def test_sha2(expression, expected):
     ],
 )
 def test_hash(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1630,7 +1630,7 @@ def test_hash(expression, expected):
     ],
 )
 def test_xxhash64(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1648,7 +1648,7 @@ def test_xxhash64(expression, expected):
     ],
 )
 def test_assert_true(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1659,7 +1659,7 @@ def test_assert_true(expression, expected):
     ],
 )
 def test_raise_error(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1670,7 +1670,7 @@ def test_raise_error(expression, expected):
     ],
 )
 def test_upper(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1681,7 +1681,7 @@ def test_upper(expression, expected):
     ],
 )
 def test_lower(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1692,7 +1692,7 @@ def test_lower(expression, expected):
     ],
 )
 def test_ascii(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1703,7 +1703,7 @@ def test_ascii(expression, expected):
     ],
 )
 def test_base64(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1714,7 +1714,7 @@ def test_base64(expression, expected):
     ],
 )
 def test_unbase64(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1725,7 +1725,7 @@ def test_unbase64(expression, expected):
     ],
 )
 def test_ltrim(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1736,7 +1736,7 @@ def test_ltrim(expression, expected):
     ],
 )
 def test_rtrim(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1747,7 +1747,7 @@ def test_rtrim(expression, expected):
     ],
 )
 def test_trim(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1758,7 +1758,7 @@ def test_trim(expression, expected):
     ],
 )
 def test_concat_ws(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1769,7 +1769,7 @@ def test_concat_ws(expression, expected):
     ],
 )
 def test_decode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1780,7 +1780,7 @@ def test_decode(expression, expected):
     ],
 )
 def test_encode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1791,7 +1791,7 @@ def test_encode(expression, expected):
     ],
 )
 def test_format_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1808,7 +1808,7 @@ def test_format_number(expression, expected):
     ],
 )
 def test_format_string(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1819,7 +1819,7 @@ def test_format_string(expression, expected):
     ],
 )
 def test_instr(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1834,7 +1834,7 @@ def test_instr(expression, expected):
     ],
 )
 def test_overlay(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1848,7 +1848,7 @@ def test_overlay(expression, expected):
     ],
 )
 def test_sentences(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1859,7 +1859,7 @@ def test_sentences(expression, expected):
     ],
 )
 def test_substring(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1870,7 +1870,7 @@ def test_substring(expression, expected):
     ],
 )
 def test_substring_index(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1881,7 +1881,7 @@ def test_substring_index(expression, expected):
     ],
 )
 def test_levenshtein(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1893,7 +1893,7 @@ def test_levenshtein(expression, expected):
     ],
 )
 def test_locate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1904,7 +1904,7 @@ def test_locate(expression, expected):
     ],
 )
 def test_lpad(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1915,7 +1915,7 @@ def test_lpad(expression, expected):
     ],
 )
 def test_rpad(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1926,7 +1926,7 @@ def test_rpad(expression, expected):
     ],
 )
 def test_repeat(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1938,7 +1938,7 @@ def test_repeat(expression, expected):
     ],
 )
 def test_split(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1963,7 +1963,7 @@ def test_split(expression, expected):
     ],
 )
 def test_regexp_extract(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1977,7 +1977,7 @@ def test_regexp_extract(expression, expected):
     ],
 )
 def test_regexp_replace(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1988,7 +1988,7 @@ def test_regexp_replace(expression, expected):
     ],
 )
 def test_initcap(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -1999,7 +1999,7 @@ def test_initcap(expression, expected):
     ],
 )
 def test_soundex(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2010,7 +2010,7 @@ def test_soundex(expression, expected):
     ],
 )
 def test_bin(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2021,7 +2021,7 @@ def test_bin(expression, expected):
     ],
 )
 def test_hex(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2032,7 +2032,7 @@ def test_hex(expression, expected):
     ],
 )
 def test_unhex(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2043,7 +2043,7 @@ def test_unhex(expression, expected):
     ],
 )
 def test_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2054,7 +2054,7 @@ def test_length(expression, expected):
     ],
 )
 def test_octet_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2065,7 +2065,7 @@ def test_octet_length(expression, expected):
     ],
 )
 def test_bit_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2076,7 +2076,7 @@ def test_bit_length(expression, expected):
     ],
 )
 def test_translate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2088,7 +2088,7 @@ def test_translate(expression, expected):
     ],
 )
 def test_array(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2099,7 +2099,7 @@ def test_array(expression, expected):
     ],
 )
 def test_array_agg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2110,7 +2110,7 @@ def test_array_agg(expression, expected):
     ],
 )
 def test_array_append(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2121,7 +2121,7 @@ def test_array_append(expression, expected):
     ],
 )
 def test_array_compact(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2133,7 +2133,7 @@ def test_array_compact(expression, expected):
     ],
 )
 def test_array_insert(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2144,7 +2144,7 @@ def test_array_insert(expression, expected):
     ],
 )
 def test_array_prepend(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2155,7 +2155,7 @@ def test_array_prepend(expression, expected):
     ],
 )
 def test_array_size(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2166,7 +2166,7 @@ def test_array_size(expression, expected):
     ],
 )
 def test_bit_and(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2177,7 +2177,7 @@ def test_bit_and(expression, expected):
     ],
 )
 def test_bit_or(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2188,7 +2188,7 @@ def test_bit_or(expression, expected):
     ],
 )
 def test_bit_xor(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2199,7 +2199,7 @@ def test_bit_xor(expression, expected):
     ],
 )
 def test_bit_count(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2210,7 +2210,7 @@ def test_bit_count(expression, expected):
     ],
 )
 def test_bit_get(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2221,7 +2221,7 @@ def test_bit_get(expression, expected):
     ],
 )
 def test_getbit(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2236,7 +2236,7 @@ def test_getbit(expression, expected):
     ],
 )
 def test_create_map(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2247,7 +2247,7 @@ def test_create_map(expression, expected):
     ],
 )
 def test_map_from_arrays(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2259,7 +2259,7 @@ def test_map_from_arrays(expression, expected):
     ],
 )
 def test_array_contains(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2270,7 +2270,7 @@ def test_array_contains(expression, expected):
     ],
 )
 def test_arrays_overlap(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2282,7 +2282,7 @@ def test_arrays_overlap(expression, expected):
     ],
 )
 def test_slice(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2300,7 +2300,7 @@ def test_slice(expression, expected):
     ],
 )
 def test_array_join(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2312,7 +2312,7 @@ def test_array_join(expression, expected):
     ],
 )
 def test_concat(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2327,7 +2327,7 @@ def test_concat(expression, expected):
     ],
 )
 def test_array_position(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2339,7 +2339,7 @@ def test_array_position(expression, expected):
     ],
 )
 def test_element_at(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2351,7 +2351,7 @@ def test_element_at(expression, expected):
     ],
 )
 def test_array_remove(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2362,7 +2362,7 @@ def test_array_remove(expression, expected):
     ],
 )
 def test_array_distinct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2373,7 +2373,7 @@ def test_array_distinct(expression, expected):
     ],
 )
 def test_array_intersect(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2384,7 +2384,7 @@ def test_array_intersect(expression, expected):
     ],
 )
 def test_array_union(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2395,7 +2395,7 @@ def test_array_union(expression, expected):
     ],
 )
 def test_array_except(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2406,7 +2406,7 @@ def test_array_except(expression, expected):
     ],
 )
 def test_explode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2417,7 +2417,7 @@ def test_explode(expression, expected):
     ],
 )
 def test_pos_explode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2428,7 +2428,7 @@ def test_pos_explode(expression, expected):
     ],
 )
 def test_explode_outer(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2439,7 +2439,7 @@ def test_explode_outer(expression, expected):
     ],
 )
 def test_posexplode_outer(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2450,7 +2450,7 @@ def test_posexplode_outer(expression, expected):
     ],
 )
 def test_get_json_object(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2461,7 +2461,7 @@ def test_get_json_object(expression, expected):
     ],
 )
 def test_json_tuple(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2479,7 +2479,7 @@ def test_json_tuple(expression, expected):
     ],
 )
 def test_from_json(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2497,7 +2497,7 @@ def test_from_json(expression, expected):
     ],
 )
 def test_to_json(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2515,7 +2515,7 @@ def test_to_json(expression, expected):
     ],
 )
 def test_schema_of_json(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2533,7 +2533,7 @@ def test_schema_of_json(expression, expected):
     ],
 )
 def test_schema_of_csv(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2551,7 +2551,7 @@ def test_schema_of_csv(expression, expected):
     ],
 )
 def test_to_csv(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2562,7 +2562,7 @@ def test_to_csv(expression, expected):
     ],
 )
 def test_size(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2573,7 +2573,7 @@ def test_size(expression, expected):
     ],
 )
 def test_array_min(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2584,7 +2584,7 @@ def test_array_min(expression, expected):
     ],
 )
 def test_array_max(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2596,7 +2596,7 @@ def test_array_max(expression, expected):
     ],
 )
 def test_sort_array(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2616,7 +2616,7 @@ def test_sort_array(expression, expected):
     ],
 )
 def test_array_sort(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2627,7 +2627,7 @@ def test_array_sort(expression, expected):
     ],
 )
 def test_shuffle(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2638,7 +2638,7 @@ def test_shuffle(expression, expected):
     ],
 )
 def test_reverse(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2649,7 +2649,7 @@ def test_reverse(expression, expected):
     ],
 )
 def test_flatten(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2660,7 +2660,7 @@ def test_flatten(expression, expected):
     ],
 )
 def test_map_keys(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2671,7 +2671,7 @@ def test_map_keys(expression, expected):
     ],
 )
 def test_map_values(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2682,7 +2682,7 @@ def test_map_values(expression, expected):
     ],
 )
 def test_map_entries(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2693,7 +2693,7 @@ def test_map_entries(expression, expected):
     ],
 )
 def test_map_from_entries(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2704,7 +2704,7 @@ def test_map_from_entries(expression, expected):
     ],
 )
 def test_array_repeat(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2716,7 +2716,7 @@ def test_array_repeat(expression, expected):
     ],
 )
 def test_arrays_zip(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2728,7 +2728,7 @@ def test_arrays_zip(expression, expected):
     ],
 )
 def test_map_concat(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2740,7 +2740,7 @@ def test_map_concat(expression, expected):
     ],
 )
 def test_sequence(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2758,7 +2758,7 @@ def test_sequence(expression, expected):
     ],
 )
 def test_from_csv(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2788,7 +2788,7 @@ def test_from_csv(expression, expected):
     ],
 )
 def test_aggregate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2803,7 +2803,7 @@ def test_aggregate(expression, expected):
     ],
 )
 def test_transform(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2815,7 +2815,7 @@ def test_transform(expression, expected):
     ],
 )
 def test_exists(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2830,7 +2830,7 @@ def test_exists(expression, expected):
     ],
 )
 def test_forall(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2853,7 +2853,7 @@ def test_forall(expression, expected):
     ],
 )
 def test_filter(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2874,7 +2874,7 @@ def test_filter(expression, expected):
     ],
 )
 def test_zip_with(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2895,7 +2895,7 @@ def test_zip_with(expression, expected):
     ],
 )
 def test_transform_keys(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2916,7 +2916,7 @@ def test_transform_keys(expression, expected):
     ],
 )
 def test_transform_values(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2931,18 +2931,20 @@ def test_transform_values(expression, expected):
     ],
 )
 def test_map_filter(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 def test_map_zip_with():
     assert (
-        SF.map_zip_with("base", "ratio", lambda k, v1, v2: SF.round(v1 * v2, 2)).sql()
+        SF.map_zip_with(
+            "base", "ratio", lambda k, v1, v2: SF.round(v1 * v2, 2)
+        ).column_expression.sql(dialect="spark")
         == "MAP_ZIP_WITH(base, ratio, (k, v1, v2) -> ROUND((v1 * v2), 2))"
     )
 
 
 def test_nullif():
-    assert SF.nullif("cola", "colb").sql() == "NULLIF(cola, colb)"
+    assert SF.nullif("cola", "colb").column_expression.sql(dialect="spark") == "NULLIF(cola, colb)"
 
 
 @pytest.mark.parametrize(
@@ -2955,7 +2957,7 @@ def test_nullif():
     ],
 )
 def test_stack(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2968,7 +2970,7 @@ def test_stack(expression, expected):
     ],
 )
 def test_make_interval(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2979,7 +2981,7 @@ def test_make_interval(expression, expected):
     ],
 )
 def test_try_add(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -2990,7 +2992,7 @@ def test_try_add(expression, expected):
     ],
 )
 def test_try_avg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3001,7 +3003,7 @@ def test_try_avg(expression, expected):
     ],
 )
 def test_try_divide(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3012,7 +3014,7 @@ def test_try_divide(expression, expected):
     ],
 )
 def test_try_multiply(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3023,7 +3025,7 @@ def test_try_multiply(expression, expected):
     ],
 )
 def test_try_subtract(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3034,7 +3036,7 @@ def test_try_subtract(expression, expected):
     ],
 )
 def test_try_sum(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3046,7 +3048,7 @@ def test_try_sum(expression, expected):
     ],
 )
 def test_try_to_binary(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3058,7 +3060,7 @@ def test_try_to_binary(expression, expected):
     ],
 )
 def test_try_to_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3082,7 +3084,7 @@ def test_try_to_number(expression, expected):
     ],
 )
 def test_aes_decrypt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3111,7 +3113,7 @@ def test_aes_decrypt(expression, expected):
     ],
 )
 def test_aes_encrypt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3122,7 +3124,7 @@ def test_aes_encrypt(expression, expected):
     ],
 )
 def test_bitmap_bit_position(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3133,7 +3135,7 @@ def test_bitmap_bit_position(expression, expected):
     ],
 )
 def test_bitmap_bucket_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3144,7 +3146,7 @@ def test_bitmap_bucket_number(expression, expected):
     ],
 )
 def test_bitmap_construct_agg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3155,7 +3157,7 @@ def test_bitmap_construct_agg(expression, expected):
     ],
 )
 def test_bitmap_count(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3166,7 +3168,7 @@ def test_bitmap_count(expression, expected):
     ],
 )
 def test_bitmap_or_agg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3177,7 +3179,7 @@ def test_bitmap_or_agg(expression, expected):
     ],
 )
 def test_any_value(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3196,7 +3198,7 @@ def test_any_value(expression, expected):
     ],
 )
 def test_approx_percentile(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3207,7 +3209,7 @@ def test_approx_percentile(expression, expected):
     ],
 )
 def test_bool_and(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3218,7 +3220,7 @@ def test_bool_and(expression, expected):
     ],
 )
 def test_bool_or(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3231,7 +3233,7 @@ def test_bool_or(expression, expected):
     ],
 )
 def test_btrim(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3242,7 +3244,7 @@ def test_btrim(expression, expected):
     ],
 )
 def test_bucket(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3255,7 +3257,7 @@ def test_bucket(expression, expected):
     ],
 )
 def test_call_function(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3266,7 +3268,7 @@ def test_call_function(expression, expected):
     ],
 )
 def test_cardinality(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3277,7 +3279,7 @@ def test_cardinality(expression, expected):
     ],
 )
 def test_char(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3288,7 +3290,7 @@ def test_char(expression, expected):
     ],
 )
 def test_char_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3299,7 +3301,7 @@ def test_char_length(expression, expected):
     ],
 )
 def test_character_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3310,7 +3312,7 @@ def test_character_length(expression, expected):
     ],
 )
 def test_contains(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3331,7 +3333,7 @@ def test_contains(expression, expected):
     ],
 )
 def test_convert_timezone(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3342,7 +3344,7 @@ def test_convert_timezone(expression, expected):
     ],
 )
 def test_count_if(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3359,7 +3361,7 @@ def test_count_if(expression, expected):
     ],
 )
 def test_count_min_sketch(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3369,7 +3371,7 @@ def test_count_min_sketch(expression, expected):
     ],
 )
 def test_curdate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3379,7 +3381,7 @@ def test_curdate(expression, expected):
     ],
 )
 def test_current_catalog(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3389,7 +3391,7 @@ def test_current_catalog(expression, expected):
     ],
 )
 def test_current_database(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3399,7 +3401,7 @@ def test_current_database(expression, expected):
     ],
 )
 def test_current_schema(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3409,7 +3411,7 @@ def test_current_schema(expression, expected):
     ],
 )
 def test_current_timezone(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3419,7 +3421,7 @@ def test_current_timezone(expression, expected):
     ],
 )
 def test_current_user(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3430,7 +3432,7 @@ def test_current_user(expression, expected):
     ],
 )
 def test_date_from_unix_date(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3441,7 +3443,7 @@ def test_date_from_unix_date(expression, expected):
     ],
 )
 def test_date_part(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3455,7 +3457,7 @@ def test_date_part(expression, expected):
     ],
 )
 def test_dateadd(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3469,7 +3471,7 @@ def test_dateadd(expression, expected):
     ],
 )
 def test_datediff(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3480,7 +3482,7 @@ def test_datediff(expression, expected):
     ],
 )
 def test_datepart(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3491,7 +3493,7 @@ def test_datepart(expression, expected):
     ],
 )
 def test_day(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3502,7 +3504,7 @@ def test_day(expression, expected):
     ],
 )
 def test_days(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3514,7 +3516,7 @@ def test_days(expression, expected):
     ],
 )
 def test_elt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3525,7 +3527,7 @@ def test_elt(expression, expected):
     ],
 )
 def test_endswith(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3536,7 +3538,7 @@ def test_endswith(expression, expected):
     ],
 )
 def test_equal_null(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3547,7 +3549,7 @@ def test_equal_null(expression, expected):
     ],
 )
 def test_every(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3558,7 +3560,7 @@ def test_every(expression, expected):
     ],
 )
 def test_extract(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3569,7 +3571,7 @@ def test_extract(expression, expected):
     ],
 )
 def test_find_in_set(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3582,7 +3584,7 @@ def test_find_in_set(expression, expected):
     ],
 )
 def test_first_value(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3594,7 +3596,7 @@ def test_first_value(expression, expected):
     ],
 )
 def test_get(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3605,7 +3607,7 @@ def test_get(expression, expected):
     ],
 )
 def test_grouping(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3616,7 +3618,7 @@ def test_grouping(expression, expected):
     ],
 )
 def test_histogram_numeric(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3629,7 +3631,7 @@ def test_histogram_numeric(expression, expected):
     ],
 )
 def test_hll_sketch_agg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3640,7 +3642,7 @@ def test_hll_sketch_agg(expression, expected):
     ],
 )
 def test_hll_sketch_estimate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3653,7 +3655,7 @@ def test_hll_sketch_estimate(expression, expected):
     ],
 )
 def test_hll_union(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3666,7 +3668,7 @@ def test_hll_union(expression, expected):
     ],
 )
 def test_hll_union_agg(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3677,7 +3679,7 @@ def test_hll_union_agg(expression, expected):
     ],
 )
 def test_hours(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3688,7 +3690,7 @@ def test_hours(expression, expected):
     ],
 )
 def test_ifnull(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3700,7 +3702,7 @@ def test_ifnull(expression, expected):
     ],
 )
 def test_ilike(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3711,7 +3713,7 @@ def test_ilike(expression, expected):
     ],
 )
 def test_inline(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3722,7 +3724,7 @@ def test_inline(expression, expected):
     ],
 )
 def test_inline_outer(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3733,7 +3735,7 @@ def test_inline_outer(expression, expected):
     ],
 )
 def test_isnotnull(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3746,7 +3748,7 @@ def test_isnotnull(expression, expected):
     ],
 )
 def test_java_method(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3757,7 +3759,7 @@ def test_java_method(expression, expected):
     ],
 )
 def test_json_array_length(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3768,7 +3770,7 @@ def test_json_array_length(expression, expected):
     ],
 )
 def test_json_object_keys(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3781,7 +3783,7 @@ def test_json_object_keys(expression, expected):
     ],
 )
 def test_last_value(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3792,7 +3794,7 @@ def test_last_value(expression, expected):
     ],
 )
 def test_lcase(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3803,7 +3805,7 @@ def test_lcase(expression, expected):
     ],
 )
 def test_left(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3815,7 +3817,7 @@ def test_left(expression, expected):
     ],
 )
 def test_like(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3826,7 +3828,7 @@ def test_like(expression, expected):
     ],
 )
 def test_ln(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3837,7 +3839,7 @@ def test_ln(expression, expected):
     ],
 )
 def test_localtimestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3857,7 +3859,7 @@ def test_localtimestamp(expression, expected):
     ],
 )
 def test_make_dt_interval(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3885,7 +3887,7 @@ def test_make_dt_interval(expression, expected):
     ],
 )
 def test_make_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3913,7 +3915,7 @@ def test_make_timestamp(expression, expected):
     ],
 )
 def test_make_timestamp_ltz(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3937,7 +3939,7 @@ def test_make_timestamp_ltz(expression, expected):
     ],
 )
 def test_make_timestamp_ntz(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3951,7 +3953,7 @@ def test_make_timestamp_ntz(expression, expected):
     ],
 )
 def test_make_ym_interval(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3962,7 +3964,7 @@ def test_make_ym_interval(expression, expected):
     ],
 )
 def test_map_contains_key(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3978,7 +3980,7 @@ def test_map_contains_key(expression, expected):
     ],
 )
 def test_mask(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -3989,7 +3991,7 @@ def test_mask(expression, expected):
     ],
 )
 def test_median(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4000,7 +4002,7 @@ def test_median(expression, expected):
     ],
 )
 def test_mode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4011,7 +4013,7 @@ def test_mode(expression, expected):
     ],
 )
 def test_months(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4023,7 +4025,7 @@ def test_months(expression, expected):
     ],
 )
 def test_named_struct(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4034,7 +4036,7 @@ def test_named_struct(expression, expected):
     ],
 )
 def test_negate(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4045,7 +4047,7 @@ def test_negate(expression, expected):
     ],
 )
 def test_negative(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4056,7 +4058,7 @@ def test_negative(expression, expected):
     ],
 )
 def test_now(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4067,7 +4069,7 @@ def test_now(expression, expected):
     ],
 )
 def test_nvl(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4078,7 +4080,7 @@ def test_nvl(expression, expected):
     ],
 )
 def test_nvl2(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4090,7 +4092,7 @@ def test_nvl2(expression, expected):
     ],
 )
 def test_parse_url(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4100,7 +4102,7 @@ def test_parse_url(expression, expected):
     ],
 )
 def test_pi(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4113,7 +4115,7 @@ def test_pi(expression, expected):
     ],
 )
 def test_pmod(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4125,7 +4127,7 @@ def test_pmod(expression, expected):
     ],
 )
 def test_position(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4136,7 +4138,7 @@ def test_position(expression, expected):
     ],
 )
 def test_positive(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4148,7 +4150,7 @@ def test_positive(expression, expected):
     ],
 )
 def test_printf(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4159,7 +4161,7 @@ def test_printf(expression, expected):
     ],
 )
 def test_product(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4180,7 +4182,7 @@ def test_product(expression, expected):
     ],
 )
 def test_reduce(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4192,7 +4194,7 @@ def test_reduce(expression, expected):
     ],
 )
 def test_reflect(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4203,7 +4205,7 @@ def test_reflect(expression, expected):
     ],
 )
 def test_regexp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4214,7 +4216,7 @@ def test_regexp(expression, expected):
     ],
 )
 def test_regexp_count(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4230,7 +4232,7 @@ def test_regexp_count(expression, expected):
     ],
 )
 def test_regexp_extract_all(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4243,7 +4245,7 @@ def test_regexp_extract_all(expression, expected):
     ],
 )
 def test_regexp_instr(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4254,7 +4256,7 @@ def test_regexp_instr(expression, expected):
     ],
 )
 def test_regexp_like(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4265,7 +4267,7 @@ def test_regexp_like(expression, expected):
     ],
 )
 def test_regexp_substr(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4276,7 +4278,7 @@ def test_regexp_substr(expression, expected):
     ],
 )
 def test_regr_avgx(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4287,7 +4289,7 @@ def test_regr_avgx(expression, expected):
     ],
 )
 def test_regr_avgy(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4298,7 +4300,7 @@ def test_regr_avgy(expression, expected):
     ],
 )
 def test_regr_count(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4309,7 +4311,7 @@ def test_regr_count(expression, expected):
     ],
 )
 def test_regr_intercept(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4320,7 +4322,7 @@ def test_regr_intercept(expression, expected):
     ],
 )
 def test_regr_r2(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4331,7 +4333,7 @@ def test_regr_r2(expression, expected):
     ],
 )
 def test_regr_slope(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4342,7 +4344,7 @@ def test_regr_slope(expression, expected):
     ],
 )
 def test_regr_sxx(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4353,7 +4355,7 @@ def test_regr_sxx(expression, expected):
     ],
 )
 def test_regr_sxy(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4364,7 +4366,7 @@ def test_regr_sxy(expression, expected):
     ],
 )
 def test_regr_syy(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4376,7 +4378,7 @@ def test_regr_syy(expression, expected):
     ],
 )
 def test_replace(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4387,7 +4389,7 @@ def test_replace(expression, expected):
     ],
 )
 def test_right(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4398,7 +4400,7 @@ def test_right(expression, expected):
     ],
 )
 def test_rlike(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4409,7 +4411,7 @@ def test_rlike(expression, expected):
     ],
 )
 def test_sha(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4420,7 +4422,7 @@ def test_sha(expression, expected):
     ],
 )
 def test_sign(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4431,7 +4433,7 @@ def test_sign(expression, expected):
     ],
 )
 def test_some(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4441,7 +4443,7 @@ def test_some(expression, expected):
     ],
 )
 def test_spark_partition_id(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4455,7 +4457,7 @@ def test_spark_partition_id(expression, expected):
     ],
 )
 def test_split_part(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4466,7 +4468,7 @@ def test_split_part(expression, expected):
     ],
 )
 def test_startswith(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4477,7 +4479,7 @@ def test_startswith(expression, expected):
     ],
 )
 def test_std(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4491,7 +4493,7 @@ def test_std(expression, expected):
     ],
 )
 def test_str_to_map(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4503,7 +4505,7 @@ def test_str_to_map(expression, expected):
     ],
 )
 def test_substr(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4514,7 +4516,7 @@ def test_substr(expression, expected):
     ],
 )
 def test_timestamp_micros(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4525,7 +4527,7 @@ def test_timestamp_micros(expression, expected):
     ],
 )
 def test_timestamp_millis(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4536,7 +4538,7 @@ def test_timestamp_millis(expression, expected):
     ],
 )
 def test_to_char(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4547,7 +4549,7 @@ def test_to_char(expression, expected):
     ],
 )
 def test_to_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4571,7 +4573,7 @@ def test_to_str(input, output):
     ],
 )
 def test_to_timestamp_ltz(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4583,7 +4585,7 @@ def test_to_timestamp_ltz(expression, expected):
     ],
 )
 def test_to_timestamp_ntz(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4594,7 +4596,7 @@ def test_to_timestamp_ntz(expression, expected):
     ],
 )
 def test_to_unix_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4605,7 +4607,7 @@ def test_to_unix_timestamp(expression, expected):
     ],
 )
 def test_to_varchar(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4635,7 +4637,7 @@ def test_to_varchar(expression, expected):
     ],
 )
 def test_try_aes_decrypt(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4646,7 +4648,7 @@ def test_try_aes_decrypt(expression, expected):
     ],
 )
 def test_try_element_at(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4658,7 +4660,7 @@ def test_try_element_at(expression, expected):
     ],
 )
 def test_try_to_timestamp(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4669,7 +4671,7 @@ def test_try_to_timestamp(expression, expected):
     ],
 )
 def test_ucase(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4680,7 +4682,7 @@ def test_ucase(expression, expected):
     ],
 )
 def test_unix_date(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4691,7 +4693,7 @@ def test_unix_date(expression, expected):
     ],
 )
 def test_unix_micros(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4702,7 +4704,7 @@ def test_unix_micros(expression, expected):
     ],
 )
 def test_unix_millis(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4713,7 +4715,7 @@ def test_unix_millis(expression, expected):
     ],
 )
 def test_unix_seconds(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4724,7 +4726,7 @@ def test_unix_seconds(expression, expected):
     ],
 )
 def test_url_decode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4735,7 +4737,7 @@ def test_url_decode(expression, expected):
     ],
 )
 def test_url_encode(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4745,7 +4747,7 @@ def test_url_encode(expression, expected):
     ],
 )
 def test_version(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4756,7 +4758,7 @@ def test_version(expression, expected):
     ],
 )
 def test_weekday(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4774,7 +4776,7 @@ def test_weekday(expression, expected):
     ],
 )
 def test_width_bucket(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4785,7 +4787,7 @@ def test_width_bucket(expression, expected):
     ],
 )
 def test_window_time(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4796,7 +4798,7 @@ def test_window_time(expression, expected):
     ],
 )
 def test_xpath(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4807,7 +4809,7 @@ def test_xpath(expression, expected):
     ],
 )
 def test_xpath_boolean(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4818,7 +4820,7 @@ def test_xpath_boolean(expression, expected):
     ],
 )
 def test_xpath_double(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4829,7 +4831,7 @@ def test_xpath_double(expression, expected):
     ],
 )
 def test_xpath_float(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4840,7 +4842,7 @@ def test_xpath_float(expression, expected):
     ],
 )
 def test_xpath_int(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4851,7 +4853,7 @@ def test_xpath_int(expression, expected):
     ],
 )
 def test_xpath_long(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4862,7 +4864,7 @@ def test_xpath_long(expression, expected):
     ],
 )
 def test_xpath_number(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4873,7 +4875,7 @@ def test_xpath_number(expression, expected):
     ],
 )
 def test_xpath_short(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4884,7 +4886,7 @@ def test_xpath_short(expression, expected):
     ],
 )
 def test_xpath_string(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected
 
 
 @pytest.mark.parametrize(
@@ -4895,4 +4897,4 @@ def test_xpath_string(expression, expected):
     ],
 )
 def test_years(expression, expected):
-    assert expression.sql() == expected
+    assert expression.column_expression.sql(dialect="spark") == expected

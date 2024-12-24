@@ -329,9 +329,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, CONN, UDF_REGISTRATION
                     row = row.asDict()
                 if isinstance(row, dict):
                     row = row.values()  # type: ignore
-                data_expressions.append(exp.tuple_(*[F.lit(x).expression for x in row]))
+                data_expressions.append(exp.tuple_(*[F.lit(x).column_expression for x in row]))
             else:
-                data_expressions.append(exp.tuple_(*[F.lit(row).expression]))
+                data_expressions.append(exp.tuple_(*[F.lit(row).column_expression]))
 
         if column_mapping:
             sel_columns = [
