@@ -79,6 +79,10 @@ class BigQuerySession(
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
         return None
 
+    @property
+    def _is_bigquery(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "bigquery"
 

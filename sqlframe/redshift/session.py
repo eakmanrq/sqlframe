@@ -44,6 +44,10 @@ class RedshiftSession(
         if not hasattr(self, "_conn"):
             super().__init__(conn)
 
+    @property
+    def _is_redshift(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "redshift"
 

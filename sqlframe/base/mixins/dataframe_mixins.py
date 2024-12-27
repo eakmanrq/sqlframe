@@ -11,7 +11,7 @@ from sqlframe.base.dataframe import (
     SESSION,
     STAT,
     WRITER,
-    _BaseDataFrame,
+    BaseDataFrame,
 )
 
 if sys.version_info >= (3, 11):
@@ -23,7 +23,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class NoCachePersistSupportMixin(_BaseDataFrame, t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
+class NoCachePersistSupportMixin(BaseDataFrame, t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def cache(self) -> Self:
         logger.warning("This engine does not support caching. Ignoring cache() call.")
         return self
@@ -34,7 +34,7 @@ class NoCachePersistSupportMixin(_BaseDataFrame, t.Generic[SESSION, WRITER, NA, 
 
 
 class TypedColumnsFromTempViewMixin(
-    _BaseDataFrame, t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]
+    BaseDataFrame, t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]
 ):
     @property
     def _typed_columns(self) -> t.List[Column]:

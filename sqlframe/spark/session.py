@@ -123,6 +123,10 @@ class SparkSession(
         """
         return cls.Builder()
 
+    @property
+    def _is_spark(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         def __init__(self):
             from pyspark.sql.session import SparkSession

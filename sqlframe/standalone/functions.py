@@ -1,1 +1,1 @@
-from sqlframe.base.functions import *
+from sqlframe.base.functions import *  # noqa

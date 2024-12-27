@@ -80,7 +80,7 @@ JOIN_HINTS = {
 }
 
 
-DF = t.TypeVar("DF", bound="_BaseDataFrame")
+DF = t.TypeVar("DF", bound="BaseDataFrame")
 
 
 class OpenAIMode(enum.Enum):
@@ -198,7 +198,7 @@ class _BaseDataFrameStatFunctions(t.Generic[DF]):
 STAT = t.TypeVar("STAT", bound=_BaseDataFrameStatFunctions)
 
 
-class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
+class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     _na: t.Type[NA]
     _stat: t.Type[STAT]
     _group_data: t.Type[GROUP_DATA]
@@ -1624,7 +1624,9 @@ class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             raise NotImplementedError("Vertical show is not yet supported")
         if truncate:
             logger.warning("Truncate is ignored so full results will be displayed")
-        result = self.limit(n).collect()
+        # Make sure that the limit we add doesn't affect the results
+        df = self._convert_leaf_to_cte()
+        result = df.limit(n).collect()
         table = PrettyTable()
         if row := seq_get(result, 0):
             table.field_names = row._unique_field_names

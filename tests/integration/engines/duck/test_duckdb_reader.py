@@ -122,3 +122,8 @@ def test_issue_219(duckdb_session: DuckDBSession):
     df2 = df1.groupBy("kind", "make").agg(F.min("price"))
     # Just making sure this doesn't raise like it did before
     df2.show()
+
+    # 222
+    lightbulbs = duckdb_session.read.csv("tests/fixtures/issue_219.csv")
+    min_prices = lightbulbs.groupBy("kind", "make").agg(F.min("price"))
+    lightbulbs.join(min_prices, "make").show()

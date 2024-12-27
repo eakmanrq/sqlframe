@@ -74,6 +74,10 @@ class DuckDBSession(
     def _execute(self, sql: str) -> None:
         self._last_result = self._cur.execute(sql)  # type: ignore
 
+    @property
+    def _is_duckdb(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "duckdb"
 

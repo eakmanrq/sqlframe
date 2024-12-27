@@ -25,7 +25,7 @@ from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark.session import SparkSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
@@ -33,7 +33,7 @@ pytest_plugins = ["tests.integration.fixtures"]
 class GetDfAndFuncCallable(t.Protocol):
     def __call__(
         self, name: str, limit: t.Optional[int] = None
-    ) -> t.Tuple[_BaseDataFrame, t.Callable]: ...
+    ) -> t.Tuple[BaseDataFrame, t.Callable]: ...
 
 
 def get_func_from_session(name: str, session: t.Union[PySparkSession, _BaseSession]) -> t.Callable:
@@ -2603,7 +2603,9 @@ def test_array_sort(get_session_and_func, get_func):
             Row(r=[1, 2, 3]),
             Row(r=[1]),
         ]
-        assert df.select(array_sort(df.data, asc=False).alias("r")).collect() == [
+        # ASC/DESC is strange on BigQuery but it is from a legacy bug.
+        # Should be updated to no share the `sort_array` function
+        assert df.select(array_sort(df.data, comparator=False).alias("r")).collect() == [
             Row(r=[3, 2, 1]),
             Row(r=[1]),
         ]

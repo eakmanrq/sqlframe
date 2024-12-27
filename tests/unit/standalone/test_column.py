@@ -31,13 +31,13 @@ def test_ge():
 def test_and():
     assert (
         (F.col("cola") == F.col("colb")) & (F.col("colc") == F.col("cold"))
-    ).sql() == "cola = colb AND colc = cold"
+    ).sql() == "(cola = colb AND colc = cold)"
 
 
 def test_or():
     assert (
         (F.col("cola") == F.col("colb")) | (F.col("colc") == F.col("cold"))
-    ).sql() == "cola = colb OR colc = cold"
+    ).sql() == "(cola = colb OR colc = cold)"
 
 
 def test_mod():
@@ -89,7 +89,7 @@ def test_invert():
 
 
 def test_invert_conjuction():
-    assert (~(F.col("cola") | F.col("colb"))).sql() == "NOT (cola OR colb)"
+    assert (~(F.col("cola") | F.col("colb"))).sql() == "NOT ((cola OR colb))"
 
 
 def test_paren():
@@ -154,18 +154,20 @@ def test_desc_nulls_last():
 
 
 def test_when_otherwise():
-    assert (F.when(F.col("cola") == 1, 2)).sql() == "CASE WHEN cola = 1 THEN 2 END"
-    assert (F.col("cola").when(F.col("cola") == 1, 2)).sql() == "CASE WHEN cola = 1 THEN 2 END"
+    assert (F.when(F.col("cola") == 1, 2)).sql() == "CASE WHEN cola = 1 THEN 2 END AS when__cola__"
+    assert (
+        F.col("cola").when(F.col("cola") == 1, 2)
+    ).sql() == "CASE WHEN cola = 1 THEN 2 END AS when__cola__"
     assert (
         F.when(F.col("cola") == 1, 2).when(F.col("colb") == 2, 3)
-    ).sql() == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 END"
+    ).sql() == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 END AS when__cola__"
     assert (
         F.col("cola").when(F.col("cola") == 1, 2).when(F.col("colb") == 2, 3).sql()
-        == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 END"
+        == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 END AS when__cola__"
     )
     assert (
         F.when(F.col("cola") == 1, 2).when(F.col("colb") == 2, 3).otherwise(4).sql()
-        == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 ELSE 4 END"
+        == "CASE WHEN cola = 1 THEN 2 WHEN colb = 2 THEN 3 ELSE 4 END AS when__cola__"
     )
 
 
@@ -223,4 +225,4 @@ def test_over():
 
 
 def test_get_item():
-    assert F.col("cola").getItem(1).sql() == "ELEMENT_AT(cola, (1 + 1))"
+    assert F.col("cola").getItem(1).sql() == "ELEMENT_AT(cola, (1 + 1)) AS element_at__cola__"

@@ -74,6 +74,10 @@ $$ LANGUAGE plpgsql;""")
                 return []
             raise e
 
+    @property
+    def _is_postgres(self) -> bool:
+        return True
+
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "postgres"
 

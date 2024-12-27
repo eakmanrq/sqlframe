@@ -24,7 +24,7 @@ from sqlglot.optimizer.qualify_columns import (
 from sqlglot.schema import MappingSchema
 
 from sqlframe.base.catalog import _BaseCatalog
-from sqlframe.base.dataframe import _BaseDataFrame
+from sqlframe.base.dataframe import BaseDataFrame
 from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 from sqlframe.base.table import _BaseTable
@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 CATALOG = t.TypeVar("CATALOG", bound=_BaseCatalog)
 READER = t.TypeVar("READER", bound=_BaseDataFrameReader)
 WRITER = t.TypeVar("WRITER", bound=_BaseDataFrameWriter)
-DF = t.TypeVar("DF", bound=_BaseDataFrame)
+DF = t.TypeVar("DF", bound=BaseDataFrame)
 TABLE = t.TypeVar("TABLE", bound=_BaseTable)
 UDF_REGISTRATION = t.TypeVar("UDF_REGISTRATION", bound=_BaseUDFRegistration)
 
@@ -335,9 +335,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     row = row.asDict()
                 if isinstance(row, dict):
                     row = row.values()  # type: ignore
-                data_expressions.append(exp.tuple_(*[F.lit(x).expression for x in row]))
+                data_expressions.append(exp.tuple_(*[F.lit(x).column_expression for x in row]))
             else:
-                data_expressions.append(exp.tuple_(*[F.lit(row).expression]))
+                data_expressions.append(exp.tuple_(*[F.lit(row).column_expression]))
 
         if column_mapping:
             sel_columns = [
@@ -588,6 +588,38 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         for value in values:
             converted_values.append(cls._to_value(value))
         return _create_row(columns, converted_values)
+
+    @property
+    def _is_bigquery(self) -> bool:
+        return False
+
+    @property
+    def _is_databricks(self) -> bool:
+        return False
+
+    @property
+    def _is_duckdb(self) -> bool:
+        return False
+
+    @property
+    def _is_postgres(self) -> bool:
+        return False
+
+    @property
+    def _is_redshift(self) -> bool:
+        return False
+
+    @property
+    def _is_snowflake(self) -> bool:
+        return False
+
+    @property
+    def _is_spark(self) -> bool:
+        return False
+
+    @property
+    def _is_standalone(self) -> bool:
+        return False
 
     class Builder:
         SQLFRAME_INPUT_DIALECT_KEY = "sqlframe.input.dialect"

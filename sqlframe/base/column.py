@@ -9,6 +9,7 @@ import typing as t
 import sqlglot
 from sqlglot import Dialect
 from sqlglot import expressions as exp
+from sqlglot.expressions import paren
 from sqlglot.helper import flatten, is_iterable
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 
@@ -63,10 +64,10 @@ class Column:
         return self.binary_op(exp.LTE, other)
 
     def __and__(self, other: ColumnOrLiteral) -> Column:
-        return self.binary_op(exp.And, other)
+        return self.binary_op(exp.And, other, paren=True)
 
     def __or__(self, other: ColumnOrLiteral) -> Column:
-        return self.binary_op(exp.Or, other)
+        return self.binary_op(exp.Or, other, paren=True)
 
     def __mod__(self, other: ColumnOrLiteral) -> Column:
         return self.binary_op(exp.Mod, other, paren=True)
@@ -181,7 +182,7 @@ class Column:
     ) -> Column:
         columns = [] if column is None else [cls.ensure_col(column)]
         column_args = [cls.ensure_col(arg) for arg in args]
-        expressions = [x.expression for x in columns + column_args]
+        expressions = [x.column_expression for x in columns + column_args]
         new_expression = exp.Anonymous(this=func_name.upper(), expressions=expressions)
         return Column(new_expression)
 
@@ -192,9 +193,9 @@ class Column:
         ensured_column = None if column is None else cls.ensure_col(column)
         ensure_expression_values = {
             k: (
-                [cls.ensure_col(x).expression for x in v]
+                [cls.ensure_col(x).column_expression for x in v]
                 if is_iterable(v)
-                else cls.ensure_col(v).expression
+                else cls.ensure_col(v).column_expression
             )
             for k, v in kwargs.items()
             if v is not None
@@ -316,10 +317,12 @@ class Column:
         from sqlframe.base.functions import when
 
         column_with_if = when(condition, value)
-        if not isinstance(self.expression, exp.Case):
+        if not isinstance(self.column_expression, exp.Case):
             return column_with_if
         new_column = self.copy()
-        new_column.expression.args["ifs"].extend(column_with_if.expression.args["ifs"])
+        new_column.column_expression.args["ifs"].extend(
+            column_with_if.column_expression.args["ifs"]
+        )
         return new_column
 
     def otherwise(self, value: t.Any) -> Column:
@@ -327,7 +330,7 @@ class Column:
 
         true_value = value if isinstance(value, Column) else lit(value)
         new_column = self.copy()
-        new_column.expression.set("default", true_value.column_expression)
+        new_column.column_expression.set("default", true_value.column_expression)
         return new_column
 
     def isNull(self) -> Column:
