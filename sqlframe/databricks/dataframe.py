@@ -5,7 +5,7 @@ import typing as t
 
 from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -31,7 +31,7 @@ class DatabricksDataFrameStatFunctions(_BaseDataFrameStatFunctions["DatabricksDa
 
 class DatabricksDataFrame(
     NoCachePersistSupportMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "DatabricksSession",
         "DatabricksDataFrameWriter",
         "DatabricksDataFrameNaFunctions",

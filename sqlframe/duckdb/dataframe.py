@@ -4,7 +4,7 @@ import logging
 import typing as t
 
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -34,7 +34,7 @@ class DuckDBDataFrameStatFunctions(_BaseDataFrameStatFunctions["DuckDBDataFrame"
 class DuckDBDataFrame(
     NoCachePersistSupportMixin,
     TypedColumnsFromTempViewMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "DuckDBSession",
         "DuckDBDataFrameWriter",
         "DuckDBDataFrameNaFunctions",

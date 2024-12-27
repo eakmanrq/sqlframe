@@ -7,7 +7,7 @@ import typing as t
 from itertools import zip_longest
 
 from sqlframe.base import types
-from sqlframe.base.dataframe import _BaseDataFrame
+from sqlframe.base.dataframe import BaseDataFrame
 from sqlframe.base.exceptions import (
     DataFrameDiffError,
     SchemaDiffError,
@@ -64,8 +64,8 @@ def _context_diff(actual: t.List[str], expected: t.List[str], n: int = 3):
 
 # Source: https://github.com/apache/spark/blob/master/python/pyspark/testing/utils.py#L519
 def assertDataFrameEqual(
-    actual: t.Union[_BaseDataFrame, pd.DataFrame, t.List[types.Row]],
-    expected: t.Union[_BaseDataFrame, pd.DataFrame, t.List[types.Row]],
+    actual: t.Union[BaseDataFrame, pd.DataFrame, t.List[types.Row]],
+    expected: t.Union[BaseDataFrame, pd.DataFrame, t.List[types.Row]],
     checkRowOrder: bool = False,
     rtol: float = 1e-5,
     atol: float = 1e-8,

@@ -7,7 +7,7 @@ import typing as t
 from enum import IntEnum
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.group import _BaseGroupedData
 
 
@@ -37,7 +37,7 @@ def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
 
     def decorator(func: t.Callable) -> t.Callable:
         @functools.wraps(func)
-        def wrapper(self: _BaseDataFrame, *args, **kwargs) -> _BaseDataFrame:
+        def wrapper(self: BaseDataFrame, *args, **kwargs) -> BaseDataFrame:
             if self.last_op == Operation.INIT:
                 self = self._convert_leaf_to_cte()
                 self.last_op = Operation.NO_OP
@@ -45,7 +45,7 @@ def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self = self._convert_leaf_to_cte()
-            df: t.Union[_BaseDataFrame, _BaseGroupedData] = func(self, *args, **kwargs)
+            df: t.Union[BaseDataFrame, _BaseGroupedData] = func(self, *args, **kwargs)
             df.last_op = new_op  # type: ignore
             return df  # type: ignore
 
@@ -69,7 +69,7 @@ def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
 
     def decorator(func: t.Callable) -> t.Callable:
         @functools.wraps(func)
-        def wrapper(self: _BaseGroupedData, *args, **kwargs) -> _BaseDataFrame:
+        def wrapper(self: _BaseGroupedData, *args, **kwargs) -> BaseDataFrame:
             if self._df.last_op == Operation.INIT:
                 self._df = self._df._convert_leaf_to_cte()
                 self._df.last_op = Operation.NO_OP
@@ -77,7 +77,7 @@ def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self._df = self._df._convert_leaf_to_cte()
-            df: _BaseDataFrame = func(self, *args, **kwargs)
+            df: BaseDataFrame = func(self, *args, **kwargs)
             df.last_op = new_op  # type: ignore
             return df
 

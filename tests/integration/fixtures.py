@@ -46,7 +46,7 @@ from sqlframe.standalone.dataframe import StandaloneDataFrame
 from sqlframe.standalone.session import StandaloneSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.session import _BaseSession
     from tests.types import DistrictData, EmployeeData, StoreData
 
@@ -650,14 +650,14 @@ def get_explain_plan() -> t.Callable:
 
 
 @pytest.fixture(params=ENGINE_PARAMETERS_NO_PYSPARK_STANDALONE)
-def get_engine_df(request: FixtureRequest) -> t.Callable[[str], _BaseDataFrame]:
+def get_engine_df(request: FixtureRequest) -> t.Callable[[str], BaseDataFrame]:
     mapping = {
         "employee": f"{request.param}_employee",
         "store": f"{request.param}_store",
         "district": f"{request.param}_district",
     }
 
-    def _get_engine_df(name: str) -> _BaseDataFrame:
+    def _get_engine_df(name: str) -> BaseDataFrame:
         return request.getfixturevalue(mapping[name])
 
     return _get_engine_df
@@ -672,14 +672,14 @@ def get_session(request: FixtureRequest) -> t.Callable[[], _BaseSession]:
 
 
 @pytest.fixture(params=ENGINE_PARAMETERS_NO_PYSPARK)
-def get_df(request: FixtureRequest) -> t.Callable[[str], _BaseDataFrame]:
+def get_df(request: FixtureRequest) -> t.Callable[[str], BaseDataFrame]:
     mapping = {
         "employee": f"{request.param}_employee",
         "store": f"{request.param}_store",
         "district": f"{request.param}_district",
     }
 
-    def _get_df(name: str) -> _BaseDataFrame:
+    def _get_df(name: str) -> BaseDataFrame:
         return request.getfixturevalue(mapping[name])
 
     return _get_df
@@ -698,14 +698,14 @@ def get_engine_session_and_spark(
 @pytest.fixture(params=ENGINE_PARAMETERS_NO_STANDALONE)
 def get_engine_df_and_pyspark(
     request: FixtureRequest,
-) -> t.Callable[[str], t.Union[_BaseDataFrame, PySparkDataFrame]]:
+) -> t.Callable[[str], t.Union[BaseDataFrame, PySparkDataFrame]]:
     mapping = {
         "employee": f"{request.param}_employee",
         "store": f"{request.param}_store",
         "district": f"{request.param}_district",
     }
 
-    def _get_engine_df_and_pyspark(name: str) -> t.Union[_BaseDataFrame, PySparkDataFrame]:
+    def _get_engine_df_and_pyspark(name: str) -> t.Union[BaseDataFrame, PySparkDataFrame]:
         return request.getfixturevalue(mapping[name])
 
     return _get_engine_df_and_pyspark
