@@ -7,7 +7,7 @@ from sqlglot import exp
 from sqlglot.expressions import _to_s
 from sqlglot.helper import object_to_dict
 
-from sqlframe.base.dataframe import DF, SESSION, _BaseDataFrame
+from sqlframe.base.dataframe import DF, SESSION, BaseDataFrame
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -189,7 +189,7 @@ class LazyExpression:
         return _to_s(self._expression)
 
 
-class _BaseTable(_BaseDataFrame, t.Generic[DF]):
+class _BaseTable(BaseDataFrame, t.Generic[DF]):
     _df: t.Type[DF]
 
     def copy(self, **kwargs):
@@ -203,7 +203,7 @@ class _BaseTable(_BaseDataFrame, t.Generic[DF]):
         return self.__class__(**object_to_dict(self))
 
     def alias(self, name: str, **kwargs) -> Self:
-        df = _BaseDataFrame.alias(self, name, **kwargs)
+        df = BaseDataFrame.alias(self, name, **kwargs)
         new_df = self.__class__(**object_to_dict(df))
         return new_df
 
