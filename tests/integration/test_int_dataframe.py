@@ -12,16 +12,16 @@ from sqlframe.standalone.dataframe import StandaloneDataFrame
 from tests.integration.fixtures import StandaloneSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
-    DataFrameMapping = t.Dict[str, _BaseDataFrame]
+    DataFrameMapping = t.Dict[str, BaseDataFrame]
 
 pytest_plugins = ["tests.integration.fixtures"]
 
 
 def test_empty_df(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     df_empty = pyspark_employee.sparkSession.createDataFrame([], "cola int, colb int")
@@ -31,7 +31,7 @@ def test_empty_df(
 
 def test_simple_select(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -42,7 +42,7 @@ def test_simple_select(
 
 def test_simple_select_from_table(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -53,7 +53,7 @@ def test_simple_select_from_table(
 
 def test_select_star_from_table(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     df = pyspark_employee
@@ -63,7 +63,7 @@ def test_select_star_from_table(
 
 def test_simple_select_df_attribute(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -74,7 +74,7 @@ def test_simple_select_df_attribute(
 
 def test_simple_select_df_dict(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -85,7 +85,7 @@ def test_simple_select_df_dict(
 
 def test_multiple_selects(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -98,7 +98,7 @@ def test_multiple_selects(
 
 def test_alias_no_op(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -109,7 +109,7 @@ def test_alias_no_op(
 
 def test_alias_with_select(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -128,7 +128,7 @@ def test_alias_with_select(
 
 def test_alias_with_space(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -149,7 +149,7 @@ def test_alias_with_space(
 
 def test_case_when_otherwise(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -176,7 +176,7 @@ def test_case_when_otherwise(
 
 def test_case_when_no_otherwise(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -199,7 +199,7 @@ def test_case_when_no_otherwise(
 
 def test_case_when_implicit_lit(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -222,7 +222,7 @@ def test_case_when_implicit_lit(
 
 def test_where_clause_single(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -233,7 +233,7 @@ def test_where_clause_single(
 
 def test_where_clause_eq_nullsafe(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -244,7 +244,7 @@ def test_where_clause_eq_nullsafe(
 
 def test_where_clause_multiple_and(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -259,7 +259,7 @@ def test_where_clause_multiple_and(
 
 def test_where_many_and(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -280,7 +280,7 @@ def test_where_many_and(
 
 def test_where_clause_multiple_or(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -295,7 +295,7 @@ def test_where_clause_multiple_or(
 
 def test_where_many_or(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -316,7 +316,7 @@ def test_where_many_or(
 
 def test_where_mixed_and_or(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -333,7 +333,7 @@ def test_where_mixed_and_or(
 
 def test_where_multiple_chained(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -348,7 +348,7 @@ def test_where_multiple_chained(
 
 def test_where_sql_expr(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -359,7 +359,7 @@ def test_where_sql_expr(
 
 def test_operators(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -409,7 +409,7 @@ def test_operators(
 def test_join_inner(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -438,7 +438,7 @@ def test_join_inner(
 def test_join_inner_no_select(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -459,7 +459,7 @@ def test_join_inner_no_select(
 def test_join_inner_equality_single(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -498,7 +498,7 @@ def test_join_inner_equality_single(
 def test_join_inner_equality_multiple(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -541,7 +541,7 @@ def test_join_inner_equality_multiple(
 def test_join_inner_equality_multiple_bitwise_and(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -579,7 +579,7 @@ def test_join_inner_equality_multiple_bitwise_and(
 def test_join_left_outer(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -616,7 +616,7 @@ def test_join_left_outer(
 def test_join_full_outer(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
 ):
@@ -651,7 +651,7 @@ def test_triple_join(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -690,7 +690,7 @@ def test_triple_join_no_select(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_duckdb: t.Callable,
     is_postgres: t.Callable,
@@ -752,7 +752,7 @@ def test_triple_joins_filter(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_duckdb: t.Callable,
     is_postgres: t.Callable,
@@ -810,7 +810,7 @@ def test_triple_join_column_name_only(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_duckdb: t.Callable,
     is_postgres: t.Callable,
@@ -863,7 +863,7 @@ def test_triple_join_column_name_only(
 def test_join_select_and_select_start(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -882,7 +882,7 @@ def test_join_select_and_select_start(
 def test_join_no_on(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     # No on results in a cross. Testing that "how" is ignored
@@ -899,7 +899,7 @@ def test_join_no_on(
 def test_cross_join(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     # No on results in a cross. Testing that "how" is ignored
@@ -915,7 +915,7 @@ def test_cross_join(
 
 def test_branching_root_dataframes(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_duckdb: t.Callable,
     is_postgres: t.Callable,
@@ -990,7 +990,7 @@ def test_branching_root_dataframes(
 def test_basic_union(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1009,7 +1009,7 @@ def test_union_with_join(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1040,7 +1040,7 @@ def test_double_union_all(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1064,7 +1064,7 @@ def test_double_union_all(
 def test_union_by_name(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1091,7 +1091,7 @@ def test_union_by_name(
 def test_union_by_name_allow_missing(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_postgres: t.Callable,
 ):
@@ -1130,7 +1130,7 @@ def test_union_by_name_allow_missing(
 
 def test_order_by_default(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1149,7 +1149,7 @@ def test_order_by_default(
 
 def test_order_by_array_bool(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1170,7 +1170,7 @@ def test_order_by_array_bool(
 
 def test_order_by_single_bool(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1191,7 +1191,7 @@ def test_order_by_single_bool(
 
 def test_order_by_column_sort_method(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1212,7 +1212,7 @@ def test_order_by_column_sort_method(
 
 def test_order_by_column_sort_method_nulls_last(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1235,7 +1235,7 @@ def test_order_by_column_sort_method_nulls_last(
 
 def test_order_by_column_sort_method_nulls_first(
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     store = get_df("store")
@@ -1259,7 +1259,7 @@ def test_order_by_column_sort_method_nulls_first(
 def test_intersect(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1290,7 +1290,7 @@ def test_intersect(
 def test_intersect_all(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
     is_redshift: t.Callable,
@@ -1330,7 +1330,7 @@ def test_intersect_all(
 def test_except_all(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
     is_redshift: t.Callable,
@@ -1369,7 +1369,7 @@ def test_except_all(
 
 def test_distinct(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1382,7 +1382,7 @@ def test_distinct(
 
 def test_union_distinct(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1402,7 +1402,7 @@ def test_union_distinct(
 
 def test_drop_duplicates_no_subset(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1413,7 +1413,7 @@ def test_drop_duplicates_no_subset(
 
 def test_drop_duplicates_subset(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_redshift: t.Callable,
 ):
@@ -1430,7 +1430,7 @@ def test_drop_duplicates_subset(
 
 def test_drop_na_default(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1447,7 +1447,7 @@ def test_drop_na_default(
 
 def test_dropna_how(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1464,7 +1464,7 @@ def test_dropna_how(
 
 def test_dropna_thresh(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1485,7 +1485,7 @@ def test_dropna_thresh(
 
 def test_dropna_subset(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1506,7 +1506,7 @@ def test_dropna_subset(
 
 def test_dropna_na_function(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1523,7 +1523,7 @@ def test_dropna_na_function(
 
 def test_fillna_default(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1540,7 +1540,7 @@ def test_fillna_default(
 
 def test_fillna_dict_replacement(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1563,7 +1563,7 @@ def test_fillna_dict_replacement(
 
 def test_fillna_na_func(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1580,7 +1580,7 @@ def test_fillna_na_func(
 
 def test_replace_basic(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1596,7 +1596,7 @@ def test_replace_basic(
 
 def test_replace_basic_subset(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1613,7 +1613,7 @@ def test_replace_basic_subset(
 
 def test_replace_mapping(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1626,7 +1626,7 @@ def test_replace_mapping(
 
 def test_replace_mapping_subset(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1643,7 +1643,7 @@ def test_replace_mapping_subset(
 
 def test_replace_na_func_basic(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1660,7 +1660,7 @@ def test_replace_na_func_basic(
 
 def test_with_column(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1673,7 +1673,7 @@ def test_with_column(
 
 def test_with_column_existing_name(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1686,7 +1686,7 @@ def test_with_column_existing_name(
 
 def test_with_column_renamed(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1699,7 +1699,7 @@ def test_with_column_renamed(
 
 def test_with_column_renamed_double(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1716,7 +1716,7 @@ def test_with_column_renamed_double(
 
 def test_with_columns(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1739,7 +1739,7 @@ def test_with_columns(
 
 def test_with_columns_reference_another(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
     is_postgres: t.Callable,
@@ -1774,7 +1774,7 @@ def test_with_columns_reference_another(
 
 def test_drop_column_single(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1788,7 +1788,7 @@ def test_drop_column_single(
 def test_drop_column_reference_join(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1814,7 +1814,7 @@ def test_drop_column_reference_join(
 
 def test_limit(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -1828,7 +1828,7 @@ def test_limit(
 def test_hint_broadcast_alias(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     get_explain_plan: t.Callable,
     is_duckdb: t.Callable,
@@ -1870,7 +1870,7 @@ def test_hint_broadcast_alias(
 def test_hint_broadcast_no_alias(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     get_explain_plan: t.Callable,
 ):
@@ -1912,7 +1912,7 @@ def test_hint_broadcast_no_alias(
 def test_broadcast_func(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     get_explain_plan: t.Callable,
 ):
@@ -1953,7 +1953,7 @@ def test_broadcast_func(
 
 def test_repartition_by_num(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     """
@@ -1974,7 +1974,7 @@ def test_repartition_by_num(
 
 def test_repartition_name_only(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     get_explain_plan: t.Callable,
 ):
@@ -1993,7 +1993,7 @@ def test_repartition_name_only(
 
 def test_repartition_num_and_multiple_names(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     get_explain_plan: t.Callable,
 ):
@@ -2014,7 +2014,7 @@ def test_repartition_num_and_multiple_names(
 
 def test_coalesce(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -2031,7 +2031,7 @@ def test_coalesce(
 def test_cache_select(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -2058,7 +2058,7 @@ def test_cache_select(
 def test_persist_select(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
@@ -2084,7 +2084,7 @@ def test_persist_select(
 
 def test_transform(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     def cast_all_to_int_pyspark(input_df):
@@ -2106,7 +2106,7 @@ def test_transform(
 # https://github.com/eakmanrq/sqlframe/issues/51
 def test_join_full_outer_no_match(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     spark = pyspark_employee._session
@@ -2151,7 +2151,7 @@ def test_join_full_outer_no_match(
 # https://github.com/eakmanrq/sqlframe/issues/102
 def test_join_with_duplicate_column_name(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     spark = pyspark_employee._session
@@ -2172,7 +2172,7 @@ def test_join_with_duplicate_column_name(
 # https://github.com/eakmanrq/sqlframe/issues/103
 def test_chained_join_common_key(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
     spark = pyspark_employee._session
@@ -2198,7 +2198,7 @@ def test_chaining_joins_with_selects(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
     pyspark_district: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_spark: t.Callable,
 ):
@@ -2253,7 +2253,7 @@ def test_chaining_joins_with_selects(
 # https://github.com/eakmanrq/sqlframe/issues/212
 def test_self_join(
     pyspark_employee: PySparkDataFrame,
-    get_df: t.Callable[[str], _BaseDataFrame],
+    get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
     is_spark: t.Callable,
 ):

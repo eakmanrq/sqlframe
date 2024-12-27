@@ -24,7 +24,7 @@ from sqlglot.optimizer.qualify_columns import (
 from sqlglot.schema import MappingSchema
 
 from sqlframe.base.catalog import _BaseCatalog
-from sqlframe.base.dataframe import _BaseDataFrame
+from sqlframe.base.dataframe import BaseDataFrame
 from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 from sqlframe.base.udf import _BaseUDFRegistration
@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 CATALOG = t.TypeVar("CATALOG", bound=_BaseCatalog)
 READER = t.TypeVar("READER", bound=_BaseDataFrameReader)
 WRITER = t.TypeVar("WRITER", bound=_BaseDataFrameWriter)
-DF = t.TypeVar("DF", bound=_BaseDataFrame)
+DF = t.TypeVar("DF", bound=BaseDataFrame)
 UDF_REGISTRATION = t.TypeVar("UDF_REGISTRATION", bound=_BaseUDFRegistration)
 
 _MISSING = "MISSING"

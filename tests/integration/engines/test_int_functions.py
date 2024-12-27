@@ -25,7 +25,7 @@ from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark.session import SparkSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
@@ -33,7 +33,7 @@ pytest_plugins = ["tests.integration.fixtures"]
 class GetDfAndFuncCallable(t.Protocol):
     def __call__(
         self, name: str, limit: t.Optional[int] = None
-    ) -> t.Tuple[_BaseDataFrame, t.Callable]: ...
+    ) -> t.Tuple[BaseDataFrame, t.Callable]: ...
 
 
 def get_func_from_session(name: str, session: t.Union[PySparkSession, _BaseSession]) -> t.Callable:

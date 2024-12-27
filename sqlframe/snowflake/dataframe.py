@@ -6,7 +6,7 @@ import typing as t
 
 from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -32,7 +32,7 @@ class SnowflakeDataFrameStatFunctions(_BaseDataFrameStatFunctions["SnowflakeData
 
 class SnowflakeDataFrame(
     NoCachePersistSupportMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "SnowflakeSession",
         "SnowflakeDataFrameWriter",
         "SnowflakeDataFrameNaFunctions",

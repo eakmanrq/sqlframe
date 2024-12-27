@@ -80,7 +80,7 @@ JOIN_HINTS = {
 }
 
 
-DF = t.TypeVar("DF", bound="_BaseDataFrame")
+DF = t.TypeVar("DF", bound="BaseDataFrame")
 
 
 class OpenAIMode(enum.Enum):
@@ -198,7 +198,7 @@ class _BaseDataFrameStatFunctions(t.Generic[DF]):
 STAT = t.TypeVar("STAT", bound=_BaseDataFrameStatFunctions)
 
 
-class _BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
+class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     _na: t.Type[NA]
     _stat: t.Type[STAT]
     _group_data: t.Type[GROUP_DATA]

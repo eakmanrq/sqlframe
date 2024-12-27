@@ -5,7 +5,7 @@ import typing as t
 
 from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -30,7 +30,7 @@ class BigQueryDataFrameStatFunctions(_BaseDataFrameStatFunctions["BigQueryDataFr
 
 class BigQueryDataFrame(
     NoCachePersistSupportMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "BigQuerySession",
         "BigQueryDataFrameWriter",
         "BigQueryDataFrameNaFunctions",

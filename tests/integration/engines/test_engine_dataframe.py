@@ -5,12 +5,12 @@ import typing as t
 from sqlframe.base.types import Row
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
 
-def test_collect(get_engine_df: t.Callable[[str], _BaseDataFrame], get_func):
+def test_collect(get_engine_df: t.Callable[[str], BaseDataFrame], get_func):
     employee = get_engine_df("employee")
     col = get_func("col", employee.session)
     results = employee.select(col("fname"), col("lname")).collect()
@@ -24,7 +24,7 @@ def test_collect(get_engine_df: t.Callable[[str], _BaseDataFrame], get_func):
 
 
 def test_show(
-    get_engine_df: t.Callable[[str], _BaseDataFrame],
+    get_engine_df: t.Callable[[str], BaseDataFrame],
     get_func,
     capsys,
     caplog,
@@ -53,7 +53,7 @@ def test_show(
 
 
 def test_show_limit(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], capsys, is_snowflake: t.Callable
+    get_engine_df: t.Callable[[str], BaseDataFrame], capsys, is_snowflake: t.Callable
 ):
     employee = get_engine_df("employee")
     employee.show(1)

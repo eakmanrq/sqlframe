@@ -7,7 +7,7 @@ from sqlglot import exp
 
 from sqlframe.base.catalog import Column
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -31,7 +31,7 @@ class SparkDataFrameStatFunctions(_BaseDataFrameStatFunctions["SparkDataFrame"])
 
 class SparkDataFrame(
     NoCachePersistSupportMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "SparkSession",
         "SparkDataFrameWriter",
         "SparkDataFrameNaFunctions",

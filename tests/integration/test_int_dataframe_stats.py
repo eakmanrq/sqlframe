@@ -3,14 +3,14 @@ import typing as t
 
 import pytest
 
-from sqlframe.base.dataframe import _BaseDataFrame
+from sqlframe.base.dataframe import BaseDataFrame
 from sqlframe.postgres import PostgresDataFrame
 from sqlframe.snowflake import SnowflakeDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
 
-def test_approx_quantile(get_engine_df_and_pyspark: t.Callable[[str], _BaseDataFrame]):
+def test_approx_quantile(get_engine_df_and_pyspark: t.Callable[[str], BaseDataFrame]):
     employee = get_engine_df_and_pyspark("employee")
     if isinstance(employee, PostgresDataFrame):
         pytest.skip("Approx quantile is not supported by the engine: postgres")
@@ -22,13 +22,13 @@ def test_approx_quantile(get_engine_df_and_pyspark: t.Callable[[str], _BaseDataF
     assert results == expected
 
 
-def test_corr(get_engine_df_and_pyspark: t.Callable[[str], _BaseDataFrame]):
+def test_corr(get_engine_df_and_pyspark: t.Callable[[str], BaseDataFrame]):
     employee = get_engine_df_and_pyspark("employee")
     results = employee.stat.corr("employee_id", "age")
     assert math.isclose(results, -0.5605569890127448)
 
 
-def test_cov(get_engine_df_and_pyspark: t.Callable[[str], _BaseDataFrame]):
+def test_cov(get_engine_df_and_pyspark: t.Callable[[str], BaseDataFrame]):
     employee = get_engine_df_and_pyspark("employee")
     results = employee.stat.cov("employee_id", "age")
     assert results == -13.5

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -23,7 +23,7 @@ class StandaloneDataFrameStatFunctions(_BaseDataFrameStatFunctions["StandaloneDa
 
 
 class StandaloneDataFrame(
-    _BaseDataFrame[
+    BaseDataFrame[
         "StandaloneSession",
         "StandaloneDataFrameWriter",
         "StandaloneDataFrameNaFunctions",

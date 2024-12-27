@@ -5,7 +5,7 @@ import sys
 import typing as t
 
 from sqlframe.base.dataframe import (
-    _BaseDataFrame,
+    BaseDataFrame,
     _BaseDataFrameNaFunctions,
     _BaseDataFrameStatFunctions,
 )
@@ -39,7 +39,7 @@ class PostgresDataFrameStatFunctions(_BaseDataFrameStatFunctions["PostgresDataFr
 class PostgresDataFrame(
     NoCachePersistSupportMixin,
     TypedColumnsFromTempViewMixin,
-    _BaseDataFrame[
+    BaseDataFrame[
         "PostgresSession",
         "PostgresDataFrameWriter",
         "PostgresDataFrameNaFunctions",

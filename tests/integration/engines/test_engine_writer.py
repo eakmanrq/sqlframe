@@ -10,15 +10,15 @@ from sqlframe.base.types import Row
 from sqlframe.duckdb.session import DuckDBSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
 
 @pytest.fixture
 def cleanup_employee_df(
-    get_engine_df: t.Callable[[str], _BaseDataFrame],
-) -> t.Iterator[_BaseDataFrame]:
+    get_engine_df: t.Callable[[str], BaseDataFrame],
+) -> t.Iterator[BaseDataFrame]:
     df = get_engine_df("employee")
     df.session._execute("DROP TABLE IF EXISTS insert_into_employee")
     df.session._execute("DROP TABLE IF EXISTS save_as_table_employee")
@@ -27,7 +27,7 @@ def cleanup_employee_df(
     df.session._execute("DROP TABLE IF EXISTS save_as_table_employee")
 
 
-def test_write_json(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path):
+def test_write_json(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_json = str(tmp_path / "employee.json")
     df_employee.write.json(temp_json)
@@ -50,9 +50,7 @@ def test_write_json_append(get_session: t.Callable[[], _BaseSession], tmp_path: 
         assert df_result.collect() == [Row(_1=1), Row(_1=2)]
 
 
-def test_write_json_ignore(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path
-):
+def test_write_json_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_json = tmp_path / "employee.json"
     temp_json.touch()
@@ -62,7 +60,7 @@ def test_write_json_ignore(
 
 
 def test_write_json_error(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path, caplog
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path, caplog
 ):
     df_employee = get_engine_df("employee")
     temp_json = tmp_path / "employee.json"
@@ -71,7 +69,7 @@ def test_write_json_error(
         df_employee.write.json(temp_json, mode="error")
 
 
-def test_write_parquet(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path):
+def test_write_parquet(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_parquet = str(tmp_path / "employee.parquet")
     df_employee.write.parquet(temp_parquet)
@@ -80,7 +78,7 @@ def test_write_parquet(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_pat
 
 
 def test_write_parquet_ignore(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path
 ):
     df_employee = get_engine_df("employee")
     temp_parquet = str(tmp_path / "employee.parquet")
@@ -95,7 +93,7 @@ def test_write_parquet_ignore(
 
 
 def test_write_parquet_error(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path, caplog
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path, caplog
 ):
     df_employee = get_engine_df("employee")
     temp_parquet = tmp_path / "employee.parquet"
@@ -105,7 +103,7 @@ def test_write_parquet_error(
 
 
 def test_write_parquet_unsupported_modes(
-    get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path
 ):
     df_employee = get_engine_df("employee")
     temp_json = tmp_path / "employee.parquet"
@@ -113,7 +111,7 @@ def test_write_parquet_unsupported_modes(
         df_employee.write.parquet(str(temp_json), mode="append")
 
 
-def test_write_csv(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path):
+def test_write_csv(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_csv = str(tmp_path / "employee.csv")
     df_employee.write.csv(temp_csv)
@@ -136,7 +134,7 @@ def test_write_csv_append(get_session: t.Callable[[], _BaseSession], tmp_path: p
         assert df_result.collect() == [Row(_1=1), Row(_1=2)]
 
 
-def test_write_csv_ignore(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path):
+def test_write_csv_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_csv = str(tmp_path / "employee.csv")
     df1 = df_employee.session.createDataFrame([(1,)])
@@ -150,7 +148,7 @@ def test_write_csv_ignore(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_
     assert df_result.collect() == df1.collect()
 
 
-def test_write_csv_error(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_path: pathlib.Path):
+def test_write_csv_error(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
     df_employee = get_engine_df("employee")
     temp_csv = tmp_path / "employee.csv"
     temp_csv.touch()
@@ -158,14 +156,14 @@ def test_write_csv_error(get_engine_df: t.Callable[[str], _BaseDataFrame], tmp_p
         df_employee.write.json(temp_csv, mode="error")
 
 
-def test_save_as_table(cleanup_employee_df: _BaseDataFrame, caplog):
+def test_save_as_table(cleanup_employee_df: BaseDataFrame, caplog):
     df_employee = cleanup_employee_df
     df_employee.write.saveAsTable("save_as_table_employee")
     df2 = df_employee.session.read.table("save_as_table_employee")
     assert sorted(df2.collect()) == sorted(df_employee.collect())
 
 
-def test_insertInto(cleanup_employee_df: _BaseDataFrame, caplog):
+def test_insertInto(cleanup_employee_df: BaseDataFrame, caplog):
     df_employee = cleanup_employee_df
     df = df_employee.session.createDataFrame(
         [(9, "Sayid", "Jarrah", 40, 1)], ["id", "first_name", "last_name", "age", "store_id"]
