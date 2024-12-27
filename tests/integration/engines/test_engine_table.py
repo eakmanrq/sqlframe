@@ -18,7 +18,7 @@ from sqlframe.spark.session import SparkSession
 from sqlframe.standalone.session import StandaloneSession
 
 if t.TYPE_CHECKING:
-    from sqlframe.base.dataframe import _BaseDataFrame
+    from sqlframe.base.dataframe import BaseDataFrame
 
 pytest_plugins = ["tests.integration.fixtures"]
 
@@ -85,8 +85,8 @@ def merge_data() -> t.Tuple[t.List[t.Any], str]:
 
 @pytest.fixture
 def cleanup_employee_df(
-    get_engine_df: t.Callable[[str], _BaseDataFrame],
-) -> t.Iterator[_BaseDataFrame]:
+    get_engine_df: t.Callable[[str], BaseDataFrame],
+) -> t.Iterator[BaseDataFrame]:
     df = get_engine_df("employee")
     df.session._execute("DROP TABLE IF EXISTS update_employee")
     df.session._execute("DROP TABLE IF EXISTS merge_employee")
@@ -97,7 +97,7 @@ def cleanup_employee_df(
     df.session._execute("DROP TABLE IF EXISTS delete_employee")
 
 
-def test_update_table(cleanup_employee_df: _BaseDataFrame, caplog):
+def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
     session = cleanup_employee_df.session
     if isinstance(
         session,
@@ -131,7 +131,7 @@ def test_update_table(cleanup_employee_df: _BaseDataFrame, caplog):
     )
 
 
-def test_delete_table(cleanup_employee_df: _BaseDataFrame, caplog):
+def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
     session = cleanup_employee_df.session
     if isinstance(
         session,
@@ -161,7 +161,7 @@ def test_delete_table(cleanup_employee_df: _BaseDataFrame, caplog):
     ]
 
 
-def test_merge_table_simple(cleanup_employee_df: _BaseDataFrame, caplog):
+def test_merge_table_simple(cleanup_employee_df: BaseDataFrame, caplog):
     session = cleanup_employee_df.session
     if isinstance(
         session,
@@ -227,7 +227,7 @@ def test_merge_table_simple(cleanup_employee_df: _BaseDataFrame, caplog):
     ]
 
 
-def test_merge_table(cleanup_employee_df: _BaseDataFrame, merge_data, get_func, caplog):
+def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, caplog):
     session = cleanup_employee_df.session
     col = get_func("col", session)
     expr = get_func("expr", session)
