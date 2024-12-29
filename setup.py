@@ -17,11 +17,11 @@ setup(
         "local_scheme": "no-local-version",
     },
     setup_requires=["setuptools_scm"],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=[
-        "prettytable<3.12.1",
+        "prettytable<4",
         "sqlglot>=24.0.0,<26.1",
-        "typing_extensions>=4.8,<5",
+        "typing_extensions",
     ],
     extras_require={
         "bigquery": [
@@ -32,7 +32,7 @@ setup(
             "duckdb>=0.9,<1.2",
             "findspark>=2,<3",
             "mypy>=1.10.0,<1.15",
-            "openai>=1.30,<1.59",
+            "openai>=1.30,<2",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
@@ -42,8 +42,7 @@ setup(
             "pytest-forked",
             "pytest-postgresql>=6,<7",
             "pytest-xdist>=3.6,<3.7",
-            "pre-commit>=3.5;python_version=='3.8'",
-            "pre-commit>=3.7,<4.1;python_version>='3.9'",
+            "pre-commit>=3.7,<5",
             "ruff>=0.4.4,<0.9",
             "types-psycopg2>=2.9,<3",
         ],
@@ -59,7 +58,7 @@ setup(
             "pandas>=2,<3",
         ],
         "openai": [
-            "openai>=1.30,<1.59",
+            "openai>=1.30,<2",
         ],
         "pandas": [
             "pandas>=2,<3",
