@@ -141,7 +141,6 @@ def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
             RedshiftSession,
             SnowflakeSession,
             SparkSession,
-            BigQuerySession,
         ),
     ):
         pytest.skip("Engine doesn't support delete")
@@ -151,8 +150,8 @@ def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
     assert isinstance(df, _BaseTable)
     delete_expr = df.delete(where=df["age"] > 28)
     result = delete_expr.execute()
-    # Postgres doesn't support returning the number of affected rows
-    if not isinstance(session, PostgresSession):
+    # Postgres and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert result[0][0] == 4
 
     df2 = session.read.table("delete_employee")
@@ -171,7 +170,6 @@ def test_merge_table_simple(cleanup_employee_df: BaseDataFrame, caplog):
             RedshiftSession,
             SnowflakeSession,
             SparkSession,
-            BigQuerySession,
             DuckDBSession,
         ),
     ):
@@ -212,8 +210,8 @@ def test_merge_table_simple(cleanup_employee_df: BaseDataFrame, caplog):
         ],
     )
     result = merge_expr.execute()
-    # Postgres doesn't support returning the number of affected rows
-    if not isinstance(session, PostgresSession):
+    # Postgres and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert result[0][0] == 2
 
     df_merged = session.read.table("merge_employee")
@@ -240,7 +238,6 @@ def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, c
             RedshiftSession,
             SnowflakeSession,
             SparkSession,
-            BigQuerySession,
             DuckDBSession,
         ),
     ):
@@ -338,8 +335,8 @@ def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, c
     )
 
     result = merge_expr.execute()
-    # Postgres doesn't support returning the number of affected rows
-    if not isinstance(session, PostgresSession):
+    # Postgres and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert result[0][0] == 3
 
     df_merged = session.read.table("merge_employee").select(

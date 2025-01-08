@@ -327,6 +327,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     raise ValueError(
                         f"Column `{col_expr.alias_or_name}` does not exist in any of the tables."
                     )
-
+            if isinstance(val.expression, exp.Alias):
+                val.expression = val.expression.this
             update_set[key] = val.expression
         return update_set

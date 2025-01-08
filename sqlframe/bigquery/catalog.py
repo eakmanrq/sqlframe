@@ -51,6 +51,7 @@ class BigQueryCatalog(
             from_dialect=self.session.execution_dialect,
             to_dialect=self.session.output_dialect,
             is_schema=True,
+            quote_identifiers=True,
         )
         return to_schema(current_database, dialect=self.session.output_dialect).db
 
