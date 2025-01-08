@@ -13,11 +13,11 @@ from sqlframe.snowflake.dataframe import SnowflakeDataFrame
 
 class SnowflakeTable(
     SnowflakeDataFrame,
-    UpdateSupportMixin["DatabricksDataFrame"],
-    DeleteSupportMixin["DatabricksDataFrame"],
-    MergeSupportMixin["DatabricksDataFrame"],
-    _BaseTable["SnowflakeDataFrame"]
+    UpdateSupportMixin["SnowflakeDataFrame"],
+    DeleteSupportMixin["SnowflakeDataFrame"],
+    MergeSupportMixin["SnowflakeDataFrame"],
+    _BaseTable["SnowflakeDataFrame"],
 ):
     _df = SnowflakeDataFrame
     _merge_supported_clauses = [WhenMatched, WhenNotMatched]
-    _merge_support_star = True
+    _merge_support_star = False

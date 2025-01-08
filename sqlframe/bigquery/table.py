@@ -17,7 +17,7 @@ class BigQueryTable(
     UpdateSupportMixin["BigQueryDataFrame"],
     DeleteSupportMixin["BigQueryDataFrame"],
     MergeSupportMixin["BigQueryDataFrame"],
-    _BaseTable["BigQueryDataFrame"]
+    _BaseTable["BigQueryDataFrame"],
 ):
     _df = BigQueryDataFrame
     _merge_supported_clauses = [WhenMatched, WhenNotMatched, WhenNotMatchedBySource]
