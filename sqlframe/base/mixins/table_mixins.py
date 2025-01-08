@@ -147,7 +147,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
     def merge(
         self,
         other_df: DF,
-        condition: t.Union[str, t.List[str], Column, t.List[Column]],
+        condition: t.Union[str, t.List[str], Column, t.List[Column], bool],
         clauses: t.Iterable[t.Union[WhenMatched, WhenNotMatched, WhenNotMatchedBySource]],
     ) -> LazyExpression:
         self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
@@ -268,7 +268,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
 
     def _ensure_and_normalize_condition(
         self,
-        condition: t.Union[str, t.List[str], Column, t.List[Column]],
+        condition: t.Union[str, t.List[str], Column, t.List[Column], bool],
         other_df: DF,
         clause: t.Optional[bool] = False,
     ):

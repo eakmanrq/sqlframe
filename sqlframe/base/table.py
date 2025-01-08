@@ -32,7 +32,7 @@ class MergeClause:
     def __init__(
         self,
         clause_type: Clause,
-        condition: t.Optional[t.Union["Column", str, bool]] = None,
+        condition: t.Optional[t.Union[str, t.List[str], "Column", t.List["Column"], bool]] = None,
         assignments: t.Optional[
             t.Dict[t.Union["Column", str], t.Union["Column", "ColumnOrLiteral", exp.Expression]]
         ] = None,
@@ -47,7 +47,10 @@ class MergeClause:
 
 
 class WhenMatched:
-    def __init__(self, condition: t.Optional[t.Union["Column", str, bool]] = None):
+    def __init__(
+        self,
+        condition: t.Optional[t.Union[str, t.List[str], "Column", t.List["Column"], bool]] = None,
+    ):
         self._condition = condition
         self._clause: t.Union[MergeClause, None] = None
 
@@ -93,7 +96,10 @@ class WhenMatched:
 
 
 class WhenNotMatched:
-    def __init__(self, condition: t.Optional[t.Union["Column", str, bool]] = None):
+    def __init__(
+        self,
+        condition: t.Optional[t.Union[str, t.List[str], "Column", t.List["Column"], bool]] = None,
+    ):
         self._condition = condition
         self._clause: t.Union[MergeClause, None] = None
 
@@ -134,7 +140,10 @@ class WhenNotMatched:
 
 
 class WhenNotMatchedBySource(object):
-    def __init__(self, condition: t.Optional[t.Union["Column", str, bool]] = None):
+    def __init__(
+        self,
+        condition: t.Optional[t.Union[str, t.List[str], "Column", t.List["Column"], bool]] = None,
+    ):
         self._condition = condition
         self._clause: t.Union[MergeClause, None] = None
 
@@ -217,7 +226,7 @@ class _BaseTable(BaseDataFrame, t.Generic[DF]):
     def merge(
         self,
         source: DF,
-        condition: t.Union[str, t.List[str], "Column", t.List["Column"]],
+        condition: t.Union[str, t.List[str], "Column", t.List["Column"], bool],
         clauses: t.Iterable[t.Union[WhenMatched, WhenNotMatched, WhenNotMatchedBySource]],
     ) -> LazyExpression:
         raise NotImplementedError()
