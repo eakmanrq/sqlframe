@@ -116,7 +116,7 @@ def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
     df = session.read.table("update_employee")
     assert isinstance(df, _BaseTable)
     update_expr = df.update(
-        _set={"age": df["age"] + 1},
+        set_={"age": df["age"] + 1},
         where=df["employee_id"] == 1,
     )
     result = update_expr.execute()

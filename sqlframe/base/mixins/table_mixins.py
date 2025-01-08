@@ -49,7 +49,7 @@ class UpdateSupportMixin(_BaseTable, t.Generic[DF]):
     @ensure_cte()
     def update(
         self,
-        _set: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
+        set_: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
         where: t.Optional[t.Union[Column, str, bool]] = None,
     ) -> LazyExpression:
         self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
@@ -67,10 +67,7 @@ class UpdateSupportMixin(_BaseTable, t.Generic[DF]):
                     col_expr.set("table", exp.to_identifier(self_name))
             condition = condition_list[0].expression
 
-        update_set = self._ensure_and_normalize_update_set(_set)
-
-        # exp.update
-
+        update_set = self._ensure_and_normalize_update_set(set_)
         update_expr = exp.Update(
             this=self_expr,
             expressions=[

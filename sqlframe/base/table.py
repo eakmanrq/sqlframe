@@ -209,7 +209,7 @@ class _BaseTable(BaseDataFrame, t.Generic[DF]):
 
     def update(
         self,
-        _set: t.Dict[t.Union["Column", str], t.Union["Column", "ColumnOrLiteral", exp.Expression]],
+        set_: t.Dict[t.Union["Column", str], t.Union["Column", "ColumnOrLiteral", exp.Expression]],
         where: t.Optional[t.Union["Column", str, bool]] = None,
     ) -> LazyExpression:
         raise NotImplementedError()
