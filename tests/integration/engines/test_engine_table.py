@@ -105,7 +105,6 @@ def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
             StandaloneSession,
             PySparkSession,
             RedshiftSession,
-            SnowflakeSession,
             SparkSession,
             BigQuerySession,
         ),
@@ -139,7 +138,6 @@ def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
             StandaloneSession,
             PySparkSession,
             RedshiftSession,
-            SnowflakeSession,
             SparkSession,
         ),
     ):
@@ -168,7 +166,6 @@ def test_merge_table_simple(cleanup_employee_df: BaseDataFrame, caplog):
             StandaloneSession,
             PySparkSession,
             RedshiftSession,
-            SnowflakeSession,
             SparkSession,
             DuckDBSession,
         ),
@@ -212,7 +209,10 @@ def test_merge_table_simple(cleanup_employee_df: BaseDataFrame, caplog):
     result = merge_expr.execute()
     # Postgres and BigQuery don't support returning the number of affected rows
     if not isinstance(session, (PostgresSession, BigQuerySession)):
-        assert result[0][0] == 2
+        if isinstance(session, SnowflakeSession):
+            assert (result[0][0] + result[0][1]) == 2
+        else:
+            assert result[0][0] == 2
 
     df_merged = session.read.table("merge_employee")
     assert sorted(df_merged.collect()) == [
@@ -236,7 +236,6 @@ def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, c
             StandaloneSession,
             PySparkSession,
             RedshiftSession,
-            SnowflakeSession,
             SparkSession,
             DuckDBSession,
         ),
@@ -247,6 +246,10 @@ def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, c
         uuid_func = "uuid"
     elif isinstance(session, PostgresSession):
         uuid_func = "gen_random_uuid"
+    elif isinstance(session, SnowflakeSession):
+        uuid_func = "uuid_string"
+    elif isinstance(session, BigQuerySession):
+        uuid_func = "generate_uuid"
     else:
         pytest.skip("Cannot generate uuids in this engine")
 
@@ -335,9 +338,11 @@ def test_merge_table(cleanup_employee_df: BaseDataFrame, merge_data, get_func, c
     )
 
     result = merge_expr.execute()
-    # Postgres and BigQuery don't support returning the number of affected rows
     if not isinstance(session, (PostgresSession, BigQuerySession)):
-        assert result[0][0] == 3
+        if isinstance(session, SnowflakeSession):
+            assert (result[0][0] + result[0][1]) == 3
+        else:
+            assert result[0][0] == 3
 
     df_merged = session.read.table("merge_employee").select(
         "employee_id", "fname", "lname", "age", "store_id", "start_date", "end_date"
