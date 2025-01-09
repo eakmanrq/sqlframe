@@ -153,3 +153,154 @@ print(session.catalog.listColumns(table_path))
 +----------------+-------------------+
 """
 ```
+
+## Extra Functionality not Present in PySpark
+
+SQLFrame supports the following extra functionality not in PySpark
+
+### Table Class
+
+SQLFrame provides a `Table` class that supports extra DML operations like `update`, `delete` and `merge`. This class is returned when using the `table` function from the `DataFrameReader` class.
+
+```python
+import os
+   
+from databricks.sql import connect
+from sqlframe.databricks import DatabricksSession
+    
+conn = connect(
+    server_hostname="dbc-xxxxxxxx-xxxx.cloud.databricks.com",
+    http_path="/sql/1.0/warehouses/xxxxxxxxxxxxxxxx",
+    access_token=os.environ["ACCESS_TOKEN"],  # Replace this with how you get your databricks access token
+    auth_type="access_token",
+    catalog="catalog",
+    schema="schema",
+)
+session = DatabricksSession(conn=conn)
+
+df_employee = session.createDataFrame(
+    [
+        {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1},
+        {"id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 2},
+        {"id": 3, "fname": "Kate", "lname": "Austen", "age": 37, "store_id": 3},
+        {"id": 4, "fname": "Claire", "lname": "Littleton", "age": 27, "store_id": 1},
+        {"id": 5, "fname": "Hugo", "lname": "Reyes", "age": 29, "store_id": 3},
+    ]
+)
+
+df_employee.write.mode("overwrite").saveAsTable("employee")
+
+table_employee = session.table("employee")  # This object is of Type DatabricksTable
+```
+
+#### Update Statement
+The `update` method of the `Table` class is equivalent to the `UPDATE table_name` statement used in standard `sql`.
+
+```python
+# Generates a `LazyExpression` object which can be executed using the `execute` method
+update_expr = table_employee.update(
+    set_={"age": table_employee["age"] + 1},
+    where=table_employee["id"] == 1,
+)
+
+# Excecutes the update statement
+update_expr.execute()
+
+# Show the result
+table_employee.show()
+```
+
+Output:
+```
++----+--------+-----------+-----+----------+
+| id | fname  |   lname   | age | store_id | 
++----+--------+-----------+-----+----------+
+| 1  |  Jack  |  Shephard |  38 |    1     |
+| 2  |  John  |   Locke   |  65 |    2     |
+| 3  |  Kate  |   Austen  |  37 |    3     |
+| 4  | Claire | Littleton |  27 |    1     |
+| 5  |  Hugo  |   Reyes   |  29 |    3     |
++----+--------+-----------+-----+----------+
+```
+#### Delete Statement
+The `delete` method of the `Table` class is equivalent to the `DELETE FROM table_name` statement used in standard `sql`.
+
+```python
+# Generates a `LazyExpression` object which can be executed using the `execute` method
+delete_expr = table_employee.delete(
+    where=table_employee["id"] == 1,
+)
+
+# Excecutes the delete statement
+delete_expr.execute()
+
+# Show the result
+table_employee.show()
+```
+
+Output:
+```
++----+--------+-----------+-----+----------+
+| id | fname  |   lname   | age | store_id | 
++----+--------+-----------+-----+----------+
+| 2  |  John  |   Locke   |  65 |    2     |
+| 3  |  Kate  |   Austen  |  37 |    3     |
+| 4  | Claire | Littleton |  27 |    1     |
+| 5  |  Hugo  |   Reyes   |  29 |    3     |
++----+--------+-----------+-----+----------+
+```
+#### Merge Statement
+
+The `merge` method of the `Table` class is equivalent to the `MERGE INTO table_name` statement used in some `sql` engines.
+
+```python
+df_new_employee = session.createDataFrame(
+    [
+        {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 38, "store_id": 1},
+        {"id": 6, "fname": "Mary", "lname": "Sue", "age": 21, "store_id": 5},
+    ]
+)
+
+# Generates a `LazyExpression` object which can be executed using the `execute` method
+merge_expr = table_employee.merge(
+    df_new_employee,
+    condition=table_employee["id"] == df_new_employee["id"],
+    clauses=[
+        WhenMatched(condition=table_employee["fname"] == df_new_employee["fname"]).update(
+            set_={
+                "age": df_new_employee["age"],
+            }
+        ),
+        WhenNotMatched().insert(
+            values={
+                "id": df_new_employee["id"],
+                "fname": df_new_employee["fname"],
+                "lname": df_new_employee["lname"],
+                "age": df_new_employee["age"],
+                "store_id": df_new_employee["store_id"],
+            }
+        ),
+        # WhenNotMatchedBySource().delete(),
+    ],
+)
+
+# Excecutes the merge statement
+merge_expr.execute()
+
+# Show the result
+table_employee.show()
+```
+
+Output:
+```
++----+--------+-----------+-----+----------+
+| id | fname  |   lname   | age | store_id | 
++----+--------+-----------+-----+----------+
+| 1  |  Jack  |  Shephard |  38 |    1     |
+| 2  |  John  |   Locke   |  65 |    2     |
+| 3  |  Kate  |   Austen  |  37 |    3     |
+| 4  | Claire | Littleton |  27 |    1     |
+| 5  |  Hugo  |   Reyes   |  29 |    3     |
+| 6  |  Mary  |   Sue     |  21 |    5     |
++----+--------+-----------+-----+----------+
+```
