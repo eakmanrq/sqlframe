@@ -257,6 +257,7 @@ The `merge` method of the `Table` class is equivalent to the `MERGE INTO table_n
 df_new_employee = session.createDataFrame(
     [
         {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 38, "store_id": 1},
+        {"id": 2, "fname": "Cate", "lname": "Austen", "age": 39, "store_id": 5},
         {"id": 6, "fname": "Mary", "lname": "Sue", "age": 21, "store_id": 5},
     ]
 )
