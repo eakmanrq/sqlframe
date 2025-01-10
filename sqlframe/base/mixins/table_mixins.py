@@ -62,6 +62,8 @@ class _BaseTableMixins(_BaseTable, t.Generic[DF]):
                 if col_expr.table == self.expression.args["from"].this.alias_or_name:
                     col_expr.set("table", exp.to_identifier(self_name))
             condition = condition_list[0].expression
+            if isinstance(condition, exp.Alias):
+                condition = condition.this
         return condition
 
 
