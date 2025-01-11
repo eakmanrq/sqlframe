@@ -1020,9 +1020,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         elif not isinstance(ascending, list):
             ascending = [ascending] * len(columns)
         ascending = [bool(x) for i, x in enumerate(ascending)]
-        assert len(columns) == len(
-            ascending
-        ), "The length of items in ascending must equal the number of columns provided"
+        assert len(columns) == len(ascending), (
+            "The length of items in ascending must equal the number of columns provided"
+        )
         col_and_ascending = list(zip(columns, ascending))
         order_by_columns = [
             (
@@ -1284,9 +1284,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             new_values = list(to_replace.values())
         elif not old_values and isinstance(to_replace, list):
             assert isinstance(value, list), "value must be a list since the replacements are a list"
-            assert len(to_replace) == len(
-                value
-            ), "the replacements and values must be the same length"
+            assert len(to_replace) == len(value), (
+                "the replacements and values must be the same length"
+            )
             old_values = to_replace
             new_values = value
         else:
