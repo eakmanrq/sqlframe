@@ -806,6 +806,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
         else:
             col = self._ensure_and_normalize_col(column)
+        if isinstance(col.expression, exp.Alias):
+            col.expression = col.expression.this
         return self.copy(expression=self.expression.where(col.expression))
 
     filter = where
