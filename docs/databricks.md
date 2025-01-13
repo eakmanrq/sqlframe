@@ -258,7 +258,7 @@ df_new_employee = session.createDataFrame(
     [
         {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 38, "store_id": 1},
         {"id": 2, "fname": "Cate", "lname": "Austen", "age": 39, "store_id": 5},
-        {"id": 6, "fname": "Mary", "lname": "Sue", "age": 21, "store_id": 5},
+        {"id": 6, "fname": "Sun-Hwa", "lname": "Kwon", "age": 27, "store_id": 5},
     ]
 )
 
@@ -294,14 +294,14 @@ table_employee.show()
 
 Output:
 ```
-+----+--------+-----------+-----+----------+
-| id | fname  |   lname   | age | store_id | 
-+----+--------+-----------+-----+----------+
-| 1  |  Jack  |  Shephard |  38 |    1     |
-| 2  |  John  |   Locke   |  65 |    2     |
-| 3  |  Kate  |   Austen  |  37 |    3     |
-| 4  | Claire | Littleton |  27 |    1     |
-| 5  |  Hugo  |   Reyes   |  29 |    3     |
-| 6  |  Mary  |   Sue     |  21 |    5     |
-+----+--------+-----------+-----+----------+
++----+---------+-----------+-----+----------+
+| id | fname   |   lname   | age | store_id | 
++----+---------+-----------+-----+----------+
+| 1  |  Jack   |  Shephard |  38 |    1     |
+| 2  |  John   |   Locke   |  65 |    2     |
+| 3  |  Kate   |   Austen  |  37 |    3     |
+| 4  | Claire  | Littleton |  27 |    1     |
+| 5  |  Hugo   |   Reyes   |  29 |    3     |
+| 6  | Sun-Hwa |   Kwon    |  27 |    5     |
++----+---------+-----------+-----+----------+
 ```
