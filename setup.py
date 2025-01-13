@@ -43,7 +43,7 @@ setup(
             "pytest-postgresql>=6,<7",
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.7,<5",
-            "ruff>=0.4.4,<0.9",
+            "ruff>=0.4.4,<0.10",
             "types-psycopg2>=2.9,<3",
         ],
         "docs": [

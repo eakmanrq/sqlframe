@@ -2278,3 +2278,17 @@ def test_self_join(
     )
 
     compare_frames(df_joined, dfs_joined, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/232
+def test_filter_alias(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df_filtered = pyspark_employee.where((F.col("age") > 40).alias("age_gt_40"))
+
+    employee = get_df("employee")
+    dfs_filtered = employee.where((SF.col("age") > 40).alias("age_gt_40"))
+
+    compare_frames(df_filtered, dfs_filtered, compare_schema=False)
