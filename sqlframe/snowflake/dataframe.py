@@ -43,6 +43,7 @@ class SnowflakeDataFrame(
     _na = SnowflakeDataFrameNaFunctions
     _stat = SnowflakeDataFrameStatFunctions
     _group_data = SnowflakeGroupedData
+    _EXPLAIN_PREFIX = "EXPLAIN USING TEXT"
 
     @property
     def _typed_columns(self) -> t.List[CatalogColumn]:

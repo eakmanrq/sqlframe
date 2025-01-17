@@ -46,6 +46,12 @@ class DuckDBDataFrame(
     _stat = DuckDBDataFrameStatFunctions
     _group_data = DuckDBGroupedData
 
+    def explain(
+        self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
+    ) -> None:
+        results = self._get_explain_plan_rows()
+        print(results[0][1])
+
     @t.overload
     def toArrow(self) -> ArrowTable: ...
 
