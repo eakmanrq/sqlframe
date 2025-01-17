@@ -202,6 +202,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     _na: t.Type[NA]
     _stat: t.Type[STAT]
     _group_data: t.Type[GROUP_DATA]
+    _EXPLAIN_PREFIX = "EXPLAIN"
 
     def __init__(
         self,
@@ -1144,6 +1145,18 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         final_df = filtered_df.select(*all_columns)
         return final_df
 
+    def _get_explain_plan_rows(self) -> t.List[Row]:
+        sql_queries = self.sql(
+            pretty=False, optimize=False, as_list=True, dialect=self.session.execution_dialect
+        )
+        if len(sql_queries) > 1:
+            raise ValueError("Cannot explain a DataFrame with multiple queries")
+        sql_query = " ".join([self._EXPLAIN_PREFIX, sql_queries[0]])
+        results = self.session._collect(sql_query)
+        if len(results) != 1:
+            raise ValueError("Got more than one result from explain query")
+        return results
+
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
     ) -> None:
@@ -1212,11 +1225,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         ...Statistics...
         ...
         """
-        sql_queries = self.sql(pretty=False, optimize=False, as_list=True)
-        if len(sql_queries) > 1:
-            raise ValueError("Cannot explain a DataFrame with multiple queries")
-        sql_query = "EXPLAIN " + sql_queries[0]
-        self.session._execute(sql_query)
+        results = self._get_explain_plan_rows()
+        print(results[0][0])
 
     @operation(Operation.FROM)
     def fillna(

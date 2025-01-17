@@ -72,3 +72,8 @@ class BigQueryDataFrame(
         sql = self.session._to_sql(self.expression)
         query_job = self.session._client.query(sql, job_config=job_config)
         return [field_to_column(field) for field in query_job.schema]
+
+    def explain(
+        self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
+    ) -> None:
+        raise NotImplementedError("BigQuery does not support EXPLAIN")

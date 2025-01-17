@@ -163,3 +163,10 @@ def test_schema_nested(spark_datatypes: SparkDataFrame):
     assert struct_fields[9].dataType == types.TimestampType()
     assert struct_fields[10].name == "boolean_col"
     assert struct_fields[10].dataType == types.BooleanType()
+
+
+def test_explain(spark_employee: SparkDataFrame, capsys):
+    spark_employee.explain()
+    output = capsys.readouterr().out.strip()
+    assert "== Physical Plan ==" in output
+    assert "LocalTableScan" in output

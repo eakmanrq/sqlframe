@@ -156,3 +156,19 @@ def test_schema_nested(snowflake_datatypes: SnowflakeDataFrame):
     assert struct_fields[9].dataType == types.TimestampType()
     assert struct_fields[10].name == "boolean_col"
     assert struct_fields[10].dataType == types.BooleanType()
+
+
+def test_explain(snowflake_employee: SnowflakeDataFrame, capsys):
+    snowflake_employee.explain()
+    assert (
+        capsys.readouterr().out.strip()
+        == """
+GlobalStats:
+    partitionsTotal=0
+    partitionsAssigned=0
+    bytesAssigned=0
+Operations:
+1:0     ->Result  A1.EMPLOYEE_ID, A1.FNAME, A1.LNAME, A1.AGE, A1.STORE_ID  
+1:1          ->ValuesClause  (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)
+""".strip()
+    )
