@@ -25,7 +25,7 @@ tests = [
         '"Test"',
         {"name": "VARCHAR"},
         "name",
-        '''SELECT "Test"."NAME" AS "NAME" FROM "Test" AS "Test"''',
+        '''SELECT "TEST"."NAME" AS "NAME" FROM "Test" AS "TEST"''',
     ),
     (
         "Column has CS while table does not",
@@ -41,7 +41,7 @@ tests = [
         '"Test"',
         {'"Name"': "VARCHAR"},
         '"Name"',
-        '''SELECT "Test"."Name" AS "Name" FROM "Test" AS "Test"''',
+        '''SELECT "TEST"."Name" AS "Name" FROM "Test" AS "TEST"''',
     ),
     (
         "Lowercase CS table and column",
@@ -49,7 +49,7 @@ tests = [
         '"test"',
         {'"name"': "VARCHAR"},
         '"name"',
-        '''SELECT "test"."name" AS "name" FROM "test" AS "test"''',
+        '''SELECT "TEST"."name" AS "name" FROM "test" AS "TEST"''',
     ),
     (
         "CS table and column and query table but no CS in query column",
