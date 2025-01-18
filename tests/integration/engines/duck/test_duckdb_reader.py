@@ -127,3 +127,12 @@ def test_issue_219(duckdb_session: DuckDBSession):
     lightbulbs = duckdb_session.read.csv("tests/fixtures/issue_219.csv")
     min_prices = lightbulbs.groupBy("kind", "make").agg(F.min("price"))
     lightbulbs.join(min_prices, "make").show()
+
+
+# https://github.com/eakmanrq/sqlframe/issues/242
+def test_read_parquet_optimize(duckdb_session: DuckDBSession):
+    df = duckdb_session.read.parquet(
+        "tests/fixtures/employee.parquet"
+    )  # Contains a `person_id` and a `person_source_value` column
+    df.createOrReplaceTempView("employee")
+    duckdb_session.table("employee").sql(optimize=True)  # type: ignore
