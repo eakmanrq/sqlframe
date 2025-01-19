@@ -481,6 +481,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     cte = cte.transform(replace_id_value, replaced_cte_names)  # type: ignore
                 if cte.alias_or_name in existing_cte_counts:
                     existing_cte_counts[cte.alias_or_name] += 10
+                    # Add unique where filter to ensure that the hash of the CTE is unique
                     cte.set(
                         "this",
                         cte.this.where(
@@ -502,6 +503,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                             new_cte_alias, dialect=self.session.input_dialect, into=exp.TableAlias
                         ),
                     )
+                    existing_cte_counts[new_cte_alias] = 0
                 existing_ctes.append(cte)
         else:
             existing_ctes = ctes
@@ -755,15 +757,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 ]
                 cte_names_in_join = [x.this for x in join_table_identifiers]
                 # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
-                # and therefore we allow multiple columns with the same name in the result. This matches the behavior
-                # of Spark.
+                # (or right to left if a right join) and therefore we allow multiple columns with the same
+                # name in the result. This matches the behavior of Spark.
                 resolved_column_position: t.Dict[exp.Column, int] = {
                     col.copy(): -1 for col in ambiguous_cols
                 }
                 for ambiguous_col in ambiguous_cols:
+                    ctes = (
+                        list(reversed(self.expression.ctes))
+                        if self.expression.args["joins"][0].args.get("side", "") == "right"
+                        else self.expression.ctes
+                    )
                     ctes_with_column = [
                         cte
-                        for cte in self.expression.ctes
+                        for cte in ctes
                         if cte.alias_or_name in cte_names_in_join
                         and ambiguous_col.alias_or_name in cte.this.named_selects
                     ]
