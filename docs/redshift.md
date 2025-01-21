@@ -174,7 +174,6 @@ import os
    
 from redshift_connector import connect
 from sqlframe.redshift import RedshiftSession
-from sqlframe.base.table import WhenMatched, WhenNotMatched
     
 conn = connect(
     user="user",
