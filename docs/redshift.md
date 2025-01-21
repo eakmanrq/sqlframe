@@ -167,7 +167,7 @@ SQLFrame supports the following extra functionality not in PySpark
 
 ### Table Class
 
-SQLFrame provides a `Table` class that supports extra DML operations like `update`, `delete` and `merge`. This class is returned when using the `table` function from the `DataFrameReader` class.
+SQLFrame provides a `Table` class that supports extra DML operations like `update` and `delete`. This class is returned when using the `table` function from the `DataFrameReader` class.
 
 ```python
 import os
