@@ -1,3 +1,5 @@
+from sqlframe.base.table import WhenNotMatchedBySourcefrom sqlframe.base.table import WhenMatched
+
 # Databricks (In Development)
 
 ## Installation
@@ -256,8 +258,65 @@ The `merge` method of the `Table` class is equivalent to the `MERGE INTO table_n
 ```python
 df_new_employee = session.createDataFrame(
     [
+        {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 38, "store_id": 1, "delete": False},
+        {"id": 2, "fname": "Cate", "lname": "Austen", "age": 39, "store_id": 5, "delete": False},
+        {"id": 5, "fname": "Ugo", "lname": "Reyes", "age": 29, "store_id": 3, "delete": True},
+        {"id": 6, "fname": "Sun-Hwa", "lname": "Kwon", "age": 27, "store_id": 5, "delete": False},
+    ]
+)
+
+# Generates a `LazyExpression` object which can be executed using the `execute` method
+merge_expr = table_employee.merge(
+    df_new_employee,
+    condition=table_employee["id"] == df_new_employee["id"],
+    clauses=[
+        WhenMatched(condition=table_employee["fname"] == df_new_employee["fname"]).update(
+            set_={
+                "age": df_new_employee["age"],
+            }
+        ),
+        WhenMatched(condition=df_new_employee["delete"]).delete(),
+        WhenNotMatched().insert(
+            values={
+                "id": df_new_employee["id"],
+                "fname": df_new_employee["fname"],
+                "lname": df_new_employee["lname"],
+                "age": df_new_employee["age"],
+                "store_id": df_new_employee["store_id"],
+            }
+        ),
+    ],
+)
+
+# Excecutes the merge statement
+merge_expr.execute()
+
+# Show the result
+table_employee.show()
+```
+
+Output:
+```
++----+---------+-----------+-----+----------+
+| id | fname   |   lname   | age | store_id | 
++----+---------+-----------+-----+----------+
+| 1  |  Jack   |  Shephard |  38 |    1     |
+| 2  |  John   |   Locke   |  65 |    2     |
+| 3  |  Kate   |   Austen  |  37 |    3     |
+| 4  | Claire  | Littleton |  27 |    1     |
+| 6  | Sun-Hwa |   Kwon    |  27 |    5     |
++----+---------+-----------+-----+----------+
+```
+
+
+Some engines like `Databricks` support an extra clause inside the `merge` statement which is `WHEN NOT MATCHED BY SOURCE THEN DELETE`.
+
+```python
+df_new_employee = session.createDataFrame(
+    [
         {"id": 1, "fname": "Jack", "lname": "Shephard", "age": 38, "store_id": 1},
         {"id": 2, "fname": "Cate", "lname": "Austen", "age": 39, "store_id": 5},
+        {"id": 5, "fname": "Hugo", "lname": "Reyes", "age": 29, "store_id": 3},
         {"id": 6, "fname": "Sun-Hwa", "lname": "Kwon", "age": 27, "store_id": 5},
     ]
 )
@@ -281,7 +340,7 @@ merge_expr = table_employee.merge(
                 "store_id": df_new_employee["store_id"],
             }
         ),
-        # WhenNotMatchedBySource().delete(),
+        WhenNotMatchedBySource().delete(),
     ],
 )
 
@@ -299,8 +358,6 @@ Output:
 +----+---------+-----------+-----+----------+
 | 1  |  Jack   |  Shephard |  38 |    1     |
 | 2  |  John   |   Locke   |  65 |    2     |
-| 3  |  Kate   |   Austen  |  37 |    3     |
-| 4  | Claire  | Littleton |  27 |    1     |
 | 5  |  Hugo   |   Reyes   |  29 |    3     |
 | 6  | Sun-Hwa |   Kwon    |  27 |    5     |
 +----+---------+-----------+-----+----------+
