@@ -307,7 +307,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             key_expr = list(key_column.expression.find_all(exp.Column))
             if len(key_expr) > 1:
                 raise ValueError(f"Target expression `{key_expr}` should be a single column.")
-            key = key_expr[0].alias_or_name
+            key = exp.column(key_expr[0].alias_or_name)
 
             val = self._ensure_and_normalize_col(val)
             val = self._ensure_and_normalize_cols(val, other_df.expression)[0]
