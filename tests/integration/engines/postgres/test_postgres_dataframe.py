@@ -120,3 +120,11 @@ def test_schema_nested(postgres_datatypes: PostgresDataFrame):
     assert struct_fields[6].dataType == types.TimestampType()
     assert struct_fields[7].name == "boolean_col"
     assert struct_fields[7].dataType == types.BooleanType()
+
+
+def test_explain(postgres_employee: PostgresDataFrame, capsys):
+    postgres_employee.explain()
+    assert (
+        capsys.readouterr().out.strip()
+        == """Values Scan on "*VALUES*"  (cost=0.00..0.06 rows=5 width=76)""".strip()
+    )

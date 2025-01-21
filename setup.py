@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "prettytable<4",
-        "sqlglot>=24.0.0,<26.1",
+        "sqlglot>=24.0.0,<26.3",
         "typing_extensions",
     ],
     extras_require={
@@ -36,7 +36,7 @@ setup(
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
-            "pyarrow>=10,<19",
+            "pyarrow>=10,<20",
             "pyspark>=2,<3.6",
             "pytest>=8.2.0,<8.4",
             "pytest-forked",

@@ -554,7 +554,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         normalize_identifiers(expression, dialect=dialect)
         if quote_identifiers:
             quote_identifiers_func(expression, dialect=dialect)
-        return optimize(expression, dialect=dialect, schema=self.catalog._schema)
+        return optimize(expression, dialect=dialect, schema=self.catalog._schema, infer_schema=True)
 
     def _execute(self, sql: str) -> None:
         self._cur.execute(sql)

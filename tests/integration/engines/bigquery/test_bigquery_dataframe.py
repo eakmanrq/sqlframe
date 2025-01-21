@@ -157,3 +157,8 @@ def test_schema_nested(bigquery_datatypes: BigQueryDataFrame):
     assert struct_fields[8].dataType == types.TimestampType()
     assert struct_fields[9].name == "boolean_col"
     assert struct_fields[9].dataType == types.BooleanType()
+
+
+def test_explain(bigquery_employee: BigQueryDataFrame):
+    with pytest.raises(NotImplementedError):
+        bigquery_employee.explain()

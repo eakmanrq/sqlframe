@@ -202,6 +202,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     _na: t.Type[NA]
     _stat: t.Type[STAT]
     _group_data: t.Type[GROUP_DATA]
+    _EXPLAIN_PREFIX = "EXPLAIN"
 
     def __init__(
         self,
@@ -480,6 +481,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     cte = cte.transform(replace_id_value, replaced_cte_names)  # type: ignore
                 if cte.alias_or_name in existing_cte_counts:
                     existing_cte_counts[cte.alias_or_name] += 10
+                    # Add unique where filter to ensure that the hash of the CTE is unique
                     cte.set(
                         "this",
                         cte.this.where(
@@ -501,6 +503,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                             new_cte_alias, dialect=self.session.input_dialect, into=exp.TableAlias
                         ),
                     )
+                    existing_cte_counts[new_cte_alias] = 0
                 existing_ctes.append(cte)
         else:
             existing_ctes = ctes
@@ -754,15 +757,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 ]
                 cte_names_in_join = [x.this for x in join_table_identifiers]
                 # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
-                # and therefore we allow multiple columns with the same name in the result. This matches the behavior
-                # of Spark.
+                # (or right to left if a right join) and therefore we allow multiple columns with the same
+                # name in the result. This matches the behavior of Spark.
                 resolved_column_position: t.Dict[exp.Column, int] = {
                     col.copy(): -1 for col in ambiguous_cols
                 }
                 for ambiguous_col in ambiguous_cols:
+                    ctes = (
+                        list(reversed(self.expression.ctes))
+                        if self.expression.args["joins"][0].args.get("side", "") == "right"
+                        else self.expression.ctes
+                    )
                     ctes_with_column = [
                         cte
-                        for cte in self.expression.ctes
+                        for cte in ctes
                         if cte.alias_or_name in cte_names_in_join
                         and ambiguous_col.alias_or_name in cte.this.named_selects
                     ]
@@ -1161,6 +1169,18 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         final_df = filtered_df.select(*all_columns)
         return final_df
 
+    def _get_explain_plan_rows(self) -> t.List[Row]:
+        sql_queries = self.sql(
+            pretty=False, optimize=False, as_list=True, dialect=self.session.execution_dialect
+        )
+        if len(sql_queries) > 1:
+            raise ValueError("Cannot explain a DataFrame with multiple queries")
+        sql_query = " ".join([self._EXPLAIN_PREFIX, sql_queries[0]])
+        results = self.session._collect(sql_query)
+        if len(results) != 1:
+            raise ValueError("Got more than one result from explain query")
+        return results
+
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
     ) -> None:
@@ -1229,11 +1249,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         ...Statistics...
         ...
         """
-        sql_queries = self.sql(pretty=False, optimize=False, as_list=True)
-        if len(sql_queries) > 1:
-            raise ValueError("Cannot explain a DataFrame with multiple queries")
-        sql_query = "EXPLAIN " + sql_queries[0]
-        self.session._execute(sql_query)
+        results = self._get_explain_plan_rows()
+        print(results[0][0])
 
     @operation(Operation.FROM)
     def fillna(

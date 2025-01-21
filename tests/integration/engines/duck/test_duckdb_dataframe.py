@@ -252,3 +252,17 @@ def test_to_arrow_batch(duckdb_employee: DuckDBDataFrame):
     assert fifth_batch.column(4).to_pylist() == [100]
     with pytest.raises(StopIteration):
         record_batch_reader.read_next_batch()
+
+
+def test_explain(duckdb_employee: DuckDBDataFrame, capsys):
+    duckdb_employee.explain()
+    assert (
+        capsys.readouterr().out.strip()
+        == """
+┌───────────────────────────┐
+│      COLUMN_DATA_SCAN     │
+│    ────────────────────   │
+│          ~5 Rows          │
+└───────────────────────────┘
+""".strip()
+    )
