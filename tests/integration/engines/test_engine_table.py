@@ -119,8 +119,8 @@ def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
         where=df["employee_id"] == 1,
     )
     result = update_expr.execute()
-    # Postgres doesn't support returning the number of affected rows
-    if not isinstance(session, PostgresSession):
+    # Postgres and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert result[0][0] == 1
 
     df2 = session.read.table("update_employee")

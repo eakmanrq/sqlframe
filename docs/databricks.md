@@ -169,7 +169,8 @@ import os
    
 from databricks.sql import connect
 from sqlframe.databricks import DatabricksSession
-    
+from sqlframe.base.table import WhenMatched, WhenNotMatched, WhenNotMatchedBySource
+
 conn = connect(
     server_hostname="dbc-xxxxxxxx-xxxx.cloud.databricks.com",
     http_path="/sql/1.0/warehouses/xxxxxxxxxxxxxxxx",
