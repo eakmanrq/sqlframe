@@ -104,9 +104,7 @@ def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
         (
             StandaloneSession,
             PySparkSession,
-            RedshiftSession,
             SparkSession,
-            BigQuerySession,
         ),
     ):
         pytest.skip("Engine doesn't support update")
@@ -119,8 +117,8 @@ def test_update_table(cleanup_employee_df: BaseDataFrame, caplog):
         where=df["employee_id"] == 1,
     )
     result = update_expr.execute()
-    # Postgres and BigQuery don't support returning the number of affected rows
-    if not isinstance(session, (PostgresSession, BigQuerySession)):
+    # Postgres, RedshiftSession and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession, RedshiftSession)):
         assert result[0][0] == 1
 
     df2 = session.read.table("update_employee")
@@ -137,7 +135,6 @@ def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
         (
             StandaloneSession,
             PySparkSession,
-            RedshiftSession,
             SparkSession,
         ),
     ):
@@ -148,8 +145,8 @@ def test_delete_table(cleanup_employee_df: BaseDataFrame, caplog):
     assert isinstance(df, _BaseTable)
     delete_expr = df.delete(where=df["age"] > 28)
     result = delete_expr.execute()
-    # Postgres and BigQuery don't support returning the number of affected rows
-    if not isinstance(session, (PostgresSession, BigQuerySession)):
+    # Postgres, RedshiftSession and BigQuery don't support returning the number of affected rows
+    if not isinstance(session, (PostgresSession, BigQuerySession, RedshiftSession)):
         assert result[0][0] == 4
 
     df2 = session.read.table("delete_employee")
