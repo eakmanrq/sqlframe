@@ -298,7 +298,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]
         ],
         other_df,
-    ) -> t.Dict[str, exp.Expression]:
+    ) -> t.Dict[exp.Column, exp.Expression]:
         self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
         other_name = self._create_hash_from_expression(other_df.expression)
         update_set = {}
@@ -307,7 +307,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             key_expr = list(key_column.expression.find_all(exp.Column))
             if len(key_expr) > 1:
                 raise ValueError(f"Target expression `{key_expr}` should be a single column.")
-            key = exp.column(key_expr[0].alias_or_name)
+            column_key = exp.column(key_expr[0].alias_or_name)
 
             val = self._ensure_and_normalize_col(val)
             val = self._ensure_and_normalize_cols(val, other_df.expression)[0]
@@ -331,5 +331,5 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     )
             if isinstance(val.expression, exp.Alias):
                 val.expression = val.expression.this
-            update_set[key] = val.expression
+            update_set[column_key] = val.expression
         return update_set
