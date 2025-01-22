@@ -642,7 +642,7 @@ df_employee = session.createDataFrame(
 
 df_employee.write.mode("overwrite").saveAsTable("employee")
 
-table_employee = session.table("employee")  # This object is of Type DatabricksTable
+table_employee = session.table("employee")  # This object is of Type SnowflakeTable
 ```
 
 #### Update Statement
