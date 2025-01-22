@@ -79,6 +79,23 @@ JOIN_HINTS = {
     "SHUFFLE_REPLICATE_NL",
 }
 
+JOIN_TYPE_MAPPING = {
+    "inner": "inner",
+    "cross": "cross",
+    "outer": "full_outer",
+    "full": "full_outer",
+    "fullouter": "full_outer",
+    "left": "left_outer",
+    "leftouter": "left_outer",
+    "right": "right_outer",
+    "rightouter": "right_outer",
+    "semi": "left_semi",
+    "leftsemi": "left_semi",
+    "left_semi": "left_semi",
+    "anti": "left_anti",
+    "leftanti": "left_anti",
+    "left_anti": "left_anti",
+}
 
 DF = t.TypeVar("DF", bound="BaseDataFrame")
 
@@ -944,16 +961,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     ) -> Self:
         from sqlframe.base.functions import coalesce
 
-        if on is None:
+        if (on is None) and ("cross" not in how):
             logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
+        if (on is not None) and ("cross" in how):
+            # Not a lot of doc, but Spark handles cross with predicate as an inner join
+            # https://learn.microsoft.com/en-us/dotnet/api/microsoft.spark.sql.dataframe.join
+            logger.warning("Got cross join with an 'on' value. This will result in an inner join.")
+            how = "inner"
 
         other_df = other_df._convert_leaf_to_cte()
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
         # We will determine actual "join on" expression later so we don't provide it at first
-        join_expression = join_expression.join(
-            join_expression.ctes[-1].alias, join_type=how.replace("_", " ")
-        )
+        join_type = JOIN_TYPE_MAPPING.get(how, how).replace("_", " ")
+        join_expression = join_expression.join(join_expression.ctes[-1].alias, join_type=join_type)
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)
@@ -961,7 +982,12 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
-        if how != "cross":
+        select_columns = (
+            self_columns
+            if join_type in ["left anti", "left semi"]
+            else self_columns + other_columns
+        )
+        if join_type != "cross":
             if isinstance(join_columns[0].expression, exp.Column):
                 """
                 Unique characteristics of join on column names only:
@@ -992,7 +1018,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         if not isinstance(column.expression.this, exp.Star)
                         else column.sql()
                     )
-                    for column in self_columns + other_columns
+                    for column in select_columns
                 ]
                 select_column_names = [
                     column_name
@@ -1010,13 +1036,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 * The left join dataframe columns go first and right come after. No sort preference is given to join columns
                 """
                 join_clause = self._normalize_join_clause(join_columns, join_expression)
-                select_column_names = [
-                    column.alias_or_name for column in self_columns + other_columns
-                ]
+                select_column_names = [column.alias_or_name for column in select_columns]
 
             # Update the on expression with the actual join clause to replace the dummy one from before
         else:
-            select_column_names = [column.alias_or_name for column in self_columns + other_columns]
+            select_column_names = [column.alias_or_name for column in select_columns]
             join_clause = None
         join_expression.args["joins"][-1].set("on", join_clause.expression if join_clause else None)
         new_df = self.copy(expression=join_expression)

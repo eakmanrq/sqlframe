@@ -435,6 +435,43 @@ def test_join_inner(
     compare_frames(df_joined, dfs_joined, sort=True)
 
 
+@pytest.mark.parametrize(
+    "how",
+    [
+        "inner",
+        "cross",
+        "outer",
+        "full",
+        "fullouter",
+        "full_outer",
+        "left",
+        "leftouter",
+        "left_outer",
+        "right",
+        "rightouter",
+        "right_outer",
+        "semi",
+        "leftsemi",
+        "left_semi",
+        "anti",
+        "leftanti",
+        "left_anti",
+    ],
+)
+def test_join_various_how(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+    how: str,
+):
+    employee = get_df("employee")
+    store = get_df("store")
+    df_joined = pyspark_employee.join(pyspark_store, on=["store_id"], how=how)
+    dfs_joined = employee.join(store, on=["store_id"], how=how)
+    compare_frames(df_joined, dfs_joined, sort=True)
+
+
 def test_join_inner_no_select(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
