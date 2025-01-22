@@ -23,11 +23,12 @@ from sqlframe.base.util import normalize_string
 if t.TYPE_CHECKING:
     from sqlframe.databricks.session import DatabricksSession  # noqa
     from sqlframe.databricks.dataframe import DatabricksDataFrame  # noqa
+    from sqlframe.databricks.table import DatabricksTable  # noqa
 
 
 class DatabricksDataFrameReader(
     PandasLoaderMixin["DatabricksSession", "DatabricksDataFrame"],
-    _BaseDataFrameReader["DatabricksSession", "DatabricksDataFrame"],
+    _BaseDataFrameReader["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
 ):
     pass
 

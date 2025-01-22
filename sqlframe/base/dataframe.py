@@ -872,6 +872,68 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         """
         return self.join.__wrapped__(self, other, how="cross")  # type: ignore
 
+    def _handle_self_join(self, other_df: DF, join_columns: t.List[Column]):
+        # If the two dataframes being joined come from the same branch, we then check if they have any columns that
+        # were created using the "branch_id" (df["column_name"]). If so, we know that we need to differentiate
+        # the two columns since they would end up with the same table name. We do this by checking for the unique
+        # uuids in the other df and finding columns that have metadata on them that match the uuids. If so, we know
+        # it comes from the other df and we change the table name to the other df's table name.
+        # See `test_self_join` for an example of this.
+        if self.branch_id == other_df.branch_id:
+            other_df_unique_uuids = other_df.known_uuids - self.known_uuids
+            for col in join_columns:
+                for col_expr in col.expression.find_all(exp.Column):
+                    if (
+                        "join_on_uuid" in col_expr.meta
+                        and col_expr.meta["join_on_uuid"] in other_df_unique_uuids
+                    ):
+                        col_expr.set("table", exp.to_identifier(other_df.latest_cte_name))
+
+    @staticmethod
+    def _handle_join_column_names_only(
+        join_columns: t.List[Column],
+        join_expression: exp.Select,
+        other_df: DF,
+        table_names: t.List[str],
+    ):
+        potential_ctes = [
+            cte
+            for cte in join_expression.ctes
+            if cte.alias_or_name in table_names and cte.alias_or_name != other_df.latest_cte_name
+        ]
+        # Determine the table to reference for the left side of the join by checking each of the left side
+        # tables and see if they have the column being referenced.
+        join_column_pairs = []
+        for join_column in join_columns:
+            num_matching_ctes = 0
+            for cte in potential_ctes:
+                if join_column.alias_or_name in cte.this.named_selects:
+                    left_column = join_column.copy().set_table_name(cte.alias_or_name)
+                    right_column = join_column.copy().set_table_name(other_df.latest_cte_name)
+                    join_column_pairs.append((left_column, right_column))
+                    num_matching_ctes += 1
+                    # We only want to match one table to the column and that should be matched left -> right
+                    # so we break after the first match
+                    break
+            if num_matching_ctes == 0:
+                raise ValueError(
+                    f"Column `{join_column.alias_or_name}` does not exist in any of the tables."
+                )
+        join_clause = functools.reduce(
+            lambda x, y: x & y,
+            [left_column == right_column for left_column, right_column in join_column_pairs],
+        )
+        return join_column_pairs, join_clause
+
+    def _normalize_join_clause(
+        self, join_columns: t.List[Column], join_expression: t.Optional[exp.Select]
+    ) -> Column:
+        join_columns = self._ensure_and_normalize_cols(join_columns, join_expression)
+        if len(join_columns) > 1:
+            join_columns = [functools.reduce(lambda x, y: x & y, join_columns)]
+        join_clause = join_columns[0]
+        return join_clause
+
     @operation(Operation.FROM)
     def join(
         self,
@@ -895,21 +957,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)
-        # If the two dataframes being joined come from the same branch, we then check if they have any columns that
-        # were created using the "branch_id" (df["column_name"]). If so, we know that we need to differentiate
-        # the two columns since they would end up with the same table name. We do this by checking for the unique
-        # uuids in the other df and finding columns that have metadata on them that match the uuids. If so, we know
-        # it comes from the other df and we change the table name to the other df's table name.
-        # See `test_self_join` for an example of this.
-        if self.branch_id == other_df.branch_id:
-            other_df_unique_uuids = other_df.known_uuids - self.known_uuids
-            for col in join_columns:
-                for col_expr in col.expression.find_all(exp.Column):
-                    if (
-                        "join_on_uuid" in col_expr.meta
-                        and col_expr.meta["join_on_uuid"] in other_df_unique_uuids
-                    ):
-                        col_expr.set("table", exp.to_identifier(other_df.latest_cte_name))
+        self._handle_self_join(other_df, join_columns)
+
         # Determines the join clause and select columns to be used passed on what type of columns were provided for
         # the join. The columns returned changes based on how the on expression is provided.
         if how != "cross":
@@ -923,38 +972,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     table.alias_or_name
                     for table in get_tables_from_expression_with_join(join_expression)
                 ]
-                potential_ctes = [
-                    cte
-                    for cte in join_expression.ctes
-                    if cte.alias_or_name in table_names
-                    and cte.alias_or_name != other_df.latest_cte_name
-                ]
-                # Determine the table to reference for the left side of the join by checking each of the left side
-                # tables and see if they have the column being referenced.
-                join_column_pairs = []
-                for join_column in join_columns:
-                    num_matching_ctes = 0
-                    for cte in potential_ctes:
-                        if join_column.alias_or_name in cte.this.named_selects:
-                            left_column = join_column.copy().set_table_name(cte.alias_or_name)
-                            right_column = join_column.copy().set_table_name(
-                                other_df.latest_cte_name
-                            )
-                            join_column_pairs.append((left_column, right_column))
-                            num_matching_ctes += 1
-                            # We only want to match one table to the column and that should be matched left -> right
-                            # so we break after the first match
-                            break
-                    if num_matching_ctes == 0:
-                        raise ValueError(
-                            f"Column `{join_column.alias_or_name}` does not exist in any of the tables."
-                        )
-                join_clause = functools.reduce(
-                    lambda x, y: x & y,
-                    [
-                        left_column == right_column
-                        for left_column, right_column in join_column_pairs
-                    ],
+
+                join_column_pairs, join_clause = self._handle_join_column_names_only(
+                    join_columns, join_expression, other_df, table_names
                 )
                 join_column_names = [
                     coalesce(
@@ -989,10 +1009,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 * There is no deduplication of the results.
                 * The left join dataframe columns go first and right come after. No sort preference is given to join columns
                 """
-                join_columns = self._ensure_and_normalize_cols(join_columns, join_expression)
-                if len(join_columns) > 1:
-                    join_columns = [functools.reduce(lambda x, y: x & y, join_columns)]
-                join_clause = join_columns[0]
+                join_clause = self._normalize_join_clause(join_columns, join_expression)
                 select_column_names = [
                     column.alias_or_name for column in self_columns + other_columns
                 ]

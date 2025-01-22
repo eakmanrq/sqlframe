@@ -13,11 +13,12 @@ from sqlframe.base.readerwriter import (
 if t.TYPE_CHECKING:
     from sqlframe.spark.dataframe import SparkDataFrame
     from sqlframe.spark.session import SparkSession
+    from sqlframe.spark.table import SparkTable
 
 
 class SparkDataFrameReader(
     PandasLoaderMixin["SparkSession", "SparkDataFrame"],
-    _BaseDataFrameReader["SparkSession", "SparkDataFrame"],
+    _BaseDataFrameReader["SparkSession", "SparkDataFrame", "SparkTable"],
 ):
     pass
 

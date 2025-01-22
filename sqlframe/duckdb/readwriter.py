@@ -16,11 +16,14 @@ if t.TYPE_CHECKING:
     from sqlframe.base.types import StructType
     from sqlframe.duckdb.dataframe import DuckDBDataFrame
     from sqlframe.duckdb.session import DuckDBSession  # noqa
+    from sqlframe.duckdb.table import DuckDBTable  # noqa
 
 logger = logging.getLogger(__name__)
 
 
-class DuckDBDataFrameReader(_BaseDataFrameReader["DuckDBSession", "DuckDBDataFrame"]):
+class DuckDBDataFrameReader(
+    _BaseDataFrameReader["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"]
+):
     def load(
         self,
         path: t.Optional[PathOrPaths] = None,

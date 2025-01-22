@@ -11,6 +11,7 @@ from sqlframe.postgres.readwriter import (
     PostgresDataFrameReader,
     PostgresDataFrameWriter,
 )
+from sqlframe.postgres.table import PostgresTable
 from sqlframe.postgres.udf import PostgresUDFRegistration
 
 if t.TYPE_CHECKING:
@@ -27,6 +28,7 @@ class PostgresSession(
         PostgresDataFrameReader,
         PostgresDataFrameWriter,
         PostgresDataFrame,
+        PostgresTable,
         psycopg2_connection,
         PostgresUDFRegistration,
     ],
@@ -35,6 +37,7 @@ class PostgresSession(
     _reader = PostgresDataFrameReader
     _writer = PostgresDataFrameWriter
     _df = PostgresDataFrame
+    _table = PostgresTable
     _udf_registration = PostgresUDFRegistration
 
     def __init__(self, conn: t.Optional[psycopg2_connection] = None):

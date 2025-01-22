@@ -13,6 +13,7 @@ from sqlframe.spark.readwriter import (
     SparkDataFrameReader,
     SparkDataFrameWriter,
 )
+from sqlframe.spark.table import SparkTable
 from sqlframe.spark.types import Row
 from sqlframe.spark.udf import SparkUDFRegistration
 
@@ -32,6 +33,7 @@ class SparkSession(
         SparkDataFrameReader,
         SparkDataFrameWriter,
         SparkDataFrame,
+        SparkTable,
         PySparkSession,
         SparkUDFRegistration,
     ],
@@ -40,6 +42,7 @@ class SparkSession(
     _reader = SparkDataFrameReader
     _writer = SparkDataFrameWriter
     _df = SparkDataFrame
+    _table = SparkTable
     _udf_registration = SparkUDFRegistration
 
     def __init__(self, conn: t.Optional[PySparkSession] = None, *args, **kwargs):
