@@ -2355,3 +2355,29 @@ def test_union_common_root(
     dfs_final = dfs_1.union(dfs_2)
 
     compare_frames(df_final, dfs_final, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/253
+def test_union_common_root_again(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df_1 = pyspark_employee.filter(F.col("age") > 40)
+    df_2 = df_1.join(
+        pyspark_employee.select("employee_id").distinct(),
+        on="employee_id",
+        how="right",
+    )
+    df_final = df_1.union(df_2).union(pyspark_employee)
+
+    employee = get_df("employee")
+    dfs_1 = employee.filter(SF.col("age") > 40)
+    dfs_2 = dfs_1.join(
+        employee.select("employee_id").distinct(),
+        on="employee_id",
+        how="right",
+    )
+    dfs_final = dfs_1.union(dfs_2).union(employee)
+
+    compare_frames(df_final, dfs_final, compare_schema=False)

@@ -9,6 +9,7 @@ import json
 import logging
 import sys
 import typing as t
+import uuid
 import zlib
 from copy import copy
 from dataclasses import dataclass
@@ -491,22 +492,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         with_expression = expression.args.get("with")
         if with_expression:
             existing_ctes = with_expression.expressions
-            existing_cte_counts = {x.alias_or_name: 0 for x in existing_ctes}
+            existing_cte_names = {x.alias_or_name for x in existing_ctes}
             replaced_cte_names = {}  # type: ignore
             for cte in ctes:
                 if replaced_cte_names:
                     cte = cte.transform(replace_id_value, replaced_cte_names)  # type: ignore
-                if cte.alias_or_name in existing_cte_counts:
-                    existing_cte_counts[cte.alias_or_name] += 10
+                if cte.alias_or_name in existing_cte_names:
+                    random_filter = exp.Literal.string(uuid.uuid4().hex)
                     # Add unique where filter to ensure that the hash of the CTE is unique
                     cte.set(
                         "this",
                         cte.this.where(
                             exp.EQ(
-                                this=exp.Literal.number(existing_cte_counts[cte.alias_or_name]),
-                                expression=exp.Literal.number(
-                                    existing_cte_counts[cte.alias_or_name]
-                                ),
+                                this=random_filter,
+                                expression=random_filter,
                             )
                         ),
                     )
@@ -520,7 +519,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                             new_cte_alias, dialect=self.session.input_dialect, into=exp.TableAlias
                         ),
                     )
-                    existing_cte_counts[new_cte_alias] = 0
+                    existing_cte_names.add(new_cte_alias)
                 existing_ctes.append(cte)
         else:
             existing_ctes = ctes
