@@ -51,6 +51,8 @@ def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
 def lit(value: t.Optional[t.Any] = None) -> Column:
     if isinstance(value, str):
         return Column(expression.Literal.string(value))
+    if isinstance(value, float) and value in {float("inf"), float("-inf")}:
+        return Column(expression.Literal.string(str(value)))
     return Column(value)
 
 
