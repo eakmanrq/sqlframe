@@ -5490,7 +5490,7 @@ def regr_syy(y: ColumnOrName, x: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(y, "regr_syy", x)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def replace(
     src: ColumnOrName, search: ColumnOrName, replace: t.Optional[ColumnOrName] = None
 ) -> Column:
@@ -5518,6 +5518,11 @@ def replace(
     >>> df.select(replace(df.a, df.b).alias('r')).collect()
     [Row(r='ABC')]
     """
+    if replace is None and (
+        _get_session()._is_duckdb or _get_session()._is_postgres or _get_session()._is_bigquery
+    ):
+        replace = expression.Literal.string("")  # type: ignore
+
     if replace is not None:
         return Column.invoke_anonymous_function(src, "replace", search, replace)
     else:
