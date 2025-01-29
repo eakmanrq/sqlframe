@@ -4951,7 +4951,7 @@ def reflect(*cols: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(cols[0], "reflect")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="snowflake")
 def regexp(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     r"""Returns true if `str` matches the Java regex `regexp`, or false otherwise.
 
@@ -5001,12 +5001,21 @@ def regexp(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     |               true|
     +-------------------+
     """
-    from sqlframe.base.function_alternatives import regexp_extract_only_one_group
+    from sqlframe.base.function_alternatives import (
+        regexp_with_contains,
+        regexp_with_matches,
+    )
 
     session = _get_session()
 
+    if session._is_duckdb:
+        return regexp_with_matches(str, regexp)
+
+    if session._is_postgres:
+        return Column.invoke_expression_over_column(str, expression.RegexpILike, expression=regexp)
+
     if session._is_bigquery:
-        return regexp_extract_only_one_group(str, regexp)  # type: ignore
+        return regexp_with_contains(str, regexp)
 
     return Column.invoke_anonymous_function(str, "regexp", regexp)
 
