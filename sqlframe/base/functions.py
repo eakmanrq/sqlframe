@@ -2967,14 +2967,14 @@ def char(col: ColumnOrName) -> Column:
     return Column(expression.Chr(expressions=Column.ensure_col(col).column_expression))
 
 
-@meta(unsupported_engines="*")
+@meta()
 def char_length(str: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(str, "char_length")
+    return Column.invoke_expression_over_column(str, expression.Length)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def character_length(str: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(str, "character_length")
+    return Column.invoke_expression_over_column(str, expression.Length)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])

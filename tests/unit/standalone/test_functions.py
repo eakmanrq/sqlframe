@@ -3287,8 +3287,8 @@ def test_char(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.char_length("cola"), "CHAR_LENGTH(cola)"),
-        (SF.char_length(SF.col("cola")), "CHAR_LENGTH(cola)"),
+        (SF.char_length("cola"), "LENGTH(cola)"),
+        (SF.char_length(SF.col("cola")), "LENGTH(cola)"),
     ],
 )
 def test_char_length(expression, expected):
@@ -3298,8 +3298,8 @@ def test_char_length(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.character_length("cola"), "CHARACTER_LENGTH(cola)"),
-        (SF.character_length(SF.col("cola")), "CHARACTER_LENGTH(cola)"),
+        (SF.character_length("cola"), "LENGTH(cola)"),
+        (SF.character_length(SF.col("cola")), "LENGTH(cola)"),
     ],
 )
 def test_character_length(expression, expected):
