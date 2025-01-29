@@ -961,12 +961,15 @@ def dayofweek(col: ColumnOrName) -> Column:
         return dayofweek_from_extract(col)
 
     if session._is_postgres:
-        return dayofweek_from_extract_with_isodow(col)
+        return dayofweek_from_extract_with_isodow(col) + 1
 
-    return Column.invoke_expression_over_column(
+    result = Column.invoke_expression_over_column(
         Column(expression.TsOrDsToDate(this=Column.ensure_col(col).column_expression)),
         expression.DayOfWeek,
     )
+    if session._is_duckdb or session._is_snowflake:
+        return result + 1
+    return result
 
 
 @meta()

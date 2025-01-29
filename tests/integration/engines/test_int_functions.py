@@ -1279,7 +1279,7 @@ def test_month(get_session_and_func):
 def test_dayofweek(get_session_and_func):
     session, dayofweek = get_session_and_func("dayofweek")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
-    assert df.select(dayofweek("dt").alias("day")).first()[0] in (3, 4)
+    assert df.select(dayofweek("dt").alias("day")).first()[0] == 4
 
 
 def test_dayofmonth(get_session_and_func):
