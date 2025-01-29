@@ -42,6 +42,8 @@ def test_invoke_anonymous(name, func):
         ),
         (SF.lit({"cola": 1, "colb": "test"}), "MAP('cola', 1, 'colb', 'test')"),
         (SF.lit(Row(cola=1, colb="test")), "STRUCT(1 AS cola, 'test' AS colb)"),
+        (SF.lit(float("inf")), "'inf'"),
+        (SF.lit(float("-inf")), "'-inf'"),
     ],
 )
 def test_lit(expression, expected):

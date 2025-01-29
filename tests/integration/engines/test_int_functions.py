@@ -5114,3 +5114,15 @@ def test_is_array(get_session_and_func, get_func):
         .collect()
     )
     assert result == [Row(v1=True, v2=True, v3=False)]
+
+
+# https://github.com/eakmanrq/sqlframe/issues/265
+def test_infinite(get_session_and_func):
+    session, lit = get_session_and_func("lit")
+    df = session.createDataFrame(
+        [
+            {"a": float("inf")},
+            {"a": float("-inf")},
+        ]
+    )
+    assert df.collect() == [Row(a=float("inf")), Row(a=float("-inf"))]
