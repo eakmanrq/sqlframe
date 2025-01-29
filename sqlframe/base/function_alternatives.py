@@ -1408,6 +1408,14 @@ def regexp_replace_global_option(
     )
 
 
+def regexp_with_matches(str: ColumnOrName, regexp: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "REGEXP_MATCHES", regexp)
+
+
+def regexp_with_contains(str: ColumnOrName, regexp: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "REGEXP_CONTAINS", regexp)
+
+
 def degrees_bgutil(col: ColumnOrName) -> Column:
     return Column(
         expression.Anonymous(
