@@ -6,9 +6,7 @@ import re
 import typing as t
 
 from sqlglot import exp as expression
-from sqlglot.dialects.dialect import build_formatted_time
 from sqlglot.helper import ensure_list
-from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.util import (
@@ -1515,6 +1513,43 @@ def unix_timestamp_bgutil(
                     ],
                 )
             ],
+        )
+    )
+
+
+def unix_seconds_extract_epoch(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Extract(
+            this=expression.Var(this="EPOCH"),
+            expression=Column.ensure_col(col).column_expression,
+        )
+    )
+
+
+def unix_millis_multiply_epoch(col: ColumnOrName) -> Column:
+    unix_seconds = get_func_from_session("unix_seconds")
+
+    return Column(
+        expression.Cast(
+            this=expression.Mul(
+                this=unix_seconds(col).column_expression,
+                expression=expression.Literal.number(1000),
+            ),
+            to=expression.DataType.build("bigint"),
+        )
+    )
+
+
+def unix_micros_multiply_epoch(col: ColumnOrName) -> Column:
+    unix_seconds = get_func_from_session("unix_seconds")
+
+    return Column(
+        expression.Cast(
+            this=expression.Mul(
+                this=unix_seconds(col).column_expression,
+                expression=expression.Literal.number(1000000),
+            ),
+            to=expression.DataType.build("bigint"),
         )
     )
 

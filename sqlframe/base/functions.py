@@ -6397,7 +6397,7 @@ def unix_date(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.UnixDate)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def unix_micros(col: ColumnOrName) -> Column:
     """Returns the number of microseconds since 1970-01-01 00:00:00 UTC.
 
@@ -6411,10 +6411,20 @@ def unix_micros(col: ColumnOrName) -> Column:
     [Row(n=1437584400000000)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
+    from sqlframe.base.function_alternatives import unix_micros_multiply_epoch
+
+    if (
+        _get_session()._is_bigquery
+        or _get_session()._is_duckdb
+        or _get_session()._is_postgres
+        or _get_session()._is_snowflake
+    ):
+        return unix_micros_multiply_epoch(col)
+
     return Column.invoke_anonymous_function(col, "unix_micros")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def unix_millis(col: ColumnOrName) -> Column:
     """Returns the number of milliseconds since 1970-01-01 00:00:00 UTC.
     Truncates higher levels of precision.
@@ -6429,10 +6439,20 @@ def unix_millis(col: ColumnOrName) -> Column:
     [Row(n=1437584400000)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
+    from sqlframe.base.function_alternatives import unix_millis_multiply_epoch
+
+    if (
+        _get_session()._is_bigquery
+        or _get_session()._is_duckdb
+        or _get_session()._is_postgres
+        or _get_session()._is_snowflake
+    ):
+        return unix_millis_multiply_epoch(col)
+
     return Column.invoke_anonymous_function(col, "unix_millis")
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta()
 def unix_seconds(col: ColumnOrName) -> Column:
     """Returns the number of seconds since 1970-01-01 00:00:00 UTC.
     Truncates higher levels of precision.
@@ -6447,6 +6467,27 @@ def unix_seconds(col: ColumnOrName) -> Column:
     [Row(n=1437584400)]
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
+    from sqlframe.base.function_alternatives import unix_seconds_extract_epoch
+
+    if _get_session()._is_postgres:
+        return unix_seconds_extract_epoch(col)
+
+    if _get_session()._is_bigquery:
+        return Column(
+            expression.Anonymous(
+                this="UNIX_SECONDS",
+                expressions=[
+                    expression.Anonymous(
+                        this="TIMESTAMP",
+                        expressions=[
+                            Column.ensure_col(col).column_expression,
+                            expression.Literal.string("UTC"),
+                        ],
+                    )
+                ],
+            )
+        )
+
     return Column.invoke_expression_over_column(col, expression.UnixSeconds)
 
 
