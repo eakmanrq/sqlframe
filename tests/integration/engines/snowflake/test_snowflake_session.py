@@ -45,3 +45,4 @@ def test_session_from_config(cleanup_connector: SnowflakeConnection):
         "cola": exp.DataType.build("DECIMAL(38, 0)", dialect=session.output_dialect),
         "colb": exp.DataType.build("TEXT", dialect=session.output_dialect),
     }
+    assert session.execution_dialect_name == "snowflake"

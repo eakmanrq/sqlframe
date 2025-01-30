@@ -18,3 +18,4 @@ def test_session_from_config():
     session = BigQuerySession.builder.config("default_dataset", "sqlframe.db1").getOrCreate()
     columns = session.catalog.get_columns("db1.test_table")
     assert columns == {"cola": exp.DataType.build("BIGINT"), "colb": exp.DataType.build("TEXT")}
+    assert session.execution_dialect_name == "bigquery"

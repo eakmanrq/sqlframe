@@ -17,3 +17,4 @@ def test_session_from_config(function_scoped_postgres):
         "cola": exp.DataType.build("INT", dialect=session.output_dialect),
         "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
     }
+    assert session.execution_dialect_name == "postgres"
