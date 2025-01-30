@@ -11,3 +11,4 @@ def test_session_from_config():
     session = DuckDBSession.builder.config("sqlframe.conn", conn).getOrCreate()
     columns = session.catalog.get_columns("test_table")
     assert columns == {"cola": exp.DataType.build("INT"), "colb": exp.DataType.build("TEXT")}
+    assert session.execution_dialect_name == "duckdb"

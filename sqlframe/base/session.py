@@ -108,6 +108,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         if not getattr(self, "schema", None) or schema:
             self._schema = schema
 
+    # https://github.com/eakmanrq/sqlframe/issues/262
+    @property
+    def execution_dialect_name(self) -> str:
+        return self.execution_dialect.__class__.__name__.lower()
+
     @property
     def read(self) -> READER:
         return self._reader(self)

@@ -45,3 +45,4 @@ def test_session_from_config(cleanup_connector: DatabricksConnection):
         "cola": exp.DataType.build("INT", dialect=session.output_dialect),
         "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
     }
+    assert session.execution_dialect_name == "databricks"
