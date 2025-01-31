@@ -43,7 +43,7 @@ def func_metadata(unsupported_engines: t.Optional[t.Union[str, t.List[str]]] = N
                         col_name = col_name.this
                 alias_name = f"{func.__name__}__{col_name or ''}__"
                 # BigQuery has restrictions on alias names so we constrain it to alphanumeric characters and underscores
-                return result.alias(re.sub("\W", "_", alias_name))  # type: ignore
+                return result.alias(re.sub(r"\W", "_", alias_name))  # type: ignore
             return result
 
         wrapper.unsupported_engines = (  # type: ignore
