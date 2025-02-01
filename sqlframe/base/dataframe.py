@@ -391,7 +391,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         cols = self._ensure_list_of_columns(cols)
         normalize(self.session, expression or self.expression, cols)
-        return list(flatten([self._expand_star(col) for col in cols]))
+        cols = list(flatten([self._expand_star(col) for col in cols]))
+        self._resolve_ambiguous_columns(cols)
+        return cols
 
     def _ensure_and_normalize_col(self, col):
         from sqlframe.base.column import Column
@@ -399,6 +401,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         col = Column.ensure_col(col)
         normalize(self.session, self.expression, col)
+        self._resolve_ambiguous_columns(col)
         return col
 
     def _convert_leaf_to_cte(
@@ -745,10 +748,55 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         kwargs["join_on_uuid"] = str(uuid4())
         return self.__class__(**object_to_dict(self, **kwargs))
 
+    def _resolve_ambiguous_columns(self, columns: t.Union[Column, t.List[Column]]) -> None:
+        if "joins" not in self.expression.args:
+            return
+
+        columns = ensure_list(columns)
+        ambiguous_cols: t.List[exp.Column] = list(
+            flatten(
+                [
+                    sub_col
+                    for col in columns
+                    for sub_col in col.expression.find_all(exp.Column)
+                    if not sub_col.table
+                ]
+            )
+        )
+        if ambiguous_cols:
+            join_table_identifiers = [
+                x.this for x in get_tables_from_expression_with_join(self.expression)
+            ]
+            cte_names_in_join = [x.this for x in join_table_identifiers]
+            # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
+            # (or right to left if a right join) and therefore we allow multiple columns with the same
+            # name in the result. This matches the behavior of Spark.
+            resolved_column_position: t.Dict[exp.Column, int] = {
+                col.copy(): -1 for col in ambiguous_cols
+            }
+            for ambiguous_col in ambiguous_cols:
+                ctes = (
+                    list(reversed(self.expression.ctes))
+                    if self.expression.args["joins"][0].args.get("side", "") == "right"
+                    else self.expression.ctes
+                )
+                ctes_with_column = [
+                    cte
+                    for cte in ctes
+                    if cte.alias_or_name in cte_names_in_join
+                    and ambiguous_col.alias_or_name in cte.this.named_selects
+                ]
+                # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
+                # use the same CTE we used before
+                cte = seq_get(ctes_with_column, resolved_column_position[ambiguous_col] + 1)
+                if cte:
+                    resolved_column_position[ambiguous_col] += 1
+                else:
+                    cte = ctes_with_column[resolved_column_position[ambiguous_col]]
+                ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
+
     @operation(Operation.SELECT)
     def select(self, *cols, **kwargs) -> Self:
-        from sqlframe.base.column import Column
-
         if not cols:
             return self
 
@@ -756,48 +804,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             cols = cols[0]  # type: ignore
         columns = self._ensure_and_normalize_cols(cols)
         kwargs["append"] = kwargs.get("append", False)
-        if self.expression.args.get("joins"):
-            ambiguous_cols: t.List[exp.Column] = list(
-                flatten(
-                    [
-                        sub_col
-                        for col in columns
-                        for sub_col in col.expression.find_all(exp.Column)
-                        if not sub_col.table
-                    ]
-                )
-            )
-            if ambiguous_cols:
-                join_table_identifiers = [
-                    x.this for x in get_tables_from_expression_with_join(self.expression)
-                ]
-                cte_names_in_join = [x.this for x in join_table_identifiers]
-                # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
-                # (or right to left if a right join) and therefore we allow multiple columns with the same
-                # name in the result. This matches the behavior of Spark.
-                resolved_column_position: t.Dict[exp.Column, int] = {
-                    col.copy(): -1 for col in ambiguous_cols
-                }
-                for ambiguous_col in ambiguous_cols:
-                    ctes = (
-                        list(reversed(self.expression.ctes))
-                        if self.expression.args["joins"][0].args.get("side", "") == "right"
-                        else self.expression.ctes
-                    )
-                    ctes_with_column = [
-                        cte
-                        for cte in ctes
-                        if cte.alias_or_name in cte_names_in_join
-                        and ambiguous_col.alias_or_name in cte.this.named_selects
-                    ]
-                    # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
-                    # use the same CTE we used before
-                    cte = seq_get(ctes_with_column, resolved_column_position[ambiguous_col] + 1)
-                    if cte:
-                        resolved_column_position[ambiguous_col] += 1
-                    else:
-                        cte = ctes_with_column[resolved_column_position[ambiguous_col]]
-                    ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
         # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
         columns = [
             col.alias(col.expression.alias_or_name)
