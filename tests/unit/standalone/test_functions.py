@@ -3228,10 +3228,10 @@ def test_bool_or(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.btrim("cola"), "BTRIM(cola)"),
-        (SF.btrim(SF.col("cola")), "BTRIM(cola)"),
-        (SF.btrim("cola", "chars"), "BTRIM(cola, chars)"),
-        (SF.btrim("cola", SF.lit("chars")), "BTRIM(cola, 'chars')"),
+        (SF.btrim("cola"), "TRIM(cola)"),
+        (SF.btrim(SF.col("cola")), "TRIM(cola)"),
+        (SF.btrim("cola", "chars"), "TRIM(chars FROM cola)"),
+        (SF.btrim("cola", SF.lit("chars")), "TRIM('chars' FROM cola)"),
     ],
 )
 def test_btrim(expression, expected):
