@@ -2381,3 +2381,27 @@ def test_union_common_root_again(
     dfs_final = dfs_1.union(dfs_2).union(employee)
 
     compare_frames(df_final, dfs_final, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/277
+def test_filtering_join_key(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.join(
+        pyspark_store,
+        on="store_id",
+        how="inner",
+    ).filter(F.col("store_id") > 1)
+
+    employee = get_df("employee")
+    store = get_df("store")
+    dfs = employee.join(
+        store,
+        on="store_id",
+        how="inner",
+    ).filter(SF.col("store_id") > 1)
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
