@@ -2851,12 +2851,14 @@ def bool_or(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LogicalOr)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def btrim(str: ColumnOrName, trim: t.Optional[ColumnOrName] = None) -> Column:
     if trim is not None:
-        return Column.invoke_anonymous_function(str, "btrim", trim)
+        return Column.invoke_expression_over_column(
+            str, expression.Trim, expression=Column.ensure_col(trim).column_expression
+        )
     else:
-        return Column.invoke_anonymous_function(str, "btrim")
+        return Column.invoke_expression_over_column(str, expression.Trim)
 
 
 @meta(unsupported_engines="*")
