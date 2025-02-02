@@ -39,11 +39,19 @@ def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
 
     dialect = _BaseSession().input_dialect
     if isinstance(column_name, str):
-        return Column(
-            expression.to_column(column_name, dialect=dialect).transform(
-                dialect.normalize_identifier
-            )
+        col_expression = expression.to_column(column_name, dialect=dialect).transform(
+            dialect.normalize_identifier
         )
+        case_sensitive_expression = expression.to_column(column_name, dialect=dialect)
+        if not isinstance(
+            case_sensitive_expression, (expression.Star, expression.Literal, expression.Null)
+        ):
+            col_expression._meta = {
+                "display_name": case_sensitive_expression.this.this,
+                **(col_expression._meta or {}),
+            }
+
+        return Column(col_expression)
     return Column(column_name)
 
 

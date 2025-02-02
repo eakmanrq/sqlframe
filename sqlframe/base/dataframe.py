@@ -233,6 +233,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         last_op: Operation = Operation.INIT,
         pending_hints: t.Optional[t.List[exp.Expression]] = None,
         output_expression_container: t.Optional[OutputExpressionContainer] = None,
+        display_name_mapping: t.Optional[t.Dict[str, str]] = None,
         **kwargs,
     ):
         self.session = session
@@ -246,6 +247,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self.pending_hints = pending_hints or []
         self.output_expression_container = output_expression_container or exp.Select()
         self.temp_views: t.List[exp.Select] = []
+        self.display_name_mapping = display_name_mapping or {}
 
     def __getattr__(self, column_name: str) -> Column:
         return self[column_name]
@@ -385,13 +387,14 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return Column.ensure_cols(ensure_list(cols))  # type: ignore
 
     def _ensure_and_normalize_cols(
-        self, cols, expression: t.Optional[exp.Select] = None
+        self, cols, expression: t.Optional[exp.Select] = None, skip_star_expansion: bool = False
     ) -> t.List[Column]:
         from sqlframe.base.normalize import normalize
 
         cols = self._ensure_list_of_columns(cols)
         normalize(self.session, expression or self.expression, cols)
-        cols = list(flatten([self._expand_star(col) for col in cols]))
+        if not skip_star_expansion:
+            cols = list(flatten([self._expand_star(col) for col in cols]))
         self._resolve_ambiguous_columns(cols)
         return cols
 
@@ -592,6 +595,23 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
         return [col]
 
+    def _update_display_name_mapping(
+        self, normalized_columns: t.List[Column], user_input: t.Iterable[ColumnOrName]
+    ) -> None:
+        from sqlframe.base.column import Column
+
+        normalized_aliases = [x.alias_or_name for x in normalized_columns]
+        user_display_names = [
+            x.expression.meta.get("display_name") if isinstance(x, Column) else x
+            for x in user_input
+        ]
+        zipped = {
+            k: v
+            for k, v in dict(zip(normalized_aliases, user_display_names)).items()
+            if v is not None
+        }
+        self.display_name_mapping.update(zipped)
+
     def _get_expressions(
         self,
         optimize: bool = True,
@@ -611,6 +631,16 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
+            for index, column in enumerate(select_expression.expressions):
+                column_name = quote_preserving_alias_or_name(column)
+                if column_name in self.display_name_mapping:
+                    display_name_identifier = exp.to_identifier(
+                        self.display_name_mapping[column_name], quoted=True
+                    )
+                    display_name_identifier._meta = {"case_sensitive": True, **(column._meta or {})}
+                    select_expression.expressions[index] = exp.alias_(
+                        column.unalias(), display_name_identifier, quoted=True
+                    )
             if optimize:
                 select_expression = t.cast(
                     exp.Select,
@@ -803,6 +833,17 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if isinstance(cols[0], list):
             cols = cols[0]  # type: ignore
         columns = self._ensure_and_normalize_cols(cols)
+        if "skip_update_display_name_mapping" not in kwargs:
+            unexpanded_columns = self._ensure_and_normalize_cols(cols, skip_star_expansion=True)
+            user_cols = list(cols)
+            star_columns = []
+            for index, user_col in enumerate(cols):
+                if "*" in (user_col if isinstance(user_col, str) else user_col.alias_or_name):
+                    star_columns.append(index)
+            for index in star_columns:
+                unexpanded_columns.pop(index)
+                user_cols.pop(index)
+            self._update_display_name_mapping(unexpanded_columns, user_cols)
         kwargs["append"] = kwargs.get("append", False)
         # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
         columns = [
@@ -852,6 +893,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.SELECT)
     def agg(self, *exprs, **kwargs) -> Self:
         cols = self._ensure_and_normalize_cols(exprs)
+        self._update_display_name_mapping(cols, exprs)
         return self.groupBy().agg(*cols)
 
     @operation(Operation.FROM)
@@ -1051,7 +1093,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         new_df = self.copy(expression=join_expression)
         new_df.pending_join_hints.extend(self.pending_join_hints)
         new_df.pending_hints.extend(other_df.pending_hints)
-        new_df = new_df.select.__wrapped__(new_df, *select_column_names)  # type: ignore
+        new_df = new_df.select.__wrapped__(  # type: ignore
+            new_df, *select_column_names, skip_update_display_name_mapping=True
+        )
         return new_df
 
     @operation(Operation.ORDER_BY)
@@ -1441,20 +1485,18 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def withColumnRenamed(self, existing: str, new: str) -> Self:
         expression = self.expression.copy()
         existing = self.session._normalize_string(existing)
-        new = self.session._normalize_string(new)
-        existing_columns = [
-            expression
-            for expression in expression.expressions
-            if expression.alias_or_name == existing
-        ]
-        if not existing_columns:
+        columns = self._get_outer_select_columns(expression)
+        results = []
+        found_match = False
+        for column in columns:
+            if column.alias_or_name == existing:
+                column = column.alias(new)
+                self._update_display_name_mapping([column], [new])
+                found_match = True
+            results.append(column)
+        if not found_match:
             raise ValueError("Tried to rename a column that doesn't exist")
-        for existing_column in existing_columns:
-            if isinstance(existing_column, exp.Column):
-                existing_column.replace(exp.alias_(existing_column, new))
-            else:
-                existing_column.set("alias", exp.to_identifier(new))
-        return self.copy(expression=expression)
+        return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
 
     @operation(Operation.SELECT)
     def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
@@ -1495,23 +1537,27 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if len(colsMap) != 1:
             raise ValueError("Only a single map is supported")
         col_map = {
-            self._ensure_and_normalize_col(k).alias_or_name: self._ensure_and_normalize_col(v)
+            self._ensure_and_normalize_col(k): (self._ensure_and_normalize_col(v), k)
             for k, v in colsMap[0].items()
         }
         existing_cols = self._get_outer_select_columns(self.expression)
         existing_col_names = [x.alias_or_name for x in existing_cols]
         select_columns = existing_cols
-        for column_name, col_value in col_map.items():
+        for col, (col_value, display_name) in col_map.items():
+            column_name = col.alias_or_name
             existing_col_index = (
                 existing_col_names.index(column_name) if column_name in existing_col_names else None
             )
             if existing_col_index is not None:
                 select_columns[existing_col_index] = col_value.alias(  # type: ignore
-                    column_name
-                ).expression
+                    display_name
+                )
             else:
-                select_columns.append(col_value.alias(column_name))
-        return self.select.__wrapped__(self, *select_columns)  # type: ignore
+                select_columns.append(col_value.alias(display_name))
+        self._update_display_name_mapping(
+            [col for col in col_map], [name for _, name in col_map.values()]
+        )
+        return self.select.__wrapped__(self, *select_columns, skip_update_display_name_mapping=True)  # type: ignore
 
     @operation(Operation.SELECT)
     def drop(self, *cols: t.Union[str, Column]) -> Self:

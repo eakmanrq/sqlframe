@@ -17,7 +17,7 @@ tests = [
         "test",
         {"name": "VARCHAR"},
         "name",
-        '''SELECT "TEST"."NAME" AS "NAME" FROM "TEST" AS "TEST"''',
+        '''SELECT "TEST"."NAME" AS "name" FROM "TEST" AS "TEST"''',
     ),
     (
         "Table has CS while column does not",
@@ -25,7 +25,7 @@ tests = [
         '"Test"',
         {"name": "VARCHAR"},
         "name",
-        '''SELECT "TEST"."NAME" AS "NAME" FROM "Test" AS "TEST"''',
+        '''SELECT "TEST"."NAME" AS "name" FROM "Test" AS "TEST"''',
     ),
     (
         "Column has CS while table does not",

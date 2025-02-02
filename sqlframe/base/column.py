@@ -291,6 +291,7 @@ class Column:
             this=self.column_expression,
             alias=alias.this if isinstance(alias, exp.Column) else alias,
         )
+        new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
         return Column(new_expression)
 
     def asc(self) -> Column:

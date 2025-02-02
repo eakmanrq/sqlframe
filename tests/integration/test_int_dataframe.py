@@ -9,7 +9,7 @@ from pyspark.sql import functions as F
 
 from sqlframe.standalone import functions as SF
 from sqlframe.standalone.dataframe import StandaloneDataFrame
-from tests.integration.fixtures import StandaloneSession
+from tests.integration.fixtures import StandaloneSession, is_snowflake
 
 if t.TYPE_CHECKING:
     from sqlframe.base.dataframe import BaseDataFrame
@@ -1780,6 +1780,7 @@ def test_with_columns_reference_another(
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
     is_postgres: t.Callable,
+    is_snowflake: t.Callable,
 ):
     # Could consider two options:
     # 1. Use SQLGlot optimizer to properly change the references to be expanded to avoid the issue (a rule already does this)
@@ -1791,6 +1792,14 @@ def test_with_columns_reference_another(
     if is_postgres():
         pytest.skip(
             "Postgres doesn't support having selects with columns that reference each other."
+        )
+    if is_snowflake():
+        # Snowflake does allow columns that reference each other but the issue is that if you do this in the final
+        # select the columns are replaced with their alias version to show their display name (the case-sensitive
+        # name provided by the user) and then, since the column is now aliased and case-sensitive, SF thinks
+        # the column doesn't exist since the column of the same case does not exist since it was aliased.
+        pytest.skip(
+            "Bugged behavior introduced display names means that snowflake can no longer reference itself."
         )
     employee = get_df("employee")
     df = pyspark_employee.withColumns(
