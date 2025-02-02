@@ -3,6 +3,8 @@ from __future__ import annotations
 import typing as t
 
 from sqlframe.base.types import Row
+from sqlframe.snowflake import SnowflakeSession
+from sqlframe.spark import SparkSession
 
 if t.TYPE_CHECKING:
     from sqlframe.base.dataframe import BaseDataFrame
@@ -31,20 +33,30 @@ def test_show(
 ):
     employee = get_engine_df("employee")
     lit = get_func("lit", employee.session)
-    employee = employee.select("*", lit(1).alias("one"))
+    col = get_func("col", employee.session)
+    employee = (
+        employee.select("EmPloyee_Id", "fname", "lnamE", "AGE", "stoRe_iD", lit(1).alias("One"))
+        .withColumnRenamed("sToRe_id", "SToRE_Id")
+        .withColumns(
+            {
+                "lNamE": col("lname"),
+                "tWo": lit(2),
+            }
+        )
+    )
     employee.show()
     captured = capsys.readouterr()
     assert (
         captured.out
-        == """+-------------+--------+-----------+-----+----------+-----+
-| employee_id | fname  |   lname   | age | store_id | one |
-+-------------+--------+-----------+-----+----------+-----+
-|      1      |  Jack  |  Shephard |  37 |    1     |  1  |
-|      2      |  John  |   Locke   |  65 |    1     |  1  |
-|      3      |  Kate  |   Austen  |  37 |    2     |  1  |
-|      4      | Claire | Littleton |  27 |    2     |  1  |
-|      5      |  Hugo  |   Reyes   |  29 |   100    |  1  |
-+-------------+--------+-----------+-----+----------+-----+\n"""
+        == """+-------------+--------+-----------+-----+----------+-----+-----+
+| EmPloyee_Id | fname  |   lNamE   | AGE | SToRE_Id | One | tWo |
++-------------+--------+-----------+-----+----------+-----+-----+
+|      1      |  Jack  |  Shephard |  37 |    1     |  1  |  2  |
+|      2      |  John  |   Locke   |  65 |    1     |  1  |  2  |
+|      3      |  Kate  |   Austen  |  37 |    2     |  1  |  2  |
+|      4      | Claire | Littleton |  27 |    2     |  1  |  2  |
+|      5      |  Hugo  |   Reyes   |  29 |   100    |  1  |  2  |
++-------------+--------+-----------+-----+----------+-----+-----+\n"""
     )
     assert "Truncate is ignored so full results will be displayed" not in caplog.text
     employee.show(truncate=True)
@@ -58,11 +70,21 @@ def test_show_limit(
     employee = get_engine_df("employee")
     employee.show(1)
     captured = capsys.readouterr()
-    assert (
-        captured.out
-        == """+-------------+-------+----------+-----+----------+
+    if isinstance(employee.session, SnowflakeSession):
+        assert (
+            captured.out
+            == """+-------------+-------+----------+-----+----------+
+| EMPLOYEE_ID | FNAME |  LNAME   | AGE | STORE_ID |
++-------------+-------+----------+-----+----------+
+|      1      |  Jack | Shephard |  37 |    1     |
++-------------+-------+----------+-----+----------+\n"""
+        )
+    else:
+        assert (
+            captured.out
+            == """+-------------+-------+----------+-----+----------+
 | employee_id | fname |  lname   | age | store_id |
 +-------------+-------+----------+-----+----------+
 |      1      |  Jack | Shephard |  37 |    1     |
 +-------------+-------+----------+-----+----------+\n"""
-    )
+        )

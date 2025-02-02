@@ -507,9 +507,14 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         result = self._cur.fetchall()
         if not self._cur.description:
             return []
+        case_sensitive_cols = []
+        for col in self._cur.description:
+            col_id = exp.parse_identifier(col[0], dialect=self.execution_dialect)
+            col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
+            case_sensitive_cols.append(col_id)
         columns = [
-            normalize_string(x[0], from_dialect="execution", to_dialect="output", is_column=True)
-            for x in self._cur.description
+            normalize_string(x, from_dialect="execution", to_dialect="output")
+            for x in case_sensitive_cols
         ]
         return [self._to_row(columns, row) for row in result]
 

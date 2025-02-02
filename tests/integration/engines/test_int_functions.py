@@ -241,7 +241,7 @@ def test_alias(get_session_and_func):
             DatabricksSession,
         ),
     ):
-        assert space_result == "`a space in new name`"
+        assert space_result == "`A Space In New Name`"
     else:
         assert space_result == "A Space In New Name"
 

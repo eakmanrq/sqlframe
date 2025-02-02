@@ -104,4 +104,4 @@ def test_saveAsTable_cache(standalone_employee: StandaloneDataFrame, compare_sql
 def test_quotes(standalone_session: StandaloneSession, compare_sql: t.Callable):
     standalone_session.catalog.add_table("`Test`", {"`ID`": "STRING"})
     df = standalone_session.table("`Test`")
-    compare_sql(df.select(df["`ID`"]), ["SELECT `test`.`id` AS `id` FROM `test` AS `test`"])
+    compare_sql(df.select(df["`ID`"]), ["SELECT `test`.`id` AS `ID` FROM `test` AS `test`"])
