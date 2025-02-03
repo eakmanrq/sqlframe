@@ -38,7 +38,9 @@ def test_dataframe_from_pandas(
     employee = get_df("employee")
     compare_frames(
         pyspark_employee,
-        employee.session.createDataFrame(pyspark_employee.toPandas()),
+        employee.session.createDataFrame(
+            pyspark_employee.toPandas(), schema=pyspark_employee.schema.simpleString()
+        ),
     )
 
 
