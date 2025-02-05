@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+import pandas as pd
 import pytest
 from _pytest.fixtures import FixtureRequest
 from pyspark.sql import DataFrame as PySparkDataFrame
@@ -27,6 +28,20 @@ def test_empty_df(
     df_empty = pyspark_employee.sparkSession.createDataFrame([], "cola int, colb int")
     dfs_empty = get_df("employee").session.createDataFrame([], "cola int, colb int")
     compare_frames(df_empty, dfs_empty, no_empty=False)
+
+
+def test_dataframe_from_pandas(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    compare_frames(
+        pyspark_employee,
+        employee.session.createDataFrame(
+            pyspark_employee.toPandas(), schema=pyspark_employee.schema.simpleString()
+        ),
+    )
 
 
 def test_simple_select(
