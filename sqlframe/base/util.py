@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import random
+import string
 import typing as t
 import unicodedata
 
@@ -430,3 +432,7 @@ def normalize_string(
         for pos in star_positions:
             normalized_value = normalized_value[:pos] + "*" + normalized_value[pos:]
     return normalized_value
+
+
+def generate_random_identifier(size=6, chars=string.ascii_uppercase + string.digits):
+    return "_" + "".join(random.choice(chars) for _ in range(size))
