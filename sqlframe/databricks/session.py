@@ -26,7 +26,7 @@ class DatabricksSession(
         DatabricksDataFrameWriter,
         DatabricksDataFrame,
         DatabricksTable,
-        DatabricksConnection,
+        DatabricksConnection,  # type: ignore
         DatabricksUDFRegistration,
     ],
 ):

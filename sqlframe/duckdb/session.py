@@ -28,7 +28,7 @@ class DuckDBSession(
         DuckDBDataFrameWriter,
         DuckDBDataFrame,
         DuckDBTable,
-        DuckDBPyConnection,
+        DuckDBPyConnection,  # type: ignore
         DuckDBUDFRegistration,
     ]
 ):

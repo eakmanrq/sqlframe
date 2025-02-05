@@ -20,7 +20,7 @@ class StandaloneSession(
         StandaloneDataFrameWriter,
         StandaloneDataFrame,
         StandaloneTable,
-        object,
+        object,  # type: ignore
         StandaloneUDFRegistration,
     ]
 ):  # type: ignore
