@@ -1197,10 +1197,10 @@ def test_current_timestamp():
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.date_format("cola", "MM/dd/yyy"), "DATE_FORMAT(CAST(cola AS TIMESTAMP), 'MM/dd/yyy')"),
+        (SF.date_format("cola", "MM/dd/yyy"), "DATE_FORMAT(cola, 'MM/dd/yyy')"),
         (
             SF.date_format(SF.col("cola"), "MM/dd/yyy"),
-            "DATE_FORMAT(CAST(cola AS TIMESTAMP), 'MM/dd/yyy')",
+            "DATE_FORMAT(cola, 'MM/dd/yyy')",
         ),
     ],
 )
