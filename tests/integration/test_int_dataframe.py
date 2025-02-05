@@ -2429,3 +2429,25 @@ def test_filtering_join_key(
     ).filter(SF.col("store_id") > 1)
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/281
+def test_create_column_after_join(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.join(
+        pyspark_store,
+        on="store_id",
+    ).withColumn("new_col", F.lit(1))
+
+    employee = get_df("employee")
+    store = get_df("store")
+    dfs = employee.join(
+        store,
+        on="store_id",
+    ).withColumn("new_col", SF.lit(1))
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
