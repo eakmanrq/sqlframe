@@ -120,14 +120,22 @@ class SparkDataFrameWriter(
     _BaseDataFrameWriter["SparkSession", "SparkDataFrame"],
 ):
     def _write(self, path: str, mode: t.Optional[str], format: str, **options):
-        spark_df = self._session.spark_session.sql(self._df.sql(optimize=False))
-        mode = mode or str(self._mode)
-        spark_writer = spark_df.write.format(format).mode(mode)
-        partition_columns = options.pop("partitionBy", None)
-        compression = options.pop("compression", None)
-        if partition_columns:
-            partition_columns = options.pop("partitionBy")
-            spark_writer = spark_writer.partitionBy(*partition_columns)
-        if compression:
-            spark_writer = spark_writer.option("compression", compression)
-        spark_writer.save(path=path, **options)
+        spark_df = None
+        expressions = self._df._get_expressions()
+        for i, expression in enumerate(expressions):
+            if i < len(expressions) - 1:
+                self._df.session._collect(expressions)
+            else:
+                sql = self._df.session._to_sql(expression)
+                spark_df = self._session.spark_session.sql(sql)
+        if spark_df is not None:
+            mode = mode or str(self._mode)
+            spark_writer = spark_df.write.format(format).mode(mode)
+            partition_columns = options.pop("partitionBy", None)
+            compression = options.pop("compression", None)
+            if partition_columns:
+                partition_columns = options.pop("partitionBy")
+                spark_writer = spark_writer.partitionBy(*partition_columns)
+            if compression:
+                spark_writer = spark_writer.option("compression", compression)
+            spark_writer.save(path=path, **options)
