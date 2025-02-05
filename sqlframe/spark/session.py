@@ -34,7 +34,7 @@ class SparkSession(
         SparkDataFrameWriter,
         SparkDataFrame,
         SparkTable,
-        PySparkSession,
+        PySparkSession,  # type: ignore
         SparkUDFRegistration,
     ],
 ):
@@ -79,17 +79,18 @@ class SparkSession(
         if skip_rows:
             return []
         assert self._last_df is not None
-        return [
-            Row(
-                **{
-                    normalize_string(
-                        k, from_dialect="execution", to_dialect="output", is_column=True
-                    ): v
-                    for k, v in row.asDict().items()
-                }
-            )
-            for row in self._last_df.collect()
-        ]
+        results = []
+        for row in self._last_df.collect():
+            rows_normalized = {}
+            for k, v in row.asDict().items():
+                col_id = exp.parse_identifier(k, dialect=self.execution_dialect)
+                col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
+                col_name = normalize_string(
+                    col_id, from_dialect="execution", to_dialect="output", is_column=True
+                )
+                rows_normalized[col_name] = v
+            results.append(Row(**rows_normalized))
+        return results
 
     def _execute(self, sql: str) -> None:
         self._last_df = self.spark_session.sql(sql)

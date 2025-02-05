@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+import pandas as pd
 import pytest
 from _pytest.fixtures import FixtureRequest
 from pyspark.sql import DataFrame as PySparkDataFrame
@@ -9,7 +10,7 @@ from pyspark.sql import functions as F
 
 from sqlframe.standalone import functions as SF
 from sqlframe.standalone.dataframe import StandaloneDataFrame
-from tests.integration.fixtures import StandaloneSession
+from tests.integration.fixtures import StandaloneSession, is_snowflake
 
 if t.TYPE_CHECKING:
     from sqlframe.base.dataframe import BaseDataFrame
@@ -27,6 +28,20 @@ def test_empty_df(
     df_empty = pyspark_employee.sparkSession.createDataFrame([], "cola int, colb int")
     dfs_empty = get_df("employee").session.createDataFrame([], "cola int, colb int")
     compare_frames(df_empty, dfs_empty, no_empty=False)
+
+
+def test_dataframe_from_pandas(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    compare_frames(
+        pyspark_employee,
+        employee.session.createDataFrame(
+            pyspark_employee.toPandas(), schema=pyspark_employee.schema.simpleString()
+        ),
+    )
 
 
 def test_simple_select(
@@ -1780,6 +1795,7 @@ def test_with_columns_reference_another(
     compare_frames: t.Callable,
     is_bigquery: t.Callable,
     is_postgres: t.Callable,
+    is_snowflake: t.Callable,
 ):
     # Could consider two options:
     # 1. Use SQLGlot optimizer to properly change the references to be expanded to avoid the issue (a rule already does this)
@@ -1791,6 +1807,14 @@ def test_with_columns_reference_another(
     if is_postgres():
         pytest.skip(
             "Postgres doesn't support having selects with columns that reference each other."
+        )
+    if is_snowflake():
+        # Snowflake does allow columns that reference each other but the issue is that if you do this in the final
+        # select the columns are replaced with their alias version to show their display name (the case-sensitive
+        # name provided by the user) and then, since the column is now aliased and case-sensitive, SF thinks
+        # the column doesn't exist since the column of the same case does not exist since it was aliased.
+        pytest.skip(
+            "Bugged behavior introduced display names means that snowflake can no longer reference itself."
         )
     employee = get_df("employee")
     df = pyspark_employee.withColumns(
@@ -2381,3 +2405,49 @@ def test_union_common_root_again(
     dfs_final = dfs_1.union(dfs_2).union(employee)
 
     compare_frames(df_final, dfs_final, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/277
+def test_filtering_join_key(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.join(
+        pyspark_store,
+        on="store_id",
+        how="inner",
+    ).filter(F.col("store_id") > 1)
+
+    employee = get_df("employee")
+    store = get_df("store")
+    dfs = employee.join(
+        store,
+        on="store_id",
+        how="inner",
+    ).filter(SF.col("store_id") > 1)
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/281
+def test_create_column_after_join(
+    pyspark_employee: PySparkDataFrame,
+    pyspark_store: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.join(
+        pyspark_store,
+        on="store_id",
+    ).withColumn("new_col", F.lit(1))
+
+    employee = get_df("employee")
+    store = get_df("store")
+    dfs = employee.join(
+        store,
+        on="store_id",
+    ).withColumn("new_col", SF.lit(1))
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)

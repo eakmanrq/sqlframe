@@ -13,17 +13,8 @@ fast-test:
 local-test:
 	pytest -n auto -m "fast or local"
 
-bigquery-test:
-	pytest -n auto -m "bigquery"
-
-duckdb-test:
-	pytest -n auto -m "duckdb"
-
-snowflake-test:
-	pytest -n auto -m "snowflake"
-
-databricks-test:
-	pytest -n auto -m "databricks"
+%-test:
+	pytest -n auto -m "${*}"
 
 style:
 	pre-commit run --all-files

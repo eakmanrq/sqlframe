@@ -53,7 +53,7 @@ class SnowflakeSession(
         SnowflakeDataFrameWriter,
         SnowflakeDataFrame,
         SnowflakeTable,
-        SnowflakeConnection,
+        SnowflakeConnection,  # type: ignore
         SnowflakeUDFRegistration,
     ],
 ):

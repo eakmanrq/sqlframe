@@ -29,7 +29,7 @@ class PostgresSession(
         PostgresDataFrameWriter,
         PostgresDataFrame,
         PostgresTable,
-        psycopg2_connection,
+        psycopg2_connection,  # type: ignore
         PostgresUDFRegistration,
     ],
 ):

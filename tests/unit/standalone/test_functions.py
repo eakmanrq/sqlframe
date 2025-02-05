@@ -1197,10 +1197,10 @@ def test_current_timestamp():
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.date_format("cola", "MM/dd/yyy"), "DATE_FORMAT(CAST(cola AS TIMESTAMP), 'MM/dd/yyy')"),
+        (SF.date_format("cola", "MM/dd/yyy"), "DATE_FORMAT(cola, 'MM/dd/yyy')"),
         (
             SF.date_format(SF.col("cola"), "MM/dd/yyy"),
-            "DATE_FORMAT(CAST(cola AS TIMESTAMP), 'MM/dd/yyy')",
+            "DATE_FORMAT(cola, 'MM/dd/yyy')",
         ),
     ],
 )
@@ -3228,10 +3228,10 @@ def test_bool_or(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.btrim("cola"), "BTRIM(cola)"),
-        (SF.btrim(SF.col("cola")), "BTRIM(cola)"),
-        (SF.btrim("cola", "chars"), "BTRIM(cola, chars)"),
-        (SF.btrim("cola", SF.lit("chars")), "BTRIM(cola, 'chars')"),
+        (SF.btrim("cola"), "TRIM(cola)"),
+        (SF.btrim(SF.col("cola")), "TRIM(cola)"),
+        (SF.btrim("cola", "chars"), "TRIM(chars FROM cola)"),
+        (SF.btrim("cola", SF.lit("chars")), "TRIM('chars' FROM cola)"),
     ],
 )
 def test_btrim(expression, expected):

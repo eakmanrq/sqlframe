@@ -39,11 +39,19 @@ def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
 
     dialect = _BaseSession().input_dialect
     if isinstance(column_name, str):
-        return Column(
-            expression.to_column(column_name, dialect=dialect).transform(
-                dialect.normalize_identifier
-            )
+        col_expression = expression.to_column(column_name, dialect=dialect).transform(
+            dialect.normalize_identifier
         )
+        case_sensitive_expression = expression.to_column(column_name, dialect=dialect)
+        if not isinstance(
+            case_sensitive_expression, (expression.Star, expression.Literal, expression.Null)
+        ):
+            col_expression._meta = {
+                "display_name": case_sensitive_expression.this.this,
+                **(col_expression._meta or {}),
+            }
+
+        return Column(col_expression)
     return Column(column_name)
 
 
@@ -2851,12 +2859,14 @@ def bool_or(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LogicalOr)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def btrim(str: ColumnOrName, trim: t.Optional[ColumnOrName] = None) -> Column:
     if trim is not None:
-        return Column.invoke_anonymous_function(str, "btrim", trim)
+        return Column.invoke_expression_over_column(
+            str, expression.Trim, expression=Column.ensure_col(trim).column_expression
+        )
     else:
-        return Column.invoke_anonymous_function(str, "btrim")
+        return Column.invoke_expression_over_column(str, expression.Trim)
 
 
 @meta(unsupported_engines="*")

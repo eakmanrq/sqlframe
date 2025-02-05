@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "prettytable<4",
-        "sqlglot>=24.0.0,<26.4",
+        "sqlglot>=24.0.0,<26.5",
         "typing_extensions",
     ],
     extras_require={
@@ -31,7 +31,7 @@ setup(
         "dev": [
             "duckdb>=0.9,<1.2",
             "findspark>=2,<3",
-            "mypy>=1.10.0,<1.15",
+            "mypy>=1.10.0,<1.16",
             "openai>=1.30,<2",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
