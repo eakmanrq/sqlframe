@@ -822,8 +822,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 if cte:
                     resolved_column_position[ambiguous_col] += 1
                 else:
-                    cte = ctes_with_column[resolved_column_position[ambiguous_col]]
-                ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
+                    cte = seq_get(ctes_with_column, resolved_column_position[ambiguous_col])
+                if cte:
+                    ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
 
     @operation(Operation.SELECT)
     def select(self, *cols, **kwargs) -> Self:
