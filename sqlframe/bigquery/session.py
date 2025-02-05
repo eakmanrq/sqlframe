@@ -27,7 +27,7 @@ class BigQuerySession(
         BigQueryDataFrameWriter,
         BigQueryDataFrame,
         BigQueryTable,
-        BigQueryConnection,
+        BigQueryConnection,  # type: ignore
         BigQueryUDFRegistration,
     ],
 ):

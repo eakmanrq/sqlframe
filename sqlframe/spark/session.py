@@ -34,7 +34,7 @@ class SparkSession(
         SparkDataFrameWriter,
         SparkDataFrame,
         SparkTable,
-        PySparkSession,
+        PySparkSession,  # type: ignore
         SparkUDFRegistration,
     ],
 ):
