@@ -148,3 +148,11 @@ def test_lineage(standalone_employee: StandaloneDataFrame):
         standalone_employee.session.sql("SELECT * FROM employee").lineage("age").source.sql()
         == "SELECT employee.age AS age FROM employee AS employee"
     )
+
+
+# Issue: https://github.com/eakmanrq/sqlframe/issues/286
+def test_unquoted_identifiers(standalone_employee: StandaloneDataFrame):
+    assert (
+        standalone_employee.sql(dialect="snowflake", pretty=False, quote_identifiers=False)
+        == "SELECT A1.EMPLOYEE_ID AS EMPLOYEE_ID, CAST(A1.FNAME AS TEXT) AS FNAME, CAST(A1.LNAME AS TEXT) AS LNAME, A1.AGE AS AGE, A1.STORE_ID AS STORE_ID FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS A1(EMPLOYEE_ID, FNAME, LNAME, AGE, STORE_ID)"
+    )
