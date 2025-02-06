@@ -16,6 +16,7 @@ from sqlglot import Dialect, exp
 from sqlglot.dialects.dialect import DialectType, NormalizationStrategy
 from sqlglot.expressions import parse_identifier
 from sqlglot.helper import ensure_list, seq_get
+from sqlglot.optimizer import RULES as OPTIMIZER_RULES
 from sqlglot.optimizer import optimize
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify import qualify as qualify_func
@@ -556,6 +557,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         dialect: DialectType = None,
         quote_identifiers: bool = True,
         pretty: bool = False,
+        **kwargs,
     ) -> str:
         return normalize_string(
             sql,
@@ -574,9 +576,19 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
     ) -> exp.Expression:
         dialect = dialect or self.input_dialect
         normalize_identifiers(expression, dialect=dialect)
+        rules = list(OPTIMIZER_RULES)
         if quote_identifiers:
             quote_identifiers_func(expression, dialect=dialect)
-        return optimize(expression, dialect=dialect, schema=self.catalog._schema, infer_schema=True)
+        else:
+            rules.remove(quote_identifiers_func)
+        return optimize(
+            expression,
+            dialect=dialect,
+            schema=self.catalog._schema,
+            infer_schema=True,
+            quote_identifiers=quote_identifiers,
+            rules=rules,  # type: ignore
+        )
 
     def _execute(self, sql: str) -> None:
         self._cur.execute(sql)
