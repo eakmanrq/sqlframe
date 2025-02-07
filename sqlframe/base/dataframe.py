@@ -1066,7 +1066,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         left_col.sql(dialect=self.session.input_dialect),
                         right_col.sql(dialect=self.session.input_dialect),
                     ).alias(left_col.alias_or_name)
-                    if how == "full"
+                    if join_type == "full outer"
                     else left_col.alias_or_name
                     for left_col, right_col in join_column_pairs
                 ]
