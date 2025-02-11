@@ -8,6 +8,7 @@ import typing as t
 
 from sqlglot import Dialect
 from sqlglot import exp as expression
+from sqlglot.dialects.dialect import time_format
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
@@ -6091,7 +6092,7 @@ def to_timestamp_ltz(
         return Column.invoke_anonymous_function(timestamp, "to_timestamp_ltz")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def to_timestamp_ntz(
     timestamp: ColumnOrName,
     format: t.Optional[ColumnOrName] = None,
@@ -6121,6 +6122,32 @@ def to_timestamp_ntz(
     ... # doctest: +SKIP
     [Row(r=datetime.datetime(2016, 4, 8, 0, 0))]
     """
+    session = _get_session()
+
+    if session._is_duckdb:
+        to_timestamp_func = get_func_from_session("to_timestamp")
+        return to_timestamp_func(timestamp, format)
+
+    if session._is_bigquery:
+        if format is not None:
+            return Column.invoke_anonymous_function(
+                session.format_execution_time(format),  # type: ignore
+                "parse_datetime",
+                timestamp,
+            )
+        else:
+            return Column.ensure_col(timestamp).cast("datetime", dialect="bigquery")
+
+    if session._is_postgres:
+        if format is not None:
+            return Column.invoke_anonymous_function(
+                timestamp,
+                "to_timestamp",
+                session.format_execution_time(format),  # type: ignore
+            )
+        else:
+            return Column.ensure_col(timestamp).cast("timestamp", dialect="postgres")
+
     if format is not None:
         return Column.invoke_anonymous_function(timestamp, "to_timestamp_ntz", format)
     else:
