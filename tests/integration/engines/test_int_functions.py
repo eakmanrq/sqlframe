@@ -2072,13 +2072,20 @@ def test_array_prepend(get_session_and_func):
     ]
 
 
-def test_array_size(get_session_and_func):
+def test_array_size(get_session_and_func, get_func):
     session, array_size = get_session_and_func("array_size")
-    df = session.createDataFrame([([2, 1, 3],), (None,)], ["data"])
-    assert df.select(array_size(df.data).alias("r")).collect() == [
-        Row(r=3),
-        Row(r=None),
-    ]
+    # Snowflake doesn't support arrays in VALUES so we need to do it in select
+    if isinstance(session, SnowflakeSession):
+        lit = get_func("lit", session)
+        assert session.range(1).select(
+            array_size(lit(["a", "b", "c"])), array_size(lit(None))
+        ).collect() == [Row(value=3, value2=None)]
+    else:
+        df = session.createDataFrame([([2, 1, 3],), (None,)], ["data"])
+        assert df.select(array_size(df.data).alias("r")).collect() == [
+            Row(r=3),
+            Row(r=None),
+        ]
 
 
 def test_create_map(get_session_and_func, get_func):

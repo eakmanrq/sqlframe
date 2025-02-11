@@ -2016,9 +2016,12 @@ def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     return Column.invoke_anonymous_function(col, "ARRAY_PREPEND", value)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def array_size(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+    session = _get_session()
+    if session._is_spark or session._is_databricks:
+        return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+    return Column.invoke_expression_over_column(col, expression.ArraySize)
 
 
 @meta(unsupported_engines="*")
