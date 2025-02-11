@@ -4930,6 +4930,9 @@ def test_unix_micros(get_session_and_func, get_func):
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
     assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
+    if not isinstance(session, SnowflakeSession):
+        df = session.createDataFrame([(datetime.datetime(2021, 3, 1, 12, 34, 56, 49000),)], ["t"])
+        assert df.select(unix_micros(df.t).alias("n")).first()[0] == 1614602096049000
 
 
 def test_unix_millis(get_session_and_func, get_func):

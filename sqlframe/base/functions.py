@@ -6445,12 +6445,25 @@ def unix_micros(col: ColumnOrName) -> Column:
     """
     from sqlframe.base.function_alternatives import unix_micros_multiply_epoch
 
-    if (
-        _get_session()._is_bigquery
-        or _get_session()._is_duckdb
-        or _get_session()._is_postgres
-        or _get_session()._is_snowflake
-    ):
+    if _get_session()._is_duckdb:
+        return Column.invoke_anonymous_function(col, "epoch_us")
+
+    if _get_session()._is_bigquery:
+        return Column(
+            expression.Anonymous(
+                this="UNIX_MICROS",
+                expressions=[
+                    expression.Anonymous(
+                        this="TIMESTAMP",
+                        expressions=[
+                            Column.ensure_col(col).column_expression,
+                        ],
+                    )
+                ],
+            )
+        )
+
+    if _get_session()._is_postgres or _get_session()._is_snowflake:
         return unix_micros_multiply_epoch(col)
 
     return Column.invoke_anonymous_function(col, "unix_micros")
