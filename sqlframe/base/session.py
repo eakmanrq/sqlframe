@@ -267,10 +267,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         else:
             column_mapping = {}
 
-        column_mapping = {
-            normalize_identifiers(k, self.input_dialect).sql(dialect=self.input_dialect): v
-            for k, v in column_mapping.items()
-        }
         empty_df = not data
         rows = [[None] * len(column_mapping)] if empty_df else list(data)  # type: ignore
 
@@ -327,7 +323,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             if isinstance(sample_row, Row):
                 sample_row = sample_row.asDict()
             if isinstance(sample_row, dict):
-                sample_row = normalize_dict(self, sample_row)
                 default_data_type = get_default_data_type(sample_row[name])
                 updated_mapping[name] = (
                     exp.DataType.build(default_data_type, dialect="spark")
@@ -387,7 +382,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         sel_expression = exp.Select(**select_kwargs)
         if empty_df:
             sel_expression = sel_expression.where(exp.false())
-        return self._create_df(sel_expression)
+        df = self._create_df(sel_expression)
+        df._update_display_name_mapping(
+            df._ensure_and_normalize_cols(list(column_mapping.keys())), list(column_mapping.keys())
+        )
+        return df
 
     def sql(
         self,

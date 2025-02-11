@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from sqlframe.base.session import _BaseSession
 from sqlframe.base.types import Row
 from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark import SparkSession
@@ -88,3 +89,47 @@ def test_show_limit(
 |      1      |  Jack | Shephard |  37 |    1     |
 +-------------+-------+----------+-----+----------+\n"""
         )
+
+
+# https://github.com/eakmanrq/sqlframe/issues/294
+def test_show_from_create_version_1(get_session: t.Callable[[], _BaseSession], capsys):
+    session = get_session()
+    df = session.createDataFrame([(1, 4), (2, 5), (3, 6)], schema=["foo", "BAR"])
+    df.show()
+    captured = capsys.readouterr()
+    assert (
+        captured.out.strip()
+        == """
++-----+-----+
+| foo | BAR |
++-----+-----+
+|  1  |  4  |
+|  2  |  5  |
+|  3  |  6  |
++-----+-----+
+""".strip()
+    )
+
+
+# https://github.com/eakmanrq/sqlframe/issues/294
+def test_show_from_create_version_2(get_session: t.Callable[[], _BaseSession], capsys):
+    session = get_session()
+    df = session.createDataFrame(
+        [
+            {"a": 1, "BAR": 1},
+            {"a": 1, "BAR": 2},
+        ]
+    )
+    df.show()
+    captured = capsys.readouterr()
+    assert (
+        captured.out.strip()
+        == """
++---+-----+
+| a | BAR |
++---+-----+
+| 1 |  1  |
+| 1 |  2  |
++---+-----+
+""".strip()
+    )
