@@ -525,7 +525,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
             case_sensitive_cols.append(col_id)
         columns = [
-            normalize_string(x, from_dialect="execution", to_dialect="output")
+            normalize_string(
+                x, from_dialect="execution", to_dialect="output", to_string_literal=True
+            )
             for x in case_sensitive_cols
         ]
         return [self._to_row(columns, row) for row in result]

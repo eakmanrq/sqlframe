@@ -150,13 +150,11 @@ def test_lit(get_session_and_func, arg, expected):
     "input, output",
     [
         ("employee_id", "employee_id"),
-        ("employee id", "`employee id`"),
+        ("employee id", "employee id"),
     ],
 )
 def test_col(get_session_and_func, input, output):
     session, col = get_session_and_func("col")
-    if isinstance(session, PySparkSession):
-        output = output.replace("`", "")
     df = session.createDataFrame([(1,)], schema=[input])
     result = df.select(col(input)).first()
     assert result[0] == 1
@@ -230,20 +228,7 @@ def test_alias(get_session_and_func):
     df = session.createDataFrame([(1,)], schema=["employee_id"])
     assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
-    if isinstance(
-        session,
-        (
-            DuckDBSession,
-            BigQuerySession,
-            PostgresSession,
-            SnowflakeSession,
-            SparkSession,
-            DatabricksSession,
-        ),
-    ):
-        assert space_result == "`A Space In New Name`"
-    else:
-        assert space_result == "A Space In New Name"
+    assert space_result == "A Space In New Name"
 
 
 def test_asc(get_session_and_func):
