@@ -86,7 +86,7 @@ class SparkSession(
                 col_id = exp.parse_identifier(k, dialect=self.execution_dialect)
                 col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
                 col_name = normalize_string(
-                    col_id, from_dialect="execution", to_dialect="output", is_column=True
+                    col_id, from_dialect="execution", to_dialect="output", to_string_literal=True
                 )
                 rows_normalized[col_name] = v
             results.append(Row(**rows_normalized))

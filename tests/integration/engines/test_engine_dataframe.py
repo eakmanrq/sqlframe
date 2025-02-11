@@ -133,3 +133,24 @@ def test_show_from_create_version_2(get_session: t.Callable[[], _BaseSession], c
 +---+-----+
 """.strip()
     )
+
+
+def test_show_from_create_with_space(get_session: t.Callable[[], _BaseSession], capsys):
+    session = get_session()
+    df = session.createDataFrame(
+        [
+            {"zor ro": 1},
+        ]
+    )
+    df.show()
+    captured = capsys.readouterr()
+    assert (
+        captured.out.strip()
+        == """
++--------+
+| zor ro |
++--------+
+|   1    |
++--------+
+""".strip()
+    )
