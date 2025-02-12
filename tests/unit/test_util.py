@@ -39,6 +39,7 @@ def test_quote_preserving_alias_or_name(expression: t.Union[exp.Column, exp.Alia
         ("INTEGER", types.IntegerType()),
         ("BIGINT", types.LongType()),
         ("SMALLINT", types.ShortType()),
+        ("TINYINT", types.ByteType()),
         ("FLOAT", types.FloatType()),
         ("DOUBLE", types.DoubleType()),
         ("BOOLEAN", types.BooleanType()),
