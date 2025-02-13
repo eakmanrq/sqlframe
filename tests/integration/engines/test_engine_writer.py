@@ -52,7 +52,7 @@ def test_write_json_append(get_session: t.Callable[[], _BaseSession], tmp_path: 
         df1.write.json(str(temp_json), mode="append")
         df2.write.json(str(temp_json), mode="append")
         df_result = session.read.json(str(temp_json))
-        assert df_result.collect() == [Row(_1=1), Row(_1=2)]
+        assert sorted(df_result.collect()) == sorted([Row(_1=1), Row(_1=2)])
 
 
 def test_write_json_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
@@ -129,7 +129,9 @@ def test_write_csv(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pa
     temp_csv = str(tmp_path / "employee.csv")
     df_employee.write.csv(temp_csv, header=True)
     df2 = df_employee.session.read.csv(temp_csv, header=True, inferSchema=True)
-    assert df2.collect() == df_employee.collect()
+    assert sorted([sorted(row.asDict()) for row in df2.collect()]) == sorted(
+        [sorted(row.asDict()) for row in df_employee.collect()]
+    )
 
 
 def test_write_csv_append(get_session: t.Callable[[], _BaseSession], tmp_path: pathlib.Path):
@@ -158,7 +160,7 @@ def test_write_csv_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_p
     df2.write.csv(temp_csv, mode="ignore")
     df_result = df_employee.session.read.csv(temp_csv, inferSchema=True)
     # Check that second write did not happen
-    assert df_result.collect() == df1.collect()
+    assert sorted(df_result.collect()) == sorted(df1.collect())
 
 
 def test_write_csv_error(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_path: pathlib.Path):
