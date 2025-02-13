@@ -7,8 +7,11 @@ import typing as t
 from sqlglot import exp
 from sqlglot.helper import ensure_list
 
-from sqlframe.base.mixins.readwriter_mixins import PandasWriterMixin
-from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
+from sqlframe.base.readerwriter import (
+    _BaseDataFrameReader,
+    _BaseDataFrameWriter,
+    _infer_format,
+)
 from sqlframe.base.util import ensure_column_mapping, generate_random_identifier, to_csv
 
 if t.TYPE_CHECKING:
@@ -73,7 +76,9 @@ class SparkDataFrameReader(
         |100|NULL|
         +---+----+
         """
-        format = format or self.state_format_to_read
+        assert path is not None, "path is required"
+        assert isinstance(path, str), "path must be a string"
+        format = format or self.state_format_to_read or _infer_format(path)
         if schema:
             column_mapping = ensure_column_mapping(schema)
             select_column_mapping = column_mapping.copy()
@@ -91,7 +96,9 @@ class SparkDataFrameReader(
             tmp_view_key = options.get("_tmp_view_key_", f"{generate_random_identifier()}_vw")
             options["_tmp_view_key_"] = tmp_view_key
 
-            format_options = options.copy()
+            format_options: dict[str, OptionalPrimitiveType] = {
+                k: v for k, v in options.items() if v is not None
+            }
             format_options.pop("_tmp_view_key_")
             format_options["path"] = paths
             if schema:
@@ -110,7 +117,7 @@ class SparkDataFrameReader(
             from_clause = f"'{path}'"
 
         df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
-        if select_columns == [exp.Star()]:
+        if select_columns == [exp.Star()] and df.schema:
             return self.load(path=path, format=format, schema=df.schema, **options)
         self.session._last_loaded_file = path  # type: ignore
         return df
@@ -129,7 +136,8 @@ class SparkDataFrameWriter(
                 sql = self._df.session._to_sql(expression)
                 spark_df = self._session.spark_session.sql(sql)
         if spark_df is not None:
-            mode = mode or str(self._mode)
+            options = {k: v for k, v in options.items() if v is not None}
+            mode = str(mode or self._mode or "default")
             spark_writer = spark_df.write.format(format).mode(mode)
             partition_columns = options.pop("partitionBy", None)
             compression = options.pop("compression", None)
