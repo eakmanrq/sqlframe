@@ -150,13 +150,11 @@ def test_lit(get_session_and_func, arg, expected):
     "input, output",
     [
         ("employee_id", "employee_id"),
-        ("employee id", "`employee id`"),
+        ("employee id", "employee id"),
     ],
 )
 def test_col(get_session_and_func, input, output):
     session, col = get_session_and_func("col")
-    if isinstance(session, PySparkSession):
-        output = output.replace("`", "")
     df = session.createDataFrame([(1,)], schema=[input])
     result = df.select(col(input)).first()
     assert result[0] == 1
@@ -230,20 +228,7 @@ def test_alias(get_session_and_func):
     df = session.createDataFrame([(1,)], schema=["employee_id"])
     assert df.select(col("employee_id").alias("test")).first().__fields__[0] == "test"
     space_result = df.select(col("employee_id").alias("A Space In New Name")).first().__fields__[0]
-    if isinstance(
-        session,
-        (
-            DuckDBSession,
-            BigQuerySession,
-            PostgresSession,
-            SnowflakeSession,
-            SparkSession,
-            DatabricksSession,
-        ),
-    ):
-        assert space_result == "`A Space In New Name`"
-    else:
-        assert space_result == "A Space In New Name"
+    assert space_result == "A Space In New Name"
 
 
 def test_asc(get_session_and_func):
@@ -2072,13 +2057,20 @@ def test_array_prepend(get_session_and_func):
     ]
 
 
-def test_array_size(get_session_and_func):
+def test_array_size(get_session_and_func, get_func):
     session, array_size = get_session_and_func("array_size")
-    df = session.createDataFrame([([2, 1, 3],), (None,)], ["data"])
-    assert df.select(array_size(df.data).alias("r")).collect() == [
-        Row(r=3),
-        Row(r=None),
-    ]
+    # Snowflake doesn't support arrays in VALUES so we need to do it in select
+    if isinstance(session, SnowflakeSession):
+        lit = get_func("lit", session)
+        assert session.range(1).select(
+            array_size(lit(["a", "b", "c"])), array_size(lit(None))
+        ).collect() == [Row(value=3, value2=None)]
+    else:
+        df = session.createDataFrame([([2, 1, 3],), (None,)], ["data"])
+        assert df.select(array_size(df.data).alias("r")).collect() == [
+            Row(r=3),
+            Row(r=None),
+        ]
 
 
 def test_create_map(get_session_and_func, get_func):
@@ -4923,6 +4915,9 @@ def test_unix_micros(get_session_and_func, get_func):
     to_timestamp = get_func("to_timestamp", session)
     df = session.createDataFrame([("2015-07-22 10:00:00",)], ["t"])
     assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
+    if not isinstance(session, SnowflakeSession):
+        df = session.createDataFrame([(datetime.datetime(2021, 3, 1, 12, 34, 56, 49000),)], ["t"])
+        assert df.select(unix_micros(df.t).alias("n")).first()[0] == 1614602096049000
 
 
 def test_unix_millis(get_session_and_func, get_func):

@@ -23,7 +23,6 @@ from sqlglot import lineage as sqlglot_lineage
 from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
 from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
-from sqlglot.optimizer.qualify_columns import quote_identifiers
 
 from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.operations import Operation, operation
@@ -616,6 +615,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self,
         optimize: bool = True,
         openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
+        quote_identifiers: bool = True,
     ) -> t.List[exp.Expression]:
         df = self._resolve_pending_hints()
         select_expressions = df._get_select_expressions()
@@ -644,7 +644,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             if optimize:
                 select_expression = t.cast(
                     exp.Select,
-                    self.session._optimize(select_expression),
+                    self.session._optimize(select_expression, quote_identifiers=quote_identifiers),
                 )
             elif openai_config:
                 qualify(
@@ -713,8 +713,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         dialect: DialectType = ...,
         optimize: bool = ...,
         pretty: bool = ...,
+        quote_identifiers: bool = ...,
         *,
-        as_list: t.Literal[False],
+        as_list: t.Literal[False] = False,
         **kwargs: t.Any,
     ) -> str: ...
 
@@ -724,6 +725,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         dialect: DialectType = ...,
         optimize: bool = ...,
         pretty: bool = ...,
+        quote_identifiers: bool = ...,
         *,
         as_list: t.Literal[True],
         **kwargs: t.Any,
@@ -734,14 +736,23 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         dialect: DialectType = None,
         optimize: bool = True,
         pretty: bool = True,
+        quote_identifiers: bool = True,
         openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
         as_list: bool = False,
         **kwargs,
     ) -> t.Union[str, t.List[str]]:
         dialect = Dialect.get_or_raise(dialect) if dialect else self.session.output_dialect
         results = []
-        for expression in self._get_expressions(optimize=optimize, openai_config=openai_config):
-            sql = self.session._to_sql(expression, dialect=dialect, pretty=pretty, **kwargs)
+        for expression in self._get_expressions(
+            optimize=optimize, openai_config=openai_config, quote_identifiers=quote_identifiers
+        ):
+            sql = self.session._to_sql(
+                expression,
+                dialect=dialect,
+                pretty=pretty,
+                quote_identifiers=quote_identifiers,
+                **kwargs,
+            )
             if openai_config:
                 assert isinstance(openai_config, OpenAIConfig)
                 verify_openai_installed()
@@ -1055,7 +1066,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         left_col.sql(dialect=self.session.input_dialect),
                         right_col.sql(dialect=self.session.input_dialect),
                     ).alias(left_col.alias_or_name)
-                    if how == "full"
+                    if join_type == "full outer"
                     else left_col.alias_or_name
                     for left_col, right_col in join_column_pairs
                 ]

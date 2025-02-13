@@ -16,6 +16,7 @@ from sqlglot import Dialect, exp
 from sqlglot.dialects.dialect import DialectType, NormalizationStrategy
 from sqlglot.expressions import parse_identifier
 from sqlglot.helper import ensure_list, seq_get
+from sqlglot.optimizer import RULES as OPTIMIZER_RULES
 from sqlglot.optimizer import optimize
 from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify import qualify as qualify_func
@@ -266,10 +267,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         else:
             column_mapping = {}
 
-        column_mapping = {
-            normalize_identifiers(k, self.input_dialect).sql(dialect=self.input_dialect): v
-            for k, v in column_mapping.items()
-        }
         empty_df = not data
         rows = [[None] * len(column_mapping)] if empty_df else list(data)  # type: ignore
 
@@ -326,7 +323,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             if isinstance(sample_row, Row):
                 sample_row = sample_row.asDict()
             if isinstance(sample_row, dict):
-                sample_row = normalize_dict(self, sample_row)
                 default_data_type = get_default_data_type(sample_row[name])
                 updated_mapping[name] = (
                     exp.DataType.build(default_data_type, dialect="spark")
@@ -386,7 +382,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         sel_expression = exp.Select(**select_kwargs)
         if empty_df:
             sel_expression = sel_expression.where(exp.false())
-        return self._create_df(sel_expression)
+        df = self._create_df(sel_expression)
+        df._update_display_name_mapping(
+            df._ensure_and_normalize_cols(list(column_mapping.keys())), list(column_mapping.keys())
+        )
+        return df
 
     def sql(
         self,
@@ -525,7 +525,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
             case_sensitive_cols.append(col_id)
         columns = [
-            normalize_string(x, from_dialect="execution", to_dialect="output")
+            normalize_string(
+                x, from_dialect="execution", to_dialect="output", to_string_literal=True
+            )
             for x in case_sensitive_cols
         ]
         return [self._to_row(columns, row) for row in result]
@@ -556,6 +558,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         dialect: DialectType = None,
         quote_identifiers: bool = True,
         pretty: bool = False,
+        **kwargs,
     ) -> str:
         return normalize_string(
             sql,
@@ -574,9 +577,19 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
     ) -> exp.Expression:
         dialect = dialect or self.input_dialect
         normalize_identifiers(expression, dialect=dialect)
+        rules = list(OPTIMIZER_RULES)
         if quote_identifiers:
             quote_identifiers_func(expression, dialect=dialect)
-        return optimize(expression, dialect=dialect, schema=self.catalog._schema, infer_schema=True)
+        else:
+            rules.remove(quote_identifiers_func)
+        return optimize(
+            expression,
+            dialect=dialect,
+            schema=self.catalog._schema,
+            infer_schema=True,
+            quote_identifiers=quote_identifiers,
+            rules=rules,  # type: ignore
+        )
 
     def _execute(self, sql: str) -> None:
         self._cur.execute(sql)

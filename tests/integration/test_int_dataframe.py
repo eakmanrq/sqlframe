@@ -2451,3 +2451,52 @@ def test_create_column_after_join(
     ).withColumn("new_col", SF.lit(1))
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/289
+def test_full_outer_nulls_no_match(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    spark = pyspark_employee._session
+
+    df_concept_1 = spark.createDataFrame(
+        [
+            (1, 100),
+            (2, 101),
+        ],
+        ["A", "col1"],
+    )
+
+    df_concept_2 = spark.createDataFrame(
+        [
+            (3, 102),
+            (4, 103),
+        ],
+        ["B", "col1"],
+    )
+
+    df = df_concept_1.join(df_concept_2, on="col1", how="outer")
+
+    session = get_df("employee").session
+
+    dfs_concept_1 = session.createDataFrame(
+        [
+            (1, 100),
+            (2, 101),
+        ],
+        ["A", "col1"],
+    )
+
+    dfs_concept_2 = session.createDataFrame(
+        [
+            (3, 102),
+            (4, 103),
+        ],
+        ["B", "col1"],
+    )
+
+    dfs = dfs_concept_1.join(dfs_concept_2, on="col1", how="outer")
+
+    compare_frames(df, dfs, compare_schema=False)

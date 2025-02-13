@@ -8,6 +8,7 @@ import typing as t
 
 from sqlglot import Dialect
 from sqlglot import exp as expression
+from sqlglot.dialects.dialect import time_format
 from sqlglot.helper import ensure_list
 from sqlglot.helper import flatten as _flatten
 
@@ -2016,9 +2017,12 @@ def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     return Column.invoke_anonymous_function(col, "ARRAY_PREPEND", value)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def array_size(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+    session = _get_session()
+    if session._is_spark or session._is_databricks:
+        return Column.invoke_anonymous_function(col, "ARRAY_SIZE")
+    return Column.invoke_expression_over_column(col, expression.ArraySize)
 
 
 @meta(unsupported_engines="*")
@@ -6088,7 +6092,7 @@ def to_timestamp_ltz(
         return Column.invoke_anonymous_function(timestamp, "to_timestamp_ltz")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def to_timestamp_ntz(
     timestamp: ColumnOrName,
     format: t.Optional[ColumnOrName] = None,
@@ -6118,6 +6122,32 @@ def to_timestamp_ntz(
     ... # doctest: +SKIP
     [Row(r=datetime.datetime(2016, 4, 8, 0, 0))]
     """
+    session = _get_session()
+
+    if session._is_duckdb:
+        to_timestamp_func = get_func_from_session("to_timestamp")
+        return to_timestamp_func(timestamp, format)
+
+    if session._is_bigquery:
+        if format is not None:
+            return Column.invoke_anonymous_function(
+                session.format_execution_time(format),  # type: ignore
+                "parse_datetime",
+                timestamp,
+            )
+        else:
+            return Column.ensure_col(timestamp).cast("datetime", dialect="bigquery")
+
+    if session._is_postgres:
+        if format is not None:
+            return Column.invoke_anonymous_function(
+                timestamp,
+                "to_timestamp",
+                session.format_execution_time(format),  # type: ignore
+            )
+        else:
+            return Column.ensure_col(timestamp).cast("timestamp", dialect="postgres")
+
     if format is not None:
         return Column.invoke_anonymous_function(timestamp, "to_timestamp_ntz", format)
     else:
@@ -6442,12 +6472,25 @@ def unix_micros(col: ColumnOrName) -> Column:
     """
     from sqlframe.base.function_alternatives import unix_micros_multiply_epoch
 
-    if (
-        _get_session()._is_bigquery
-        or _get_session()._is_duckdb
-        or _get_session()._is_postgres
-        or _get_session()._is_snowflake
-    ):
+    if _get_session()._is_duckdb:
+        return Column.invoke_anonymous_function(col, "epoch_us")
+
+    if _get_session()._is_bigquery:
+        return Column(
+            expression.Anonymous(
+                this="UNIX_MICROS",
+                expressions=[
+                    expression.Anonymous(
+                        this="TIMESTAMP",
+                        expressions=[
+                            Column.ensure_col(col).column_expression,
+                        ],
+                    )
+                ],
+            )
+        )
+
+    if _get_session()._is_postgres or _get_session()._is_snowflake:
         return unix_micros_multiply_epoch(col)
 
     return Column.invoke_anonymous_function(col, "unix_micros")
