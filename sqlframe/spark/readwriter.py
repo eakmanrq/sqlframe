@@ -116,7 +116,10 @@ class SparkDataFrameReader(
         else:
             from_clause = f"'{path}'"
 
-        df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
+        df = self.session.sql(
+            exp.select(*select_columns).from_(from_clause, dialect=self.session.input_dialect),
+            qualify=False,
+        )
         if select_columns == [exp.Star()] and df.schema:
             return self.load(path=path, format=format, schema=df.schema, **options)
         self.session._last_loaded_file = path  # type: ignore
@@ -126,6 +129,17 @@ class SparkDataFrameReader(
 class SparkDataFrameWriter(
     _BaseDataFrameWriter["SparkSession", "SparkDataFrame"],
 ):
+    def save(
+        self,
+        path: str,
+        mode: t.Optional[str] = None,
+        format: t.Optional[str] = None,
+        partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
+        **options,
+    ):
+        format = str(format or self._state_format_to_write)
+        self._write(path, mode, format, partitionBy=partitionBy, **options)
+
     def _write(self, path: str, mode: t.Optional[str], format: str, **options):
         spark_df = None
         expressions = self._df._get_expressions()

@@ -436,3 +436,16 @@ def normalize_string(
 
 def generate_random_identifier(size=6, chars=string.ascii_uppercase + string.digits):
     return "_" + "".join(random.choice(chars) for _ in range(size))
+
+
+def split_filepath(filepath: str) -> tuple[str, str]:
+    if filepath.startswith("dbfs:") or filepath.startswith("/dbfs"):
+        prefix = "dbfs:"
+        return prefix, filepath[len(prefix) :]
+    if filepath.startswith("file://"):
+        prefix = "file://"
+        return "", filepath[len(prefix) :]
+    split_ = str(filepath).split("://", 1)
+    if len(split_) == 2:  # noqa: PLR2004
+        return split_[0] + "://", split_[1]
+    return "", split_[0]

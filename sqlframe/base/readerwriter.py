@@ -393,10 +393,12 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         df: DF,
         mode: t.Optional[str] = None,
         by_name: bool = False,
+        state_format_to_write: t.Optional[str] = None,
     ):
         self._df = df
         self._mode = mode
         self._by_name = by_name
+        self._state_format_to_write = state_format_to_write
 
     @property
     def _session(self) -> SESSION:
@@ -483,6 +485,44 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
 
     def _write(self, path: str, mode: t.Optional[str], format: str, **options) -> None:
         raise NotImplementedError
+
+    def format(self, source: str) -> "Self":
+        """Specifies the input data source format.
+
+        .. versionadded:: 1.4.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        source : str
+            string, name of the data source, e.g. 'json', 'parquet'.
+
+        Examples
+        --------
+        >>> spark.read.format('json')
+        <...readwriter.DataFrameReader object ...>
+
+        Write a DataFrame into a JSON file and read it back.
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     # Write a DataFrame into a JSON file
+        ...     spark.createDataFrame(
+        ...         [{"age": 100, "name": "Hyukjin Kwon"}]
+        ...     ).write.mode("overwrite").format("json").save(d)
+        ...
+        ...     # Read the JSON file as a DataFrame.
+        ...     spark.read.format('json').load(d).show()
+        +---+------------+
+        |age|        name|
+        +---+------------+
+        |100|Hyukjin Kwon|
+        +---+------------+
+        """
+        self._state_format_to_write = source
+        return self
 
     def json(
         self,
