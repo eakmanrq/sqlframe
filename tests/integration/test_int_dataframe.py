@@ -2164,6 +2164,54 @@ def test_transform(
     compare_frames(df, dfs)
 
 
+def test_unpivot(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.unpivot(
+        pyspark_employee.columns,  # type: ignore
+        ["fname", "lname"],
+        "attribute",
+        "value",
+    )
+    dfs = employee.unpivot(employee.columns, ["fname", "lname"], "attribute", "value")
+    compare_frames(df, dfs, sort=True)
+
+
+def test_unpivot_no_values(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.unpivot(["employee_id", "fname", "lname"], None, "attribute", "value")
+    dfs = employee.unpivot(["employee_id", "fname", "lname"], None, "attribute", "value")
+    compare_frames(df, dfs, sort=True)
+
+
+def test_unpivot_doc_example(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee._session.createDataFrame(
+        [(1, 11, 1.1), (2, 12, 1.2)],
+        ["id", "int", "double"],
+    ).unpivot("id", ["int", "double"], "var", "val")
+
+    dfs = (
+        get_df("employee")
+        .session.createDataFrame(
+            [(1, 11, 1.1), (2, 12, 1.2)],
+            ["id", "int", "double"],
+        )
+        .unpivot("id", ["int", "double"], "var", "val")
+    )
+    compare_frames(df, dfs, sort=True, compare_schema=False)
+
+
 # https://github.com/eakmanrq/sqlframe/issues/51
 def test_join_full_outer_no_match(
     pyspark_employee: PySparkDataFrame,
