@@ -3133,20 +3133,14 @@ def datepart(field: ColumnOrName, source: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def day(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import day_with_try_to_timestamp
-
     session = _get_session()
 
     if session._is_duckdb:
         try_to_timestamp = get_func_from_session("try_to_timestamp")
         to_date = get_func_from_session("to_date")
-        when = get_func_from_session("when")
         _is_string = get_func_from_session("_is_string")
         coalesce = get_func_from_session("coalesce")
-        col = when(
-            _is_string(col),
-            coalesce(try_to_timestamp(col), to_date(col)),
-        ).otherwise(col)
+        col = coalesce(try_to_timestamp(Column.ensure_col(col).cast("VARCHAR")), to_date(col))
 
     return Column.invoke_expression_over_column(col, expression.Day)
 

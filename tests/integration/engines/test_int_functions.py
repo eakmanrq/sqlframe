@@ -3640,6 +3640,10 @@ def test_day(get_session_and_func, get_func):
     session, day = get_session_and_func("day")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
     assert df.select(day("dt").alias("day")).first()[0] == 8
+    df = session.createDataFrame([(datetime.datetime(2025, 4, 8),)], ["dt"])
+    assert df.select(day("dt").alias("day")).first()[0] == 8
+    df = session.createDataFrame([("2015-04-08 01:00:00",)], ["dt"])
+    assert df.select(day("dt").alias("day")).first()[0] == 8
 
 
 def test_elt(get_session_and_func, get_func):
