@@ -1718,6 +1718,114 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             grouping_columns.extend([list(x) for x in itertools.combinations(columns, i)])
         return self._group_data(self, grouping_columns, self.last_op)
 
+    @operation(Operation.SELECT)
+    def unpivot(
+        self,
+        ids: t.Union[ColumnOrName, t.List[ColumnOrName], t.Tuple[ColumnOrName, ...]],
+        values: t.Optional[t.Union[ColumnOrName, t.List[ColumnOrName], t.Tuple[ColumnOrName, ...]]],
+        variableColumnName: str,
+        valueColumnName: str,
+    ) -> Self:
+        """
+        Unpivot a DataFrame from wide format to long format, optionally leaving
+        identifier columns set. This is the reverse to `groupBy(...).pivot(...).agg(...)`,
+        except for the aggregation, which cannot be reversed.
+
+        This function is useful to massage a DataFrame into a format where some
+        columns are identifier columns ("ids"), while all other columns ("values")
+        are "unpivoted" to the rows, leaving just two non-id columns, named as given
+        by `variableColumnName` and `valueColumnName`.
+
+        When no "id" columns are given, the unpivoted DataFrame consists of only the
+        "variable" and "value" columns.
+
+        The `values` columns must not be empty so at least one value must be given to be unpivoted.
+        When `values` is `None`, all non-id columns will be unpivoted.
+
+        All "value" columns must share a least common data type. Unless they are the same data type,
+        all "value" columns are cast to the nearest common data type. For instance, types
+        `IntegerType` and `LongType` are cast to `LongType`, while `IntegerType` and `StringType`
+        do not have a common data type and `unpivot` fails.
+
+        .. versionadded:: 3.4.0
+
+        Parameters
+        ----------
+        ids : str, Column, tuple, list
+            Column(s) to use as identifiers. Can be a single column or column name,
+            or a list or tuple for multiple columns.
+        values : str, Column, tuple, list, optional
+            Column(s) to unpivot. Can be a single column or column name, or a list or tuple
+            for multiple columns. If specified, must not be empty. If not specified, uses all
+            columns that are not set as `ids`.
+        variableColumnName : str
+            Name of the variable column.
+        valueColumnName : str
+            Name of the value column.
+
+        Returns
+        -------
+        :class:`DataFrame`
+            Unpivoted DataFrame.
+
+        Notes
+        -----
+        Supports Spark Connect.
+
+        Examples
+        --------
+        >>> df = spark.createDataFrame(
+        ...     [(1, 11, 1.1), (2, 12, 1.2)],
+        ...     ["id", "int", "double"],
+        ... )
+        >>> df.show()
+        +---+---+------+
+        | id|int|double|
+        +---+---+------+
+        |  1| 11|   1.1|
+        |  2| 12|   1.2|
+        +---+---+------+
+
+        >>> df.unpivot("id", ["int", "double"], "var", "val").show()
+        +---+------+----+
+        | id|   var| val|
+        +---+------+----+
+        |  1|   int|11.0|
+        |  1|double| 1.1|
+        |  2|   int|12.0|
+        |  2|double| 1.2|
+        +---+------+----+
+
+        See Also
+        --------
+        DataFrame.melt
+        """
+        from sqlframe.base import functions as F
+
+        id_columns = self._ensure_and_normalize_cols(ids)
+        if not values:
+            outer_selects = self._get_outer_select_columns(self.expression)
+            values = [
+                column
+                for column in outer_selects
+                if column.alias_or_name not in {x.alias_or_name for x in id_columns}
+            ]
+        value_columns = self._ensure_and_normalize_cols(values)
+
+        df = self._convert_leaf_to_cte()
+        selects = []
+        for value in value_columns:
+            selects.append(
+                exp.select(
+                    *[x.column_expression for x in id_columns],
+                    F.lit(value.alias_or_name).alias(variableColumnName).expression,
+                    value.alias(valueColumnName).expression,
+                ).from_(df.expression.ctes[-1].alias_or_name)
+            )
+        unioned_expression = functools.reduce(lambda x, y: x.union(y, distinct=False), selects)  # type: ignore
+        final_expression = self._add_ctes_to_expression(unioned_expression, df.expression.ctes)
+        return self.copy(expression=final_expression)._convert_leaf_to_cte()
+
     def collect(self) -> t.List[Row]:
         return self._collect()
 
