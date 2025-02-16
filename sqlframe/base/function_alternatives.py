@@ -193,10 +193,6 @@ def factorial_ensure_int(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col_func(col).cast("integer"), "FACTORIAL")
 
 
-def skewness_from_skew(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "SKEW")
-
-
 def isnan_using_equal(col: ColumnOrName) -> Column:
     lit = get_func_from_session("lit")
     return Column(

@@ -486,14 +486,32 @@ def var_pop(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def skewness(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import skewness_from_skew
-
     session = _get_session()
 
-    if session._is_snowflake:
-        return skewness_from_skew(col)
+    func_name = "SKEWNESS"
 
-    return Column.invoke_anonymous_function(col, "SKEWNESS")
+    if session._is_snowflake:
+        func_name = "SKEW"
+
+    if session._is_duckdb or session._is_snowflake:
+        when_func = get_func_from_session("when")
+        count_func = get_func_from_session("count")
+        count_star = count_func("*")
+        lit_func = get_func_from_session("lit")
+        sqrt_func = get_func_from_session("sqrt")
+        col = Column.ensure_col(col)
+        return (
+            when_func(count_star == lit_func(0), lit_func(None))
+            .when(count_star == lit_func(1), lit_func(float("nan")))
+            .when(count_star == lit_func(2), lit_func(0.0))
+            .otherwise(
+                Column.invoke_anonymous_function(col, func_name)
+                * (count_star - lit_func(2))
+                / (sqrt_func(count_star * (count_star - lit_func(1))))
+            )
+        )
+
+    return Column.invoke_anonymous_function(col, func_name)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
