@@ -135,6 +135,7 @@ def test_show_from_create_version_2(get_session: t.Callable[[], _BaseSession], c
     )
 
 
+# https://github.com/eakmanrq/sqlframe/issues/291
 def test_show_from_create_with_space(get_session: t.Callable[[], _BaseSession], capsys):
     session = get_session()
     df = session.createDataFrame(
@@ -154,3 +155,31 @@ def test_show_from_create_with_space(get_session: t.Callable[[], _BaseSession], 
 +--------+
 """.strip()
     )
+
+
+# https://github.com/eakmanrq/sqlframe/issues/291
+def test_show_from_create_with_space_with_schema(get_session: t.Callable[[], _BaseSession], capsys):
+    session = get_session()
+    data = {"an tan": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+
+    df = session.createDataFrame([*zip(*data.values())], schema=[*data.keys()])
+    df.show()
+    captured = capsys.readouterr()
+    assert (
+        captured.out.strip()
+        == """
++--------+---+-----+
+| an tan | b |  z  |
++--------+---+-----+
+|   1    | 4 | 7.0 |
+|   3    | 4 | 8.0 |
+|   2    | 6 | 9.0 |
++--------+---+-----+
+    """.strip()
+    )
+    assert df.columns == ["an tan", "b", "z"]
+    assert df.collect() == [
+        Row(**{"an tan": 1, "b": 4, "z": 7.0}),
+        Row(**{"an tan": 3, "b": 4, "z": 8.0}),
+        Row(**{"an tan": 2, "b": 6, "z": 9.0}),
+    ]
