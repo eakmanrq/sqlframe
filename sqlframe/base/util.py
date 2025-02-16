@@ -97,12 +97,8 @@ def get_column_mapping_from_schema_input(
     else:
         value = {x.strip(): None for x in schema}
     return {
-        exp.to_column(k).sql(dialect=dialect): exp.DataType.build(v, dialect=dialect)
-        if v is not None
-        else v
-        for k, v in value.items()
+        k: exp.DataType.build(v, dialect=dialect) if v is not None else v for k, v in value.items()
     }
-    # return {x.strip(): None for x in schema}  # type: ignore
 
 
 def get_tables_from_expression_with_join(expression: exp.Select) -> t.List[exp.Table]:
