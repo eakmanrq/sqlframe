@@ -318,6 +318,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
         exp.DataType.Type.INT: types.IntegerType,
         exp.DataType.Type.BIGINT: types.LongType,
         exp.DataType.Type.SMALLINT: types.ShortType,
+        exp.DataType.Type.TINYINT: types.ByteType,
         exp.DataType.Type.FLOAT: types.FloatType,
         exp.DataType.Type.DOUBLE: types.DoubleType,
         exp.DataType.Type.DECIMAL: types.DecimalType,
