@@ -690,11 +690,7 @@ def test_var_pop(get_session_and_func):
 def test_skewness(get_session_and_func):
     session, skewness = get_session_and_func("skewness")
     df = session.createDataFrame([[1], [1], [2]], ["c"])
-    if isinstance(session, (DuckDBSession, SnowflakeSession)):
-        # DuckDB calculates skewness differently than spark
-        assert round(df.select(skewness("c")).first()[0], 4) == 1.7321
-    else:
-        assert math.isclose(df.select(skewness(df.c)).first()[0], 0.7071067811865475)
+    assert math.isclose(df.select(skewness(df.c)).first()[0], 0.7071067811865475, rel_tol=1e-5)
 
 
 def test_kurtosis(get_session_and_func):
