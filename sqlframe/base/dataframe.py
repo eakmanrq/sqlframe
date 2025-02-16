@@ -296,6 +296,12 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @property
     def columns(self) -> t.List[str]:
+        expression_display_names = self.expression.copy()
+        self._set_display_names(expression_display_names)
+        return expression_display_names.named_selects
+
+    @property
+    def _columns(self) -> t.List[str]:
         return self.expression.named_selects
 
     @property
@@ -611,6 +617,18 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         }
         self.display_name_mapping.update(zipped)
 
+    def _set_display_names(self, select_expression: exp.Select) -> None:
+        for index, column in enumerate(select_expression.expressions):
+            column_name = quote_preserving_alias_or_name(column)
+            if column_name in self.display_name_mapping:
+                display_name_identifier = exp.to_identifier(
+                    self.display_name_mapping[column_name], quoted=True
+                )
+                display_name_identifier._meta = {"case_sensitive": True, **(column._meta or {})}
+                select_expression.expressions[index] = exp.alias_(
+                    column.unalias(), display_name_identifier, quoted=True
+                )
+
     def _get_expressions(
         self,
         optimize: bool = True,
@@ -631,16 +649,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
-            for index, column in enumerate(select_expression.expressions):
-                column_name = quote_preserving_alias_or_name(column)
-                if column_name in self.display_name_mapping:
-                    display_name_identifier = exp.to_identifier(
-                        self.display_name_mapping[column_name], quoted=True
-                    )
-                    display_name_identifier._meta = {"case_sensitive": True, **(column._meta or {})}
-                    select_expression.expressions[index] = exp.alias_(
-                        column.unalias(), display_name_identifier, quoted=True
-                    )
+            self._set_display_names(select_expression)
             if optimize:
                 select_expression = t.cast(
                     exp.Select,
@@ -1158,8 +1167,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.FROM)
     def unionByName(self, other: Self, allowMissingColumns: bool = False) -> Self:
-        l_columns = self.columns
-        r_columns = other.columns
+        l_columns = self._columns
+        r_columns = other._columns
         if not allowMissingColumns:
             l_expressions = l_columns
             r_expressions = l_columns
@@ -1619,9 +1628,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         | 16|  Bob|
         +---+-----+
         """
-        if len(cols) != len(self.columns):
+        if len(cols) != len(self._columns):
             raise ValueError(
-                f"Number of column names does not match number of columns: {len(cols)} != {len(self.columns)}"
+                f"Number of column names does not match number of columns: {len(cols)} != {len(self._columns)}"
             )
         expression = self.expression.copy()
         expression = expression.select(

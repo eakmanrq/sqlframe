@@ -109,6 +109,7 @@ def test_show_from_create_version_1(get_session: t.Callable[[], _BaseSession], c
 +-----+-----+
 """.strip()
     )
+    assert df.columns == ["foo", "BAR"]
 
 
 # https://github.com/eakmanrq/sqlframe/issues/294
@@ -133,6 +134,7 @@ def test_show_from_create_version_2(get_session: t.Callable[[], _BaseSession], c
 +---+-----+
 """.strip()
     )
+    assert df.columns == ["a", "BAR"]
 
 
 # https://github.com/eakmanrq/sqlframe/issues/291
