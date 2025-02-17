@@ -92,6 +92,7 @@ class DuckDBDataFrameReader(
         if format == "delta":
             from_clause = f"delta_scan('{path}')"
         elif format:
+            options.pop("inferSchema", None)
             paths = ",".join([f"'{path}'" for path in ensure_list(path)])
             from_clause = f"read_{format}([{paths}], {to_csv(options)})"
         else:
