@@ -342,7 +342,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             return types.StructType(
                 [
                     types.StructField(
-                        c.name,
+                        self.display_name_mapping.get(c.name, c.name),
                         sqlglot_to_spark(
                             exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
                         ),
@@ -1898,7 +1898,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         print("root")
         for column in self._typed_columns:
             print_schema(
-                column.name,
+                self.display_name_mapping.get(column.name, column.name),
                 exp.DataType.build(column.dataType, dialect=self.session.output_dialect),
                 column.nullable,
                 0,

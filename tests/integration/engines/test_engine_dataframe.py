@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from sqlframe.base.session import _BaseSession
-from sqlframe.base.types import Row
+from sqlframe.base.types import DoubleType, LongType, Row, StructField, StructType
 from sqlframe.snowflake import SnowflakeSession
 from sqlframe.spark import SparkSession
 
@@ -185,3 +185,7 @@ def test_show_from_create_with_space_with_schema(get_session: t.Callable[[], _Ba
         Row(**{"an tan": 3, "b": 4, "z": 8.0}),
         Row(**{"an tan": 2, "b": 6, "z": 9.0}),
     ]
+    assert df.schema.fields[0].name == "an tan"
+    df.printSchema()
+    captured = capsys.readouterr()
+    assert "|-- an tan:" in captured.out.strip()
