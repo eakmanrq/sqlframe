@@ -4121,7 +4121,7 @@ def test_mode(get_session_and_func, get_func):
         ],
         schema=("course", "year", "earnings"),
     )
-    assert df.groupby("course").agg(mode("year")).collect() == [
+    assert df.groupby("course").agg(mode("year")).orderBy("course").collect() == [
         Row(value1="Java", value2=2012),
         Row(value1="dotNET", value2=2012),
     ]
