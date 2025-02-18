@@ -4504,7 +4504,7 @@ def median(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Median)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres"])
 def mode(col: ColumnOrName) -> Column:
     """
     Returns the most frequent value in a group.
@@ -4540,6 +4540,7 @@ def mode(col: ColumnOrName) -> Column:
     |dotNET|      2012|
     +------+----------+
     """
+
     return Column.invoke_anonymous_function(col, "mode")
 
 
