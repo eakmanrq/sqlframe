@@ -62,7 +62,7 @@ root
  |-- bigint_col: bigint (nullable = true)
  |-- double_col: double (nullable = true)
  |-- string_col: string (nullable = true)
- |-- `array<bigint>_col`: array<bigint> (nullable = true)
+ |-- array<bigint>_col: array<bigint> (nullable = true)
  |    |-- element: bigint (nullable = true)
  |-- date_col: date (nullable = true)
  |-- timestamp_col: timestamp (nullable = true)
@@ -108,7 +108,7 @@ def test_schema_nested(postgres_datatypes: PostgresDataFrame):
     assert struct_fields[1].dataType == types.DoubleType()
     assert struct_fields[2].name == "string_col"
     assert struct_fields[2].dataType == types.StringType()
-    assert struct_fields[3].name == "`array<bigint>_col`"
+    assert struct_fields[3].name == "array<bigint>_col"
     assert struct_fields[3].dataType == types.ArrayType(
         types.LongType(),
     )
