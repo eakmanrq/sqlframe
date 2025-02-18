@@ -82,6 +82,10 @@ class PandasLoaderMixin(_BaseDataFrameReader, t.Generic[SESSION, DF]):
         elif format == "parquet":
             df = pd.read_parquet(path, **kwargs)  # type: ignore
         elif format == "csv":
+            kwargs.pop("inferSchema", None)
+            if "header" in kwargs:
+                if isinstance(kwargs["header"], bool) and kwargs["header"]:
+                    kwargs["header"] = "infer"
             df = pd.read_csv(path, **kwargs)  # type: ignore
         else:
             raise UnsupportedOperationError(f"Unsupported format: {format}")
