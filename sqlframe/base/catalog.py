@@ -79,7 +79,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         table = self.ensure_table(table)
         if self._schema.find(table):
             return
-        if not column_mapping:
+        if column_mapping is None:
             try:
                 column_mapping = {
                     normalize_string(
