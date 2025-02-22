@@ -4,7 +4,7 @@ import typing as t
 from functools import cached_property
 
 from sqlframe.base.session import _BaseSession
-from sqlframe.base.util import soundex, verify_numpy_installed
+from sqlframe.base.util import soundex
 from sqlframe.duckdb.catalog import DuckDBCatalog
 from sqlframe.duckdb.dataframe import DuckDBDataFrame
 from sqlframe.duckdb.readwriter import (
@@ -46,8 +46,6 @@ class DuckDBSession(
         if not hasattr(self, "_conn"):
             conn = conn or duckdb.connect()
             try:
-                # Creating a function requires numpy to be installed so if they don't have it, we'll just skip it
-                verify_numpy_installed()
                 conn.create_function("SOUNDEX", lambda x: soundex(x), return_type=VARCHAR)
             except ImportError:
                 pass
