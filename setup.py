@@ -40,7 +40,7 @@ setup(
             "pyspark>=2,<3.6",
             "pytest>=8.2.0,<8.4",
             "pytest-forked",
-            "pytest-postgresql>=6,<7",
+            "pytest-postgresql>=6,<8",
             "pytest-xdist>=3.6,<3.7",
             "pre-commit>=3.7,<5",
             "ruff>=0.4.4,<0.10",
