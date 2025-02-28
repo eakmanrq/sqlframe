@@ -6,8 +6,10 @@ import pandas as pd
 import pytest
 from _pytest.fixtures import FixtureRequest
 from pyspark.sql import DataFrame as PySparkDataFrame
+from pyspark.sql import Window
 from pyspark.sql import functions as F
 
+from sqlframe.standalone import Window as SWindow
 from sqlframe.standalone import functions as SF
 from sqlframe.standalone.dataframe import StandaloneDataFrame
 from tests.integration.fixtures import StandaloneSession, is_snowflake
@@ -2546,5 +2548,89 @@ def test_full_outer_nulls_no_match(
     )
 
     dfs = dfs_concept_1.join(dfs_concept_2, on="col1", how="outer")
+
+    compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/317
+def test_rows_between_negative_start(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    session = pyspark_employee.sparkSession
+    df = session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    window = Window().partitionBy("store").orderBy("date").rowsBetween(-1, 1)
+    df = df.withColumn("rolling_price", F.mean("price").over(window))
+
+    employee = get_df("employee")
+    sf_session = employee.session
+    dfs = sf_session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    swindow = SWindow().partitionBy("store").orderBy("date").rowsBetween(-1, 1)
+    dfs = dfs.withColumn("rolling_price", SF.mean("price").over(swindow))
+
+    compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/317
+def test_rows_between_negative_end(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    session = pyspark_employee.sparkSession
+    df = session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    window = Window().partitionBy("store").orderBy("date").rowsBetween(-2, -1)
+    df = df.withColumn("rolling_price", F.mean("price").over(window))
+
+    employee = get_df("employee")
+    sf_session = employee.session
+    dfs = sf_session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    swindow = SWindow().partitionBy("store").orderBy("date").rowsBetween(-2, -1)
+    dfs = dfs.withColumn("rolling_price", SF.mean("price").over(swindow))
+
+    compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/317
+def test_rows_between_positive_both_start_end(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    session = pyspark_employee.sparkSession
+    df = session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    window = Window().partitionBy("store").orderBy("date").rowsBetween(1, 2)
+    df = df.withColumn("rolling_price", F.mean("price").over(window))
+
+    employee = get_df("employee")
+    sf_session = employee.session
+    dfs = sf_session.createDataFrame(
+        pd.DataFrame(
+            {"store": [1, 1, 1, 2, 2, 2, 2], "price": [1, 2, 3, 4, 3, 2, 1], "date": list(range(7))}
+        )
+    )
+    swindow = SWindow().partitionBy("store").orderBy("date").rowsBetween(1, 2)
+    dfs = dfs.withColumn("rolling_price", SF.mean("price").over(swindow))
 
     compare_frames(df, dfs, compare_schema=False)

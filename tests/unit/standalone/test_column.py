@@ -207,7 +207,9 @@ def test_over():
     assert (
         (
             F.sum("cola").over(
-                Window.partitionBy("colb").orderBy("colc").rowsBetween(1, Window.unboundedFollowing)
+                Window.partitionBy("colb")
+                .orderBy("colc")
+                .rowsBetween(-1, Window.unboundedFollowing)
             )
         ).sql()
         == "SUM(cola) OVER (PARTITION BY colb ORDER BY colc ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING)"
@@ -217,7 +219,7 @@ def test_over():
             F.sum("cola").over(
                 Window.partitionBy("colb")
                 .orderBy("colc")
-                .rangeBetween(1, Window.unboundedFollowing)
+                .rangeBetween(-1, Window.unboundedFollowing)
             )
         ).sql()
         == "SUM(cola) OVER (PARTITION BY colb ORDER BY colc RANGE BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING)"
