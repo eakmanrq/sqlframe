@@ -82,37 +82,26 @@ class WindowSpec:
     def _calc_start_end(
         self, start: int, end: int
     ) -> t.Dict[str, t.Optional[t.Union[str, exp.Expression]]]:
-        kwargs: t.Dict[str, t.Optional[t.Union[str, exp.Expression]]] = {
-            "start_side": None,
-            "end_side": None,
+        def get_value_and_side(x: int) -> t.Tuple[t.Union[str, exp.Expression], t.Optional[str]]:
+            if x == Window.currentRow:
+                return "CURRENT ROW", None
+            if x < 0:
+                side = "PRECEDING"
+                value = "UNBOUNDED" if x <= Window.unboundedPreceding else F.lit(abs(x)).expression
+                return value, side
+            else:
+                side = "FOLLOWING"
+                value = "UNBOUNDED" if x >= Window.unboundedFollowing else F.lit(x).expression
+                return value, side
+
+        start, start_side = get_value_and_side(start)  # type: ignore
+        end, end_side = get_value_and_side(end)  # type: ignore
+        return {
+            "start": start,  # type: ignore
+            "start_side": start_side,
+            "end": end,  # type: ignore
+            "end_side": end_side,
         }
-        if start == Window.currentRow:
-            kwargs["start"] = "CURRENT ROW"
-        else:
-            kwargs = {
-                **kwargs,
-                **{
-                    "start_side": "PRECEDING",
-                    "start": (
-                        "UNBOUNDED"
-                        if start <= Window.unboundedPreceding
-                        else F.lit(start).expression
-                    ),
-                },
-            }
-        if end == Window.currentRow:
-            kwargs["end"] = "CURRENT ROW"
-        else:
-            kwargs = {
-                **kwargs,
-                **{
-                    "end_side": "FOLLOWING",
-                    "end": (
-                        "UNBOUNDED" if end >= Window.unboundedFollowing else F.lit(end).expression
-                    ),
-                },
-            }
-        return kwargs
 
     def rowsBetween(self, start: int, end: int) -> WindowSpec:
         window_spec = self.copy()
