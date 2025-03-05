@@ -70,13 +70,16 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         }
 
     def add_table(
-        self, table: exp.Table | str, column_mapping: t.Optional[ColumnMapping] = None
+        self,
+        table: exp.Table | str,
+        column_mapping: t.Optional[ColumnMapping] = None,
+        **kwargs: t.Any,
     ) -> None:
         # TODO: Making this an update or add
         table = self.ensure_table(table)
         if self._schema.find(table):
             return
-        if not column_mapping:
+        if column_mapping is None:
             try:
                 column_mapping = {
                     normalize_string(
@@ -100,7 +103,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
             if column.this.quoted:
                 self._quoted_columns[table].append(column.this.name)
 
-        self._schema.add_table(table, column_mapping, dialect=self.session.input_dialect)
+        self._schema.add_table(table, column_mapping, dialect=self.session.input_dialect, **kwargs)
 
     def getDatabase(self, dbName: str) -> Database:
         """Get the database with the specified name.
