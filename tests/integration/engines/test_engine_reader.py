@@ -10,9 +10,9 @@ if t.TYPE_CHECKING:
 pytest_plugins = ["tests.integration.fixtures"]
 
 
-def test_load_no_format(get_session: t.Callable[[], _BaseSession]):
+def test_load_no_format(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.load("tests/fixtures/employee.json")
+    df = session.read.load(f"{fixture_root_path}/tests/fixtures/employee.json")
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
@@ -27,10 +27,10 @@ def test_load_no_format(get_session: t.Callable[[], _BaseSession]):
     )
 
 
-def test_load_no_format_schema(get_session: t.Callable[[], _BaseSession]):
+def test_load_no_format_schema(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
     df = session.read.load(
-        "tests/fixtures/employee.json",
+        f"{fixture_root_path}/tests/fixtures/employee.json",
         schema="employee_id STRING, fname STRING, lname STRING, age INT, store_id INT",
     )
     assert df.collect() == [
@@ -50,9 +50,9 @@ def test_load_no_format_schema(get_session: t.Callable[[], _BaseSession]):
     ]
 
 
-def test_load_json(get_session: t.Callable[[], _BaseSession]):
+def test_load_json(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.load("tests/fixtures/employee.json", format="json")
+    df = session.read.load(f"{fixture_root_path}/tests/fixtures/employee.json", format="json")
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
@@ -67,9 +67,9 @@ def test_load_json(get_session: t.Callable[[], _BaseSession]):
     )
 
 
-def test_json(get_session: t.Callable[[], _BaseSession]):
+def test_json(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.json("tests/fixtures/employee.json")
+    df = session.read.json(f"{fixture_root_path}/tests/fixtures/employee.json")
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
@@ -84,9 +84,9 @@ def test_json(get_session: t.Callable[[], _BaseSession]):
     )
 
 
-def test_load_parquet(get_session: t.Callable[[], _BaseSession]):
+def test_load_parquet(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.load("tests/fixtures/employee.parquet", format="parquet")
+    df = session.read.load(f"{fixture_root_path}/tests/fixtures/employee.parquet", format="parquet")
     assert df.collect() == [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
@@ -98,9 +98,9 @@ def test_load_parquet(get_session: t.Callable[[], _BaseSession]):
     ]
 
 
-def test_parquet(get_session: t.Callable[[], _BaseSession]):
+def test_parquet(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.parquet("tests/fixtures/employee.parquet")
+    df = session.read.parquet(f"{fixture_root_path}/tests/fixtures/employee.parquet")
     assert df.collect() == [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),
@@ -112,10 +112,10 @@ def test_parquet(get_session: t.Callable[[], _BaseSession]):
     ]
 
 
-def test_load_csv(get_session: t.Callable[[], _BaseSession]):
+def test_load_csv(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
     df = session.read.load(
-        "tests/fixtures/employee.csv", format="csv", header=True, inferSchema=True
+        f"{fixture_root_path}/tests/fixtures/employee.csv", format="csv", header=True, inferSchema=True
     )
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
@@ -131,9 +131,9 @@ def test_load_csv(get_session: t.Callable[[], _BaseSession]):
     )
 
 
-def test_csv(get_session: t.Callable[[], _BaseSession]):
+def test_csv(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.csv("tests/fixtures/employee.csv", header=True, inferSchema=True)
+    df = session.read.csv(f"{fixture_root_path}/tests/fixtures/employee.csv", header=True, inferSchema=True)
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),

@@ -6,7 +6,9 @@ import sys
 import typing as t
 
 import sqlglot as sg
+from databricks.sql import ServerOperationError
 from sqlglot import exp
+from sqlglot.helper import ensure_list
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -17,12 +19,21 @@ from sqlframe.base.mixins.readwriter_mixins import PandasLoaderMixin, PandasWrit
 from sqlframe.base.readerwriter import (
     _BaseDataFrameReader,
     _BaseDataFrameWriter,
+    _infer_format,
 )
-from sqlframe.base.util import normalize_string
+from sqlframe.base.util import (
+    ensure_column_mapping,
+    generate_random_identifier,
+    normalize_string,
+    split_filepath,
+    to_csv,
+)
 
 if t.TYPE_CHECKING:
-    from sqlframe.databricks.session import DatabricksSession  # noqa
+    from sqlframe.base._typing import OptionalPrimitiveType, PathOrPaths
+    from sqlframe.base.types import StructType
     from sqlframe.databricks.dataframe import DatabricksDataFrame  # noqa
+    from sqlframe.databricks.session import DatabricksSession  # noqa
     from sqlframe.databricks.table import DatabricksTable  # noqa
 
 
@@ -30,13 +41,263 @@ class DatabricksDataFrameReader(
     PandasLoaderMixin["DatabricksSession", "DatabricksDataFrame"],
     _BaseDataFrameReader["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
 ):
-    pass
+    def load(
+        self,
+        path: t.Optional[PathOrPaths] = None,
+        format: t.Optional[str] = None,
+        schema: t.Optional[t.Union[StructType, str]] = None,
+        **options: OptionalPrimitiveType,
+    ) -> DatabricksDataFrame:
+        """Loads data from a data source and returns it as a :class:`DataFrame`.
+
+        .. versionadded:: 1.4.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        path : str or list, t.Optional
+            t.Optional string or a list of string for file-system backed data sources.
+        format : str, t.Optional
+            t.Optional string for format of the data source. Default to 'parquet'.
+        schema : :class:`pyspark.sql.types.StructType` or str, t.Optional
+            t.Optional :class:`pyspark.sql.types.StructType` for the input schema
+            or a DDL-formatted string (For example ``col0 INT, col1 DOUBLE``).
+        **options : dict
+            all other string options
+
+        Examples
+        --------
+        Load a CSV file with format, schema and options specified.
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     # Write a DataFrame into a CSV file with a header
+        ...     df = spark.createDataFrame([{"age": 100, "name": "Hyukjin Kwon"}])
+        ...     df.write.option("header", True).mode("overwrite").format("csv").save(d)
+        ...
+        ...     # Read the CSV file as a DataFrame with 'nullValue' option set to 'Hyukjin Kwon',
+        ...     # and 'header' option set to `True`.
+        ...     df = spark.read.load(
+        ...         d, schema=df.schema, format="csv", nullValue="Hyukjin Kwon", header=True)
+        ...     df.printSchema()
+        ...     df.show()
+        root
+         |-- age: long (nullable = true)
+         |-- name: string (nullable = true)
+        +---+----+
+        |age|name|
+        +---+----+
+        |100|NULL|
+        +---+----+
+        """
+        assert path is not None, "path is required"
+        assert isinstance(path, str), "path must be a string"
+        format = format or self.state_format_to_read or _infer_format(path)
+        fs_prefix, filepath = split_filepath(path)
+
+        if fs_prefix == "":
+            return super().load(path, format, schema, **options)
+
+        if schema:
+            column_mapping = ensure_column_mapping(schema)
+            select_column_mapping = column_mapping.copy()
+            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
+
+            if hasattr(schema, "simpleString"):
+                schema = schema.simpleString()
+        else:
+            select_columns = [exp.Star()]
+
+        if format == "delta":
+            from_clause = f"delta.`{fs_prefix + filepath}`"
+        elif format:
+            paths = ",".join([f"{path}" for path in ensure_list(path)])
+
+            format_options: dict[str, OptionalPrimitiveType] = {
+                k: v for k, v in options.items() if v is not None
+            }
+            format_options["format"] = format
+            format_options["schemaEvolutionMode"] = "none"
+            if schema:
+                format_options["schema"] = f"{schema}"
+            if "inferSchema" in format_options:
+                format_options["inferColumnTypes"] = format_options.pop("inferSchema")
+
+            format_options = {key: f"'{val}'" for key, val in format_options.items()}
+            format_options_str = to_csv(format_options, " => ")
+
+            from_clause = f"read_files('{paths}', {format_options_str})"
+        else:
+            from_clause = f"'{path}'"
+
+        df = self.session.sql(
+            exp.select(*select_columns).from_(from_clause, dialect=self.session.input_dialect),
+            qualify=False,
+        )
+        if select_columns == [exp.Star()] and df.schema:
+            return self.load(path=path, format=format, schema=df.schema, **options)
+        self.session._last_loaded_file = path  # type: ignore
+        return df
 
 
 class DatabricksDataFrameWriter(
     PandasWriterMixin["DatabricksSession", "DatabricksDataFrame"],
     _BaseDataFrameWriter["DatabricksSession", "DatabricksDataFrame"],
 ):
+    def _create_external_table(
+        self,
+        name: str,
+        format: str,
+        path: str,
+        options: str,
+        sql: t.Optional[str] = None,
+        partition_by: t.Optional[t.Union[str, t.List[str]]] = None,
+    ):
+        partition = ""
+        if partition_by is not None:
+            if isinstance(partition_by, list):
+                partition = ",".join([f"`{part}`" for part in partition_by])
+            else:
+                partition = f"`{partition_by}`"
+
+        create_sql = (
+            f"""
+        CREATE TABLE {name}
+        USING {format.upper()}
+        """
+            + (
+                f"PARTITIONED BY ({partition})"
+                if partition_by is not None and sql is not None
+                else ""
+            )
+            + f"""
+        LOCATION '{path}'
+        """
+            + (f"OPTIONS ({options})" if options else "")
+            + (f"{sql};" if sql else ";")
+        )
+        self._df.session._collect(create_sql)
+
+    def save(
+        self,
+        path: str,
+        mode: t.Optional[str] = None,
+        format: t.Optional[str] = None,
+        partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
+        **options,
+    ):
+        format = str(format or self._state_format_to_write)
+        self._write(path, mode, format, partitionBy=partitionBy, **options)
+
+    def _write(self, path: str, mode: t.Optional[str], format: str, **options):  # type: ignore
+        fs_prefix, filepath = split_filepath(path)
+        sql = None
+        if fs_prefix == "":
+            super()._write(filepath, mode, format, **options)
+        elif format == "delta":
+            self.saveAsTable(f"delta.`{fs_prefix + filepath}`", None, mode, **options)
+        else:
+            expressions = self._df._get_expressions(optimize=False)
+            for i, expression in enumerate(expressions):
+                if i < len(expressions) - 1:
+                    self._df.session._collect(expressions)
+                else:
+                    sql = self._df.session._to_sql(expression)
+
+        if sql is not None:
+            mode = str(mode or self._mode or "error")
+            partition_by = options.pop("partitionBy", None)
+            format_options: dict[str, OptionalPrimitiveType] = {
+                key: f"'{val}'" for key, val in options.items() if val is not None
+            }
+            tmp_table = f"_{generate_random_identifier()}_tmp"
+            format_options_str = to_csv(format_options, " ")
+            if mode == "append" or mode == "default":
+                try:
+                    self._create_external_table(
+                        tmp_table, format, fs_prefix + filepath, format_options_str
+                    )
+                    by_name = self._by_name
+                    self._by_name = True
+                    self.insertInto(tmp_table)
+                    self._by_name = by_name
+                except ServerOperationError as e:
+                    if "UNABLE_TO_INFER_SCHEMA" in str(e):
+                        self._create_external_table(
+                            tmp_table, format, fs_prefix + filepath, format_options_str, sql
+                        )
+                    else:
+                        raise e
+                finally:
+                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+            elif mode == "error" or mode == "errorifexists":
+                try:
+                    self._create_external_table(
+                        tmp_table, format, fs_prefix + filepath, format_options_str
+                    )
+                    raise FileExistsError(f"Path already exists: {fs_prefix + filepath}")
+                except ServerOperationError as e:
+                    if "UNABLE_TO_INFER_SCHEMA" in str(e):
+                        self._create_external_table(
+                            tmp_table, format, fs_prefix + filepath, format_options_str, sql
+                        )
+                finally:
+                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+            elif mode == "overwrite":
+                try:
+                    self._create_external_table(
+                        tmp_table,
+                        format,
+                        fs_prefix + filepath,
+                        format_options_str,
+                        sql,
+                        partition_by,
+                    )
+                finally:
+                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+            elif mode == "ignore":
+                pass
+            else:
+                raise RuntimeError(f"Unssuported mode: {mode}")
+
+    def insertInto(
+        self,
+        tableName: str,
+        overwrite: t.Optional[bool] = None,
+        replaceWhere: t.Optional[str] = None,
+    ) -> Self:
+        from sqlframe.base.session import _BaseSession
+
+        tableName = normalize_string(tableName, from_dialect="input", is_table=True)
+        output_expression_container = exp.Insert(
+            **{
+                **{
+                    "this": exp.to_table(tableName, dialect=_BaseSession().input_dialect),
+                    "overwrite": overwrite,
+                },
+                **(
+                    {
+                        "by_name": self._by_name,
+                    }
+                    if self._by_name
+                    else {}
+                ),
+                **({"where": sg.parse_one(replaceWhere)} if replaceWhere else {}),
+            }
+        )
+        df = self._df.copy(output_expression_container=output_expression_container)
+        if self._by_name:
+            columns = self._session.catalog._schema.column_names(
+                tableName, only_visible=True, dialect=_BaseSession().input_dialect
+            )
+            df = df._convert_leaf_to_cte().select(*columns)
+
+        if self._session._has_connection:
+            df.collect()
+        return self.copy(_df=df)
+
     def saveAsTable(
         self,
         name: str,
@@ -44,13 +305,15 @@ class DatabricksDataFrameWriter(
         mode: t.Optional[str] = None,
         partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
         clusterBy: t.Optional[t.Union[str, t.List[str]]] = None,
+        replaceWhere: t.Optional[str] = None,
+        path: t.Optional[str] = None,
         **options,
     ) -> Self:
         if format is not None:
             raise NotImplementedError("Providing Format in the save as table is not supported")
-        exists, replace, mode = None, None, mode or str(self._mode)
+        exists, replace, mode = None, None, str(mode or self._mode)
         if mode == "append":
-            return self.insertInto(name)
+            return self.insertInto(name, replaceWhere=replaceWhere)
         if mode == "ignore":
             exists = True
         if mode == "overwrite":
@@ -76,6 +339,12 @@ class DatabricksDataFrameWriter(
             properties.append(
                 exp.Cluster(
                     expressions=[exp.Tuple(expressions=list(map(sg.to_identifier, cluster_by)))]
+                )
+            )
+        if path is not None and isinstance(path, str):
+            properties.append(
+                exp.LocationProperty(
+                    this=sg.to_identifier(path)
                 )
             )
 
