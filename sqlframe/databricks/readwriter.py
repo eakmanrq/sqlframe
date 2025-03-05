@@ -342,11 +342,7 @@ class DatabricksDataFrameWriter(
                 )
             )
         if path is not None and isinstance(path, str):
-            properties.append(
-                exp.LocationProperty(
-                    this=sg.to_identifier(path)
-                )
-            )
+            properties.append(exp.LocationProperty(this=sg.to_identifier(path)))
 
         properties.extend(
             exp.Property(this=sg.to_identifier(name), value=exp.convert(value))

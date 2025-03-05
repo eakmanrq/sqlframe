@@ -784,14 +784,17 @@ def is_databricks(request: FixtureRequest) -> t.Callable:
 
     return _is_databricks
 
+
 @pytest.fixture
 def fixture_root_path(request: FixtureRequest) -> str:
     local_fixture_root_path = "."
     root_path_mapping = {
         "databricks": os.environ.get("DATABRICKS_ROOT_CLOUD_PATH", local_fixture_root_path)
     }
-    engine = re.search(r"\[(.*)]", request.node.name).group(1)
+    match = re.search(r"\[(.*)]", request.node.name)
+    engine = match.group(1) if match is not None else ""
     return root_path_mapping.get(engine, local_fixture_root_path)
+
 
 @pytest.fixture
 def tmp_root_path(request: FixtureRequest) -> str:
@@ -799,5 +802,6 @@ def tmp_root_path(request: FixtureRequest) -> str:
     root_path_mapping = {
         "databricks": os.environ.get("DATABRICKS_ROOT_CLOUD_PATH", local_tmp_root_path)
     }
-    engine = re.search(r"\[(.*)]", request.node.name).group(1)
+    match = re.search(r"\[(.*)]", request.node.name)
+    engine = match.group(1) if match is not None else ""
     return root_path_mapping.get(engine, local_tmp_root_path)

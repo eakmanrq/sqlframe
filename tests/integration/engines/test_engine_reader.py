@@ -115,7 +115,10 @@ def test_parquet(get_session: t.Callable[[], _BaseSession], fixture_root_path: s
 def test_load_csv(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
     df = session.read.load(
-        f"{fixture_root_path}/tests/fixtures/employee.csv", format="csv", header=True, inferSchema=True
+        f"{fixture_root_path}/tests/fixtures/employee.csv",
+        format="csv",
+        header=True,
+        inferSchema=True,
     )
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
@@ -133,7 +136,9 @@ def test_load_csv(get_session: t.Callable[[], _BaseSession], fixture_root_path: 
 
 def test_csv(get_session: t.Callable[[], _BaseSession], fixture_root_path: str):
     session = get_session()
-    df = session.read.csv(f"{fixture_root_path}/tests/fixtures/employee.csv", header=True, inferSchema=True)
+    df = session.read.csv(
+        f"{fixture_root_path}/tests/fixtures/employee.csv", header=True, inferSchema=True
+    )
     expected = [
         Row(**{"employee_id": 1, "fname": "Jack", "lname": "Shephard", "age": 37, "store_id": 1}),
         Row(**{"employee_id": 2, "fname": "John", "lname": "Locke", "age": 65, "store_id": 1}),

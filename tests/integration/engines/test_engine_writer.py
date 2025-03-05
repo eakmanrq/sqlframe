@@ -31,7 +31,9 @@ def cleanup_employee_df(
     df.session._execute("DROP TABLE IF EXISTS save_as_table_employee")
 
 
-def test_write_json(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_json(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_json = f"{tmp_root_path}{str(tmp_path / 'employee.json')}"
     df_employee.write.json(temp_json)
@@ -41,7 +43,9 @@ def test_write_json(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_pa
     )
 
 
-def test_write_json_append(get_session: t.Callable[[], _BaseSession], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_json_append(
+    get_session: t.Callable[[], _BaseSession], tmp_root_path: str, tmp_path: pathlib.Path
+):
     session = get_session()
     temp_json = f"{tmp_root_path}{str(tmp_path / 'test.json')}"
     df1 = session.createDataFrame([(1,)])
@@ -56,7 +60,9 @@ def test_write_json_append(get_session: t.Callable[[], _BaseSession], tmp_root_p
         assert sorted(df_result.collect()) == sorted([Row(_1=1), Row(_1=2)])
 
 
-def test_write_json_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_json_ignore(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_json = f"{tmp_root_path}{str(tmp_path / 'employee.json')}"
     df_empty = df_employee.session.createDataFrame([])
@@ -69,7 +75,10 @@ def test_write_json_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_
 
 
 def test_write_json_error(
-    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path, caplog
+    get_engine_df: t.Callable[[str], BaseDataFrame],
+    tmp_root_path: str,
+    tmp_path: pathlib.Path,
+    caplog,
 ):
     df_employee = get_engine_df("employee")
     temp_json = f"{tmp_root_path}{str(tmp_path / 'employee.json')}"
@@ -80,7 +89,9 @@ def test_write_json_error(
         df_employee.write.json(temp_json, mode="error")
 
 
-def test_write_parquet(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_parquet(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_parquet = f"{tmp_root_path}{str(tmp_path / 'employee.parquet')}"
     df_employee.write.parquet(temp_parquet)
@@ -104,7 +115,10 @@ def test_write_parquet_ignore(
 
 
 def test_write_parquet_error(
-    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path, caplog
+    get_engine_df: t.Callable[[str], BaseDataFrame],
+    tmp_root_path: str,
+    tmp_path: pathlib.Path,
+    caplog,
 ):
     df_employee = get_engine_df("employee")
     temp_parquet = f"{tmp_root_path}{str(tmp_path / 'employee.parquet')}"
@@ -132,7 +146,9 @@ def test_write_parquet_unsupported_modes(
         df_employee.write.parquet(str(temp_parquet), mode="append")
 
 
-def test_write_csv(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_csv(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_csv = f"{tmp_root_path}{str(tmp_path / 'employee.csv')}"
     df_employee.write.csv(temp_csv, header=True)
@@ -142,7 +158,9 @@ def test_write_csv(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_pat
     )
 
 
-def test_write_csv_append(get_session: t.Callable[[], _BaseSession], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_csv_append(
+    get_session: t.Callable[[], _BaseSession], tmp_root_path: str, tmp_path: pathlib.Path
+):
     session = get_session()
     temp_csv = f"{tmp_root_path}{str(tmp_path / 'test.csv')}"
     df1 = session.createDataFrame([(1,)])
@@ -157,7 +175,9 @@ def test_write_csv_append(get_session: t.Callable[[], _BaseSession], tmp_root_pa
         assert sorted(df_result.collect()) == sorted([Row(_1=1), Row(_1=2)])
 
 
-def test_write_csv_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_csv_ignore(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_csv = f"{tmp_root_path}{str(tmp_path / 'employee.csv')}"
     df1 = df_employee.session.createDataFrame([(1,)])
@@ -171,7 +191,9 @@ def test_write_csv_ignore(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_r
     assert sorted(df_result.collect()) == sorted(df1.collect())
 
 
-def test_write_csv_error(get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path):
+def test_write_csv_error(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
     df_employee = get_engine_df("employee")
     temp_csv = f"{tmp_root_path}{str(tmp_path / 'employee.csv')}"
     df_empty = df_employee.session.createDataFrame([], schema="_1 INTEGER")
