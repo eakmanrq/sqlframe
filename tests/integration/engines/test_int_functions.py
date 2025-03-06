@@ -1591,7 +1591,7 @@ def test_hash(get_session_and_func):
     df = session.createDataFrame([("ABC", "DEF")], ["c1", "c2"])
     if isinstance(session, DuckDBSession):
         assert df.select(hash("c1").alias("hash")).first()[0] == 1241521928161919141
-        assert df.select(hash("c1", "c2").alias("hash")).first()[0] == 13305036188712072380
+        assert df.select(hash("c1", "c2").alias("hash")).first()[0] == 7524280102280623017
     # Bigquery only supports hashing a single column
     elif isinstance(session, BigQuerySession):
         assert df.select(hash("c1").alias("hash")).first()[0] == 228873345217803866
@@ -4894,9 +4894,9 @@ def test_try_element_at(get_session_and_func, get_func):
     else:
         assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] == "c"
     df = session.createDataFrame([({"a": 1.0, "b": 2.0},)], ["data"])
-    if isinstance(session, DuckDBSession):
-        assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == [1.0]
-    elif isinstance(session, PostgresSession):
+    # if isinstance(session, DuckDBSession):
+    #     assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == [1.0]
+    if isinstance(session, PostgresSession):
         pass
     else:
         assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == 1.0

@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "prettytable<4",
-        "sqlglot>=24.0.0,<26.7",
+        "sqlglot>=24.0.0,<26.9",
         "typing_extensions",
     ],
     extras_require={
@@ -29,7 +29,7 @@ setup(
             "google-cloud-bigquery-storage>=2,<3",
         ],
         "dev": [
-            "duckdb>=0.9,<1.2",
+            "duckdb>=1.2,<1.3",
             "findspark>=2,<3",
             "mypy>=1.10.0,<1.16",
             "openai>=1.30,<2",
@@ -54,7 +54,7 @@ setup(
             "pymdown-extensions",
         ],
         "duckdb": [
-            "duckdb>=0.9,<1.2",
+            "duckdb>=1.2,<1.3",
             "pandas>=2,<3",
         ],
         "openai": [

@@ -57,25 +57,15 @@ def test_set_current_database(duckdb_session: DuckDBSession):
 
 def test_list_databases(duckdb_session: DuckDBSession):
     assert sorted(duckdb_session.catalog.listDatabases(), key=lambda x: (x.catalog, x.name)) == [
-        Database(name="information_schema", catalog="catalog1", description=None, locationUri=""),
         Database(name="main", catalog="catalog1", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="catalog1", description=None, locationUri=""),
-        Database(name="information_schema", catalog="catalog2", description=None, locationUri=""),
         Database(name="main", catalog="catalog2", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="catalog2", description=None, locationUri=""),
         Database(name="db1", catalog="default", description=None, locationUri=""),
-        Database(name="information_schema", catalog="default", description=None, locationUri=""),
         Database(name="main", catalog="default", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="default", description=None, locationUri=""),
-        Database(name="information_schema", catalog="memory", description=None, locationUri=""),
         Database(name="main", catalog="memory", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="memory", description=None, locationUri=""),
         Database(name="information_schema", catalog="system", description=None, locationUri=""),
         Database(name="main", catalog="system", description=None, locationUri=""),
         Database(name="pg_catalog", catalog="system", description=None, locationUri=""),
-        Database(name="information_schema", catalog="temp", description=None, locationUri=""),
         Database(name="main", catalog="temp", description=None, locationUri=""),
-        Database(name="pg_catalog", catalog="temp", description=None, locationUri=""),
     ]
 
 
@@ -99,8 +89,8 @@ def test_get_database_name_only(duckdb_session: DuckDBSession):
 
 
 def test_get_database_name_and_catalog(duckdb_session: DuckDBSession):
-    assert duckdb_session.catalog.getDatabase("catalog1.information_schema") == Database(
-        name="information_schema", catalog="catalog1", description=None, locationUri=""
+    assert duckdb_session.catalog.getDatabase("system.information_schema") == Database(
+        name="information_schema", catalog="system", description=None, locationUri=""
     )
 
 

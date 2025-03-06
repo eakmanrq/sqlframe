@@ -1,3 +1,7 @@
+import os
+
+import pytest
+
 from sqlframe.base.types import Row
 from sqlframe.duckdb import DuckDBSession
 from sqlframe.duckdb import functions as F
@@ -102,6 +106,10 @@ def test_employee_extra_line_csv_multiple(duckdb_session: DuckDBSession):
 
 
 def test_employee_delta(duckdb_session: DuckDBSession):
+    if os.environ.get("CI"):
+        pytest.skip(
+            "DuckDB Delta is not working in CI with DuckDB 1.2.1. Error: `duckdb.duckdb.Error: An error occurred while trying to automatically install the required extension 'delta'`"
+        )
     df = duckdb_session.read.load(
         "tests/fixtures/employee_delta",
         format="delta",
