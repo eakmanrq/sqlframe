@@ -1062,8 +1062,23 @@ def test_struct(get_session_and_func):
         if not isinstance(session, SnowflakeSession)
         else [Row(value={"age": 2, "name": "Alice"}), Row(value={"age": 5, "name": "Bob"})]
     )
-    assert df.select(struct("age", "name").alias("struct")).collect() == expected
-    assert df.select(struct([df.age, df.name]).alias("struct")).collect() == expected
+    expected_field_names = ["age", "name"]
+    result = df.select(struct("age", "name").alias("struct")).collect()
+    assert result == expected
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pass
+    elif isinstance(session, SnowflakeSession):
+        assert list(result[0][0]) == expected_field_names
+    else:
+        assert result[0][0]._unique_field_names == expected_field_names
+    result = df.select(struct([df.age, df.name]).alias("struct")).collect()
+    assert result == expected
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pass
+    elif isinstance(session, SnowflakeSession):
+        assert list(result[0][0]) == expected_field_names
+    else:
+        assert result[0][0]._unique_field_names == expected_field_names
 
 
 def test_greatest(get_session_and_func):

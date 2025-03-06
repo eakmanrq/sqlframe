@@ -1070,10 +1070,13 @@ def test_expr():
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.struct("cola", "colb", "colc"), "STRUCT(cola, colb, colc)"),
-        (SF.struct(SF.col("cola"), SF.col("colb"), SF.col("colc")), "STRUCT(cola, colb, colc)"),
-        (SF.struct("cola"), "STRUCT(cola)"),
-        (SF.struct(["cola", "colb", "colc"]), "STRUCT(cola, colb, colc)"),
+        (SF.struct("cola", "colb", "colc"), "STRUCT(cola AS cola, colb AS colb, colc AS colc)"),
+        (
+            SF.struct(SF.col("cola"), SF.col("colb"), SF.col("colc")),
+            "STRUCT(cola AS cola, colb AS colb, colc AS colc)",
+        ),
+        (SF.struct("cola"), "STRUCT(cola AS cola)"),
+        (SF.struct(["cola", "colb", "colc"]), "STRUCT(cola AS cola, colb AS colb, colc AS colc)"),
     ],
 )
 def test_struct(expression, expected):

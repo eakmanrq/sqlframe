@@ -856,15 +856,21 @@ def expr(str: str) -> Column:
 
 @meta(unsupported_engines=["postgres"])
 def struct(col: t.Union[ColumnOrName, t.Iterable[ColumnOrName]], *cols: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import struct_with_eq
-
     session = _get_session()
+    col_func = get_func_from_session("col")
 
-    if session._is_snowflake:
-        return struct_with_eq(col, *cols)
-
-    columns = ensure_list(col) + list(cols)
-    return Column.invoke_expression_over_column(None, expression.Struct, expressions=columns)
+    columns = [col_func(x) for x in ensure_list(col) + list(cols)]
+    expressions = []
+    for column in columns:
+        expressions.append(
+            expression.PropertyEQ(
+                this=expression.parse_identifier(
+                    column.alias_or_name, dialect=session.input_dialect
+                ),
+                expression=column.column_expression,
+            )
+        )
+    return Column(expression.Struct(expressions=expressions))
 
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
