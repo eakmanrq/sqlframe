@@ -10,6 +10,7 @@ from sqlglot import exp, parse_one
 
 from sqlframe.base.catalog import Function, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
+    CreateTableFromFunctionMixin,
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
@@ -24,18 +25,20 @@ from sqlframe.base.util import normalize_string, schema_, to_schema
 if t.TYPE_CHECKING:
     from sqlframe.snowflake.session import SnowflakeSession  # noqa
     from sqlframe.snowflake.dataframe import SnowflakeDataFrame  # noqa
+    from sqlframe.snowflake.table import SnowflakeTable  # noqa
 
 
 class SnowflakeCatalog(
-    SetCurrentCatalogFromUseMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    GetCurrentCatalogFromFunctionMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    GetCurrentDatabaseFromFunctionMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    ListDatabasesFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    ListCatalogsFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    SetCurrentDatabaseFromUseMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    ListTablesFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    ListColumnsFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame"],
-    _BaseCatalog["SnowflakeSession", "SnowflakeDataFrame"],
+    SetCurrentCatalogFromUseMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    GetCurrentCatalogFromFunctionMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    GetCurrentDatabaseFromFunctionMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    CreateTableFromFunctionMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    ListDatabasesFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    ListCatalogsFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    SetCurrentDatabaseFromUseMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    ListTablesFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    ListColumnsFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
+    _BaseCatalog["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
     UPPERCASE_INFO_SCHEMA = True

@@ -15,7 +15,6 @@ from sqlframe.base.mixins.catalog_mixins import (
     ListCatalogsFromInfoSchemaMixin,
     ListDatabasesFromInfoSchemaMixin,
     ListTablesFromInfoSchemaMixin,
-    SetCurrentCatalogFromUseMixin,
     SetCurrentDatabaseFromUseMixin,
 )
 from sqlframe.base.util import normalize_string, schema_, to_schema
@@ -23,16 +22,21 @@ from sqlframe.base.util import normalize_string, schema_, to_schema
 if t.TYPE_CHECKING:
     from sqlframe.databricks.session import DatabricksSession  # noqa
     from sqlframe.databricks.dataframe import DatabricksDataFrame  # noqa
+    from sqlframe.databricks.table import DatabricksTable  # noqa
 
 
 class DatabricksCatalog(
-    GetCurrentCatalogFromFunctionMixin["DatabricksSession", "DatabricksDataFrame"],
-    GetCurrentDatabaseFromFunctionMixin["DatabricksSession", "DatabricksDataFrame"],
-    ListDatabasesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
-    ListCatalogsFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
-    SetCurrentDatabaseFromUseMixin["DatabricksSession", "DatabricksDataFrame"],
-    ListTablesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame"],
-    _BaseCatalog["DatabricksSession", "DatabricksDataFrame"],
+    GetCurrentCatalogFromFunctionMixin[
+        "DatabricksSession", "DatabricksDataFrame", "DatabricksTable"
+    ],
+    GetCurrentDatabaseFromFunctionMixin[
+        "DatabricksSession", "DatabricksDataFrame", "DatabricksTable"
+    ],
+    ListDatabasesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
+    ListCatalogsFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
+    SetCurrentDatabaseFromUseMixin["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
+    ListTablesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
+    _BaseCatalog["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
     UPPERCASE_INFO_SCHEMA = True

@@ -9,6 +9,7 @@ from sqlglot import exp, parse_one
 
 from sqlframe.base.catalog import Function, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
+    CreateTableFromFunctionMixin,
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
@@ -22,17 +23,19 @@ from sqlframe.base.util import normalize_string, schema_, to_schema
 if t.TYPE_CHECKING:
     from sqlframe.redshift.dataframe import RedshiftDataFrame
     from sqlframe.redshift.session import RedshiftSession
+    from sqlframe.redshift.table import RedshiftTable
 
 
 class RedshiftCatalog(
-    GetCurrentCatalogFromFunctionMixin["RedshiftSession", "RedshiftDataFrame"],
-    GetCurrentDatabaseFromFunctionMixin["RedshiftSession", "RedshiftDataFrame"],
-    ListDatabasesFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame"],
-    ListCatalogsFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame"],
-    SetCurrentDatabaseFromSearchPathMixin["RedshiftSession", "RedshiftDataFrame"],
-    ListTablesFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame"],
-    ListColumnsFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame"],
-    _BaseCatalog["RedshiftSession", "RedshiftDataFrame"],
+    GetCurrentCatalogFromFunctionMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    GetCurrentDatabaseFromFunctionMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    CreateTableFromFunctionMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    ListDatabasesFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    ListCatalogsFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    SetCurrentDatabaseFromSearchPathMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    ListTablesFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    ListColumnsFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
+    _BaseCatalog["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
 
