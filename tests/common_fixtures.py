@@ -123,6 +123,7 @@ def duckdb_session() -> DuckDBSession:
     connector.execute("set TimeZone = 'UTC'")
     connector.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")
     assert connector.fetchone()[1] == "UTC"  # type: ignore
+    connector.execute("INSTALL tpcds")
     return DuckDBSession(conn=connector)
 
 
