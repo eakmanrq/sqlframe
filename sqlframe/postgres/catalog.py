@@ -9,6 +9,7 @@ from sqlglot import exp, parse_one
 
 from sqlframe.base.catalog import Column, Function, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
+    CreateTableFromFunctionMixin,
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
@@ -21,16 +22,18 @@ from sqlframe.base.util import normalize_string, to_schema
 if t.TYPE_CHECKING:
     from sqlframe.postgres.session import PostgresSession  # noqa
     from sqlframe.postgres.dataframe import PostgresDataFrame  # noqa
+    from sqlframe.postgres.table import PostgresTable  # noqa
 
 
 class PostgresCatalog(
-    GetCurrentCatalogFromFunctionMixin["PostgresSession", "PostgresDataFrame"],
-    GetCurrentDatabaseFromFunctionMixin["PostgresSession", "PostgresDataFrame"],
-    ListDatabasesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
-    ListCatalogsFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
-    SetCurrentDatabaseFromSearchPathMixin["PostgresSession", "PostgresDataFrame"],
-    ListTablesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame"],
-    _BaseCatalog["PostgresSession", "PostgresDataFrame"],
+    GetCurrentCatalogFromFunctionMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    GetCurrentDatabaseFromFunctionMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    CreateTableFromFunctionMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    ListDatabasesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    ListCatalogsFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    SetCurrentDatabaseFromSearchPathMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    ListTablesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
+    _BaseCatalog["PostgresSession", "PostgresDataFrame", "PostgresTable"],
 ):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.column("current_catalog")
     TEMP_SCHEMA_FILTER = exp.column("table_schema").like("pg_temp_%")

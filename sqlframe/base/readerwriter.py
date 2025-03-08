@@ -444,7 +444,10 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         return self.copy(_df=df)
 
     def saveAsTable(
-        self, name: str, format: t.Optional[str] = None, mode: t.Optional[str] = None
+        self,
+        name: str,
+        format: t.Optional[str] = None,
+        mode: t.Optional[str] = None,
     ) -> Self:
         if format is not None:
             raise NotImplementedError("Providing Format in the save as table is not supported")

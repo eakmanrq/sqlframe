@@ -14,16 +14,17 @@ if t.TYPE_CHECKING:
     from sqlglot.schema import ColumnMapping
 
     from sqlframe.base._typing import StorageLevel, UserDefinedFunctionLike
-    from sqlframe.base.session import DF, _BaseSession
+    from sqlframe.base.session import DF, TABLE, _BaseSession
     from sqlframe.base.types import DataType, StructType
 
     SESSION = t.TypeVar("SESSION", bound=_BaseSession)
 else:
     DF = t.TypeVar("DF")
+    TABLE = t.TypeVar("TABLE")
     SESSION = t.TypeVar("SESSION")
 
 
-class _BaseCatalog(t.Generic[SESSION, DF]):
+class _BaseCatalog(t.Generic[SESSION, DF, TABLE]):
     """User-facing catalog API, accessible through `SparkSession.catalog`."""
 
     TEMP_CATALOG_FILTER: t.Optional[exp.Expression] = None
@@ -688,7 +689,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         source: t.Optional[str] = None,
         schema: t.Optional[StructType] = None,
         **options: str,
-    ) -> DF:
+    ) -> TABLE:
         """Creates a table based on the dataset in a data source.
 
         It returns the DataFrame associated with the external table.
@@ -716,7 +717,7 @@ class _BaseCatalog(t.Generic[SESSION, DF]):
         schema: t.Optional[StructType] = None,
         description: t.Optional[str] = None,
         **options: str,
-    ) -> DF:
+    ) -> TABLE:
         """Creates a table based on the dataset in a data source.
 
         .. versionadded:: 2.2.0

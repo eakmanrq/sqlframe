@@ -6,16 +6,23 @@ from sqlglot import exp
 from sqlframe.base.catalog import (
     DF,
     SESSION,
+    TABLE,
     CatalogMetadata,
     Column,
     Database,
     Table,
     _BaseCatalog,
 )
-from sqlframe.base.util import normalize_string, schema_, to_schema
+from sqlframe.base.types import StructType
+from sqlframe.base.util import (
+    get_column_mapping_from_schema_input,
+    normalize_string,
+    schema_,
+    to_schema,
+)
 
 
-class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = False
     UPPERCASE_INFO_SCHEMA = False
 
@@ -52,7 +59,7 @@ class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         )
 
 
-class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
 
     def currentCatalog(self) -> str:
@@ -74,7 +81,7 @@ class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         )
 
 
-class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     CURRENT_DATABASE_EXPRESSION: exp.Expression = exp.func("current_schema")
 
     def currentDatabase(self) -> str:
@@ -94,7 +101,7 @@ class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         )
 
 
-class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     def setCurrentCatalog(self, catalogName: str) -> None:
         """Sets the current default catalog in this session.
 
@@ -114,7 +121,136 @@ class SetCurrentCatalogFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         )
 
 
-class ListDatabasesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
+class CreateTableFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
+    def createTable(
+        self,
+        tableName: str,
+        path: t.Optional[str] = None,
+        source: t.Optional[str] = None,
+        schema: t.Optional[StructType] = None,
+        description: t.Optional[str] = None,
+        **options: str,
+    ) -> TABLE:
+        """Creates a table based on the dataset in a data source.
+
+        .. versionadded:: 2.2.0
+
+        Parameters
+        ----------
+        tableName : str
+            name of the table to create.
+
+            .. versionchanged:: 3.4.0
+               Allow ``tableName`` to be qualified with catalog name.
+
+        path : str, t.Optional
+            the path in which the data for this table exists.
+            When ``path`` is specified, an external table is
+            created from the data at the given path. Otherwise a managed table is created.
+        source : str, t.Optional
+            the source of this table such as 'parquet, 'orc', etc.
+            If ``source`` is not specified, the default data source configured by
+            ``spark.sql.sources.default`` will be used.
+        schema : class:`StructType`, t.Optional
+            the schema for this table.
+        description : str, t.Optional
+            the description of this table.
+
+            .. versionchanged:: 3.1.0
+                Added the ``description`` parameter.
+
+        **options : dict, t.Optional
+            extra options to specify in the table.
+
+        Returns
+        -------
+        :class:`DataFrame`
+            The DataFrame associated with the table.
+
+        Examples
+        --------
+        Creating a managed table.
+
+        >>> _ = spark.catalog.createTable("tbl1", schema=spark.range(1).schema, source='parquet')
+        >>> _ = spark.sql("DROP TABLE tbl1")
+
+        Creating an external table
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     _ = spark.catalog.createTable(
+        ...         "tbl2", schema=spark.range(1).schema, path=d, source='parquet')
+        >>> _ = spark.sql("DROP TABLE tbl2")
+        """
+        if source is not None:
+            raise NotImplementedError("Providing source to create table is not supported")
+        if path is not None:
+            raise NotImplementedError("Creating a external table is not supported")
+
+        replace: t.Union[str, bool, None] = options.pop("replace", None)
+        exists: t.Union[str, bool, None] = options.pop("exists", None)
+
+        if isinstance(replace, str) and replace.lower() == "true":
+            replace = True
+        if isinstance(exists, str) and exists.lower() == "true":
+            exists = True
+
+        if schema is None:
+            raise ValueError("schema must be specified.")
+
+        column_mapping = get_column_mapping_from_schema_input(
+            schema, dialect=self.session.input_dialect
+        )
+        expressions = [
+            exp.ColumnDef(this=exp.parse_identifier(k, dialect=self.session.input_dialect), kind=v)
+            for k, v in column_mapping.items()
+        ]
+
+        name = normalize_string(tableName, from_dialect="input", is_table=True)
+        output_expression_container = exp.Create(
+            this=exp.Schema(
+                this=exp.to_table(name, dialect=self.session.input_dialect),
+                expressions=expressions,
+            ),
+            kind="TABLE",
+            exists=exists,
+            replace=replace,
+        )
+        if self.session._has_connection:
+            self.session._collect(output_expression_container)
+
+        df = self.session.table(name)
+        return df
+
+    def createExternalTable(
+        self,
+        tableName: str,
+        path: t.Optional[str] = None,
+        source: t.Optional[str] = None,
+        schema: t.Optional[StructType] = None,
+        **options: str,
+    ) -> TABLE:
+        """Creates a table based on the dataset in a data source.
+
+        It returns the DataFrame associated with the external table.
+
+        The data source is specified by the ``source`` and a set of ``options``.
+        If ``source`` is not specified, the default data source configured by
+        ``spark.sql.sources.default`` will be used.
+
+        t.Optionally, a schema can be provided as the schema of the returned :class:`DataFrame` and
+        created external table.
+
+        .. versionadded:: 2.0.0
+
+        Returns
+        -------
+        :class:`DataFrame`
+        """
+        return self.createTable(tableName, path=path, source=source, schema=schema, **options)
+
+
+class ListDatabasesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF, TABLE]):
     def listDatabases(self, pattern: t.Optional[str] = None) -> t.List[Database]:
         """
         Returns a t.List of databases available across all sessions.
@@ -169,7 +305,7 @@ class ListDatabasesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, 
         return databases
 
 
-class ListCatalogsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
+class ListCatalogsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF, TABLE]):
     def listCatalogs(self, pattern: t.Optional[str] = None) -> t.List[CatalogMetadata]:
         """
         Returns a t.List of databases available across all sessions.
@@ -221,7 +357,7 @@ class ListCatalogsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, D
         return catalogs
 
 
-class SetCurrentDatabaseFromSearchPathMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class SetCurrentDatabaseFromSearchPathMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     def setCurrentDatabase(self, dbName: str) -> None:
         """
         Sets the current default database in this session.
@@ -235,7 +371,7 @@ class SetCurrentDatabaseFromSearchPathMixin(_BaseCatalog, t.Generic[SESSION, DF]
         self.session._execute(f'SET search_path TO "{dbName}"')
 
 
-class SetCurrentDatabaseFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
+class SetCurrentDatabaseFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
     def setCurrentDatabase(self, dbName: str) -> None:
         """
         Sets the current default database in this session.
@@ -257,7 +393,7 @@ class SetCurrentDatabaseFromUseMixin(_BaseCatalog, t.Generic[SESSION, DF]):
         self.session._collect(exp.Use(this=schema))
 
 
-class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
+class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF, TABLE]):
     def listTables(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
     ) -> t.List[Table]:
@@ -395,7 +531,7 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]
         return tables
 
 
-class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF]):
+class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF, TABLE]):
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
     ) -> t.List[Column]:
