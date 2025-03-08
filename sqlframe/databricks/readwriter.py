@@ -274,16 +274,19 @@ class DatabricksDataFrameWriter(
         mode: t.Optional[str] = None,
         partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
         clusterBy: t.Optional[t.Union[str, t.List[str]]] = None,
-        path: t.Optional[str] = None,
         **options: OptionalPrimitiveType,
     ):
         format = (format or self._state_format_to_write or "delta").lower()
         table_properties: t.Union[OptionalPrimitiveType, t.Dict[str, OptionalPrimitiveType]] = (
             options.pop("properties", {})
         )
+        path: OptionalPrimitiveType = options.pop("path", None)
+        if path is not None and not isinstance(path, str):
+            raise ValueError("path must be a string")
+
         replace_where: OptionalPrimitiveType = options.pop("replaceWhere", None)
-        if replace_where is not None:
-            replace_where = str(replace_where)
+        if replace_where is not None and not isinstance(replace_where, str):
+            raise ValueError("replaceWhere must be a string")
 
         exists, replace, mode = None, None, str(mode or self._mode or "error")
         if mode == "append":
