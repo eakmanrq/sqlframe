@@ -146,40 +146,6 @@ class DatabricksDataFrameWriter(
     PandasWriterMixin["DatabricksSession", "DatabricksDataFrame"],
     _BaseDataFrameWriter["DatabricksSession", "DatabricksDataFrame"],
 ):
-    def _create_external_table(
-        self,
-        name: str,
-        format: str,
-        path: str,
-        options: str,
-        sql: t.Optional[str] = None,
-        partition_by: t.Optional[t.Union[str, t.List[str]]] = None,
-    ):
-        partition = ""
-        if partition_by is not None:
-            if isinstance(partition_by, list):
-                partition = ",".join([f"`{part}`" for part in partition_by])
-            else:
-                partition = f"`{partition_by}`"
-
-        create_sql = (
-            f"""
-        CREATE TABLE {name}
-        USING {format.upper()}
-        """
-            + (
-                f"PARTITIONED BY ({partition})"
-                if partition_by is not None and sql is not None
-                else ""
-            )
-            + f"""
-        LOCATION '{path}'
-        """
-            + (f"OPTIONS ({options})" if options else "")
-            + (f"{sql};" if sql else ";")
-        )
-        self._df.session._collect(create_sql)
-
     def save(
         self,
         path: str,
@@ -197,7 +163,7 @@ class DatabricksDataFrameWriter(
         if fs_prefix == "":
             super()._write(filepath, mode, format, **options)
         elif format == "delta":
-            self.saveAsTable(f"delta.`{fs_prefix + filepath}`", None, mode, **options)
+            self.saveAsTable(f"delta.`{fs_prefix + filepath}`", format, mode, **options)
         else:
             expressions = self._df._get_expressions(optimize=False)
             for i, expression in enumerate(expressions):
@@ -209,15 +175,19 @@ class DatabricksDataFrameWriter(
         if sql is not None:
             mode = str(mode or self._mode or "error")
             partition_by = options.pop("partitionBy", None)
-            format_options: dict[str, OptionalPrimitiveType] = {
-                key: f"'{val}'" for key, val in options.items() if val is not None
-            }
             tmp_table = f"_{generate_random_identifier()}_tmp"
-            format_options_str = to_csv(format_options, " ")
+            drop_expr = exp.Drop(
+                this=exp.to_table(tmp_table, dialect=self._session.input_dialect),
+                kind="TABLE",
+                exists=True,
+            )
             if mode == "append" or mode == "default":
                 try:
-                    self._create_external_table(
-                        tmp_table, format, fs_prefix + filepath, format_options_str
+                    self._session.catalog.createTable(
+                        tmp_table,
+                        path=fs_prefix + filepath,
+                        source=format,
+                        **options,
                     )
                     by_name = self._by_name
                     self._by_name = True
@@ -225,38 +195,49 @@ class DatabricksDataFrameWriter(
                     self._by_name = by_name
                 except ServerOperationError as e:
                     if "UNABLE_TO_INFER_SCHEMA" in str(e):
-                        self._create_external_table(
-                            tmp_table, format, fs_prefix + filepath, format_options_str, sql
+                        self.saveAsTable(
+                            tmp_table,
+                            format=format,
+                            mode=mode,
+                            path=fs_prefix + filepath,
+                            **options,
                         )
                     else:
                         raise e
                 finally:
-                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+                    self._df.session._collect(drop_expr)
             elif mode == "error" or mode == "errorifexists":
                 try:
-                    self._create_external_table(
-                        tmp_table, format, fs_prefix + filepath, format_options_str
+                    self._session.catalog.createTable(
+                        tmp_table,
+                        path=fs_prefix + filepath,
+                        source=format,
+                        **options,
                     )
                     raise FileExistsError(f"Path already exists: {fs_prefix + filepath}")
                 except ServerOperationError as e:
                     if "UNABLE_TO_INFER_SCHEMA" in str(e):
-                        self._create_external_table(
-                            tmp_table, format, fs_prefix + filepath, format_options_str, sql
+                        self.saveAsTable(
+                            tmp_table,
+                            format=format,
+                            mode=mode,
+                            path=fs_prefix + filepath,
+                            **options,
                         )
                 finally:
-                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+                    self._df.session._collect(drop_expr)
             elif mode == "overwrite":
                 try:
-                    self._create_external_table(
+                    self.saveAsTable(
                         tmp_table,
-                        format,
-                        fs_prefix + filepath,
-                        format_options_str,
-                        sql,
-                        partition_by,
+                        format=format,
+                        mode=mode,
+                        path=fs_prefix + filepath,
+                        partitionBy=partition_by,
+                        **options,
                     )
                 finally:
-                    self._df.session._collect(f"DROP TABLE IF EXISTS {tmp_table}")
+                    self._df.session._collect(drop_expr)
             elif mode == "ignore":
                 pass
             else:
@@ -307,17 +288,21 @@ class DatabricksDataFrameWriter(
         clusterBy: t.Optional[t.Union[str, t.List[str]]] = None,
         replaceWhere: t.Optional[str] = None,
         path: t.Optional[str] = None,
-        **options,
+        **options: OptionalPrimitiveType,
     ) -> Self:
-        if format is not None:
-            raise NotImplementedError("Providing Format in the save as table is not supported")
-        exists, replace, mode = None, None, str(mode or self._mode)
+        format = (format or self._state_format_to_write or "delta").lower()
+        exists, replace, mode = None, None, str(mode or self._mode or "error")
         if mode == "append":
             return self.insertInto(name, replaceWhere=replaceWhere)
         if mode == "ignore":
             exists = True
         if mode == "overwrite":
             replace = True
+
+        table_properties: t.Union[OptionalPrimitiveType, t.Dict[str, OptionalPrimitiveType]] = (
+            options.pop("properties", {})
+        )
+
         name = normalize_string(name, from_dialect="input", is_table=True)
 
         properties: t.List[exp.Expression] = []
@@ -341,12 +326,32 @@ class DatabricksDataFrameWriter(
                     expressions=[exp.Tuple(expressions=list(map(sg.to_identifier, cluster_by)))]
                 )
             )
+
+        format_options_str = ""
+        if format is not None:
+            properties.append(exp.FileFormatProperty(this=exp.Var(this=format.upper())))
+            format_options: dict[str, OptionalPrimitiveType] = {
+                key: f"'{val}'" for key, val in options.items() if val is not None
+            }
+            format_options_str = to_csv(format_options, " ")
+
         if path is not None and isinstance(path, str):
-            properties.append(exp.LocationProperty(this=sg.to_identifier(path)))
+            properties.append(exp.LocationProperty(this=exp.convert(path)))
+            if replace and format != "delta":
+                replace = None
+                drop_expression = exp.Drop(
+                    this=exp.to_table(name, dialect=self._session.input_dialect),
+                    kind="TABLE",
+                    exists=True,
+                )
+                if self._session._has_connection:
+                    self._session._collect(drop_expression)
 
         properties.extend(
             exp.Property(this=sg.to_identifier(name), value=exp.convert(value))
-            for name, value in (options or {}).items()
+            for name, value in (
+                (table_properties if isinstance(table_properties, dict) else {}).items()
+            )
         )
 
         output_expression_container = exp.Create(
@@ -356,7 +361,14 @@ class DatabricksDataFrameWriter(
             replace=replace,
             properties=exp.Properties(expressions=properties),
         )
-        df = self._df.copy(output_expression_container=output_expression_container)
         if self._session._has_connection:
-            df.collect()
-        return self.copy(_df=df)
+            create_sql = self._session._to_sql(output_expression_container, quote_identifiers=True)
+            df_sql = self._df.sql(self._session.execution_dialect, False, False)
+            sql = (
+                create_sql
+                + (f"OPTIONS ({format_options_str})" if format_options_str else "")
+                + " AS "
+                + df_sql
+            )
+            self._session._collect(sql)
+        return self.copy(_df=self._df)
