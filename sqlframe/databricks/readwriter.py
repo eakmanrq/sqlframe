@@ -287,7 +287,18 @@ class DatabricksDataFrameWriter(
 
         exists, replace, mode = None, None, str(mode or self._mode or "error")
         if mode == "append":
-            return self.insertInto(name, replaceWhere=replace_where)
+            self._session.catalog.createTable(
+                name,
+                path=path,
+                source=format,
+                schema=self._df.schema,
+                partitionBy=partitionBy,
+                clusterBy=clusterBy,
+                exists="true",
+                **options,
+            )
+            self.insertInto(name, replaceWhere=replace_where)
+            return
         if mode == "ignore":
             exists = True
         if mode == "overwrite":
@@ -356,7 +367,7 @@ class DatabricksDataFrameWriter(
             df_sql = self._df.sql(self._session.execution_dialect, False, False)
             sql = (
                 create_sql
-                + (f"OPTIONS ({format_options_str})" if format_options_str else "")
+                + (f" OPTIONS ({format_options_str})" if format_options_str else "")
                 + " AS "
                 + df_sql
             )
