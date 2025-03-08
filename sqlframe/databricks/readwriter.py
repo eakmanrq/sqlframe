@@ -189,16 +189,13 @@ class DatabricksDataFrameWriter(
                         source=format,
                         **options,
                     )
-                    by_name = self._by_name
-                    self._by_name = True
-                    self.insertInto(tmp_table)
-                    self._by_name = by_name
+                    self.byName.insertInto(tmp_table)
                 except ServerOperationError as e:
                     if "UNABLE_TO_INFER_SCHEMA" in str(e):
                         self.saveAsTable(
                             tmp_table,
                             format=format,
-                            mode=mode,
+                            mode="error",
                             path=fs_prefix + filepath,
                             **options,
                         )
@@ -289,7 +286,7 @@ class DatabricksDataFrameWriter(
         replaceWhere: t.Optional[str] = None,
         path: t.Optional[str] = None,
         **options: OptionalPrimitiveType,
-    ) -> Self:
+    ):
         format = (format or self._state_format_to_write or "delta").lower()
         exists, replace, mode = None, None, str(mode or self._mode or "error")
         if mode == "append":
@@ -371,4 +368,3 @@ class DatabricksDataFrameWriter(
                 + df_sql
             )
             self._session._collect(sql)
-        return self.copy(_df=self._df)
