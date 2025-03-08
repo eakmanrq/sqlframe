@@ -283,22 +283,24 @@ class DatabricksDataFrameWriter(
         mode: t.Optional[str] = None,
         partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
         clusterBy: t.Optional[t.Union[str, t.List[str]]] = None,
-        replaceWhere: t.Optional[str] = None,
         path: t.Optional[str] = None,
         **options: OptionalPrimitiveType,
     ):
         format = (format or self._state_format_to_write or "delta").lower()
+        table_properties: t.Union[OptionalPrimitiveType, t.Dict[str, OptionalPrimitiveType]] = (
+            options.pop("properties", {})
+        )
+        replace_where: OptionalPrimitiveType = options.pop("replaceWhere", None)
+        if replace_where is not None:
+            replace_where = str(replace_where)
+
         exists, replace, mode = None, None, str(mode or self._mode or "error")
         if mode == "append":
-            return self.insertInto(name, replaceWhere=replaceWhere)
+            return self.insertInto(name, replaceWhere=replace_where)
         if mode == "ignore":
             exists = True
         if mode == "overwrite":
             replace = True
-
-        table_properties: t.Union[OptionalPrimitiveType, t.Dict[str, OptionalPrimitiveType]] = (
-            options.pop("properties", {})
-        )
 
         name = normalize_string(name, from_dialect="input", is_table=True)
 
