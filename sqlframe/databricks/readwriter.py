@@ -159,20 +159,11 @@ class DatabricksDataFrameWriter(
 
     def _write(self, path: str, mode: t.Optional[str], format: str, **options):  # type: ignore
         fs_prefix, filepath = split_filepath(path)
-        sql = None
         if fs_prefix == "":
             super()._write(filepath, mode, format, **options)
         elif format == "delta":
             self.saveAsTable(f"delta.`{fs_prefix + filepath}`", format, mode, **options)
         else:
-            expressions = self._df._get_expressions(optimize=False)
-            for i, expression in enumerate(expressions):
-                if i < len(expressions) - 1:
-                    self._df.session._collect(expressions)
-                else:
-                    sql = self._df.session._to_sql(expression)
-
-        if sql is not None:
             mode = str(mode or self._mode or "error")
             partition_by = options.pop("partitionBy", None)
             tmp_table = f"_{generate_random_identifier()}_tmp"
