@@ -6,9 +6,18 @@ import functools
 import typing as t
 from enum import IntEnum
 
+from typing_extensions import Concatenate, ParamSpec
+
 if t.TYPE_CHECKING:
     from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.group import _BaseGroupedData
+
+    DF = t.TypeVar("DF", bound=BaseDataFrame)
+    T = t.TypeVar("T", bound=t.Union[BaseDataFrame, _BaseGroupedData])
+else:
+    DF = t.TypeVar("DF")
+    T = t.TypeVar("T")
+P = ParamSpec("P")  # represents arbitrary args + kwargs
 
 
 class Operation(IntEnum):
@@ -23,7 +32,17 @@ class Operation(IntEnum):
     LIMIT = 7
 
 
-def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
+# We want to decorate a function (self: DF, *args, **kwargs) -> T
+#       where DF is a subclass of BaseDataFrame
+#       where T is a subclass of BaseDataFrame or _BaseGroupedData
+# And keep its signature, i.e. produce a function of the same shape
+# Hence we work with `t.Callable[Concatenate[DF, P], T]`
+def operation(
+    op: Operation,
+) -> t.Callable[
+    [t.Callable[Concatenate[DF, P], T]],  # accept such a function
+    t.Callable[Concatenate[DF, P], T],  # and return such a function
+]:
     """
     Decorator used around DataFrame methods to indicate what type of operation is being performed from the
     ordered Operation enums. This is used to determine which operations should be performed on a CTE vs.
@@ -35,9 +54,11 @@ def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
     in cases where there is overlap in names.
     """
 
-    def decorator(func: t.Callable) -> t.Callable:
+    def decorator(
+        func: t.Callable[Concatenate[DF, P], T],
+    ) -> t.Callable[Concatenate[DF, P], T]:
         @functools.wraps(func)
-        def wrapper(self: BaseDataFrame, *args, **kwargs) -> BaseDataFrame:
+        def wrapper(self: DF, *args, **kwargs) -> T:
             if self.last_op == Operation.INIT:
                 self = self._convert_leaf_to_cte()
                 self.last_op = Operation.NO_OP
@@ -45,17 +66,21 @@ def operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self = self._convert_leaf_to_cte()
-            df: t.Union[BaseDataFrame, _BaseGroupedData] = func(self, *args, **kwargs)
-            df.last_op = new_op  # type: ignore
-            return df  # type: ignore
+            df = func(self, *args, **kwargs)
+            df.last_op = new_op
+            return df
 
-        wrapper.__wrapped__ = func  # type: ignore
+        wrapper.__wrapped__ = func
         return wrapper
 
     return decorator
 
 
-def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
+# Here decorate a function (self: _BaseGroupedData[DF], *args, **kwargs) -> DF
+def group_operation(op: Operation) -> t.Callable[
+    [t.Callable[Concatenate[_BaseGroupedData[DF], P], DF]],
+    t.Callable[Concatenate[_BaseGroupedData[DF], P], DF],
+]:
     """
     Decorator used around DataFrame methods to indicate what type of operation is being performed from the
     ordered Operation enums. This is used to determine which operations should be performed on a CTE vs.
@@ -67,9 +92,11 @@ def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
     in cases where there is overlap in names.
     """
 
-    def decorator(func: t.Callable) -> t.Callable:
+    def decorator(
+        func: t.Callable[Concatenate[_BaseGroupedData[DF], P], DF],
+    ) -> t.Callable[Concatenate[_BaseGroupedData[DF], P], DF]:
         @functools.wraps(func)
-        def wrapper(self: _BaseGroupedData, *args, **kwargs) -> BaseDataFrame:
+        def wrapper(self: _BaseGroupedData[DF], *args, **kwargs) -> DF:
             if self._df.last_op == Operation.INIT:
                 self._df = self._df._convert_leaf_to_cte()
                 self._df.last_op = Operation.NO_OP
@@ -77,11 +104,11 @@ def group_operation(op: Operation) -> t.Callable[[t.Callable], t.Callable]:
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self._df = self._df._convert_leaf_to_cte()
-            df: BaseDataFrame = func(self, *args, **kwargs)
-            df.last_op = new_op  # type: ignore
+            df = func(self, *args, **kwargs)
+            df.last_op = new_op
             return df
 
-        wrapper.__wrapped__ = func  # type: ignore
+        wrapper.__wrapped__ = func
         return wrapper
 
     return decorator

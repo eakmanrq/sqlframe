@@ -4,6 +4,9 @@ import typing as t
 
 from sqlglot import exp
 
+if t.TYPE_CHECKING:
+    from sqlframe.base._typing import StorageLevel
+
 from sqlframe.base.catalog import Column
 from sqlframe.base.dataframe import (
     GROUP_DATA,
@@ -28,7 +31,7 @@ class NoCachePersistSupportMixin(BaseDataFrame, t.Generic[SESSION, WRITER, NA, S
         logger.warning("This engine does not support caching. Ignoring cache() call.")
         return self
 
-    def persist(self) -> Self:
+    def persist(self, storageLevel: "StorageLevel" = "MEMORY_AND_DISK_SER") -> Self:
         logger.warning("This engine does not support persist. Ignoring persist() call.")
         return self
 
