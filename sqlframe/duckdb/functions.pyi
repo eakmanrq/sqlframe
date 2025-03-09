@@ -194,6 +194,7 @@ from sqlframe.base.functions import sumDistinct as sumDistinct
 from sqlframe.base.functions import tan as tan
 from sqlframe.base.functions import timestamp_seconds as timestamp_seconds
 from sqlframe.base.functions import to_date as to_date
+from sqlframe.base.functions import to_json as to_json
 from sqlframe.base.functions import to_timestamp as to_timestamp
 from sqlframe.base.functions import to_unix_timestamp as to_unix_timestamp
 from sqlframe.base.functions import toDegrees as toDegrees

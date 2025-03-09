@@ -2360,7 +2360,7 @@ def from_json(
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
