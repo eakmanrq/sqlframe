@@ -16,6 +16,8 @@ else:
 # https://spark.apache.org/docs/latest/sql-ref-syntax-qry-select-groupby.html
 # https://stackoverflow.com/questions/37975227/what-is-the-difference-between-cube-rollup-and-groupby-operators
 class _BaseGroupedData(t.Generic[DF]):
+    last_op: Operation
+
     def __init__(
         self,
         df: DF,

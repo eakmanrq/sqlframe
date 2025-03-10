@@ -1730,8 +1730,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.SELECT)
     def unpivot(
         self,
-        ids: t.Union[ColumnOrName, t.List[ColumnOrName], t.Tuple[ColumnOrName, ...]],
-        values: t.Optional[t.Union[ColumnOrName, t.List[ColumnOrName], t.Tuple[ColumnOrName, ...]]],
+        ids: t.Union[ColumnOrName, t.Collection[ColumnOrName]],
+        values: t.Optional[t.Union[ColumnOrName, t.Collection[ColumnOrName]]],
         variableColumnName: str,
         valueColumnName: str,
     ) -> Self:
