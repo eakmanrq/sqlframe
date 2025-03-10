@@ -2360,8 +2360,17 @@ def from_json(
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
+    session = _get_session()
+    if session._is_duckdb:
+        options = None
+        logger.warning(
+            "Options for `to_json()` ignored, since not supported in this dialect. "
+            + "Potential `null` values are included in the returned JSON string. "
+            + "This is different from Spark's default behavior."
+        )
+
     if options is not None:
         options_col = create_map([lit(x) for x in _flatten(options.items())])
         return Column.invoke_expression_over_column(col, expression.JSONFormat, options=options_col)
