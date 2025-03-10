@@ -77,10 +77,11 @@ def operation(
 
 
 # Here decorate a function (self: _BaseGroupedData[DF], *args, **kwargs) -> DF
-def group_operation(op: Operation) -> t.Callable[
-    [t.Callable[Concatenate[_BaseGroupedData[DF], P], DF]],
-    t.Callable[Concatenate[_BaseGroupedData[DF], P], DF],
-]:
+# Hence we work with t.Callable[Concatenate[_BaseGroupedData[DF], P], DF]
+# We simplify the parameters, as Pyright (used for VSCode autocomplete) doesn't unterstand this
+def group_operation(
+    op: Operation,
+) -> t.Callable[[t.Callable[P, DF]], t.Callable[P, DF]]:
     """
     Decorator used around DataFrame methods to indicate what type of operation is being performed from the
     ordered Operation enums. This is used to determine which operations should be performed on a CTE vs.
@@ -111,4 +112,4 @@ def group_operation(op: Operation) -> t.Callable[
         wrapper.__wrapped__ = func
         return wrapper
 
-    return decorator
+    return decorator  # type: ignore
