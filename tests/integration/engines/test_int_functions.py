@@ -2460,15 +2460,15 @@ def test_from_json(get_session_and_func, get_types, get_func):
 
 def test_to_json(get_session_and_func, get_types, get_func):
     session, to_json = get_session_and_func("to_json")
-    data = [(1, Row(age=2, name="Alice"))]
+    data = [(1, Row(id=2, name="Alice", birthday=datetime.date(1995, 1, 9)))]
     df = session.createDataFrame(data, ("key", "value"))
     assert df.select(to_json(df.value).alias("json")).collect() == [
-        Row(json='{"age":2,"name":"Alice"}')
+        Row(json='{"id":2,"name":"Alice","birthday":"1995-01-09"}')
     ]
-    data = [(1, [Row(age=2, name="Alice"), Row(age=3, name="Bob")])]
+    data = [(1, [Row(id=2, name="Alice"), Row(id=3, name="Bob"), Row(id=4, name=None)])]
     df = session.createDataFrame(data, ("key", "value"))
-    assert df.select(to_json(df.value).alias("json")).collect() == [
-        Row(json='[{"age":2,"name":"Alice"},{"age":3,"name":"Bob"}]')
+    assert df.select(to_json(df.value, options={"ignoreNullFields": False}).alias("json")).collect() == [
+        Row(json='[{"id":2,"name":"Alice"},{"id":3,"name":"Bob"},{"id":4,"name":null}]')
     ]
     data = [(1, {"name": "Alice"})]
     df = session.createDataFrame(data, ("key", "value"))
