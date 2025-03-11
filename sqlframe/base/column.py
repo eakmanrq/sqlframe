@@ -128,6 +128,21 @@ class Column:
             "Tried to call a column which is unexpected. Did you mean to call a method on a DataFrame? If so, make sure the method is typed correctly and is supported. If not, please open an issue requesting support: https://github.com/eakmanrq/sqlframe/issues"
         )
 
+    def __getattr__(self, name: str) -> Column:
+        """
+        Enables accessing nested fields using dot notation for struct types.
+
+        For example:
+            df.select(df.r.a)  # This is equivalent to df.select(df.r.getField("a"))
+
+        This method is called when the attribute doesn't exist in the class,
+        and delegates to getField method.
+        """
+        # Handle special method names (like __iter__) properly by raising AttributeError
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(f"{self.__class__.__name__} object has no attribute '{name}'")
+        return self.getField(name)
+
     @classmethod
     def ensure_col(cls, value: t.Optional[t.Union[ColumnOrName, exp.Expression]]) -> Column:
         col = get_func_from_session("col")
@@ -459,3 +474,45 @@ class Column:
         if isinstance(key.expression, exp.Literal) and key.expression.is_number:
             key = key + lit(1)
         return element_at(self, key)
+
+    def getField(self, name: t.Any) -> Column:
+        """
+        An expression that gets a field by name in a StructType.
+
+        .. versionadded:: 1.3.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        name
+            a literal value, or a :class:`Column` expression.
+            The result will only be true at a location if the field matches in the Column.
+
+             .. deprecated:: 3.0.0
+                 :class:`Column` as a parameter is deprecated.
+
+        Returns
+        -------
+        :class:`Column`
+            Column representing whether each element of Column got by name.
+
+        Examples
+        --------
+        >>> from sqlframe.base.types import Row
+        >>> df = spark.createDataFrame([Row(r=Row(a=1, b="b"))])
+        >>> df.select(df.r.getField("b")).show()
+        +---+
+        |r.b|
+        +---+
+        |  b|
+        +---+
+        >>> df.select(df.r.a).show()
+        +---+
+        |r.a|
+        +---+
+        |  1|
+        +---+
+        """
+        return self.getItem(name)
