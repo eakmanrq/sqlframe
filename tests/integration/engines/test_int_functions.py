@@ -2468,7 +2468,7 @@ def test_to_json(get_session_and_func, get_types, get_func):
     data = [(1, [Row(id=2, name="Alice"), Row(id=3, name="Bob"), Row(id=4, name=None)])]
     df = session.createDataFrame(data, ("key", "value"))
     assert df.select(
-        to_json(df.value, options={"ignoreNullFields": False}).alias("json")
+        to_json(df.value, options={"ignoreNullFields": "false"}).alias("json")
     ).collect() == [
         Row(json='[{"id":2,"name":"Alice"},{"id":3,"name":"Bob"},{"id":4,"name":null}]')
     ]
