@@ -81,6 +81,30 @@ from sqlframe import deactivate
 deactivate()
 ```
 
+### Context-Based Activation
+
+For more fine-grained control, SQLFrame provides a context manager that allows you to activate SQLFrame only within a specific block of code. 
+This is particularly useful in testing environments or when you need to avoid global activation that might affect other parts of your application.
+
+The `activate_context` function provides a context manager that activates SQLFrame only within the `with` block:
+
+```python
+import duckdb
+from sqlframe import activate_context
+
+# SQLFrame is not active here
+connection = duckdb.connect()
+
+with activate_context("duckdb", conn=connection):
+    # SQLFrame is active only within this block
+    from pyspark.sql import SparkSession
+    spark = SparkSession.builder.getOrCreate()
+    df = spark.createDataFrame([{"a": 1}])
+    result = df.collect()
+
+# SQLFrame is automatically deactivated here
+```
+
 ## Generated SQL
 
 ### Pretty
