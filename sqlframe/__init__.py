@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import sys
 import typing as t
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
 if t.TYPE_CHECKING:
@@ -98,3 +99,14 @@ def deactivate() -> None:
         except ImportError:
             pass
     ACTIVATE_CONFIG.clear()
+
+
+@contextmanager
+def activate_context(
+    engine: t.Optional[str] = None,
+    conn: t.Optional[CONN] = None,
+    config: t.Optional[t.Dict[str, t.Any]] = None,
+):
+    activate(engine, conn, config)
+    yield
+    deactivate()
