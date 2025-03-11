@@ -7,6 +7,7 @@ from sqlglot import exp
 
 from sqlframe.base.catalog import CatalogMetadata, Column, Function
 from sqlframe.base.mixins.catalog_mixins import (
+    CreateTableFromFunctionMixin,
     ListDatabasesFromInfoSchemaMixin,
     ListTablesFromInfoSchemaMixin,
     _BaseInfoSchemaMixin,
@@ -18,12 +19,14 @@ if t.TYPE_CHECKING:
 
     from sqlframe.bigquery.dataframe import BigQueryDataFrame  # noqa
     from sqlframe.bigquery.session import BigQuerySession  # noqa
+    from sqlframe.bigquery.table import BigQueryTable  # noqa
 
 
 class BigQueryCatalog(
-    ListDatabasesFromInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame"],
-    ListTablesFromInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame"],
-    _BaseInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame"],
+    CreateTableFromFunctionMixin["BigQuerySession", "BigQueryDataFrame", "BigQueryTable"],
+    ListDatabasesFromInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame", "BigQueryTable"],
+    ListTablesFromInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame", "BigQueryTable"],
+    _BaseInfoSchemaMixin["BigQuerySession", "BigQueryDataFrame", "BigQueryTable"],
 ):
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = True
     UPPERCASE_INFO_SCHEMA = True

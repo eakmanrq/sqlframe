@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import os
+import re
 import typing as t
 import warnings
 from decimal import Decimal
@@ -10,8 +12,6 @@ from _pytest.fixtures import FixtureRequest
 from pyspark.sql import DataFrame as PySparkDataFrame
 from pyspark.sql import SparkSession as PySparkSession
 from pyspark.sql import types as PySparkTypes
-from sqlglot import Dialect
-from sqlglot.helper import ensure_list
 
 from sqlframe.base.types import Row
 from sqlframe.base.util import (
@@ -783,3 +783,25 @@ def is_databricks(request: FixtureRequest) -> t.Callable:
         return request.node.name.endswith("[databricks]")
 
     return _is_databricks
+
+
+@pytest.fixture
+def fixture_root_path(request: FixtureRequest) -> str:
+    local_fixture_root_path = "."
+    root_path_mapping = {
+        "databricks": os.environ.get("DATABRICKS_ROOT_CLOUD_PATH", local_fixture_root_path)
+    }
+    match = re.search(r"\[(.*)]", request.node.name)
+    engine = match.group(1) if match is not None else ""
+    return root_path_mapping.get(engine, local_fixture_root_path)
+
+
+@pytest.fixture
+def tmp_root_path(request: FixtureRequest) -> str:
+    local_tmp_root_path = ""
+    root_path_mapping = {
+        "databricks": os.environ.get("DATABRICKS_ROOT_CLOUD_PATH", local_tmp_root_path)
+    }
+    match = re.search(r"\[(.*)]", request.node.name)
+    engine = match.group(1) if match is not None else ""
+    return root_path_mapping.get(engine, local_tmp_root_path)

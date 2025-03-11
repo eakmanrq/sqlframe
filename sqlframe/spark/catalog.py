@@ -20,10 +20,11 @@ if t.TYPE_CHECKING:
     from sqlframe.base._typing import StorageLevel, UserDefinedFunctionLike
     from sqlframe.spark.dataframe import SparkDataFrame
     from sqlframe.spark.session import SparkSession  # noqa
+    from sqlframe.spark.table import SparkTable  # noqa
 
 
 class SparkCatalog(
-    _BaseCatalog["SparkSession", "SparkDataFrame"],
+    _BaseCatalog["SparkSession", "SparkDataFrame", "SparkTable"],
 ):
     @property
     def _spark_catalog(self):
@@ -727,7 +728,7 @@ class SparkCatalog(
         source: t.Optional[str] = None,
         schema: t.Optional[StructType] = None,
         **options: str,
-    ) -> SparkDataFrame:
+    ) -> SparkTable:
         """Creates a table based on the dataset in a data source.
 
         It returns the DataFrame associated with the external table.
@@ -745,7 +746,14 @@ class SparkCatalog(
         -------
         :class:`DataFrame`
         """
-        raise NotImplementedError()
+        tableName = normalize_string(tableName, from_dialect="input", to_dialect="execution")
+        return self._spark_catalog.createExternalTable(
+            tableName,
+            path,
+            source,
+            schema,
+            **options,
+        )
 
     def createTable(
         self,
@@ -755,7 +763,7 @@ class SparkCatalog(
         schema: t.Optional[StructType] = None,
         description: t.Optional[str] = None,
         **options: str,
-    ) -> SparkDataFrame:
+    ) -> SparkTable:
         """Creates a table based on the dataset in a data source.
 
         .. versionadded:: 2.2.0
@@ -807,7 +815,15 @@ class SparkCatalog(
         ...         "tbl2", schema=spark.range(1).schema, path=d, source='parquet')
         >>> _ = spark.sql("DROP TABLE tbl2")
         """
-        raise NotImplementedError()
+        tableName = normalize_string(tableName, from_dialect="input", to_dialect="execution")
+        return self._spark_catalog.createTable(
+            tableName,
+            path,
+            source,
+            schema,
+            description,
+            **options,
+        )
 
     def dropTempView(self, viewName: str) -> bool:
         """Drops the local temporary view with the given view name in the catalog.

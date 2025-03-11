@@ -9,6 +9,7 @@ from sqlglot import exp
 
 from sqlframe.base.catalog import Function, _BaseCatalog
 from sqlframe.base.mixins.catalog_mixins import (
+    CreateTableFromFunctionMixin,
     GetCurrentCatalogFromFunctionMixin,
     GetCurrentDatabaseFromFunctionMixin,
     ListCatalogsFromInfoSchemaMixin,
@@ -23,18 +24,20 @@ from sqlframe.base.util import normalize_string, schema_, to_schema
 if t.TYPE_CHECKING:
     from sqlframe.duckdb.session import DuckDBSession  # noqa
     from sqlframe.duckdb.dataframe import DuckDBDataFrame  # noqa
+    from sqlframe.duckdb.table import DuckDBTable  # noqa
 
 
 class DuckDBCatalog(
-    GetCurrentCatalogFromFunctionMixin["DuckDBSession", "DuckDBDataFrame"],
-    SetCurrentCatalogFromUseMixin["DuckDBSession", "DuckDBDataFrame"],
-    GetCurrentDatabaseFromFunctionMixin["DuckDBSession", "DuckDBDataFrame"],
-    ListDatabasesFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame"],
-    ListCatalogsFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame"],
-    SetCurrentDatabaseFromUseMixin["DuckDBSession", "DuckDBDataFrame"],
-    ListTablesFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame"],
-    ListColumnsFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame"],
-    _BaseCatalog["DuckDBSession", "DuckDBDataFrame"],
+    GetCurrentCatalogFromFunctionMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    SetCurrentCatalogFromUseMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    GetCurrentDatabaseFromFunctionMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    CreateTableFromFunctionMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    ListDatabasesFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    ListCatalogsFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    SetCurrentDatabaseFromUseMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    ListTablesFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    ListColumnsFromInfoSchemaMixin["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
+    _BaseCatalog["DuckDBSession", "DuckDBDataFrame", "DuckDBTable"],
 ):
     TEMP_CATALOG_FILTER = exp.column("table_catalog").eq("temp")
 
