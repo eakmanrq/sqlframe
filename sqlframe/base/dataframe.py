@@ -355,6 +355,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 "This engine does not support schema inference likely since it does not have an active connection."
             ) from e
 
+    @property
+    def sparkSession(self) -> SESSION:
+        return self.session
+
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
         replacement_mapping = {}
         for cte in expression.ctes:
