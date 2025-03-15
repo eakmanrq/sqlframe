@@ -2462,9 +2462,11 @@ def test_to_json(get_session_and_func, get_types, get_func):
     session, to_json = get_session_and_func("to_json")
     data = [(1, Row(id=2, name="Alice", birthday=datetime.date(1995, 1, 9)))]
     df = session.createDataFrame(data, ("key", "value"))
-    assert df.select(to_json(df.value).alias("json")).collect() == [
-        Row(json='{"id":2,"name":"Alice","birthday":"1995-01-09"}')
-    ]
+    assert df.select(
+        to_json(df.value, options={"ignoreNullFields": False, "dateFormat": "yyyy-MM-dd"}).alias(
+            "json"
+        )
+    ).collect() == [Row(json='{"id":2,"name":"Alice","birthday":"1995-01-09"}')]
     data = [(1, [Row(id=2, name="Alice"), Row(id=3, name="Bob"), Row(id=4, name=None)])]
     df = session.createDataFrame(data, ("key", "value"))
     assert df.select(

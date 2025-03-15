@@ -2379,7 +2379,7 @@ def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> 
         options = None
 
     if options is not None:
-        options_col = create_map([lit(x) for x in _flatten(options.items())])
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
         return Column.invoke_expression_over_column(col, expression.JSONFormat, options=options_col)
     return Column.invoke_expression_over_column(col, expression.JSONFormat)
 
