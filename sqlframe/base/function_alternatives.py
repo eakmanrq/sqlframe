@@ -551,6 +551,17 @@ def sha1_force_sha1_and_to_hex(col: ColumnOrName) -> Column:
     )
 
 
+def sha2_sha265(col: ColumnOrName) -> Column:
+    col_func = get_func_from_session("col")
+
+    return Column(
+        expression.Anonymous(
+            this="SHA256",
+            expressions=[col_func(col).column_expression],
+        )
+    )
+
+
 def hash_from_farm_fingerprint(*cols: ColumnOrName) -> Column:
     if len(cols) > 1:
         raise ValueError("This dialect only supports a single column for calculating hash")
