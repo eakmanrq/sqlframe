@@ -2355,7 +2355,7 @@ def from_json(
         schema = schema.simpleString()
     schema = schema if isinstance(schema, Column) else lit(schema)
     if options is not None:
-        options_col = create_map([lit(x) for x in _flatten(options.items())])
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "FROM_JSON", schema, options_col)
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
@@ -2389,7 +2389,7 @@ def schema_of_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = No
     if isinstance(col, str):
         col = lit(col)
     if options is not None:
-        options_col = create_map([lit(x) for x in _flatten(options.items())])
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "SCHEMA_OF_JSON", options_col)
     return Column.invoke_anonymous_function(col, "SCHEMA_OF_JSON")
 
@@ -2399,7 +2399,7 @@ def schema_of_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = Non
     if isinstance(col, str):
         col = lit(col)
     if options is not None:
-        options_col = create_map([lit(x) for x in _flatten(options.items())])
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "SCHEMA_OF_CSV", options_col)
     return Column.invoke_anonymous_function(col, "SCHEMA_OF_CSV")
 
@@ -2407,7 +2407,7 @@ def schema_of_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = Non
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
 def to_csv(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     if options is not None:
-        options_col = create_map([lit(x) for x in _flatten(options.items())])
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
         return Column.invoke_anonymous_function(col, "TO_CSV", options_col)
     return Column.invoke_anonymous_function(col, "TO_CSV")
 
