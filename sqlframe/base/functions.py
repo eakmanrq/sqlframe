@@ -1504,8 +1504,18 @@ def sha1(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.SHA)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres"])
 def sha2(col: ColumnOrName, numBits: int) -> Column:
+    from sqlframe.base.function_alternatives import sha2_sha265
+
+    session = _get_session()
+
+    if session._is_duckdb:
+        if numBits in [256, 0]:
+            return sha2_sha265(col)
+        else:
+            raise ValueError("This dialect only supports SHA-265 (numBits=256 or numBits=0)")
+
     return Column.invoke_expression_over_column(col, expression.SHA2, length=lit(numBits))
 
 
