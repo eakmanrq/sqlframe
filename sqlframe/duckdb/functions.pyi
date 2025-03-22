@@ -166,6 +166,7 @@ from sqlframe.base.functions import rpad as rpad
 from sqlframe.base.functions import rtrim as rtrim
 from sqlframe.base.functions import second as second
 from sqlframe.base.functions import sequence as sequence
+from sqlframe.base.functions import sha1 as sha1
 from sqlframe.base.functions import shiftLeft as shiftLeft
 from sqlframe.base.functions import shiftleft as shiftleft
 from sqlframe.base.functions import shiftRight as shiftRight

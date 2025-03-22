@@ -1492,7 +1492,7 @@ def md5(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.MD5)
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines=["postgres"])
 def sha1(col: ColumnOrName) -> Column:
     from sqlframe.base.function_alternatives import sha1_force_sha1_and_to_hex
 
