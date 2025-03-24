@@ -1,19 +1,23 @@
-from __future__ import annotations
-
+import functools
 import re
 import typing as t
 
 from sqlglot import exp
 from sqlglot.helper import ensure_list
+from typing_extensions import ParamSpec
 
 from sqlframe.base.column import Column
 
-CALLING_CLASS = t.TypeVar("CALLING_CLASS")
+P = ParamSpec("P")
+T = t.TypeVar("T")
 
 
-def func_metadata(unsupported_engines: t.Optional[t.Union[str, t.List[str]]] = None) -> t.Callable:
-    def _metadata(func: t.Callable) -> t.Callable:
-        def wrapper(*args, **kwargs):
+def func_metadata(
+    unsupported_engines: t.Optional[t.Union[str, t.List[str]]] = None,
+) -> t.Callable[[t.Callable[P, T]], t.Callable[P, T]]:
+    def _metadata(func: t.Callable[P, T]) -> t.Callable[P, T]:
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             funcs_to_not_auto_alias = [
                 "posexplode",
                 "explode_outer",
