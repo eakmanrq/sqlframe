@@ -148,6 +148,7 @@ from sqlframe.base.functions import percentile_approx as percentile_approx
 from sqlframe.base.functions import position as position
 from sqlframe.base.functions import pow as pow
 from sqlframe.base.functions import power as power
+from sqlframe.base.functions import product as product
 from sqlframe.base.functions import quarter as quarter
 from sqlframe.base.functions import radians as radians
 from sqlframe.base.functions import rand as rand
