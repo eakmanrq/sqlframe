@@ -4944,7 +4944,7 @@ def printf(format: ColumnOrName, *cols: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(format, "printf", *cols)
 
 
-@meta(unsupported_engines=["*", "spark", "databricks"])
+@meta(unsupported_engines=["bigquery", "postgres", "redshift", "snowflake", "spark", "databricks"])
 def product(col: ColumnOrName) -> Column:
     """
     Aggregate function: returns the product of the values in a group.
