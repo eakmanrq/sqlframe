@@ -193,22 +193,21 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
     def getActiveSession(self) -> Self:
         return self
 
-    def range(self, *args):
-        start = 0
-        step = 1
-        numPartitions = None
-        if len(args) == 1:
-            end = args[0]
-        elif len(args) == 2:
-            start, end = args
-        elif len(args) == 3:
-            start, end, step = args
-        elif len(args) == 4:
-            start, end, step, numPartitions = args
-        else:
-            raise ValueError(
-                "range() takes 1 to 4 positional arguments but {} were given".format(len(args))
-            )
+    def range(
+        self,
+        start: int,
+        end: t.Optional[int] = None,
+        step: int = 1,
+        numPartitions: t.Optional[int] = None,
+    ):
+        # Ensure end is provided by either args or kwargs
+        if end is None:
+            if start:
+                end = start
+                start = 0
+            else:
+                raise ValueError("range() requires an 'end' value")
+
         if numPartitions is not None:
             logger.warning("numPartitions is not supported")
         return self.createDataFrame([[x] for x in range(start, end, step)], schema={"id": "long"})
