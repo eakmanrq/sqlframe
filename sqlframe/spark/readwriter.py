@@ -78,6 +78,10 @@ class SparkDataFrameReader(
         """
         assert path is not None, "path is required"
         assert isinstance(path, str), "path must be a string"
+
+        # Merge state_options with provided options, with provided options taking precedence
+        merged_options = {**self.state_options, **options}
+
         format = format or self.state_format_to_read or _infer_format(path)
         if schema:
             column_mapping = ensure_column_mapping(schema)
@@ -93,11 +97,13 @@ class SparkDataFrameReader(
             from_clause = f"delta.`{path}`"
         elif format:
             paths = ",".join([f"{path}" for path in ensure_list(path)])
-            tmp_view_key = options.get("_tmp_view_key_", f"{generate_random_identifier()}_vw")
-            options["_tmp_view_key_"] = tmp_view_key
+            tmp_view_key = merged_options.get(
+                "_tmp_view_key_", f"{generate_random_identifier()}_vw"
+            )
+            merged_options["_tmp_view_key_"] = tmp_view_key
 
             format_options: dict[str, OptionalPrimitiveType] = {
-                k: v for k, v in options.items() if v is not None
+                k: v for k, v in merged_options.items() if v is not None
             }
             format_options.pop("_tmp_view_key_")
             format_options["path"] = paths
@@ -121,7 +127,7 @@ class SparkDataFrameReader(
             qualify=False,
         )
         if select_columns == [exp.Star()] and df.schema:
-            return self.load(path=path, format=format, schema=df.schema, **options)
+            return self.load(path=path, format=format, schema=df.schema, **merged_options)
         self.session._last_loaded_file = path  # type: ignore
         return df
 

@@ -75,31 +75,34 @@ class DuckDBDataFrameReader(
         |100|NULL|
         +---+----+
         """
+        # Merge state_options with provided options, with provided options taking precedence
+        merged_options = {**self.state_options, **options}
+
         format = format or self.state_format_to_read
         if schema:
             column_mapping = ensure_column_mapping(schema)
             select_column_mapping = column_mapping.copy()
-            if options.get("filename"):
+            if merged_options.get("filename"):
                 select_column_mapping["filename"] = "VARCHAR"
             select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
             if format == "csv":
                 duckdb_columns = ", ".join(
                     [f"'{column}': '{dtype}'" for column, dtype in column_mapping.items()]
                 )
-                options["columns"] = "{" + duckdb_columns + "}"
+                merged_options["columns"] = "{" + duckdb_columns + "}"
         else:
             select_columns = [exp.Star()]
         if format == "delta":
             from_clause = f"delta_scan('{path}')"
         elif format:
-            options.pop("inferSchema", None)
+            merged_options.pop("inferSchema", None)
             paths = ",".join([f"'{path}'" for path in ensure_list(path)])
-            from_clause = f"read_{format}([{paths}], {to_csv(options)})"
+            from_clause = f"read_{format}([{paths}], {to_csv(merged_options)})"
         else:
             from_clause = f"'{path}'"
         df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
         if select_columns == [exp.Star()]:
-            return self.load(path=path, format=format, schema=df.schema, **options)
+            return self.load(path=path, format=format, schema=df.schema, **merged_options)
         self.session._last_loaded_file = path  # type: ignore
         return df
 

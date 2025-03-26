@@ -38,6 +38,7 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
     def __init__(self, spark: SESSION):
         self._session = spark
         self.state_format_to_read: t.Optional[str] = None
+        self.state_options: t.Dict[str, OptionalPrimitiveType] = {}
 
     @property
     def session(self) -> SESSION:
@@ -105,6 +106,88 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
         +---+------------+
         """
         self.state_format_to_read = source
+        return self
+
+    def options(self, **options: OptionalPrimitiveType) -> "Self":
+        """Adds input options for the underlying data source.
+
+        .. versionadded:: 1.4.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        **options : dict
+            The dictionary of string keys and primitive-type values.
+
+        Examples
+        --------
+        >>> spark.read.options(inferSchema=True, header=True)
+        <...readwriter.DataFrameReader object ...>
+
+        Specify the option 'nullValue' and 'header' with reading a CSV file.
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     # Write a DataFrame into a CSV file with a header.
+        ...     df = spark.createDataFrame([{"age": 100, "name": "Hyukjin Kwon"}])
+        ...     df.write.option("header", True).mode("overwrite").format("csv").save(d)
+        ...
+        ...     # Read the CSV file as a DataFrame with 'nullValue' option set to 'Hyukjin Kwon',
+        ...     # and 'header' option set to `True`.
+        ...     spark.read.options(
+        ...         nullValue="Hyukjin Kwon",
+        ...         header=True
+        ...     ).format('csv').load(d).show()
+        +---+----+
+        |age|name|
+        +---+----+
+        |100|NULL|
+        +---+----+
+        """
+
+        self.state_options = {**self.state_options, **options}
+        return self
+
+    def option(self, key: str, value: OptionalPrimitiveType) -> "Self":
+        """Adds an input option for the underlying data source.
+
+        .. versionadded:: 1.4.0
+
+        .. versionchanged:: 3.4.0
+            Supports Spark Connect.
+
+        Parameters
+        ----------
+        key : str
+            The key of the option.
+        value :
+            The value of the option.
+
+        Examples
+        --------
+        >>> spark.read.option("inferSchema", True)
+        <...readwriter.DataFrameReader object ...>
+
+        Specify the option 'nullValue' and 'header' with reading a CSV file.
+
+        >>> import tempfile
+        >>> with tempfile.TemporaryDirectory() as d:
+        ...     # Write a DataFrame into a CSV file with a header.
+        ...     df = spark.createDataFrame([{"age": 100, "name": "Hyukjin Kwon"}])
+        ...     df.write.option("header", True).mode("overwrite").format("csv").save(d)
+        ...
+        ...     # Read the CSV file as a DataFrame with 'nullValue' option set to 'Hyukjin Kwon',
+        ...     # and 'header' option set to `True`.
+        ...     spark.read.option("nullValue", "Hyukjin Kwon").option("header", True).format('csv').load(d).show()
+        +---+----+
+        |age|name|
+        +---+----+
+        |100|NULL|
+        +---+----+
+        """
+        self.state_options[key] = value
         return self
 
     def load(
@@ -220,7 +303,9 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
             modifiedAfter=modifiedAfter,
             allowNonNumericNumbers=allowNonNumericNumbers,
         )
-        return self.load(path=path, format="json", schema=schema, **options)
+        # Apply previously set options, with method-specific options taking precedence
+        all_options = {**self.state_options, **{k: v for k, v in options.items() if v is not None}}
+        return self.load(path=path, format="json", schema=schema, **all_options)
 
     def parquet(self, *paths: str, **options: OptionalPrimitiveType) -> DF:
         """
@@ -263,7 +348,8 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
         |100|Hyukjin Kwon|
         +---+------------+
         """
-        dfs = [self.load(path=path, format="parquet", **options) for path in paths]  # type: ignore
+        all_options = {**self.state_options, **{k: v for k, v in options.items() if v is not None}}
+        dfs = [self.load(path=path, format="parquet", **all_options) for path in paths]  # type: ignore
         return reduce(lambda a, b: a.union(b), dfs)
 
     def csv(
@@ -384,7 +470,9 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
             modifiedAfter=modifiedAfter,
             unescapedQuoteHandling=unescapedQuoteHandling,
         )
-        return self.load(path=path, format="csv", schema=schema, **options)
+        # Apply previously set options, with method-specific options taking precedence
+        all_options = {**self.state_options, **{k: v for k, v in options.items() if v is not None}}
+        return self.load(path=path, format="csv", schema=schema, **all_options)
 
 
 class _BaseDataFrameWriter(t.Generic[SESSION, DF]):

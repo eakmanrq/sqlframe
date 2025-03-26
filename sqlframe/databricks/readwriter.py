@@ -94,11 +94,15 @@ class DatabricksDataFrameReader(
         """
         assert path is not None, "path is required"
         assert isinstance(path, str), "path must be a string"
+
+        # Merge state_options with provided options, with provided options taking precedence
+        merged_options = {**self.state_options, **options}
+
         format = format or self.state_format_to_read or _infer_format(path)
         fs_prefix, filepath = split_filepath(path)
 
         if fs_prefix == "":
-            return super().load(path, format, schema, **options)
+            return super().load(path, format, schema, **merged_options)
 
         if schema:
             column_mapping = ensure_column_mapping(schema)
@@ -116,7 +120,7 @@ class DatabricksDataFrameReader(
             paths = ",".join([f"{path}" for path in ensure_list(path)])
 
             format_options: dict[str, OptionalPrimitiveType] = {
-                k: v for k, v in options.items() if v is not None
+                k: v for k, v in merged_options.items() if v is not None
             }
             format_options["format"] = format
             format_options["schemaEvolutionMode"] = "none"
@@ -137,7 +141,7 @@ class DatabricksDataFrameReader(
             qualify=False,
         )
         if select_columns == [exp.Star()] and df.schema:
-            return self.load(path=path, format=format, schema=df.schema, **options)
+            return self.load(path=path, format=format, schema=df.schema, **merged_options)
         self.session._last_loaded_file = path  # type: ignore
         return df
 
