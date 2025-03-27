@@ -38,14 +38,17 @@ def func_metadata(
                 and not isinstance(result.expression, exp.Alias)
                 and func.__name__ not in funcs_to_not_auto_alias
             ):
-                col_name = result.column_expression.find(exp.Identifier)
-                if col_name:
-                    col_name = col_name.name
+                col_name = ""
+                col_name_exp: t.Optional[exp.Expression] = result.column_expression.find(
+                    exp.Identifier
+                )
+                if col_name_exp:
+                    col_name = col_name_exp.name
                 else:
-                    col_name = result.column_expression.find(exp.Literal)
-                    if col_name:
-                        col_name = col_name.this
-                alias_name = f"{func.__name__}__{col_name or ''}__"
+                    col_name_exp = result.column_expression.find(exp.Literal)
+                    if col_name_exp:
+                        col_name = col_name_exp.this
+                alias_name = f"{func.__name__}__{col_name}__"
                 # BigQuery has restrictions on alias names so we constrain it to alphanumeric characters and underscores
                 return result.alias(re.sub(r"\W", "_", alias_name))  # type: ignore
             return result

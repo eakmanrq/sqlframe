@@ -3481,12 +3481,9 @@ def hll_union(
     +------------+
     """
     if allowDifferentLgConfigK is not None:
-        allowDifferentLgConfigK = (
-            lit(allowDifferentLgConfigK)
-            if isinstance(allowDifferentLgConfigK, bool)
-            else allowDifferentLgConfigK
+        return Column.invoke_anonymous_function(
+            col1, "hll_union", col2, lit(allowDifferentLgConfigK)
         )
-        return Column.invoke_anonymous_function(col1, "hll_union", col2, allowDifferentLgConfigK)  # type: ignore
     else:
         return Column.invoke_anonymous_function(col1, "hll_union", col2)
 
