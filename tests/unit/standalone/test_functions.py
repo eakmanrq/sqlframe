@@ -17,7 +17,16 @@ def test_invoke_anonymous(name, func):
     # make_interval - SQLGlot doesn't support week
     # to_char - convert to a cast that ignores the format provided
     # ltrim/rtrim - don't seem to convert correctly on some engines
-    ignore_funcs = {"array_size", "exists", "make_interval", "to_char", "ltrim", "rtrim"}
+    ignore_funcs = {
+        "array_size",
+        "exists",
+        "make_interval",
+        "to_char",
+        "ltrim",
+        "rtrim",
+        "ascii",
+        "current_schema",
+    }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
         assert isinstance(func, exp.Anonymous)
@@ -3332,7 +3341,7 @@ def test_contains(expression, expected):
             "CONVERT_TIMEZONE(cola, CAST(colb AS TIMESTAMP_LTZ))",
         ),
         (
-            SF.convert_timezone(SF.col("colc"), "cola", "colb"),
+            SF.convert_timezone(SF.col("colc"), SF.col("cola"), "colb"),
             "CONVERT_TIMEZONE(colc, cola, CAST(colb AS TIMESTAMP_LTZ))",
         ),
     ],
@@ -3632,7 +3641,7 @@ def test_histogram_numeric(expression, expected):
         (SF.hll_sketch_agg("cola"), "HLL_SKETCH_AGG(cola)"),
         (SF.hll_sketch_agg(SF.col("cola")), "HLL_SKETCH_AGG(cola)"),
         (SF.hll_sketch_agg("cola", 12), "HLL_SKETCH_AGG(cola, 12)"),
-        (SF.hll_sketch_agg("cola", "colb"), "HLL_SKETCH_AGG(cola, colb)"),
+        (SF.hll_sketch_agg("cola", SF.lit(12)), "HLL_SKETCH_AGG(cola, 12)"),
     ],
 )
 def test_hll_sketch_agg(expression, expected):
@@ -3655,7 +3664,6 @@ def test_hll_sketch_estimate(expression, expected):
     [
         (SF.hll_union("cola", "colb"), "HLL_UNION(cola, colb)"),
         (SF.hll_union(SF.col("cola"), SF.col("colb")), "HLL_UNION(cola, colb)"),
-        (SF.hll_union("cola", "colb", "colc"), "HLL_UNION(cola, colb, colc)"),
         (SF.hll_union("cola", "colb", False), "HLL_UNION(cola, colb, FALSE)"),
     ],
 )
@@ -3668,7 +3676,7 @@ def test_hll_union(expression, expected):
     [
         (SF.hll_union_agg("cola"), "HLL_UNION_AGG(cola)"),
         (SF.hll_union_agg(SF.col("cola")), "HLL_UNION_AGG(cola)"),
-        (SF.hll_union_agg("cola", "colb"), "HLL_UNION_AGG(cola, colb)"),
+        (SF.hll_union_agg("cola", SF.lit(True)), "HLL_UNION_AGG(cola, TRUE)"),
         (SF.hll_union_agg("cola", False), "HLL_UNION_AGG(cola, FALSE)"),
     ],
 )

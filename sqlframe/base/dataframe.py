@@ -1084,7 +1084,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     for left_col, right_col in join_column_pairs
                 ]
                 # To match spark behavior only the join clause gets deduplicated and it gets put in the front of the column list
-                select_column_names = [
+                select_column_names: list[str | Column] = [
                     (
                         column.alias_or_name
                         if not isinstance(column.expression.this, exp.Star)
