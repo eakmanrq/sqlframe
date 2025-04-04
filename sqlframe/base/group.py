@@ -47,7 +47,10 @@ class _BaseGroupedData(t.Generic[DF]):
         from sqlframe.base.column import Column
 
         columns = (
-            [Column(f"{agg_func}({column_name})") for column_name, agg_func in exprs[0].items()]
+            [
+                self._get_function_applied_columns(agg_func, (column_name,))[0]
+                for column_name, agg_func in exprs[0].items()
+            ]
             if isinstance(exprs[0], dict)
             else exprs
         )
@@ -55,7 +58,8 @@ class _BaseGroupedData(t.Generic[DF]):
 
         if not self.group_by_cols or not isinstance(self.group_by_cols[0], (list, tuple, set)):
             expression = self._df.expression.group_by(
-                *[x.expression for x in self.group_by_cols]  # type: ignore
+                # User column_expression for group by to avoid alias in group by
+                *[x.column_expression for x in self.group_by_cols]  # type: ignore
             ).select(*[x.expression for x in self.group_by_cols + cols], append=False)  # type: ignore
             group_by_cols = self.group_by_cols
         else:
@@ -66,7 +70,7 @@ class _BaseGroupedData(t.Generic[DF]):
             group_by_cols = []
             for grouping_set in self.group_by_cols:
                 all_grouping_sets.append(
-                    exp.Tuple(expressions=[x.expression for x in grouping_set])  # type: ignore
+                    exp.Tuple(expressions=[x.column_expression for x in grouping_set])  # type: ignore
                 )
                 group_by_cols.extend(grouping_set)  # type: ignore
             group_by_cols = list(dict.fromkeys(group_by_cols))

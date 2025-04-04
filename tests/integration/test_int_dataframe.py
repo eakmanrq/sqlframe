@@ -2634,3 +2634,41 @@ def test_rows_between_positive_both_start_end(
     dfs = dfs.withColumn("rolling_price", SF.mean("price").over(swindow))
 
     compare_frames(df, dfs, compare_schema=False)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/356
+def test_array_of_grouping_columns(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    df = df.groupBy(["name", df.age]).count().sort("name", "age")  # type: ignore
+
+    dfs = get_df("employee").sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    dfs = dfs.groupBy(["name", dfs.age]).count().sort("name", "age")
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/356
+def test_alias_group_by_column(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    df = df.groupBy(F.col("name").alias("Firstname")).count()
+
+    dfs = get_df("employee").sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
