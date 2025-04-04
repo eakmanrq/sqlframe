@@ -80,8 +80,6 @@ JOIN_HINTS = {
 }
 
 JOIN_TYPE_MAPPING = {
-    "inner": "inner",
-    "cross": "cross",
     "outer": "full_outer",
     "full": "full_outer",
     "fullouter": "full_outer",
@@ -91,10 +89,8 @@ JOIN_TYPE_MAPPING = {
     "rightouter": "right_outer",
     "semi": "left_semi",
     "leftsemi": "left_semi",
-    "left_semi": "left_semi",
     "anti": "left_anti",
     "leftanti": "left_anti",
-    "left_anti": "left_anti",
 }
 
 DF = t.TypeVar("DF", bound="BaseDataFrame")
