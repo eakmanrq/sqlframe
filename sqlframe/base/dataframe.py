@@ -1028,7 +1028,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.FROM)
     def join(
         self,
-        other_df: Self,
+        other: Self,
         on: t.Optional[t.Union[str, t.List[str], Column, t.List[Column]]] = None,
         how: str = "inner",
         **kwargs,
@@ -1044,7 +1044,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             logger.warning("Got cross join with an 'on' value. This will result in an inner join.")
             how = "inner"
 
-        other_df = other_df._convert_leaf_to_cte()
+        other_df = other._convert_leaf_to_cte()
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
         # We will determine actual "join on" expression later so we don't provide it at first
         join_type = JOIN_TYPE_MAPPING.get(how, how).replace("_", " ")

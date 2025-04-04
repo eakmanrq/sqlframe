@@ -431,7 +431,7 @@ def test_join_inner(
 ):
     employee = get_df("employee")
     store = get_df("store")
-    df_joined = pyspark_employee.join(pyspark_store, on=["store_id"], how="inner").select(
+    df_joined = pyspark_employee.join(other=pyspark_store, on=["store_id"], how="inner").select(
         pyspark_employee.employee_id,
         pyspark_employee["fname"],
         F.col("lname"),
