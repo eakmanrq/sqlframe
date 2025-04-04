@@ -910,6 +910,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.GROUP_BY)
     def groupBy(self, *cols, **kwargs) -> GROUP_DATA:
+        if cols and isinstance(cols[0], list):
+            cols = cols[0]  # type: ignore
         columns = self._ensure_and_normalize_cols(cols)
         return self._group_data(self, columns, self.last_op)
 
