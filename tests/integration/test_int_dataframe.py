@@ -2672,3 +2672,16 @@ def test_alias_group_by_column(
     dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+def test_head(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+):
+    row = pyspark_employee.head()
+    rows = get_df("employee").head()
+    assert row == rows
+
+    row = pyspark_employee.filter(F.lit(False)).head()
+    rows = get_df("employee").filter(SF.lit(False)).head()
+    assert row == rows
