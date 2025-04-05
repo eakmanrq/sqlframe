@@ -189,3 +189,13 @@ def test_show_from_create_with_space_with_schema(get_session: t.Callable[[], _Ba
     df.printSchema()
     captured = capsys.readouterr()
     assert "|-- an tan:" in captured.out.strip()
+
+
+def test_multiple_limit(get_session: t.Callable[[], _BaseSession], capsys, get_func) -> None:
+    session = get_session()
+    lit = get_func("lit", session)
+    df = session.range(20)
+    assert df.select("id").limit(10).limit(0).count() == 0
+    assert df.select("id").limit(0).limit(10).count() == 0
+    assert df.limit(0).limit(10).limit(5).count() == 0
+    assert df.limit(0).filter(lit(True)).limit(10).limit(5).count() == 0
