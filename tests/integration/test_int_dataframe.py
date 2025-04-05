@@ -2678,10 +2678,14 @@ def test_head(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], BaseDataFrame],
 ):
-    row = pyspark_employee.head()
-    rows = get_df("employee").head()
-    assert row == rows
+    employee = get_df("employee")
 
+    # head() on DataFrame containing data
+    row = pyspark_employee.head()
+    row_sf = employee.head()
+    assert row == row_sf
+
+    # head() on empty DataFrame
     row = pyspark_employee.filter(F.lit(False)).head()
-    rows = get_df("employee").filter(SF.lit(False)).head()
-    assert row == rows
+    row_sf = employee.filter(SF.lit(False)).head()
+    assert row == row_sf
