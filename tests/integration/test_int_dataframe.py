@@ -2672,3 +2672,19 @@ def test_alias_group_by_column(
     dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+def test_is_empty(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+):
+    session_pyspark = pyspark_employee.sparkSession
+    session_sf = get_df("employee").sparkSession
+
+    df = session_pyspark.createDataFrame([], "name STRING")
+    df_sf = session_sf.createDataFrame([], "name STRING")
+    assert df.isEmpty() == df_sf.isEmpty()
+
+    df = session_pyspark.createDataFrame([(2, "Alice")], schema=["age", "name"])
+    df_sf = session_sf.createDataFrame([(2, "Alice")], schema=["age", "name"])
+    assert df.isEmpty() == df_sf.isEmpty()

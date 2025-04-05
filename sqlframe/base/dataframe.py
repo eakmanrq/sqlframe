@@ -1935,6 +1935,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def createGlobalTempView(self, name: str) -> None:
         raise NotImplementedError("Global temp views are not yet supported")
 
+    def isEmpty(self) -> bool:
+        from sqlframe.base import functions as F
+
+        return True if self.select(F.lit(True)).head(1) == [] else False
+
     """
     Stat Functions
     """
