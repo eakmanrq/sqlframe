@@ -4,18 +4,19 @@
 
 SQLFrame implements the PySpark DataFrame API in order to enable running transformation pipelines directly on database engines - no Spark clusters or dependencies required.
 
-SQLFrame currently supports the following engines (many more in development):
+SQLFrame currently supports the following engines:
 
 * [BigQuery](https://sqlframe.readthedocs.io/en/stable/bigquery/)
+* [Databricks](https://sqlframe.readthedocs.io/en/stable/databricks)
 * [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb)
 * [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
 * [Snowflake](https://sqlframe.readthedocs.io/en/stable/snowflake)
 * [Spark](https://sqlframe.readthedocs.io/en/stable/spark)
 
-There are also two engines in development. These engines lack test coverage and robust documentation, but are available for early testing:
+There is also one engine in development. This engine lacks test coverage and robust documentation, but is available for testing:
 
 * [Redshift](https://sqlframe.readthedocs.io/en/stable/redshift)
-* [Databricks](https://sqlframe.readthedocs.io/en/stable/databricks)
+
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
 
@@ -33,6 +34,8 @@ SQLFrame is great for:
 ```bash
 # BigQuery
 pip install "sqlframe[bigquery]"
+# Databricks
+pip install "sqlframe[databricks]"
 # DuckDB
 pip install "sqlframe[duckdb]"
 # Postgres
@@ -43,8 +46,6 @@ pip install "sqlframe[snowflake]"
 pip install "sqlframe[spark]"
 # Redshift (in development)
 pip install "sqlframe[redshift]"
-# Databricks (in development)
-pip install "sqlframe[databricks]"
 # Standalone
 pip install sqlframe
 ```
