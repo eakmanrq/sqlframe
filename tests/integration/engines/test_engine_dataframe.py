@@ -208,3 +208,28 @@ def test_is_empty(get_session):
 
     assert not df_non_empty.isEmpty()
     assert df_empty.isEmpty()
+
+
+def test_head(get_session, get_func):
+    session = get_session()
+    lit = get_func("lit", session)
+    df_non_empty = session.createDataFrame(
+        data=[(2, "Alice"), (5, "Bob"), (8, "Charly")],
+        schema=["age", "name"],
+    )
+    df_empty = df_non_empty.filter(lit(False))
+
+    # head() on DataFrame containing data: single row
+    assert df_non_empty.head() == Row(**{"age": 2, "name": "Alice"})
+
+    # head() on empty DataFrame: None
+    assert df_empty.head() is None
+
+    # head(n) on DataFrame containing data: list of rows
+    assert df_non_empty.head(2) == [
+        Row(**{"age": 2, "name": "Alice"}),
+        Row(**{"age": 5, "name": "Bob"}),
+    ]
+
+    # head(n) on empty DataFrame : empty list
+    assert df_empty.head(2) == []

@@ -1852,11 +1852,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def head(self, n: int) -> t.List[Row]: ...
 
     def head(self, n: t.Optional[int] = None) -> t.Union[t.Optional[Row], t.List[Row]]:
-        n = n or 1
-        df = self.limit(n)
-        if n == 1:
-            return df.collect()[0]
-        return df.collect()
+        df = self.limit(n or 1)
+        collected = df.collect()
+        if n is None:
+            return seq_get(collected, 0)
+        return collected
 
     def first(self) -> t.Optional[Row]:
         return self.head()
