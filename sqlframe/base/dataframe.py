@@ -1595,6 +1595,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.LIMIT)
     def limit(self, num: int) -> Self:
+        if limit_exp := self.expression.args.get("limit"):
+            num = min(num, int(limit_exp.expression.this))
         return self.copy(expression=self.expression.limit(num))
 
     def toDF(self, *cols: str) -> Self:

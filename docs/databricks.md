@@ -1,6 +1,4 @@
-from sqlframe.base.table import WhenNotMatchedBySourcefrom sqlframe.base.table import WhenMatched
-
-# Databricks (In Development)
+# Databricks
 
 ## Installation
 
