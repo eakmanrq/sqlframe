@@ -201,6 +201,15 @@ def test_multiple_limit(get_session: t.Callable[[], _BaseSession], capsys, get_f
     assert df.limit(0).filter(lit(True)).limit(10).limit(5).count() == 0
 
 
+def test_is_empty(get_session):
+    session = get_session()
+    df_non_empty = session.createDataFrame([(1, 4), (2, 5), (3, 6)], schema=["foo", "BAR"])
+    df_empty = session.createDataFrame([], schema=["foo", "BAR"])
+
+    assert not df_non_empty.isEmpty()
+    assert df_empty.isEmpty()
+
+
 def test_head(get_session, get_func):
     session = get_session()
     lit = get_func("lit", session)
