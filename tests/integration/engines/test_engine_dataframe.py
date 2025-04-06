@@ -189,3 +189,12 @@ def test_show_from_create_with_space_with_schema(get_session: t.Callable[[], _Ba
     df.printSchema()
     captured = capsys.readouterr()
     assert "|-- an tan:" in captured.out.strip()
+
+
+def test_is_empty(get_session):
+    session = get_session()
+    df_non_empty = session.createDataFrame([(1, 4), (2, 5), (3, 6)], schema=["foo", "BAR"])
+    df_empty = session.createDataFrame([], schema=["foo", "BAR"])
+
+    assert not df_non_empty.isEmpty()
+    assert df_empty.isEmpty()

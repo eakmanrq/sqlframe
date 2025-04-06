@@ -1938,7 +1938,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def isEmpty(self) -> bool:
         from sqlframe.base import functions as F
 
-        return True if self.select(F.lit(True)).head(1) == [] else False
+        return not bool(self.select(F.lit(True)).head())
 
     """
     Stat Functions
