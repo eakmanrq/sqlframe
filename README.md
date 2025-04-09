@@ -48,6 +48,8 @@ pip install "sqlframe[spark]"
 pip install "sqlframe[redshift]"
 # Standalone
 pip install sqlframe
+# Or from conda-forge
+conda install -c conda-forge sqlframe
 ```
 
 See specific engine documentation for additional setup instructions.
