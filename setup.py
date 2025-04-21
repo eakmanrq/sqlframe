@@ -76,7 +76,7 @@ setup(
             "pyspark>=2,<3.6",
         ],
         "databricks": [
-            "databricks-sql-connector>=3.6,<5",
+            "databricks-sql-connector[pyarrow]>=3.6,<5",
         ],
     },
     classifiers=[
