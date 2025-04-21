@@ -361,3 +361,17 @@ Output:
 | 6  | Sun-Hwa |   Kwon    |  27 |    5     |
 +----+---------+-----------+-----+----------+
 ```
+
+### toArrow Batching
+
+SQLFrame supports the `toArrow` method in order to return a `pyarrow.Table` object. 
+```python
+arrow_table = df.toArrow()
+```
+
+Unique to SQLFrame though is a `batch_size` argument. If provided, a class similar to `pyarrow.RecordBatchReader` is returned which can be used to iterate over the batches.
+`StopIteration` will be raised when there are no more batches to read.
+```python
+record_batch_reader = df.toArrow(batch_size=1)
+first_batch_arrow_table = record_batch_reader.read_next_batch()
+```

@@ -14,11 +14,26 @@ from sqlframe.base.util import normalize_string
 from sqlframe.databricks.group import DatabricksGroupedData
 
 if t.TYPE_CHECKING:
+    from databricks.sql.client import Cursor
+    from pyarrow import Table as ArrowTable
+
     from sqlframe.databricks.readwriter import DatabricksDataFrameWriter
     from sqlframe.databricks.session import DatabricksSession
 
 
 logger = logging.getLogger(__name__)
+
+
+class RecordBatchReaderFacade:
+    def __init__(self, cur: Cursor, batch_size: int):
+        self.cur = cur
+        self.batch_size = batch_size
+
+    def read_next_batch(self) -> ArrowTable:
+        result = self.cur.fetchmany_arrow(self.batch_size)
+        if result.num_rows == 0:
+            raise StopIteration
+        return result
 
 
 class DatabricksDataFrameNaFunctions(_BaseDataFrameNaFunctions["DatabricksDataFrame"]):
@@ -68,3 +83,17 @@ class DatabricksDataFrame(
                 )
             )
         return columns
+
+    @t.overload  # type: ignore
+    def toArrow(self) -> ArrowTable: ...
+
+    @t.overload
+    def toArrow(self, batch_size: int) -> RecordBatchReaderFacade: ...
+
+    def toArrow(
+        self, batch_size: t.Optional[int] = None
+    ) -> t.Union[ArrowTable, RecordBatchReaderFacade]:
+        self._collect(skip_rows=True)
+        if not batch_size:
+            return self.session._cur.fetchall_arrow()  # type: ignore
+        return RecordBatchReaderFacade(self.session._cur, batch_size)  # type: ignore
