@@ -84,16 +84,14 @@ def test_typed_schema_nested_map(standalone_session: StandaloneSession, compare_
         ]
     )
     df = standalone_session.createDataFrame([[{"sub_cola": 1, "sub_colb": "test"}]], schema)  # type: ignore
-    expected = "SELECT `a1`.`cola` AS `cola` FROM VALUES (MAP('sub_cola', 1, 'sub_colb', 'test')) AS `a1`(`cola`)"
+    expected = "SELECT CAST(`a1`.`cola` AS MAP<INT, STRING>) AS `cola` FROM VALUES (MAP('sub_cola', 1, 'sub_colb', 'test')) AS `a1`(`cola`)"
 
     compare_sql(df, expected)
 
 
 def test_nested_struct(standalone_session: StandaloneSession, compare_sql: t.Callable):
     df = standalone_session.createDataFrame([[types.Row(cola=1, colb="test")]])  # type: ignore
-    expected = (
-        "SELECT `a1`.`_1` AS `_1` FROM VALUES (STRUCT(1 AS `cola`, 'test' AS `colb`)) AS `a1`(`_1`)"
-    )
+    expected = "SELECT CAST(`a1`.`_1` AS STRUCT<`cola`: BIGINT, `colb`: STRING>) AS `_1` FROM VALUES (STRUCT(1 AS `cola`, 'test' AS `colb`)) AS `a1`(`_1`)"
     compare_sql(df, expected)
 
 
