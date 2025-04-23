@@ -1223,8 +1223,8 @@ def test_date_format(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.year("cola"), "YEAR(TO_DATE(cola))"),
-        (SF.year(SF.col("cola")), "YEAR(TO_DATE(cola))"),
+        (SF.year("cola"), "YEAR(cola)"),
+        (SF.year(SF.col("cola")), "YEAR(cola)"),
     ],
 )
 def test_year(expression, expected):
@@ -1245,8 +1245,8 @@ def test_quarter(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.month("cola"), "MONTH(TO_DATE(cola))"),
-        (SF.month(SF.col("cola")), "MONTH(TO_DATE(cola))"),
+        (SF.month("cola"), "MONTH(cola)"),
+        (SF.month(SF.col("cola")), "MONTH(cola)"),
     ],
 )
 def test_month(expression, expected):
