@@ -678,7 +678,22 @@ def isnull(col: ColumnOrName) -> Column:
 def last(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
     this = Column.invoke_expression_over_column(col, expression.Last)
     if ignorenulls:
-        return Column.invoke_expression_over_column(this, expression.IgnoreNulls)
+        if _get_session()._is_duckdb:
+            return Column(
+                expression.Filter(
+                    this=this.expression,
+                    expression=expression.Where(
+                        this=expression.Not(
+                            this=expression.Is(
+                                this=Column.ensure_col(col).expression,
+                                expression=expression.Null(),
+                            )
+                        )
+                    ),
+                )
+            )
+        else:
+            return Column.invoke_expression_over_column(this, expression.IgnoreNulls)
     return this
 
 
@@ -3872,7 +3887,7 @@ def json_object_keys(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "json_object_keys")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
     """Returns the last value of `col` for a group of rows. It will return the last non-null
     value it sees when `ignoreNulls` is set to true. If all values are null, then null is returned.
@@ -3913,6 +3928,11 @@ def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]]
     |            b|            2|
     +-------------+-------------+
     """
+    session = _get_session()
+
+    if session._is_duckdb:
+        return last(col, ignoreNulls)  # type: ignore
+
     column = Column.invoke_expression_over_column(col, expression.LastValue)
 
     if ignoreNulls:
