@@ -430,8 +430,9 @@ class Column:
         )
 
     def over(self, window: WindowSpec) -> Column:
+        column_expression = self.column_expression.meta.get("window_func", self.column_expression)
         window_expression = window.expression.copy()
-        window_expression.set("this", self.column_expression)
+        window_expression.set("this", column_expression)
         return Column(window_expression)
 
     def getItem(self, key: t.Any) -> Column:

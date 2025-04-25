@@ -6,6 +6,7 @@ import typing as t
 from collections import Counter
 from decimal import Decimal
 
+import pandas as pd
 import pytest
 import pytz
 from pyspark.sql import SparkSession as PySparkSession
@@ -3959,14 +3960,51 @@ def test_json_object_keys(get_session_and_func, get_func):
     ]
 
 
-def test_last_value(get_session_and_func, get_func):
+def test_last_value(get_session_and_func, get_func, get_window):
     session, last_value = get_session_and_func("last_value")
+    col = get_func("col", session)
+    Window = get_window(session)
     assert session.createDataFrame(
         [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
     ).select(last_value("a"), last_value("b")).collect() == [Row(value1=None, value2=2)]
     assert session.createDataFrame(
         [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
     ).select(last_value("a", True), last_value("b", True)).collect() == [Row(value1="b", value2=2)]
+    data = {
+        "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
+        "idx": list(range(10)),
+    }
+    window = (
+        Window().orderBy(col("idx").asc_nulls_first()).rowsBetween(Window.unboundedPreceding, 0)
+    )
+    assert session.createDataFrame(pd.DataFrame(data)).withColumn(
+        "bf", last_value("b", ignoreNulls=True).over(window)
+    ).collect() == [
+        Row(b="a", idx=0, bf="a"),
+        Row(b=None, idx=1, bf="a"),
+        Row(b=None, idx=2, bf="a"),
+        Row(b=None, idx=3, bf="a"),
+        Row(b="b", idx=4, bf="b"),
+        Row(b="c", idx=5, bf="c"),
+        Row(b=None, idx=6, bf="c"),
+        Row(b=None, idx=7, bf="c"),
+        Row(b=None, idx=8, bf="c"),
+        Row(b="d", idx=9, bf="d"),
+    ]
+    assert session.createDataFrame(pd.DataFrame(data)).withColumn(
+        "bf", last_value("b").over(window)
+    ).collect() == [
+        Row(b="a", idx=0, bf="a"),
+        Row(b=None, idx=1, bf=None),
+        Row(b=None, idx=2, bf=None),
+        Row(b=None, idx=3, bf=None),
+        Row(b="b", idx=4, bf="b"),
+        Row(b="c", idx=5, bf="c"),
+        Row(b=None, idx=6, bf=None),
+        Row(b=None, idx=7, bf=None),
+        Row(b=None, idx=8, bf=None),
+        Row(b="d", idx=9, bf="d"),
+    ]
 
 
 def test_lcase(get_session_and_func, get_func):
