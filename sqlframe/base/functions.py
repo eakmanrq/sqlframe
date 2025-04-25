@@ -3930,13 +3930,16 @@ def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]]
     """
     session = _get_session()
 
-    if session._is_duckdb:
-        return last(col, ignoreNulls)  # type: ignore
-
     column = Column.invoke_expression_over_column(col, expression.LastValue)
 
     if ignoreNulls:
-        return Column(expression.IgnoreNulls(this=column.column_expression))
+        column = Column(expression.IgnoreNulls(this=column.column_expression))
+
+    if session._is_duckdb:
+        agg_func = last(col, ignoreNulls)  # type: ignore
+        agg_func.expression._meta = agg_func.expression._meta or {}
+        agg_func.expression._meta["window_func"] = column.expression
+        return agg_func
     return column
 
 
