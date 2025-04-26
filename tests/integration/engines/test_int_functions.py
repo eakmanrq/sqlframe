@@ -3753,8 +3753,10 @@ def test_find_in_set(get_session_and_func, get_func):
     assert df.select(find_in_set(df.a, df.b).alias("r")).first()[0] == 3
 
 
-def test_first_value(get_session_and_func, get_func):
+def test_first_value(get_session_and_func, get_func, get_window):
     session, first_value = get_session_and_func("first_value")
+    col = get_func("col", session)
+    Window = get_window(session)
     assert session.createDataFrame(
         [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
     ).select(first_value("a"), first_value("b")).collect() == [Row(value1=None, value2=1)]
@@ -3762,6 +3764,41 @@ def test_first_value(get_session_and_func, get_func):
         [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
     ).select(first_value("a", True), first_value("b", True)).collect() == [
         Row(value1="a", value2=1)
+    ]
+    data = {
+        "b": [None, None, "a", None, "b", "c", None, None, None, "d"],
+        "idx": list(range(10)),
+    }
+    window = (
+        Window().orderBy(col("idx").asc_nulls_first()).rowsBetween(Window.unboundedPreceding, 0)
+    )
+    assert session.createDataFrame(pd.DataFrame(data)).withColumn(
+        "bf", first_value("b", ignoreNulls=True).over(window)
+    ).collect() == [
+        Row(b=None, idx=0, bf=None),
+        Row(b=None, idx=1, bf=None),
+        Row(b="a", idx=2, bf="a"),
+        Row(b=None, idx=3, bf="a"),
+        Row(b="b", idx=4, bf="a"),
+        Row(b="c", idx=5, bf="a"),
+        Row(b=None, idx=6, bf="a"),
+        Row(b=None, idx=7, bf="a"),
+        Row(b=None, idx=8, bf="a"),
+        Row(b="d", idx=9, bf="a"),
+    ]
+    assert session.createDataFrame(pd.DataFrame(data)).withColumn(
+        "bf", first_value("b").over(window)
+    ).collect() == [
+        Row(b=None, idx=0, bf=None),
+        Row(b=None, idx=1, bf=None),
+        Row(b="a", idx=2, bf=None),
+        Row(b=None, idx=3, bf=None),
+        Row(b="b", idx=4, bf=None),
+        Row(b="c", idx=5, bf=None),
+        Row(b=None, idx=6, bf=None),
+        Row(b=None, idx=7, bf=None),
+        Row(b=None, idx=8, bf=None),
+        Row(b="d", idx=9, bf=None),
     ]
 
 
