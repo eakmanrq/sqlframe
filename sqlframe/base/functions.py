@@ -625,11 +625,22 @@ def covar_samp(col1: ColumnOrName, col2: ColumnOrName) -> Column:
 def first(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
     session = _get_session()
 
-    if session._is_duckdb:
-        ignorenulls = None
-
     this = Column.invoke_expression_over_column(col, expression.First)
     if ignorenulls:
+        if session._is_duckdb:
+            return Column(
+                expression.Filter(
+                    this=this.expression,
+                    expression=expression.Where(
+                        this=expression.Not(
+                            this=expression.Is(
+                                this=Column.ensure_col(col).expression,
+                                expression=expression.Null(),
+                            )
+                        )
+                    ),
+                )
+            )
         return Column.invoke_expression_over_column(this, expression.IgnoreNulls)
     return this
 
@@ -3266,12 +3277,57 @@ def find_in_set(str: ColumnOrName, str_array: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "find_in_set", str_array)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def first_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
+    """Returns the first value of `col` for a group of rows. It will return the first non-null
+    value it sees when `ignoreNulls` is set to true. If all values are null, then null is returned.
+
+    Parameters
+    ----------
+    col : :class:`~pyspark.sql.Column` or str
+        target column to work on.
+    ignorenulls : :class:`~pyspark.sql.Column` or bool
+        if first value is null then look for first non-null value.
+
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        some value of `col` for a group of rows.
+
+    Examples
+    --------
+    >>> import pyspark.sql.functions as sf
+    >>> spark.createDataFrame(
+    ...     [(None, 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+    ... ).select(sf.first_value('a'), sf.first_value('b')).show()
+    +--------------+--------------+
+    |first_value(a)|first_value(b)|
+    +--------------+--------------+
+    |          NULL|             1|
+    +--------------+--------------+
+
+    >>> import pyspark.sql.functions as sf
+    >>> spark.createDataFrame(
+    ...     [(None, 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+    ... ).select(sf.first_value('a', True), sf.first_value('b', True)).show()
+    +--------------+--------------+
+    |first_value(a)|first_value(b)|
+    +--------------+--------------+
+    |             a|             1|
+    +--------------+--------------+
+    """
+    session = _get_session()
+
     column = Column.invoke_expression_over_column(col, expression.FirstValue)
 
     if ignoreNulls:
-        return Column(expression.IgnoreNulls(this=column.column_expression))
+        column = Column(expression.IgnoreNulls(this=column.column_expression))
+
+    if session._is_duckdb:
+        agg_func = first(col, ignoreNulls)  # type: ignore
+        agg_func.expression._meta = agg_func.expression._meta or {}
+        agg_func.expression._meta["window_func"] = column.expression
+        return agg_func
     return column
 
 
