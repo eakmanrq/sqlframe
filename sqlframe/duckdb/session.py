@@ -41,13 +41,14 @@ class DuckDBSession(
 
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
         import duckdb
+        from duckdb import InvalidInputException
         from duckdb.typing import VARCHAR
 
         if not hasattr(self, "_conn"):
             conn = conn or duckdb.connect()
             try:
                 conn.create_function("SOUNDEX", lambda x: soundex(x), return_type=VARCHAR)
-            except ImportError:
+            except (ImportError, InvalidInputException):
                 pass
 
             super().__init__(conn, *args, **kwargs)
