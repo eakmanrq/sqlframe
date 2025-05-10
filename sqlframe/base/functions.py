@@ -500,15 +500,16 @@ def skewness(col: ColumnOrName) -> Column:
         lit_func = get_func_from_session("lit")
         sqrt_func = get_func_from_session("sqrt")
         col = Column.ensure_col(col)
+        full_calc = (
+            Column.invoke_anonymous_function(col, func_name)
+            * (count_star - lit_func(2))
+            / (sqrt_func(count_star * (count_star - lit_func(1))))
+        )
         return (
             when_func(count_star == lit_func(0), lit_func(None))
             .when(count_star == lit_func(1), lit_func(float("nan")))
-            .when(count_star == lit_func(2), lit_func(0.0))
-            .otherwise(
-                Column.invoke_anonymous_function(col, func_name)
-                * (count_star - lit_func(2))
-                / (sqrt_func(count_star * (count_star - lit_func(1))))
-            )
+            .when(count_star == lit_func(2), lit_func(None))
+            .otherwise(full_calc)
         )
 
     return Column.invoke_anonymous_function(col, func_name)
