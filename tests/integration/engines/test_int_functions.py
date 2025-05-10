@@ -692,6 +692,8 @@ def test_skewness(get_session_and_func):
     session, skewness = get_session_and_func("skewness")
     df = session.createDataFrame([[1], [1], [2]], ["c"])
     assert math.isclose(df.select(skewness(df.c)).first()[0], 0.7071067811865475, rel_tol=1e-5)
+    df = session.createDataFrame([{"a": 2.0}, {"a": None}])
+    assert df.agg(skewness(df.a)).collect() == [Row(value=None)]
 
 
 def test_kurtosis(get_session_and_func):
