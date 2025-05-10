@@ -1425,6 +1425,11 @@ def test_to_timestamp(get_session_and_func):
     assert result == datetime.datetime(1997, 2, 28, 10, 30)
     result = df.select(to_timestamp(df.t, "yyyy-MM-dd HH:mm:ss").alias("dt")).first()[0]
     assert result == datetime.datetime(1997, 2, 28, 10, 30)
+    df = session.createDataFrame(pd.DataFrame({"a": ["2020-01-01 01:02:03+0100"]}))
+    # There seems to be an issue in SQLGlot transpiling the format string for these dialects
+    if not isinstance(session, (BigQuerySession, SnowflakeSession, PostgresSession)):
+        result = df.withColumn("b", to_timestamp("a", format="y-M-d H:m:sZ")).first()[0]
+        assert result == "2020-01-01 01:02:03+0100"
 
 
 def test_trunc(get_session_and_func):

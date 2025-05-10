@@ -304,8 +304,6 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             elif isinstance(value, float):
                 return "double"
             elif isinstance(value, datetime.datetime):
-                if value.tzinfo:
-                    return "timestamptz"
                 return "timestamp"
             elif isinstance(value, datetime.date):
                 return "date"

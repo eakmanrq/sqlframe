@@ -143,3 +143,4 @@ sqlframe/_version.py
 
 # Emacs files
 *~
+**/.claude/settings.local.json
