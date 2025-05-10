@@ -313,7 +313,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
         exp.DataType.Type.TIMESTAMP: types.TimestampType,
         exp.DataType.Type.TIMESTAMPTZ: types.TimestampType,
         exp.DataType.Type.TIMESTAMPLTZ: types.TimestampType,
-        exp.DataType.Type.TIMESTAMPNTZ: types.TimestampType,
+        exp.DataType.Type.TIMESTAMPNTZ: types.TimestampNTZType,
         exp.DataType.Type.DATE: types.DateType,
         exp.DataType.Type.JSON: types.StringType,
     }
