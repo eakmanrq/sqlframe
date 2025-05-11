@@ -260,6 +260,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def __copy__(self):
         return self.copy()
 
+    def __repr__(self) -> str:
+        fields = [f"{field.name}: {field.dataType}" for field in self.schema]
+        return "DataFrame[" + ", ".join(fields) + "]"
+
+    def _display_(self) -> str:
+        return self.__repr__()
+
     @property
     def _typed_columns(self) -> t.List[CatalogColumn]:
         raise NotImplementedError
