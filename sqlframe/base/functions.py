@@ -494,21 +494,21 @@ def skewness(col: ColumnOrName) -> Column:
         func_name = "SKEW"
 
     if session._is_duckdb or session._is_snowflake:
+        col = Column.ensure_col(col)
         when_func = get_func_from_session("when")
         count_func = get_func_from_session("count")
-        count_star = count_func("*")
+        count_col = count_func(col)
         lit_func = get_func_from_session("lit")
         sqrt_func = get_func_from_session("sqrt")
-        col = Column.ensure_col(col)
         full_calc = (
             Column.invoke_anonymous_function(col, func_name)
-            * (count_star - lit_func(2))
-            / (sqrt_func(count_star * (count_star - lit_func(1))))
+            * (count_col - lit_func(2))
+            / (sqrt_func(count_col * (count_col - lit_func(1))))
         )
         return (
-            when_func(count_star == lit_func(0), lit_func(None))
-            .when(count_star == lit_func(1), lit_func(float("nan")))
-            .when(count_star == lit_func(2), lit_func(None))
+            when_func(count_col == lit_func(0), lit_func(None))
+            .when(count_col == lit_func(1), lit_func(None))
+            .when(count_col == lit_func(2), lit_func(0.0))
             .otherwise(full_calc)
         )
 
