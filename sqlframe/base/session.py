@@ -304,7 +304,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             elif isinstance(value, float):
                 return "double"
             elif isinstance(value, datetime.datetime):
-                return "timestamp"
+                if value.tzinfo:
+                    # Spark defaults `timestamp` to be a timestamp with timezone
+                    return "timestamp"
+                return "timestampntz"
             elif isinstance(value, datetime.date):
                 return "date"
             elif isinstance(value, str):

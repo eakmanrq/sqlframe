@@ -35,7 +35,7 @@ def spark_datatypes(spark_session: SparkSession) -> SparkDataFrame:
             "array<bigint>_col",
             "struct<a:bigint>_col",
             "date_col",
-            "timestamp_col",
+            "timestampntz_col",
             "timestamptz_col",
             "boolean_col",
         ],
@@ -79,7 +79,7 @@ root
  |-- struct<a:bigint>_col: struct<a: bigint> (nullable = false)
  |    |-- a: bigint (nullable = true)
  |-- date_col: date (nullable = true)
- |-- timestamp_col: timestamp (nullable = true)
+ |-- timestampntz_col: timestamp_ntz (nullable = true)
  |-- timestamptz_col: timestamp (nullable = true)
  |-- boolean_col: boolean (nullable = false)""".strip()
     )
@@ -157,8 +157,8 @@ def test_schema_nested(spark_datatypes: SparkDataFrame):
     )
     assert struct_fields[7].name == "date_col"
     assert struct_fields[7].dataType == types.DateType()
-    assert struct_fields[8].name == "timestamp_col"
-    assert struct_fields[8].dataType == types.TimestampType()
+    assert struct_fields[8].name == "timestampntz_col"
+    assert struct_fields[8].dataType == types.TimestampNTZType()
     assert struct_fields[9].name == "timestamptz_col"
     assert struct_fields[9].dataType == types.TimestampType()
     assert struct_fields[10].name == "boolean_col"
