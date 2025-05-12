@@ -6,9 +6,16 @@ import typing as t
 from collections import defaultdict
 
 from sqlglot import MappingSchema, exp
+from sqlglot.helper import seq_get
 
+from sqlframe.base import types
 from sqlframe.base.exceptions import TableSchemaError
-from sqlframe.base.util import ensure_column_mapping, normalize_string, to_schema
+from sqlframe.base.util import (
+    ensure_column_mapping,
+    normalize_string,
+    spark_to_sqlglot,
+    to_schema,
+)
 
 if t.TYPE_CHECKING:
     from sqlglot.schema import ColumnMapping
@@ -99,6 +106,10 @@ class _BaseCatalog(t.Generic[SESSION, DF, TABLE]):
                     "This session does not have access to a catalog that can lookup column information. See docs for explicitly defining columns or using a session that can automatically determine this."
                 )
         column_mapping = ensure_column_mapping(column_mapping)  # type: ignore
+        if isinstance(column_mapping, dict) and isinstance(
+            seq_get(list(column_mapping.values()), 0), types.DataType
+        ):
+            column_mapping = {k: spark_to_sqlglot(v) for k, v in column_mapping.items()}
         for column_name in column_mapping:
             column = exp.to_column(column_name, dialect=self.session.input_dialect)
             if column.this.quoted:

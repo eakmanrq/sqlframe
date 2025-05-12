@@ -347,6 +347,93 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
     raise NotImplementedError(f"Unsupported data type: {sqlglot_dtype}")
 
 
+def spark_to_sqlglot(spark_dtype: types.DataType) -> exp.DataType:
+    """
+    Convert a Spark data type to a SQLGlot data type.
+
+    This function is the opposite of sqlglot_to_spark.
+
+    Args:
+        spark_dtype: A Spark data type
+
+    Returns:
+        The equivalent SQLGlot data type
+    """
+    from sqlframe.base import types
+
+    # Handle primitive types
+    if isinstance(spark_dtype, types.StringType):
+        return exp.DataType(this=exp.DataType.Type.TEXT)
+    elif isinstance(spark_dtype, types.VarcharType):
+        return exp.DataType(
+            this=exp.DataType.Type.VARCHAR,
+            expressions=[exp.DataTypeParam(this=exp.Literal.number(spark_dtype.length))],
+        )
+    elif isinstance(spark_dtype, types.CharType):
+        return exp.DataType(
+            this=exp.DataType.Type.CHAR,
+            expressions=[exp.DataTypeParam(this=exp.Literal.number(spark_dtype.length))],
+        )
+    elif isinstance(spark_dtype, types.BinaryType):
+        return exp.DataType(this=exp.DataType.Type.BINARY)
+    elif isinstance(spark_dtype, types.BooleanType):
+        return exp.DataType(this=exp.DataType.Type.BOOLEAN)
+    elif isinstance(spark_dtype, types.IntegerType):
+        return exp.DataType(this=exp.DataType.Type.INT)
+    elif isinstance(spark_dtype, types.LongType):
+        return exp.DataType(this=exp.DataType.Type.BIGINT)
+    elif isinstance(spark_dtype, types.ShortType):
+        return exp.DataType(this=exp.DataType.Type.SMALLINT)
+    elif isinstance(spark_dtype, types.ByteType):
+        return exp.DataType(this=exp.DataType.Type.TINYINT)
+    elif isinstance(spark_dtype, types.FloatType):
+        return exp.DataType(this=exp.DataType.Type.FLOAT)
+    elif isinstance(spark_dtype, types.DoubleType):
+        return exp.DataType(this=exp.DataType.Type.DOUBLE)
+    elif isinstance(spark_dtype, types.DecimalType):
+        if spark_dtype.precision is not None and spark_dtype.scale is not None:
+            return exp.DataType(
+                this=exp.DataType.Type.DECIMAL,
+                expressions=[
+                    exp.DataTypeParam(this=exp.Literal.number(spark_dtype.precision)),
+                    exp.DataTypeParam(this=exp.Literal.number(spark_dtype.scale)),
+                ],
+            )
+        return exp.DataType(this=exp.DataType.Type.DECIMAL)
+    elif isinstance(spark_dtype, types.TimestampType):
+        return exp.DataType(this=exp.DataType.Type.TIMESTAMP)
+    elif isinstance(spark_dtype, types.TimestampNTZType):
+        return exp.DataType(this=exp.DataType.Type.TIMESTAMPNTZ)
+    elif isinstance(spark_dtype, types.DateType):
+        return exp.DataType(this=exp.DataType.Type.DATE)
+
+    # Handle complex types
+    elif isinstance(spark_dtype, types.ArrayType):
+        return exp.DataType(
+            this=exp.DataType.Type.ARRAY, expressions=[spark_to_sqlglot(spark_dtype.elementType)]
+        )
+    elif isinstance(spark_dtype, types.MapType):
+        return exp.DataType(
+            this=exp.DataType.Type.MAP,
+            expressions=[
+                spark_to_sqlglot(spark_dtype.keyType),
+                spark_to_sqlglot(spark_dtype.valueType),
+            ],
+        )
+    elif isinstance(spark_dtype, types.StructType):
+        return exp.DataType(
+            this=exp.DataType.Type.STRUCT,
+            expressions=[
+                exp.ColumnDef(
+                    this=exp.to_identifier(field.name), kind=spark_to_sqlglot(field.dataType)
+                )
+                for field in spark_dtype
+            ],
+        )
+
+    raise NotImplementedError(f"Unsupported data type: {spark_dtype}")
+
+
 def normalize_string(
     value: t.Union[str, exp.Expression],
     from_dialect: DialectType = None,
