@@ -4701,8 +4701,8 @@ def test_unix_date(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.unix_micros("cola"), "UNIX_MICROS(cola)"),
-        (SF.unix_micros(SF.col("cola")), "UNIX_MICROS(cola)"),
+        (SF.unix_micros("cola"), "UNIX_MICROS(CAST(cola AS TIMESTAMP_LTZ))"),
+        (SF.unix_micros(SF.col("cola")), "UNIX_MICROS(CAST(cola AS TIMESTAMP_LTZ))"),
     ],
 )
 def test_unix_micros(expression, expected):
