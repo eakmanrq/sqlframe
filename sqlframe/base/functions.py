@@ -1356,7 +1356,6 @@ def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 @meta()
 def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.function_alternatives import (
-        to_timestamp_just_timestamp,
         to_timestamp_tz,
         to_timestamp_with_time_zone,
     )
@@ -1365,9 +1364,6 @@ def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 
     if session._is_duckdb:
         return to_timestamp_tz(col, format)
-
-    if session._is_bigquery:
-        return to_timestamp_just_timestamp(col, format)
 
     if session._is_postgres:
         return to_timestamp_with_time_zone(col, format)
@@ -6594,26 +6590,15 @@ def unix_micros(col: ColumnOrName) -> Column:
     """
     from sqlframe.base.function_alternatives import unix_micros_multiply_epoch
 
+    to_timestamp = get_func_from_session("to_timestamp")
+
     if _get_session()._is_duckdb:
         return Column.invoke_anonymous_function(col, "epoch_us")
 
-    if _get_session()._is_bigquery:
-        return Column(
-            expression.Anonymous(
-                this="UNIX_MICROS",
-                expressions=[
-                    expression.Anonymous(
-                        this="TIMESTAMP",
-                        expressions=[
-                            Column.ensure_col(col).column_expression,
-                        ],
-                    )
-                ],
-            )
-        )
-
     if _get_session()._is_postgres or _get_session()._is_snowflake:
         return unix_micros_multiply_epoch(col)
+
+    col = to_timestamp(col)
 
     return Column.invoke_anonymous_function(col, "unix_micros")
 
@@ -6665,22 +6650,6 @@ def unix_seconds(col: ColumnOrName) -> Column:
 
     if _get_session()._is_postgres:
         return unix_seconds_extract_epoch(col)
-
-    if _get_session()._is_bigquery:
-        return Column(
-            expression.Anonymous(
-                this="UNIX_SECONDS",
-                expressions=[
-                    expression.Anonymous(
-                        this="TIMESTAMP",
-                        expressions=[
-                            Column.ensure_col(col).column_expression,
-                            expression.Literal.string("UTC"),
-                        ],
-                    )
-                ],
-            )
-        )
 
     return Column.invoke_expression_over_column(col, expression.UnixSeconds)
 

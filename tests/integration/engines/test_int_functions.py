@@ -165,17 +165,17 @@ def test_col(get_session_and_func, input, output):
 @pytest.mark.parametrize(
     "arg, expected",
     [
-        # (1, "bigint"),
-        # (2.0, "double"),
-        # ("foo", "string"),
-        # ({"a": 1}, "map<string,bigint>"),
-        # ([1, 2, 3], "array<bigint>"),
-        # (Row(a=1), "struct<a:bigint>"),
+        (1, "bigint"),
+        (2.0, "double"),
+        ("foo", "string"),
+        ({"a": 1}, "map<string,bigint>"),
+        ([1, 2, 3], "array<bigint>"),
+        (Row(a=1), "struct<a:bigint>"),
         (datetime.date(2022, 1, 1), "date"),
         (datetime.datetime(2022, 1, 1, 0, 0, 0), "timestampntz"),
         (datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc), "timestamptz"),
-        # (True, "boolean"),
-        # (bytes("test", "utf-8"), "binary"),
+        (True, "boolean"),
+        (bytes("test", "utf-8"), "binary"),
     ],
 )
 def test_typeof(get_session_and_func, get_types, arg, expected):
@@ -5030,7 +5030,7 @@ def test_unix_micros(get_session_and_func, get_func):
     assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1437559200000000
     if not isinstance(session, SnowflakeSession):
         df = session.createDataFrame([(datetime.datetime(2021, 3, 1, 12, 34, 56, 49000),)], ["t"])
-        assert df.select(unix_micros(to_timestamp(df.t)).alias("n")).first()[0] == 1614602096049000
+        assert df.select(unix_micros(df.t).alias("n")).first()[0] == 1614602096049000
 
 
 def test_unix_millis(get_session_and_func, get_func):
