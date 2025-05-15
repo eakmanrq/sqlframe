@@ -68,3 +68,23 @@ def test_column_get_field_struct(get_session: t.Callable[[], _BaseSession]):
     result3 = df.select(df.r.a.alias("a_dot")).collect()
     assert result3[0][0] == 1
     assert result3[1][0] == 2
+
+
+def test_contains(get_session: t.Callable[[], _BaseSession], get_func):
+    session = get_session()
+    if session._is_postgres:
+        pytest.skip("Postgres does not support the contains function")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([Row(a="foo"), Row(a="bar")])
+    df_foo = df.select(df.a.contains("foo")).collect()
+    assert df_foo[0][0] is True
+    assert df_foo[1][0] is False
+    df_foo_lit = df.select(df.a.contains(lit("foo"))).collect()
+    assert df_foo_lit[0][0] is True
+    assert df_foo_lit[1][0] is False
+    df_bar = df.select(df.a.contains("bar")).collect()
+    assert df_bar[0][0] is False
+    assert df_bar[1][0] is True
+    df_bar_lit = df.select(df.a.contains(lit("bar"))).collect()
+    assert df_bar_lit[0][0] is False
+    assert df_bar_lit[1][0] is True

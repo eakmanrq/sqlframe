@@ -3064,7 +3064,7 @@ def character_length(str: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(str, expression.Length)
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["postgres"])
 def contains(left: ColumnOrName, right: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(
         left, expression.Contains, expression=Column.ensure_col(right).column_expression

@@ -517,3 +517,7 @@ class Column:
         +---+
         """
         return self.getItem(name)
+
+    def contains(self, value: t.Union[str, Column]) -> Column:
+        value = self._lit(value) if not isinstance(value, Column) else value
+        return self.invoke_expression_over_column(self, exp.Contains, expression=value.expression)
