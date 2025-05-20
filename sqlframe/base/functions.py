@@ -2393,6 +2393,240 @@ def from_json(
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
 
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "spark"])
+def try_parse_json(col: ColumnOrName) -> Column:
+    """
+    Parses a column containing a JSON string into a :class:`VariantType`. Returns None if a string
+    contains an invalid JSON value.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    col : :class:`~pyspark.sql.Column` or str
+        a column or column name JSON formatted strings
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a new column of VariantType.
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''}, {'json': '''{a : 1}'''} ])
+    >>> df.select(to_json(try_parse_json(df.json))).collect() # doctest: +SKIP
+    [Row(to_json(try_parse_json(json))='{"a":1}'), Row(to_json(try_parse_json(json))=None)]
+    """
+    return Column.invoke_anonymous_function(col, "TRY_PARSE_JSON")
+
+
+@meta(unsupported_engines="*")
+def to_variant_object(col: ColumnOrName) -> Column:
+    """
+    Converts a column containing nested inputs (array/map/struct) into a variants where maps and
+    structs are converted to variant objects which are unordered unlike SQL structs. Input maps can
+    only have string keys.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    col : :class:`~pyspark.sql.Column` or str
+        a column with a nested schema or column name
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a new column of VariantType.
+    Examples
+    --------
+    Example 1: Converting an array containing a nested struct into a variant
+    >>> from pyspark.sql import functions as sf
+    >>> from pyspark.sql.types import ArrayType, StructType, StructField, StringType, MapType
+    >>> schema = StructType([
+    ...     StructField("i", StringType(), True),
+    ...     StructField("v", ArrayType(StructType([
+    ...         StructField("a", MapType(StringType(), StringType()), True)
+    ...     ]), True))
+    ... ])
+    >>> data = [("1", [{"a": {"b": 2}}])]
+    >>> df = spark.createDataFrame(data, schema)
+    >>> df.select(sf.to_variant_object(df.v))
+    DataFrame[to_variant_object(v): variant]
+    >>> df.select(sf.to_variant_object(df.v)).show(truncate=False)
+    +--------------------+
+    |to_variant_object(v)|
+    +--------------------+
+    |[{"a":{"b":"2"}}]   |
+    +--------------------+
+    """
+    return Column.invoke_anonymous_function(col, "TO_VARIANT_OBJECT")
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "spark"])
+def parse_json(col: ColumnOrName) -> Column:
+    """
+    Parses a column containing a JSON string into a :class:`VariantType`. Throws exception if a
+    string represents an invalid JSON value.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    col : :class:`~pyspark.sql.Column` or str
+        a column or column name JSON formatted strings
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a new column of VariantType.
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> df.select(to_json(parse_json(df.json))).collect() # doctest: +SKIP
+    [Row(to_json(parse_json(json))='{"a":1}')]
+    """
+    return Column.invoke_anonymous_function(col, "PARSE_JSON")
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "spark"])
+def is_variant_null(v: ColumnOrName) -> Column:
+    """
+    Check if a variant value is a variant null. Returns true if and only if the input is a variant
+    null and false otherwise (including in the case of SQL NULL).
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    v : :class:`~pyspark.sql.Column` or str
+        a variant column or column name
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a boolean column indicating whether the variant value is a variant null
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> df.select(is_variant_null(parse_json(df.json)).alias("r")).collect() # doctest: +SKIP
+    [Row(r=False)]
+    """
+    from sqlframe.base.function_alternatives import is_null_value
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return is_null_value(v)
+
+    return Column.invoke_anonymous_function(v, "IS_VARIANT_NULL")
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "spark"])
+def variant_get(v: ColumnOrName, path: str, targetType: str | None = None) -> Column:
+    """
+    Extracts a sub-variant from `v` according to `path`, and then cast the sub-variant to
+    `targetType`. Returns null if the path does not exist. Throws an exception if the cast fails.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    v : :class:`~pyspark.sql.Column` or str
+        a variant column or column name
+    path : str
+        the extraction path. A valid path should start with `$` and is followed by zero or more
+        segments like `[123]`, `.name`, `['name']`, or `["name"]`.
+    targetType : str
+        the target data type to cast into, in a DDL-formatted string
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a column of `targetType` representing the extracted result
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> v = parse_json(df.json)
+    >>> df.select(variant_get(v, "$.a", "int").alias("r")).collect() # doctest: +SKIP
+    [Row(r=1)]
+    >>> df.select(variant_get(v, "$.b", "int").alias("r")).collect() # doctest: +SKIP
+    [Row(r=None)]
+    """
+    from sqlframe.base.function_alternatives import get_path
+
+    session = _get_session()
+
+    if session._is_snowflake:
+        return get_path(v, path)
+
+    if targetType is None:
+        raise ValueError("This dialect requires `targetType` to be provided.")
+
+    return Column.invoke_anonymous_function(v, "VARIANT_GET", lit(path), lit(targetType))
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake", "spark"])
+def try_variant_get(v: ColumnOrName, path: str, targetType: str) -> Column:
+    """
+    Extracts a sub-variant from `v` according to `path`, and then cast the sub-variant to
+    `targetType`. Returns null if the path does not exist or the cast fails.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    v : :class:`~pyspark.sql.Column` or str
+        a variant column or column name
+    path : str
+        the extraction path. A valid path should start with `$` and is followed by zero or more
+        segments like `[123]`, `.name`, `['name']`, or `["name"]`.
+    targetType : str
+        the target data type to cast into, in a DDL-formatted string
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a column of `targetType` representing the extracted result
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> v = parse_json(df.json)
+    >>> df.select(try_variant_get(v, "$.a", "int").alias("r")).collect() # doctest: +SKIP
+    [Row(r=1)]
+    >>> df.select(try_variant_get(v, "$.b", "int").alias("r")).collect() # doctest: +SKIP
+    [Row(r=None)]
+    >>> df.select(try_variant_get(v, "$.a", "binary").alias("r")).collect() # doctest: +SKIP
+    [Row(r=None)]
+    """
+    return Column.invoke_anonymous_function(v, "TRY_VARIANT_GET", lit(path), lit(targetType))
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake", "spark"])
+def schema_of_variant(v: ColumnOrName) -> Column:
+    """
+    Returns schema in the SQL format of a variant.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    v : :class:`~pyspark.sql.Column` or str
+        a variant column or column name
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a string column representing the variant schema
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> df.select(schema_of_variant(parse_json(df.json)).alias("r")).collect()
+    [Row(r='OBJECT<a: BIGINT>')]
+    """
+    return Column.invoke_anonymous_function(v, "SCHEMA_OF_VARIANT")
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake", "spark"])
+def schema_of_variant_agg(v: ColumnOrName) -> Column:
+    """
+    Returns the merged schema in the SQL format of a variant column.
+    .. versionadded:: 4.0.0
+    Parameters
+    ----------
+    v : :class:`~pyspark.sql.Column` or str
+        a variant column or column name
+    Returns
+    -------
+    :class:`~pyspark.sql.Column`
+        a string column representing the variant schema
+    Examples
+    --------
+    >>> df = spark.createDataFrame([ {'json': '''{ "a" : 1 }'''} ])
+    >>> df.select(schema_of_variant_agg(parse_json(df.json)).alias("r")).collect()
+    [Row(r='OBJECT<a: BIGINT>')]
+    """
+    return Column.invoke_anonymous_function(v, "SCHEMA_OF_VARIANT_AGG")
+
+
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     session = _get_session()

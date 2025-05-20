@@ -32,6 +32,7 @@ from sqlframe.standalone import types
             ),
             "struct<cola:integer, colb:string>",
         ),
+        (types.VariantType(), "variant"),
     ],
 )
 def test_string(dtype, expected):

@@ -199,6 +199,10 @@ def isnull_using_equal(col: ColumnOrName) -> Column:
     )
 
 
+def is_null_value(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "IS_NULL_VALUE")
+
+
 def nanvl_as_case(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     when = get_func_from_session("when")
     isnan = get_func_from_session("isnan")
@@ -1069,6 +1073,11 @@ def get_json_object_using_arrow_op(col: ColumnOrName, path: str) -> Column:
 def get_json_object_using_function(col: ColumnOrName, path: str) -> Column:
     lit = get_func_from_session("lit")
     return Column.invoke_anonymous_function(col, "GET_JSON_OBJECT", lit(path))
+
+
+def get_path(col: ColumnOrName, path: str) -> Column:
+    lit = get_func_from_session("lit")
+    return Column.invoke_anonymous_function(col, "GET_PATH", lit(path))
 
 
 def array_min_from_sort(col: ColumnOrName) -> Column:

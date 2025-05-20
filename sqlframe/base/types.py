@@ -163,6 +163,10 @@ class MapType(DataType):
         }
 
 
+class VariantType(DataType):
+    pass
+
+
 class StructField(DataType):
     def __init__(
         self,

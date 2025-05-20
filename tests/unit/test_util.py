@@ -73,6 +73,7 @@ def test_quote_preserving_alias_or_name(expression: t.Union[exp.Column, exp.Alia
                 )
             ),
         ),
+        ("VARIANT", types.VariantType()),
     ],
 )
 def test_sqlglot_to_spark(dtype: str, expected: types.DataType):

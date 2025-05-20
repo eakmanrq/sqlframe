@@ -316,6 +316,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
         exp.DataType.Type.TIMESTAMPNTZ: types.TimestampNTZType,
         exp.DataType.Type.DATE: types.DateType,
         exp.DataType.Type.JSON: types.StringType,
+        exp.DataType.Type.VARIANT: types.VariantType,
     }
     if sqlglot_dtype.this in primitive_mapping:
         pyspark_class = primitive_mapping[sqlglot_dtype.this]
@@ -406,6 +407,8 @@ def spark_to_sqlglot(spark_dtype: types.DataType) -> exp.DataType:
         return exp.DataType(this=exp.DataType.Type.TIMESTAMPNTZ)
     elif isinstance(spark_dtype, types.DateType):
         return exp.DataType(this=exp.DataType.Type.DATE)
+    elif isinstance(spark_dtype, types.VariantType):
+        return exp.DataType(this=exp.DataType.Type.VARIANT)
 
     # Handle complex types
     elif isinstance(spark_dtype, types.ArrayType):
