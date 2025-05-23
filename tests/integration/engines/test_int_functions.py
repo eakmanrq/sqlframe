@@ -176,9 +176,10 @@ def test_col(get_session_and_func, input, output):
         (datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc), "timestamptz"),
         (True, "boolean"),
         (bytes("test", "utf-8"), "binary"),
+        ({"key": [1, 2, 3]}, "variant"),
     ],
 )
-def test_typeof(get_session_and_func, get_types, arg, expected):
+def test_typeof(get_session_and_func, get_types, get_func, arg, expected):
     session, typeof = get_session_and_func("typeof")
     # If we just pass a struct in for values then Spark will automatically explode the struct into columns
     # it won't do this though if there is another column so that is why we include an ignore column
@@ -198,23 +199,23 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
         if expected == "timestampntz":
             expected = "datetime"
     if isinstance(session, DuckDBSession):
-        if expected == "binary":
-            pytest.skip("DuckDB doesn't support binary")
+        if expected in ("binary", "variant"):
+            pytest.skip(f"DuckDB doesn't support {expected}")
         expected = expected.replace("string", "varchar").replace("struct<a:", "struct<a ")
     if isinstance(session, BigQuerySession):
         if expected.startswith("map"):
             pytest.skip("BigQuery doesn't support map types")
         if "<" in expected:
             expected = expected.split("<")[0]
-        if expected == "binary":
-            pytest.skip("BigQuery doesn't support binary")
+        if expected in ("binary", "variant"):
+            pytest.skip(f"BigQuery doesn't support {expected}")
     if isinstance(session, PostgresSession):
         if expected.startswith("map"):
             pytest.skip("Postgres doesn't support map types")
         elif expected.startswith("struct"):
             pytest.skip("Postgres doesn't support struct types")
-        elif expected == "binary":
-            pytest.skip("Postgres doesn't support binary")
+        elif expected in ("binary", "variant"):
+            pytest.skip(f"Postgres doesn't support {expected}")
     if isinstance(session, SnowflakeSession):
         if expected == "bigint":
             expected = "int"
@@ -228,6 +229,13 @@ def test_typeof(get_session_and_func, get_types, arg, expected):
     if isinstance(session, PySparkSession):
         if expected == "timestampntz":
             expected = "timestamp"
+        if expected == "variant":
+            pytest.skip("PySpark doesn't support variant")
+
+    if expected == "variant":
+        to_variant_object = get_func("to_variant_object", session)
+        df = df.withColumn("col", to_variant_object("col"))
+
     result = df.select(typeof("col").alias("test")).first()[0]
     assert exp.DataType.build(result, dialect=dialect) == exp.DataType.build(
         expected, dialect=dialect
@@ -2476,6 +2484,97 @@ def test_from_json(get_session_and_func, get_types, get_func):
     schema = types.ArrayType(types.IntegerType())
     df = session.createDataFrame(data, ("key", "value"))
     assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=[1, 2, 3])]
+
+
+def test_try_parse_json(get_session_and_func, get_types, get_func):
+    session, try_parse_json = get_session_and_func("try_parse_json")
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(try_parse_json("value")).collect()[0][0].toPython() == {"key": [1, 2, 3]}
+    df = session.createDataFrame(["a"], "STRING")
+    assert df.select(try_parse_json("value").alias("value")).collect() == [Row(value=None)]
+
+
+def test_to_variant_object(get_session_and_func, get_types, get_func):
+    session, to_variant_object = get_session_and_func("to_variant_object")
+    types = get_types(session)
+    schema = types.StructType(
+        [
+            types.StructField("i", types.StringType(), True),
+            types.StructField(
+                "v",
+                types.ArrayType(
+                    types.StructType(
+                        [
+                            types.StructField(
+                                "a",
+                                types.MapType(types.StringType(), types.StringType()),
+                                True,
+                            )
+                        ]
+                    ),
+                    True,
+                ),
+            ),
+        ]
+    )
+    data = [("1", [{"a": {"b": 2}}])]
+    df = session.createDataFrame(data, schema)
+    assert df.select(to_variant_object(df.v)).collect()[0][0].toPython() == [{"a": {"b": "2"}}]
+
+
+def test_parse_json(get_session_and_func, get_types, get_func):
+    session, parse_json = get_session_and_func("parse_json")
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(parse_json("value")).collect()[0][0].toPython() == {"key": [1, 2, 3]}
+
+
+def test_is_variant_null(get_session_and_func, get_types, get_func):
+    session, is_variant_null = get_session_and_func("is_variant_null")
+    parse_json = get_func("parse_json", session)
+    df = session.createDataFrame(['{"key": [1, 2, 3]}', "null"], "STRING")
+    assert df.select(is_variant_null(parse_json("value")).alias("is_variant_null")).collect() == [
+        Row(is_variant_null=False),
+        Row(is_variant_null=True),
+    ]
+
+
+def test_variant_get(get_session_and_func, get_types, get_func):
+    session, variant_get = get_session_and_func("variant_get")
+    parse_json = get_func("parse_json", session)
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(
+        variant_get(parse_json("value"), "$.key", "ARRAY<INTEGER>").alias("key")
+    ).collect() == [Row(key=[1, 2, 3])]
+
+
+def test_try_variant_get(get_session_and_func, get_types, get_func):
+    session, try_variant_get = get_session_and_func("try_variant_get")
+    parse_json = get_func("parse_json", session)
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(
+        try_variant_get(parse_json("value"), "$.key", "ARRAY<INTEGER>").alias("key")
+    ).collect() == [Row(key=[1, 2, 3])]
+    assert df.select(
+        try_variant_get(parse_json("value"), "$.foo", "STRING").alias("foo")
+    ).collect() == [Row(foo=None)]
+
+
+def test_schema_of_variant(get_session_and_func, get_types, get_func):
+    session, schema_of_variant = get_session_and_func("schema_of_variant")
+    parse_json = get_func("parse_json", session)
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(schema_of_variant(parse_json("value")).alias("r")).collect() == [
+        Row(r="OBJECT<key: ARRAY<BIGINT>>")
+    ]
+
+
+def test_schema_of_variant_agg(get_session_and_func, get_types, get_func):
+    session, schema_of_variant_agg = get_session_and_func("schema_of_variant_agg")
+    parse_json = get_func("parse_json", session)
+    df = session.createDataFrame(['{"key": [1, 2, 3]}'], "STRING")
+    assert df.select(schema_of_variant_agg(parse_json("value")).alias("r")).collect() == [
+        Row(r="OBJECT<key: ARRAY<BIGINT>>")
+    ]
 
 
 def test_to_json(get_session_and_func, get_types, get_func):
