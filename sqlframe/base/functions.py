@@ -2801,9 +2801,11 @@ def try_avg(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "TRY_AVG")
 
 
-@meta(unsupported_engines="*")
+@meta()
 def try_divide(left: ColumnOrName, right: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(left, "TRY_DIVIDE", right)
+    return Column.invoke_expression_over_column(
+        left, expression.SafeDivide, expression=Column.ensure_col(right).column_expression
+    )
 
 
 @meta(unsupported_engines="*")
