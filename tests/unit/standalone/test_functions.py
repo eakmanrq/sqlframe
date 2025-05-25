@@ -3012,8 +3012,11 @@ def test_try_avg(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.try_divide("cola", "colb"), "TRY_DIVIDE(cola, colb)"),
-        (SF.try_divide(SF.col("cola"), SF.col("colb")), "TRY_DIVIDE(cola, colb)"),
+        (SF.try_divide("cola", "colb"), "IF(colb <> 0, cola / colb, NULL)"),
+        (
+            SF.try_divide(SF.col("cola"), SF.col("colb")),
+            "IF(colb <> 0, cola / colb, NULL)",
+        ),
     ],
 )
 def test_try_divide(expression, expected):

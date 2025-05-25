@@ -3112,10 +3112,11 @@ def test_try_divide(get_session_and_func, get_func):
     session, try_divide = get_session_and_func("try_divide")
     make_interval = get_func("make_interval", session)
     lit = get_func("lit", session)
-    df = session.createDataFrame([(6000, 15), (1990, 2)], ["a", "b"])
+    df = session.createDataFrame([(6000, 15), (1990, 2), (100, 0)], ["a", "b"])
     assert df.select(try_divide(df.a, df.b).alias("r")).collect() == [
         Row(r=400.0),
         Row(r=995.0),
+        Row(r=None),
     ]
     df = session.createDataFrame([(1, 2)], ["year", "month"])
     assert (
