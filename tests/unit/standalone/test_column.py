@@ -229,8 +229,10 @@ def test_over():
 def test_get_item():
     assert F.col("cola").getItem(1).sql() == "ELEMENT_AT(cola, (1 + 1)) AS element_at__cola__"
 
+
 def test_get_item_with_array_syntax():
     assert F.col("cola")[1].sql() == "ELEMENT_AT(cola, (1 + 1)) AS element_at__cola__"
+
 
 def test_contains():
     assert F.col("cola").contains("foo").sql() == "CONTAINS(cola, 'foo')"

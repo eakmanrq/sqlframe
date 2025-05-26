@@ -127,7 +127,7 @@ class Column:
         raise UnsupportedOperationError(
             "Tried to call a column which is unexpected. Did you mean to call a method on a DataFrame? If so, make sure the method is typed correctly and is supported. If not, please open an issue requesting support: https://github.com/eakmanrq/sqlframe/issues"
         )
-    
+
     def __getitem__(self, key: t.Any) -> Column:
         """
         An expression that gets an item at position ``ordinal`` out of a list,
@@ -160,7 +160,7 @@ class Column:
         +---------------+------+
         """
         return self.getItem(key)
-    
+
     def __getattr__(self, name: str) -> Column:
         """
         Enables accessing nested fields using dot notation for struct types.
