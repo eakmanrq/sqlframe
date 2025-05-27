@@ -45,6 +45,7 @@ def test_column_get_item_map(get_session: t.Callable[[], _BaseSession], get_func
     lit = get_func("lit", session)
     if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert session.range(1).select(lit({"key": "value"}).getItem("key")).first()[0] == "value"
+        assert session.range(1).select(lit({"key": "value"})["key"]).first()[0] == "value"
 
 
 def test_column_get_field_struct(get_session: t.Callable[[], _BaseSession]):
