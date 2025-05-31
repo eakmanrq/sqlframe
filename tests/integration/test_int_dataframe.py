@@ -1835,6 +1835,23 @@ def test_with_columns_reference_another(
     compare_frames(df, dfs)
 
 
+def test_with_columns_renamed(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.withColumnsRenamed(
+        {"fname": "first_name", "lname": "last_name", "nonexistent_col": "new_name"}
+    )
+
+    dfs = employee.withColumnsRenamed(
+        {"fname": "first_name", "lname": "last_name", "nonexistent_col": "new_name"}
+    )
+
+    compare_frames(df, dfs)
+
+
 def test_drop_column_single(
     pyspark_employee: PySparkDataFrame,
     get_df: t.Callable[[str], BaseDataFrame],
