@@ -1525,6 +1525,52 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
 
     @operation(Operation.SELECT)
+    def withColumnsRenamed(self, colsMap: t.Dict[str, str]) -> Self:
+        """
+        Returns a new :class:`DataFrame` by renaming multiple columns. If a non-existing column is
+        provided, it will be silently ignored.
+
+        .. versionadded:: 3.5.0
+
+        Parameters
+        ----------
+        colsMap : dict
+            a dict of column name and new column name.
+
+        Returns
+        -------
+        :class:`DataFrame`
+            DataFrame with renamed columns.
+
+        Examples
+        --------
+        >>> df = spark.createDataFrame([(2, "Alice"), (5, "Bob")], schema=["age", "name"])
+        >>> df.withColumnsRenamed({"age": "years", "name": "firstName"}).show()
+        +-----+---------+
+        |years|firstName|
+        +-----+---------+
+        |    2|    Alice|
+        |    5|      Bob|
+        +-----+---------+
+        """
+        expression = self.expression.copy()
+        columns = self._get_outer_select_columns(expression)
+        results = []
+
+        # Normalize the keys in colsMap
+        normalized_cols_map = {self.session._normalize_string(k): v for k, v in colsMap.items()}
+
+        for column in columns:
+            col_name = column.alias_or_name
+            if col_name in normalized_cols_map:
+                new_name = normalized_cols_map[col_name]
+                column = column.alias(new_name)
+                self._update_display_name_mapping([column], [new_name])
+            results.append(column)
+
+        return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
+
+    @operation(Operation.SELECT)
     def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
         """
         Returns a new :class:`DataFrame` by adding multiple columns or replacing the
