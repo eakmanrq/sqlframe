@@ -37,7 +37,7 @@ setup(
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
             "pyarrow>=10,<21",
-            "pyspark>=2,<3.6",
+            "pyspark>=2,<4.1",
             "pytest>=8.2.0,<8.4",
             "pytest-forked",
             "pytest-postgresql>=6,<8",
@@ -73,7 +73,7 @@ setup(
             "snowflake-connector-python[secure-local-storage]>=3.10.0,<3.16",
         ],
         "spark": [
-            "pyspark>=2,<3.6",
+            "pyspark>=2,<4.1",
         ],
         "databricks": [
             "databricks-sql-connector[pyarrow]>=3.6,<5",
