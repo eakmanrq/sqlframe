@@ -51,7 +51,7 @@ class BigQuerySession(
             super().__init__(conn or connect())
             if self._client.default_query_job_config is None:
                 self._client.default_query_job_config = bigquery.QueryJobConfig()
-            self.default_dataset = default_dataset
+            self.default_dataset = default_dataset  # type: ignore
 
     @property
     def _client(self) -> BigQueryClient:
