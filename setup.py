@@ -38,7 +38,7 @@ setup(
             "psycopg>=3.1,<4",
             "pyarrow>=10,<21",
             "pyspark>=2,<3.6",
-            "pytest>=8.2.0,<8.4",
+            "pytest>=8.2.0,<8.5",
             "pytest-forked",
             "pytest-postgresql>=6,<8",
             "pytest-xdist>=3.6,<3.8",
