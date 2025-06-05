@@ -999,27 +999,6 @@ def element_at_using_brackets(col: ColumnOrName, value: ColumnOrLiteral) -> Colu
     )
 
 
-def array_remove_using_filter(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    lit = get_func_from_session("lit")
-    col_func = get_func_from_session("col")
-
-    value = value if isinstance(value, Column) else lit(value)
-    return Column(
-        expression.Anonymous(
-            this="LIST_FILTER",
-            expressions=[
-                col_func(col).column_expression,
-                expression.Lambda(
-                    this=expression.NEQ(
-                        this=expression.Identifier(this="x"), expression=value.column_expression
-                    ),
-                    expressions=[expression.Identifier(this="x")],
-                ),
-            ],
-        )
-    )
-
-
 def array_union_using_list_concat(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     col_func = get_func_from_session("col")
 
@@ -1662,41 +1641,6 @@ def array_position_bgutil(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
             expressions=[lit(0).column_expression],
         )
     )
-
-
-def array_remove_bgutil(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    lit = get_func_from_session("lit")
-
-    value_col = value if isinstance(value, Column) else lit(value)
-
-    filter_subquery = expression.select(
-        "*",
-    ).from_(
-        expression.Unnest(
-            expressions=[Column.ensure_col(col).column_expression],
-            alias=expression.TableAlias(
-                columns=[expression.to_identifier("x")],
-            ),
-        )
-    )
-
-    agg_subquery = (
-        expression.select(
-            expression.Anonymous(
-                this="ARRAY_AGG",
-                expressions=[expression.column("x")],
-            ),
-        )
-        .from_(filter_subquery.subquery("t"))
-        .where(
-            expression.NEQ(
-                this=expression.column("x", "t"),
-                expression=value_col.column_expression,
-            )
-        )
-    )
-
-    return Column(agg_subquery.subquery())
 
 
 def array_distinct_bgutil(col: ColumnOrName) -> Column:
