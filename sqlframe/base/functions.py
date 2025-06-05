@@ -2268,21 +2268,10 @@ def element_at(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta()
 def array_remove(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    from sqlframe.base.function_alternatives import (
-        array_remove_bgutil,
-        array_remove_using_filter,
-    )
-
-    session = _get_session()
-
-    if session._is_bigquery:
-        return array_remove_bgutil(col, value)
-
-    if session._is_duckdb:
-        return array_remove_using_filter(col, value)
-
     value_col = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_anonymous_function(col, "ARRAY_REMOVE", value_col)
+    return Column.invoke_expression_over_column(
+        col, expression.ArrayRemove, expression=value_col.column_expression
+    )
 
 
 @meta(unsupported_engines="postgres")
