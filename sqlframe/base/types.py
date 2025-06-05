@@ -104,22 +104,22 @@ class FloatType(DataType):
 
 
 class ByteType(DataType):
-    def __str__(self) -> str:
+    def simpleString(self) -> str:
         return "tinyint"
 
 
 class IntegerType(DataType):
-    def __str__(self) -> str:
+    def simpleString(self) -> str:
         return "int"
 
 
 class LongType(DataType):
-    def __str__(self) -> str:
+    def simpleString(self) -> str:
         return "bigint"
 
 
 class ShortType(DataType):
-    def __str__(self) -> str:
+    def simpleString(self) -> str:
         return "smallint"
 
 
