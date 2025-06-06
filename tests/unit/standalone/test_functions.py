@@ -26,6 +26,7 @@ def test_invoke_anonymous(name, func):
         "rtrim",
         "ascii",
         "current_schema",
+        "parse_json",
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
@@ -2493,6 +2494,94 @@ def test_json_tuple(expression, expected):
     ],
 )
 def test_from_json(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_parse_json("cola"), "TRY_PARSE_JSON(cola)"),
+        (SF.try_parse_json(SF.col("cola")), "TRY_PARSE_JSON(cola)"),
+    ],
+)
+def test_try_parse_json(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_variant_object("cola"), "TO_VARIANT_OBJECT(cola)"),
+        (SF.to_variant_object(SF.col("cola")), "TO_VARIANT_OBJECT(cola)"),
+    ],
+)
+def test_to_variant_object(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.parse_json("cola"), "PARSE_JSON(cola)"),
+        (SF.parse_json(SF.col("cola")), "PARSE_JSON(cola)"),
+    ],
+)
+def test_parse_json(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.is_variant_null("cola"), "IS_VARIANT_NULL(cola)"),
+        (SF.is_variant_null(SF.col("cola")), "IS_VARIANT_NULL(cola)"),
+    ],
+)
+def test_is_variant_null(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.variant_get("cola", "$.a", "int"), "VARIANT_GET(cola, '$.a', 'int')"),
+        (SF.variant_get(SF.col("cola"), "$.a", "int"), "VARIANT_GET(cola, '$.a', 'int')"),
+    ],
+)
+def test_variant_get(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_variant_get("cola", "$.a", "int"), "TRY_VARIANT_GET(cola, '$.a', 'int')"),
+        (SF.try_variant_get(SF.col("cola"), "$.a", "int"), "TRY_VARIANT_GET(cola, '$.a', 'int')"),
+    ],
+)
+def test_try_variant_get(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.schema_of_variant("cola"), "SCHEMA_OF_VARIANT(cola)"),
+        (SF.schema_of_variant(SF.col("cola")), "SCHEMA_OF_VARIANT(cola)"),
+    ],
+)
+def test_schema_of_variant(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.schema_of_variant_agg("cola"), "SCHEMA_OF_VARIANT_AGG(cola)"),
+        (SF.schema_of_variant_agg(SF.col("cola")), "SCHEMA_OF_VARIANT_AGG(cola)"),
+    ],
+)
+def test_schema_of_variant_agg(expression, expected):
     assert expression.column_expression.sql(dialect="spark") == expected
 
 
