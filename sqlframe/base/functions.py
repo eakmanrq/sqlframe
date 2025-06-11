@@ -2288,14 +2288,14 @@ def array_distinct(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def array_intersect(col1: ColumnOrName, col2: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import array_intersect_using_intersection
-
-    session = _get_session()
-
-    if session._is_snowflake:
-        return array_intersect_using_intersection(col1, col2)
-
-    return Column.invoke_anonymous_function(col1, "ARRAY_INTERSECT", Column.ensure_col(col2))
+    return Column(
+        expression.ArrayIntersect(
+            expressions=[
+                Column.ensure_col(col1).column_expression,
+                Column.ensure_col(col2).column_expression,
+            ]
+        )
+    )
 
 
 @meta(unsupported_engines=["postgres"])
@@ -3226,18 +3226,16 @@ def elt(*inputs: ColumnOrName) -> Column:
 def endswith(str: ColumnOrName, suffix: ColumnOrName) -> Column:
     from sqlframe.base.function_alternatives import (
         endswith_using_like,
-        endswith_with_underscore,
     )
 
     session = _get_session()
 
-    if session._is_bigquery or session._is_duckdb:
-        return endswith_with_underscore(str, suffix)
-
     if session._is_postgres:
         return endswith_using_like(str, suffix)
 
-    return Column.invoke_anonymous_function(str, "endswith", suffix)
+    return Column.invoke_expression_over_column(
+        str, expression.EndsWith, expression=Column.ensure_col(suffix).column_expression
+    )
 
 
 @meta(unsupported_engines="*")

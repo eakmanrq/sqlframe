@@ -3409,6 +3409,10 @@ def test_bitmap_or_agg(get_session_and_func, get_func):
 
 def test_any_value(get_session_and_func):
     session, any_value = get_session_and_func("any_value")
+    if isinstance(session, PostgresSession):
+        pytest.skip(
+            "any_value is supported in SQLGlot for Postgres but by default assumes Postgres 16+. Tests run against 15. Therefore skipping but should remove this if SQLFrame addss the ability to define Postgres version."
+        )
     df = session.createDataFrame(
         [("c", None), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["c1", "c2"]
     )
@@ -3419,9 +3423,9 @@ def test_any_value(get_session_and_func):
         assert non_ignore_nulls == [Row(value="c", value2=2)]
         assert ignore_nulls == [Row(value="c", value2=2)]
     # SQLGlot converts any_value to max
-    elif isinstance(session, PostgresSession):
-        assert non_ignore_nulls == [Row(value="c", value2=8)]
-        assert ignore_nulls == [Row(value="c", value2=8)]
+    # elif isinstance(session, PostgresSession):
+    #     assert non_ignore_nulls == [Row(value="c", value2=8)]
+    #     assert ignore_nulls == [Row(value="c", value2=8)]
     # Always includes nulls
     elif isinstance(session, SnowflakeSession):
         assert non_ignore_nulls == [Row(value="c", value2=None)]
