@@ -103,6 +103,29 @@ A DatabricksSession, which implements the PySpark Session API, is created by pas
     session = SparkSession.builder.getOrCreate()
     ```
 
+### Creating Session with Idle Connections
+
+The Databricks SQL Connector for Python will automatically close connections that have been idle for a while. 
+This will cause errors when using SQLFrame since it will retry to use a closed connection.
+To avoid this, you can have SQLFrame create the connection for you and it will automatically reconnect when needed.
+Note that this will not work with the `activate` function since it requires a `databricks.sql.client.Connection` object.
+
+```python
+import os
+
+from sqlframe.databricks import DatabricksSession
+
+session = DatabricksSession(
+    server_hostname="dbc-xxxxxxxx-xxxx.cloud.databricks.com",
+    http_path="/sql/1.0/warehouses/xxxxxxxxxxxxxxxx",
+    access_token=os.environ["ACCESS_TOKEN"],  # Replace this with how you get your databricks access token
+    auth_type="access_token",
+    catalog="catalog",
+    schema="schema",
+)
+```
+
+
 ## Example Usage
 
 ```python
