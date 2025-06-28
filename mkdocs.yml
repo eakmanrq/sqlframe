@@ -3,14 +3,14 @@ repo_url: https://github.com/eakmanrq/sqlframe
 repo_name: eakmanrq/sqlframe
 nav:
   - "Overview": index.md
+  - "Configuration": configuration.md
   - "BigQuery": bigquery.md
+  - "Databricks": databricks.md
   - "DuckDB": duckdb.md
   - "Postgres": postgres.md
   - "Spark": spark.md
   - "Standalone": standalone.md
-  - "Configuration": configuration.md
   - "Redshift (In-Development)": redshift.md
-  - "Databricks (In-Development)": databricks.md
 theme:
   name: material
   logo: images/SF.png
