@@ -5653,10 +5653,9 @@ def replace(
     ):
         replace = expression.Literal.string("")  # type: ignore
 
-    if replace is not None:
-        return Column.invoke_anonymous_function(src, "replace", search, replace)
-    else:
-        return Column.invoke_anonymous_function(src, "replace", search)
+    return Column.invoke_expression_over_column(
+        src, expression.Replace, expression=search, replacement=replace
+    )
 
 
 @meta()
