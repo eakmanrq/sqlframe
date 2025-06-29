@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import sys
 import typing as t
 
 from sqlframe.base.operations import Operation, group_operation, operation
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if t.TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -28,6 +34,8 @@ class _BaseGroupedData(t.Generic[DF]):
         self.session = df.session
         self.last_op = last_op
         self.group_by_cols = group_by_cols
+        self.pivot_col: t.Optional[str] = None
+        self.pivot_values: t.Optional[t.List[t.Any]] = None
 
     def _get_function_applied_columns(
         self, func_name: str, cols: t.Tuple[str, ...]
@@ -56,6 +64,79 @@ class _BaseGroupedData(t.Generic[DF]):
         )
         cols = self._df._ensure_and_normalize_cols(columns)
 
+        # Handle pivot transformation
+        if self.pivot_col is not None and self.pivot_values is not None:
+            from sqlglot import exp
+
+            from sqlframe.base import functions as F
+
+            # Build the pivot expression
+            # First, we need to convert the DataFrame to include the pivot logic
+            df = self._df.copy()
+
+            # Create the base query with group by columns, pivot column, and aggregation columns
+            select_cols = []
+            # Add group by columns
+            for col in self.group_by_cols:
+                select_cols.append(col.expression)  # type: ignore
+            # Add pivot column
+            select_cols.append(Column.ensure_col(self.pivot_col).expression)
+            # Add the value columns that will be aggregated
+            for agg_col in cols:
+                # Extract the column being aggregated from the aggregation function
+                # For example, from SUM(earnings), we want to extract 'earnings'
+                if (
+                    isinstance(agg_col.column_expression, exp.AggFunc)
+                    and agg_col.column_expression.this
+                ):
+                    if agg_col.column_expression.this not in select_cols:
+                        select_cols.append(agg_col.column_expression.this)
+
+            # Create the base query
+            base_query = df.expression.select(*select_cols, append=False)
+
+            # Build pivot expression
+            pivot_expressions = []
+            for agg_col in cols:
+                if isinstance(agg_col.column_expression, exp.AggFunc):
+                    # Clone the aggregation function
+                    # Snowflake doesn't support alias in the pivot, so we need to use the column_expression
+                    agg_func = (
+                        agg_col.column_expression.copy()
+                        if self.session._is_snowflake
+                        else agg_col.expression.copy()
+                    )
+                    pivot_expressions.append(agg_func)
+
+            # Create the IN clause with pivot values
+            in_values = []
+            for v in self.pivot_values:
+                if isinstance(v, str):
+                    in_values.append(exp.Literal.string(v))
+                else:
+                    in_values.append(exp.Literal.number(v))
+
+            # Build the pivot node with the fields parameter
+            pivot = exp.Pivot(
+                expressions=pivot_expressions,
+                fields=[
+                    exp.In(
+                        this=Column.ensure_col(self.pivot_col).column_expression,
+                        expressions=in_values,
+                    )
+                ],
+            )
+
+            # Create a subquery with the pivot attached
+            subquery = base_query.subquery()
+            subquery.set("pivots", [pivot])
+
+            # Create the final select from the pivoted subquery
+            expression = exp.select("*").from_(subquery)
+
+            return self._df.copy(expression=expression)
+
+        # Original non-pivot logic
         if not self.group_by_cols or not isinstance(self.group_by_cols[0], (list, tuple, set)):
             expression = self._df.expression.group_by(
                 # User column_expression for group by to avoid alias in group by
@@ -104,5 +185,43 @@ class _BaseGroupedData(t.Generic[DF]):
     def sum(self, *cols: str) -> DF:
         return self.agg(*self._get_function_applied_columns("sum", cols))
 
-    def pivot(self, *cols: str) -> DF:
-        raise NotImplementedError("Sum distinct is not currently implemented")
+    def pivot(self, pivot_col: str, values: t.Optional[t.List[t.Any]] = None) -> Self:
+        """
+        Pivots a column of the current DataFrame and perform the specified aggregation.
+
+        There are two versions of the pivot function: one that requires the caller
+        to specify the list of distinct values to pivot on, and one that does not.
+        The latter is more concise but less efficient, because Spark needs to first
+        compute the list of distinct values internally.
+
+        Parameters
+        ----------
+        pivot_col : str
+            Name of the column to pivot.
+        values : list, optional
+            List of values that will be translated to columns in the output DataFrame.
+
+        Returns
+        -------
+        GroupedData
+            Returns self to allow chaining with aggregation methods.
+        """
+        if self.session._is_postgres:
+            raise NotImplementedError(
+                "Pivot operation is not supported in Postgres. Please create an issue if you would like a workaround implemented."
+            )
+
+        self.pivot_col = pivot_col
+
+        if values is None:
+            # Eagerly compute distinct values
+            from sqlframe.base.column import Column
+
+            distinct_df = self._df.select(pivot_col).distinct()
+            distinct_rows = distinct_df.collect()
+            # Sort to make the results deterministic
+            self.pivot_values = sorted([row[0] for row in distinct_rows])
+        else:
+            self.pivot_values = values
+
+        return self
