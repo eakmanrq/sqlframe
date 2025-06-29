@@ -1300,10 +1300,6 @@ def day_with_try_to_timestamp(col: ColumnOrName) -> Column:
     )
 
 
-def endswith_with_underscore(str: ColumnOrName, suffix: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(str, "ENDS_WITH", suffix)
-
-
 def endswith_using_like(str: ColumnOrName, suffix: ColumnOrName) -> Column:
     concat = get_func_from_session("concat")
     lit = get_func_from_session("lit")
