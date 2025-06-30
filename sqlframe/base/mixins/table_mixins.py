@@ -3,6 +3,7 @@ import logging
 import typing as t
 
 from sqlglot import exp
+from typing_extensions import ParamSpec
 
 try:
     from sqlglot.expressions import Whens
@@ -28,21 +29,22 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def ensure_cte() -> t.Callable[[t.Callable], t.Callable]:
-    def decorator(func: t.Callable) -> t.Callable:
-        @functools.wraps(func)
-        def wrapper(self: _BaseTable, *args, **kwargs) -> t.Any:
-            if len(self.expression.ctes) > 0:
-                return func(self, *args, **kwargs)  # type: ignore
-            self_class = self.__class__
-            self = self._convert_leaf_to_cte()
-            self = self_class(**object_to_dict(self))
+P = ParamSpec("P")
+T = t.TypeVar("T")
+
+
+def ensure_cte(func: t.Callable[P, T]) -> t.Callable[P, T]:
+    @functools.wraps(func)
+    def wrapper(self: _BaseTable, *args: P.args, **kwargs: P.kwargs) -> T:
+        if len(self.expression.ctes) > 0:
             return func(self, *args, **kwargs)  # type: ignore
+        self_class = self.__class__
+        self = self._convert_leaf_to_cte()
+        self = self_class(**object_to_dict(self))
+        return func(self, *args, **kwargs)  # type: ignore
 
-        wrapper.__wrapped__ = func  # type: ignore
-        return wrapper
-
-    return decorator
+    wrapper.__wrapped__ = func  # type: ignore
+    return wrapper  # type: ignore[return-value]
 
 
 class _BaseTableMixins(_BaseTable, t.Generic[DF]):
@@ -68,7 +70,7 @@ class _BaseTableMixins(_BaseTable, t.Generic[DF]):
 
 
 class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
-    @ensure_cte()
+    @ensure_cte
     def update(
         self,
         set_: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
@@ -119,7 +121,7 @@ class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
 
 
 class DeleteSupportMixin(_BaseTableMixins, t.Generic[DF]):
-    @ensure_cte()
+    @ensure_cte
     def delete(
         self,
         where: t.Optional[t.Union[Column, str, bool]] = None,
@@ -141,7 +143,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
     ]
     _merge_support_star: bool
 
-    @ensure_cte()
+    @ensure_cte
     def merge(
         self,
         other_df: DF,
