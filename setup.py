@@ -70,7 +70,7 @@ setup(
             "redshift_connector>=2.1.1,<2.2.0",
         ],
         "snowflake": [
-            "snowflake-connector-python[secure-local-storage]>=3.10.0,<3.16",
+            "snowflake-connector-python[secure-local-storage]>=3.10.0,<3.17",
         ],
         "spark": [
             "pyspark>=2,<3.6",
