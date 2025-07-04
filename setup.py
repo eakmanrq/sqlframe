@@ -41,7 +41,7 @@ setup(
             "pytest>=8.2.0,<8.5",
             "pytest-forked",
             "pytest-postgresql>=6,<8",
-            "pytest-xdist>=3.6,<3.8",
+            "pytest-xdist>=3.6,<3.9",
             "pre-commit>=3.7,<5",
             "ruff>=0.4.4,<0.13",
             "types-psycopg2>=2.9,<3",
