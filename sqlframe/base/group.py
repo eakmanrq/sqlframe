@@ -70,6 +70,11 @@ class _BaseGroupedData(t.Generic[DF]):
 
             from sqlframe.base import functions as F
 
+            if self.session._is_snowflake and len(cols) > 1:
+                raise ValueError(
+                    "Snowflake does not support multiple aggregation functions in a single group by operation."
+                )
+
             # Build the pivot expression
             # First, we need to convert the DataFrame to include the pivot logic
             df = self._df.copy()
@@ -132,11 +137,55 @@ class _BaseGroupedData(t.Generic[DF]):
             subquery.set("pivots", [pivot])
 
             # Create the final select from the pivoted subquery
-            expression = exp.select("*").from_(subquery)
+            final_select_in_values = []
+            for col in in_values:  # type: ignore
+                for agg_col in cols:
+                    original_name = col.alias_or_name  # type: ignore
+                    if self.session._is_snowflake:
+                        # Snowflake takes the provided values, like 'Java', and creates the column as "'Java'"
+                        # Therefore the user to select the column would need to use "'Java'"
+                        # This does not conform to the PySpark API, nor is it very user-friendly.
+                        # Therefore, we select the column as expected, and tell SQLFrame it is case-sensitive, but then
+                        # alias is to case-insensitive "Java" so that the user can select it without quotes.
+                        # This has a downside that if a user really needed case-sensitive column names then it wouldn't work.
+                        new_col = exp.to_column(
+                            col.alias_or_name,  # type: ignore
+                            quoted=True,
+                            dialect=self.session.execution_dialect,
+                        )
+                        new_col.this.set("this", f"'{new_col.this.this}'")
+                        new_col = exp.alias_(new_col, original_name)
+                        new_col.unalias()._meta = {"case_sensitive": True}
+                    elif self.session._is_bigquery:
+                        # BigQuery flips the alias order to <alias>_<value> instead of <value>_<alias>
+                        new_col = exp.to_column(
+                            f"{agg_col.alias_or_name}_{original_name}",
+                            dialect=self.session.execution_dialect,
+                        )
+                        new_col = (
+                            exp.alias_(new_col, original_name)
+                            if len(cols) == 1
+                            else exp.alias_(new_col, f"{original_name}_{agg_col.alias_or_name}")
+                        )
+                    elif self.session._is_duckdb:
+                        # DuckDB always respects the alias if if num_cols == 1
+                        new_col = exp.column(f"{original_name}_{agg_col.expression.alias_or_name}")
+                        if len(cols) == 1:
+                            new_col = exp.alias_(new_col, original_name)
+                    else:
+                        new_col = (
+                            exp.column(original_name)
+                            if len(cols) == 1
+                            else exp.column(f"{original_name}_{agg_col.expression.alias_or_name}")
+                        )
+                    final_select_in_values.append(new_col)
+
+            expression = exp.select(
+                *[x.column_expression for x in self.group_by_cols] + final_select_in_values  # type: ignore
+            ).from_(subquery)
 
             return self._df.copy(expression=expression)
 
-        # Original non-pivot logic
         if not self.group_by_cols or not isinstance(self.group_by_cols[0], (list, tuple, set)):
             expression = self._df.expression.group_by(
                 # User column_expression for group by to avoid alias in group by
