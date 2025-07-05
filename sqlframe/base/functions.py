@@ -1796,7 +1796,9 @@ def substring_index(str: ColumnOrName, delim: str, count: int) -> Column:
     if session._is_bigquery:
         return substring_index_bgutil(str, delim, count)
 
-    return Column.invoke_anonymous_function(str, "SUBSTRING_INDEX", lit(delim), lit(count))
+    return Column.invoke_expression_over_column(
+        str, expression.SubstringIndex, delimiter=lit(delim), count=lit(count)
+    )
 
 
 @meta(unsupported_engines="bigquery")
@@ -2205,7 +2207,9 @@ def slice(
 
     start_col = lit(start) if isinstance(start, int) else start
     length_col = lit(length) if isinstance(length, int) else length
-    return Column.invoke_anonymous_function(x, "SLICE", start_col, length_col)
+    return Column.invoke_expression_over_column(
+        x, expression.ArraySlice, start=start_col, end=length_col
+    )
 
 
 @meta()
@@ -2748,7 +2752,7 @@ def typeof(col: ColumnOrName) -> Column:
     if session._is_snowflake:
         return typeof_from_variant(col)
 
-    return Column.invoke_anonymous_function(col, "TYPEOF")
+    return Column.invoke_expression_over_column(col, expression.Typeof)
 
 
 @meta()
