@@ -370,3 +370,64 @@ def test_pivot_multiple_aggregations(
     )
 
     compare_frames(df_pivot, dfs_pivot)
+
+
+def test_pivot_without_values_and_selects(
+    pyspark_employee: DataFrame,
+    compare_frames: t.Callable,
+    get_session: t.Callable,
+    is_postgres: t.Callable,
+):
+    """Test pivot without values (auto-detect)"""
+    sqlf_spark = get_session()
+    if is_postgres():
+        pytest.skip("Pivot operation is not supported in Postgres")
+    spark = pyspark_employee.sparkSession
+
+    # Create test data based on PySpark documentation example
+    df1 = spark.createDataFrame(
+        [
+            Row(course="dotNET", year=2012, earnings=10000),
+            Row(course="Java", year=2012, earnings=20000),
+            Row(course="dotNET", year=2012, earnings=5000),
+            Row(course="dotNET", year=2013, earnings=48000),
+            Row(course="Java", year=2013, earnings=30000),
+        ]
+    )
+
+    # Create the same DataFrame in SQLFrame
+    dfs1 = sqlf_spark.createDataFrame(
+        [
+            {
+                "course": "dotNET",
+                "year": 2012,
+                "earnings": 10000,
+            },
+            {
+                "course": "Java",
+                "year": 2012,
+                "earnings": 20000,
+            },
+            {
+                "course": "dotNET",
+                "year": 2012,
+                "earnings": 5000,
+            },
+            {
+                "course": "dotNET",
+                "year": 2013,
+                "earnings": 48000,
+            },
+            {
+                "course": "Java",
+                "year": 2013,
+                "earnings": 30000,
+            },
+        ]
+    )
+
+    # Test pivot without values (auto-detect)
+    df_pivot = df1.groupBy("year").pivot("course").sum("earnings").select("Java")
+    dfs_pivot = dfs1.groupBy("year").pivot("course").sum("earnings").select("Java")
+
+    compare_frames(df_pivot, dfs_pivot)
