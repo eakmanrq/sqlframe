@@ -1547,6 +1547,24 @@ def test_timestamp_seconds(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
+        (SF.timestamp_add("year", "quantity", "ts"), "DATE_ADD(YEAR, quantity, ts)"),
+        (SF.timestamp_add("WEEK", SF.lit(5), "ts"), "DATE_ADD(WEEK, 5, ts)"),
+        (SF.timestamp_add("day", SF.lit(-5), "ts"), "DATE_ADD(DAY, -5, ts)"),
+        (
+            SF.timestamp_add("hour", SF.col("quantity"), SF.col("ts")),
+            "DATE_ADD(HOUR, quantity, ts)",
+        ),
+        (SF.timestamp_add("second", SF.lit(120), "ts"), "DATE_ADD(SECOND, 120, ts)"),
+        (SF.timestamp_add("month", "quantity", "ts"), "DATE_ADD(MONTH, quantity, ts)"),
+    ],
+)
+def test_timestamp_add(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
         (SF.window("cola", "10 minutes"), "WINDOW(cola, '10 minutes')"),
         (SF.window(SF.col("cola"), "10 minutes"), "WINDOW(cola, '10 minutes')"),
         (
