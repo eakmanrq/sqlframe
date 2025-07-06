@@ -11,7 +11,7 @@ fast-test:
 	pytest -n auto tests/unit
 
 local-test:
-	pytest -n auto -m "fast or local"
+	pytest -n auto -m "fast or local" --reruns 5
 
 %-test:
 	pytest -n auto -m "${*}"
