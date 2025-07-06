@@ -1531,6 +1531,48 @@ def test_timestamp_seconds(get_session_and_func):
     )
 
 
+def test_timestamp_add(get_session_and_func, get_func):
+    session, timestamp_add = get_session_and_func("timestamp_add")
+    lit = get_func("lit", session)
+
+    # Test data from PySpark examples
+    df = session.createDataFrame(
+        [(datetime.datetime(2016, 3, 11, 9, 0, 7), 2), (datetime.datetime(2024, 4, 2, 9, 0, 7), 3)],
+        ["ts", "quantity"],
+    )
+
+    # Test adding years
+    if not session._is_postgres:
+        result = df.select(timestamp_add("year", "quantity", "ts")).collect()
+        expected_years = [
+            datetime.datetime(2018, 3, 11, 9, 0, 7),
+            datetime.datetime(2027, 4, 2, 9, 0, 7),
+        ]
+        for i, row in enumerate(result):
+            actual = row[0].replace(tzinfo=None) if row[0] else None
+            assert actual == expected_years[i], f"Year addition failed for row {i}"
+
+    # Test adding weeks
+    result = df.select(timestamp_add("WEEK", lit(5), "ts")).collect()
+    expected_weeks = [
+        datetime.datetime(2016, 4, 15, 9, 0, 7),
+        datetime.datetime(2024, 5, 7, 9, 0, 7),
+    ]
+    for i, row in enumerate(result):
+        actual = row[0].replace(tzinfo=None) if row[0] else None
+        assert actual == expected_weeks[i], f"Week addition failed for row {i}"
+
+    # Test subtracting days
+    result = df.select(timestamp_add("day", lit(-5), "ts")).collect()
+    expected_days = [
+        datetime.datetime(2016, 3, 6, 9, 0, 7),
+        datetime.datetime(2024, 3, 28, 9, 0, 7),
+    ]
+    for i, row in enumerate(result):
+        actual = row[0].replace(tzinfo=None) if row[0] else None
+        assert actual == expected_days[i], f"Day subtraction failed for row {i}"
+
+
 def test_window(get_session_and_func, get_func):
     session, window = get_session_and_func("window")
     sum = get_func("sum", session)

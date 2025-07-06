@@ -1475,6 +1475,32 @@ def timestamp_seconds(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.UnixToTime)
 
 
+@meta()
+def timestamp_add(unit: str, quantity: ColumnOrName, ts: ColumnOrName) -> Column:
+    session = _get_session()
+
+    if session._is_duckdb or session._is_postgres:
+        quantity = lit(quantity) if isinstance(quantity, int) else quantity
+        if (
+            isinstance(quantity, Column)
+            and isinstance(quantity.expression, expression.Literal)
+            and quantity.expression.is_number
+            and int(quantity.expression.this) < 0
+        ):
+            # If quantity is a negative literal, we use DateSub
+            expr = expression.DateSub
+            quantity.expression.set("this", str(-int(quantity.expression.this)))
+        else:
+            expr = expression.DateAdd  # type: ignore
+        return Column.invoke_expression_over_column(
+            ts, expr, expression=quantity, unit=expression.Var(this=unit.upper())
+        )
+
+    return Column.invoke_expression_over_column(
+        ts, expression.TimestampAdd, expression=quantity, unit=expression.Var(this=unit.upper())
+    )
+
+
 @meta(unsupported_engines=["*", "spark"])
 def window(
     timeColumn: ColumnOrName,
