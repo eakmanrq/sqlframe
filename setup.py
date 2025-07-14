@@ -31,7 +31,7 @@ setup(
         "dev": [
             "duckdb>=1.2,<1.4",
             "findspark>=2,<3",
-            "mypy>=1.10.0,<1.17",
+            "mypy>=1.10.0,<1.18",
             "openai>=1.30,<2",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
