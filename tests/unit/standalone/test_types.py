@@ -7,8 +7,8 @@ from sqlframe.standalone import types
     "dtype, expected",
     [
         (types.StringType(), "string"),
-        (types.CharType(100), "char"),
-        (types.VarcharType(65), "varchar"),
+        (types.CharType(100), "char(100)"),
+        (types.VarcharType(65), "varchar(65)"),
         (types.BinaryType(), "binary"),
         (types.BooleanType(), "boolean"),
         (types.DateType(), "date"),
