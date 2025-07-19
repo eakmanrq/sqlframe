@@ -1572,6 +1572,16 @@ def test_timestamp_add(get_session_and_func, get_func):
         actual = row[0].replace(tzinfo=None) if row[0] else None
         assert actual == expected_days[i], f"Day subtraction failed for row {i}"
 
+    # Test adding quarters
+    result = df.select(timestamp_add("quarter", lit(2), "ts")).collect()
+    expected_quarters = [
+        datetime.datetime(2016, 9, 11, 9, 0, 7),
+        datetime.datetime(2024, 10, 2, 9, 0, 7),
+    ]
+    for i, row in enumerate(result):
+        actual = row[0].replace(tzinfo=None) if row[0] else None
+        assert actual == expected_quarters[i], f"Quarter addition failed for row {i}"
+
 
 def test_window(get_session_and_func, get_func):
     session, window = get_session_and_func("window")

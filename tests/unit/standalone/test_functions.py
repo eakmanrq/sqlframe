@@ -1256,8 +1256,8 @@ def test_month(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.dayofweek("cola"), "DAYOFWEEK(TO_DATE(cola))"),
-        (SF.dayofweek(SF.col("cola")), "DAYOFWEEK(TO_DATE(cola))"),
+        (SF.dayofweek("cola"), "DAYOFWEEK(cola)"),
+        (SF.dayofweek(SF.col("cola")), "DAYOFWEEK(cola)"),
     ],
 )
 def test_dayofweek(expression, expected):
@@ -1267,8 +1267,8 @@ def test_dayofweek(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.dayofmonth("cola"), "DAYOFMONTH(TO_DATE(cola))"),
-        (SF.dayofmonth(SF.col("cola")), "DAYOFMONTH(TO_DATE(cola))"),
+        (SF.dayofmonth("cola"), "DAYOFMONTH(cola)"),
+        (SF.dayofmonth(SF.col("cola")), "DAYOFMONTH(cola)"),
     ],
 )
 def test_dayofmonth(expression, expected):
@@ -1278,8 +1278,8 @@ def test_dayofmonth(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.dayofyear("cola"), "DAYOFYEAR(TO_DATE(cola))"),
-        (SF.dayofyear(SF.col("cola")), "DAYOFYEAR(TO_DATE(cola))"),
+        (SF.dayofyear("cola"), "DAYOFYEAR(cola)"),
+        (SF.dayofyear(SF.col("cola")), "DAYOFYEAR(cola)"),
     ],
 )
 def test_dayofyear(expression, expected):
@@ -1322,8 +1322,8 @@ def test_second(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.weekofyear("cola"), "WEEKOFYEAR(TO_DATE(cola))"),
-        (SF.weekofyear(SF.col("cola")), "WEEKOFYEAR(TO_DATE(cola))"),
+        (SF.weekofyear("cola"), "WEEKOFYEAR(cola)"),
+        (SF.weekofyear(SF.col("cola")), "WEEKOFYEAR(cola)"),
     ],
 )
 def test_weekofyear(expression, expected):
