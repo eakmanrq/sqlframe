@@ -3835,14 +3835,15 @@ def test_first_value(get_session_and_func, get_func, get_window):
     session, first_value = get_session_and_func("first_value")
     col = get_func("col", session)
     Window = get_window(session)
-    assert session.createDataFrame(
-        [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
-    ).select(first_value("a"), first_value("b")).collect() == [Row(value1=None, value2=1)]
-    assert session.createDataFrame(
-        [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
-    ).select(first_value("a", True), first_value("b", True)).collect() == [
-        Row(value1="a", value2=1)
-    ]
+    if not isinstance(session, (BigQuerySession, SnowflakeSession)):
+        assert session.createDataFrame(
+            [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
+        ).select(first_value("a"), first_value("b")).collect() == [Row(value1=None, value2=1)]
+        assert session.createDataFrame(
+            [(None, 1), ("a", 2), ("a", 3), ("b", 8), ("b", 2)], ["a", "b"]
+        ).select(first_value("a", True), first_value("b", True)).collect() == [
+            Row(value1="a", value2=1)
+        ]
     data = {
         "b": [None, None, "a", None, "b", "c", None, None, None, "d"],
         "idx": list(range(10)),
@@ -3853,8 +3854,8 @@ def test_first_value(get_session_and_func, get_func, get_window):
     assert session.createDataFrame(pd.DataFrame(data)).withColumn(
         "bf", first_value("b", ignoreNulls=True).over(window)
     ).collect() == [
-        Row(b=None, idx=0, bf=None),
-        Row(b=None, idx=1, bf=None),
+        Row(b=None, idx=0, bf=None if not isinstance(session, SnowflakeSession) else "a"),
+        Row(b=None, idx=1, bf=None if not isinstance(session, SnowflakeSession) else "a"),
         Row(b="a", idx=2, bf="a"),
         Row(b=None, idx=3, bf="a"),
         Row(b="b", idx=4, bf="a"),
@@ -4079,12 +4080,15 @@ def test_last_value(get_session_and_func, get_func, get_window):
     session, last_value = get_session_and_func("last_value")
     col = get_func("col", session)
     Window = get_window(session)
-    assert session.createDataFrame(
-        [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
-    ).select(last_value("a"), last_value("b")).collect() == [Row(value1=None, value2=2)]
-    assert session.createDataFrame(
-        [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
-    ).select(last_value("a", True), last_value("b", True)).collect() == [Row(value1="b", value2=2)]
+    if not isinstance(session, (BigQuerySession, SnowflakeSession)):
+        assert session.createDataFrame(
+            [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+        ).select(last_value("a"), last_value("b")).collect() == [Row(value1=None, value2=2)]
+        assert session.createDataFrame(
+            [("a", 1), ("a", 2), ("a", 3), ("b", 8), (None, 2)], ["a", "b"]
+        ).select(last_value("a", True), last_value("b", True)).collect() == [
+            Row(value1="b", value2=2)
+        ]
     data = {
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
         "idx": list(range(10)),
