@@ -2110,24 +2110,24 @@ def array_size(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ArraySize)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="snowflake")
 def bit_and(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "BIT_AND")
+    return Column.invoke_expression_over_column(col, expression.BitwiseAndAgg)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="snowflake")
 def bit_or(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "BIT_OR")
+    return Column.invoke_expression_over_column(col, expression.BitwiseOrAgg)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="snowflake")
 def bit_xor(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "BIT_XOR")
+    return Column.invoke_expression_over_column(col, expression.BitwiseXorAgg)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["postgres", "snowflake"])
 def bit_count(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "BIT_COUNT")
+    return Column.invoke_expression_over_column(col, expression.BitwiseCountAgg)
 
 
 @meta(unsupported_engines="*")
