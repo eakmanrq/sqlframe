@@ -3293,7 +3293,7 @@ def find_in_set(str: ColumnOrName, str_array: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "find_in_set", str_array)
 
 
-@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres"])
 def first_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
     """Returns the first value of `col` for a group of rows. It will return the first non-null
     value it sees when `ignoreNulls` is set to true. If all values are null, then null is returned.
@@ -3959,7 +3959,7 @@ def json_object_keys(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "json_object_keys")
 
 
-@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
+@meta(unsupported_engines="postgres")
 def last_value(col: ColumnOrName, ignoreNulls: t.Optional[t.Union[bool, Column]] = None) -> Column:
     """Returns the last value of `col` for a group of rows. It will return the last non-null
     value it sees when `ignoreNulls` is set to true. If all values are null, then null is returned.
