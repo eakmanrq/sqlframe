@@ -42,7 +42,7 @@ class DataTypeWithLength(DataType):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.length})"
 
-    def __str__(self) -> str:
+    def simpleString(self) -> str:
         return f"{self.typeName()}({self.length})"
 
 
