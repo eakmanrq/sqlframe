@@ -90,3 +90,21 @@ def test_contains(get_session: t.Callable[[], _BaseSession], get_func):
     df_bar_lit = df.select(df.a.contains(lit("bar"))).collect()
     assert df_bar_lit[0][0] is False
     assert df_bar_lit[1][0] is True
+
+
+def test_endswith(get_session: t.Callable[[], _BaseSession], get_func):
+    session = get_session()
+    lit = get_func("lit", session)
+    df = session.createDataFrame([Row(a="abc"), Row(a="def")])
+    df_endswith_c = df.select(df.a.endswith("c")).collect()
+    assert df_endswith_c[0][0] is True
+    assert df_endswith_c[1][0] is False
+    df_endswith_c_lit = df.select(df.a.endswith(lit("c"))).collect()
+    assert df_endswith_c_lit[0][0] is True
+    assert df_endswith_c_lit[1][0] is False
+    df_endswith_f = df.select(df.a.endswith("f")).collect()
+    assert df_endswith_f[0][0] is False
+    assert df_endswith_f[1][0] is True
+    df_endswith_f_lit = df.select(df.a.endswith(lit("f"))).collect()
+    assert df_endswith_f_lit[0][0] is False
+    assert df_endswith_f_lit[1][0] is True

@@ -3754,7 +3754,6 @@ def test_elt(get_session_and_func, get_func):
 
 def test_endswith(get_session_and_func, get_func):
     session, endswith = get_session_and_func("endswith")
-    to_binary = get_func("to_binary", session)
     df = session.createDataFrame(
         [
             (
@@ -3774,6 +3773,7 @@ def test_endswith(get_session_and_func, get_func):
         ],
         ["e", "f"],
     )
+    to_binary = get_func("to_binary", session)
     df = df.select(to_binary("e").alias("e"), to_binary("f").alias("f"))
     assert df.select(endswith("e", "f"), endswith("f", "e")).collect() == [
         Row(value1=True, value2=False)
