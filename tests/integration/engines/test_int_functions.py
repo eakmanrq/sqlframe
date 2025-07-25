@@ -121,6 +121,7 @@ def get_types() -> t.Callable:
         ),
         ({"cola": 1}, {"cola": 1}),
         (Row(**{"cola": 1, "colb": "test"}), Row(**{"cola": 1, "colb": "test"})),
+        (datetime.timedelta(1), datetime.timedelta(1)),
     ],
 )
 def test_lit(get_session_and_func, arg, expected):
@@ -141,6 +142,11 @@ def test_lit(get_session_and_func, arg, expected):
     if isinstance(session, SnowflakeSession):
         if isinstance(arg, Row):
             pytest.skip("Snowflake doesn't support literal row types")
+        if isinstance(arg, datetime.timedelta):
+            pytest.skip("Snowflake doesn't support literal timedelta types")
+    if isinstance(session, DatabricksSession):
+        if isinstance(arg, datetime.timedelta):
+            pytest.skip("Databricks doesn't support literal timedelta types")
     if isinstance(session, DuckDBSession):
         if isinstance(arg, dict):
             expected = Row(**expected)

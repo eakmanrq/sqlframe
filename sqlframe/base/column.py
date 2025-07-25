@@ -222,6 +222,12 @@ class Column:
             else:
                 value = value.astimezone(datetime.timezone.utc).isoformat(sep=" ")
                 return cls(exp.cast(exp.Literal.string(value), exp.DataType.Type.TIMESTAMPTZ))
+        elif isinstance(value, datetime.timedelta):
+            return cls(
+                exp.Interval(
+                    this=exp.Literal.string(int(value.total_seconds())), unit=exp.Var(this="SECOND")
+                )
+            )
         return cls(exp.convert(value))
 
     @classmethod
