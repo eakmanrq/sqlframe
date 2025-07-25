@@ -12,6 +12,7 @@ from collections import defaultdict
 from functools import cached_property
 
 import sqlglot
+from dateutil.relativedelta import relativedelta
 from sqlglot import Dialect, exp
 from sqlglot.dialects.dialect import DialectType, NormalizationStrategy
 from sqlglot.expressions import parse_identifier
@@ -613,6 +614,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             return [cls._to_value(x) for x in value]
         elif isinstance(value, datetime.datetime):
             return value.replace(tzinfo=None)
+        elif isinstance(value, relativedelta):
+            return datetime.timedelta(
+                days=value.days, hours=value.hours, minutes=value.minutes, seconds=value.seconds
+            )
+
         return value
 
     @classmethod
