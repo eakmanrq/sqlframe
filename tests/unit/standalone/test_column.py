@@ -105,7 +105,7 @@ def test_startswith():
 
 
 def test_endswith():
-    assert (F.col("cola").endswith("test")).sql() == "ENDSWITH(cola, 'test')"
+    assert (F.col("cola").endswith("test")).sql() == "ENDSWITH(cola, 'test') AS endswith__cola__"
 
 
 def test_rlike():
