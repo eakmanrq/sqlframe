@@ -14,6 +14,7 @@ from sqlglot.helper import flatten as _flatten
 
 from sqlframe.base.column import Column
 from sqlframe.base.decorators import func_metadata as meta
+from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.util import (
     get_func_from_session,
 )
@@ -81,9 +82,13 @@ def least(*cols: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(cols[0], expression.Least)
 
 
-@meta(unsupported_engines="bigquery")
+@meta()
 def count_distinct(col: ColumnOrName, *cols: ColumnOrName) -> Column:
     columns = [Column.ensure_col(x) for x in [col] + list(cols)]
+    if len(columns) > 1 and _get_session()._is_bigquery:
+        raise UnsupportedOperationError(
+            "BigQuery does not support multiple columns in countDistinct"
+        )
     return Column(
         expression.Count(
             this=expression.Distinct(expressions=[x.column_expression for x in columns])

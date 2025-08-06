@@ -879,7 +879,11 @@ def test_count_distinct(get_session_and_func):
     df1 = session.createDataFrame([1, 1, 3], "int")
     df2 = session.createDataFrame([1, 2], "int")
     df_joined = df1.join(df2)
-    assert df_joined.select(count_distinct(df1.value, df2.value)).collect() == [Row(value=4)]
+    if isinstance(session, BigQuerySession):
+        # BigQuery does not support count_distinct with multiple columns
+        assert df_joined.select(count_distinct(df1.value)).collect() == [Row(value=2)]
+    else:
+        assert df_joined.select(count_distinct(df1.value, df2.value)).collect() == [Row(value=4)]
 
 
 def test_first(get_session_and_func):
