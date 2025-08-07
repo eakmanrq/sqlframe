@@ -2318,6 +2318,14 @@ def array_distinct(col: ColumnOrName) -> Column:
     if session._is_bigquery:
         return array_distinct_bgutil(col)
 
+    if session._is_duckdb:
+        # DuckDB's array_distinct removes nulls, but we need to preserve them
+        # Check if original array contains null and append it back if needed
+        original_col = Column.ensure_col(col)
+        distinct_result = Column.invoke_anonymous_function(col, "ARRAY_DISTINCT")
+        has_null = array_position(original_col, lit(None)) > lit(0)
+        return when(has_null, array_append(distinct_result, lit(None))).otherwise(distinct_result)
+
     return Column.invoke_anonymous_function(col, "ARRAY_DISTINCT")
 
 
