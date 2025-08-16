@@ -110,7 +110,6 @@ class SparkDataFrameReader(
             if schema:
                 format_options["schema"] = f"{schema}"
                 format_options.pop("inferSchema", None)
-            format_options = {key: f"'{val}'" for key, val in format_options.items()}
             format_options_str = to_csv(format_options, " ")
 
             tmp_view = f"CREATE OR REPLACE TEMPORARY VIEW {tmp_view_key} USING {format}" + (

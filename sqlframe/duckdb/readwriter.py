@@ -86,10 +86,7 @@ class DuckDBDataFrameReader(
                 select_column_mapping["filename"] = "VARCHAR"
             select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
             if format == "csv":
-                duckdb_columns = ", ".join(
-                    [f"'{column}': '{dtype}'" for column, dtype in column_mapping.items()]
-                )
-                merged_options["columns"] = "{" + duckdb_columns + "}"
+                merged_options["columns"] = column_mapping  # type: ignore
         else:
             select_columns = [exp.Star()]
         if format == "delta":
