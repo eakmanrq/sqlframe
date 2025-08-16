@@ -20,6 +20,7 @@ def test_employee_extra_line_csv(duckdb_session: DuckDBSession):
         null_padding=True,
         ignore_errors=1,
         auto_detect=False,
+        sep=",",
     )
     assert df.collect() == [
         Row(

@@ -113,9 +113,13 @@ def get_tables_from_expression_with_join(expression: exp.Select) -> t.List[exp.T
 
 
 def to_csv(options: t.Dict[str, OptionalPrimitiveType], equality_char: str = "=") -> str:
-    return ", ".join(
-        [f"{k}{equality_char}{v}" for k, v in (options or {}).items() if v is not None]
-    )
+    results = []
+    for k, v in (options or {}).items():
+        if v is None:
+            continue
+        v = f"'{v}'" if isinstance(v, str) else v
+        results.append(f"{k}{equality_char}{v}")
+    return ", ".join(results)
 
 
 def ensure_column_mapping(schema: t.Union[str, StructType]) -> t.Dict:

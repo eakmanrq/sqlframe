@@ -128,8 +128,6 @@ class DatabricksDataFrameReader(
                 format_options["schema"] = f"{schema}"
             if "inferSchema" in format_options:
                 format_options["inferColumnTypes"] = format_options.pop("inferSchema")
-
-            format_options = {key: f"'{val}'" for key, val in format_options.items()}
             format_options_str = to_csv(format_options, " => ")
 
             from_clause = f"read_files('{paths}', {format_options_str})"
@@ -338,10 +336,7 @@ class DatabricksDataFrameWriter(
         format_options_str = ""
         if format is not None:
             properties.append(exp.FileFormatProperty(this=exp.Var(this=format.upper())))
-            format_options: dict[str, OptionalPrimitiveType] = {
-                key: f"'{val}'" for key, val in options.items() if val is not None
-            }
-            format_options_str = to_csv(format_options, " ")
+            format_options_str = to_csv(options, " ")
 
         if path is not None and isinstance(path, str):
             properties.append(exp.LocationProperty(this=exp.convert(path)))

@@ -461,11 +461,7 @@ class DatabricksCatalog(
             exp.Property(this=sg.to_identifier(name=k), value=exp.convert(value=v))
             for k, v in (table_properties if isinstance(table_properties, dict) else {}).items()
         )
-
-        format_options: dict[str, t.Union[bool, float, int, str, None]] = {
-            key: f"'{val}'" for key, val in options.items() if val is not None
-        }
-        format_options_str = to_csv(format_options, " ")
+        format_options_str = to_csv(options, " ")  # type: ignore
 
         output_expression_container = exp.Create(
             this=exp.Schema(
