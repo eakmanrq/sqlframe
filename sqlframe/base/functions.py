@@ -2572,7 +2572,7 @@ def shuffle(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines="snowflake")
 def reverse(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "REVERSE")
+    return Column.invoke_expression_over_column(col, expression.Reverse)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
@@ -3219,9 +3219,9 @@ def current_user() -> Column:
     return Column.invoke_expression_over_column(None, expression.CurrentUser)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def date_from_unix_date(days: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(days, "date_from_unix_date")
+    return Column.invoke_expression_over_column(days, expression.DateFromUnixDate)
 
 
 @meta(unsupported_engines="*")
@@ -6631,7 +6631,7 @@ def unix_micros(col: ColumnOrName) -> Column:
 
     col = to_timestamp(col)
 
-    return Column.invoke_anonymous_function(col, "unix_micros")
+    return Column.invoke_expression_over_column(col, expression.UnixMicros)
 
 
 @meta()
@@ -6651,15 +6651,10 @@ def unix_millis(col: ColumnOrName) -> Column:
     """
     from sqlframe.base.function_alternatives import unix_millis_multiply_epoch
 
-    if (
-        _get_session()._is_bigquery
-        or _get_session()._is_duckdb
-        or _get_session()._is_postgres
-        or _get_session()._is_snowflake
-    ):
+    if _get_session()._is_duckdb or _get_session()._is_postgres or _get_session()._is_snowflake:
         return unix_millis_multiply_epoch(col)
 
-    return Column.invoke_anonymous_function(col, "unix_millis")
+    return Column.invoke_expression_over_column(col, expression.UnixMillis)
 
 
 @meta()

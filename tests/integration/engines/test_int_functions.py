@@ -3675,9 +3675,10 @@ def test_current_timezone(get_session_and_func, get_func):
 def test_date_from_unix_date(get_session_and_func, get_func):
     session, date_from_unix_date = get_session_and_func("date_from_unix_date")
     lit = get_func("lit", session)
-    assert session.range(1).select(date_from_unix_date(lit(1))).first()[0] == datetime.date(
-        1970, 1, 2
-    )
+    assert session.range(1).select(date_from_unix_date(lit(1))).first()[0] in [
+        datetime.date(1970, 1, 2),
+        datetime.datetime(1970, 1, 2, 0, 0),
+    ]
 
 
 def test_date_part(get_session_and_func, get_func):
