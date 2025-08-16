@@ -17,6 +17,7 @@ def test_invoke_anonymous(name, func):
     # make_interval - SQLGlot doesn't support week
     # to_char - convert to a cast that ignores the format provided
     # ltrim/rtrim - don't seem to convert correctly on some engines
+    # unix_micros - it is actually supported just an engine specific override uses an anonymous function
     ignore_funcs = {
         "array_size",
         "exists",
@@ -26,6 +27,7 @@ def test_invoke_anonymous(name, func):
         "rtrim",
         "ascii",
         "current_schema",
+        "unix_micros",
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
