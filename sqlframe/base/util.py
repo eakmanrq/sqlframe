@@ -524,3 +524,12 @@ def split_filepath(filepath: str) -> tuple[str, str]:
     if len(split_) == 2:  # noqa: PLR2004
         return split_[0] + "://", split_[1]
     return "", split_[0]
+
+
+def is_relativedelta_like(value: t.Any) -> bool:
+    return (
+        hasattr(value, "years")
+        and hasattr(value, "months")
+        and hasattr(value, "weeks")
+        and hasattr(value, "leapdays")
+    )
