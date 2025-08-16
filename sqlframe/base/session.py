@@ -12,7 +12,6 @@ from collections import defaultdict
 from functools import cached_property
 
 import sqlglot
-from dateutil.relativedelta import relativedelta
 from sqlglot import Dialect, exp
 from sqlglot.dialects.dialect import DialectType, NormalizationStrategy
 from sqlglot.expressions import parse_identifier
@@ -34,6 +33,7 @@ from sqlframe.base.table import _BaseTable
 from sqlframe.base.udf import _BaseUDFRegistration
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
+    is_relativedelta_like,
     normalize_string,
     verify_pandas_installed,
 )
@@ -614,7 +614,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             return [cls._to_value(x) for x in value]
         elif isinstance(value, datetime.datetime):
             return value.replace(tzinfo=None)
-        elif isinstance(value, relativedelta):
+        elif is_relativedelta_like(value):
             return datetime.timedelta(
                 days=value.days, hours=value.hours, minutes=value.minutes, seconds=value.seconds
             )
