@@ -1984,7 +1984,7 @@ def initcap(col: ColumnOrName) -> Column:
 
 @meta()
 def soundex(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "SOUNDEX")
+    return Column.invoke_expression_over_column(col, expression.Soundex)
 
 
 @meta(unsupported_engines=["postgres", "snowflake"])
@@ -2053,7 +2053,11 @@ def bit_length(col: ColumnOrName) -> Column:
 
 @meta()
 def translate(srcCol: ColumnOrName, matching: str, replace: str) -> Column:
-    return Column.invoke_anonymous_function(srcCol, "TRANSLATE", lit(matching), lit(replace))
+    return Column.invoke_expression_over_column(
+        srcCol,
+        expression.Translate,
+        **{"from": lit(matching).column_expression, "to": lit(replace).column_expression},
+    )
 
 
 @meta()
@@ -3380,7 +3384,7 @@ def get_active_spark_context() -> SparkContext:
     return session.spark_session.sparkContext
 
 
-@meta(unsupported_engines="*")
+@meta()
 def grouping(col: ColumnOrName) -> Column:
     """
     Aggregate function: indicates whether a specified column in a GROUP BY list is aggregated
@@ -3413,7 +3417,7 @@ def grouping(col: ColumnOrName) -> Column:
     |  Bob|             0|       5|
     +-----+--------------+--------+
     """
-    return Column.invoke_anonymous_function(col, "grouping")
+    return Column(expression.Grouping(expressions=[Column.ensure_col(col).column_expression]))
 
 
 @meta(unsupported_engines="*")
