@@ -179,7 +179,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         return self._table(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
-        if _BaseSession._instance is None:
+        if _BaseSession._instance is None or not isinstance(_BaseSession._instance, cls):
             _BaseSession._instance = super().__new__(cls)
         return _BaseSession._instance
 
@@ -193,6 +193,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def getActiveSession(self) -> Self:
         return self
+
+    def stop(self) -> None:
+        if connection := getattr(self, "_connection", None):
+            connection.close()
+        _BaseSession._instance = None
 
     def range(
         self,
