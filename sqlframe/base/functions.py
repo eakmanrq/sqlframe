@@ -6344,7 +6344,7 @@ def to_unix_timestamp(
     session = _get_session()
 
     if session._is_duckdb:
-        format = format or _BaseSession().default_time_format
+        format = format or session.default_time_format
         timestamp = Column.ensure_col(timestamp).cast("string")
 
     if format is not None:
