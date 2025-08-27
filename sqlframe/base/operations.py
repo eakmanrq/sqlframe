@@ -27,9 +27,10 @@ class Operation(IntEnum):
     WHERE = 2
     GROUP_BY = 3
     HAVING = 4
-    SELECT = 5
-    ORDER_BY = 6
-    LIMIT = 7
+    SELECT_CONSTRAINED = 5
+    SELECT = 6
+    ORDER_BY = 7
+    LIMIT = 8
 
 
 # We want to decorate a function (self: DF, *args, **kwargs) -> T

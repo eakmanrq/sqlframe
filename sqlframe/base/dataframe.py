@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 import sqlglot
+from more_itertools import partition
 from prettytable import PrettyTable
 from sqlglot import Dialect, maybe_parse
 from sqlglot import expressions as exp
@@ -31,6 +32,7 @@ from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
     normalize_string,
+    partition_to,
     quote_preserving_alias_or_name,
     sqlglot_to_spark,
     verify_openai_installed,
@@ -541,15 +543,22 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return expression
 
     @classmethod
+    def _get_outer_select_expressions(
+        cls, item: exp.Expression
+    ) -> t.List[t.Union[exp.Column, exp.Alias]]:
+        outer_select = item.find(exp.Select)
+        if outer_select:
+            return outer_select.expressions
+        return []
+
+    @classmethod
     def _get_outer_select_columns(cls, item: exp.Expression) -> t.List[Column]:
         from sqlframe.base.session import _BaseSession
 
         col = get_func_from_session("col", _BaseSession())
 
-        outer_select = item.find(exp.Select)
-        if outer_select:
-            return [col(quote_preserving_alias_or_name(x)) for x in outer_select.expressions]
-        return []
+        outer_expressions = cls._get_outer_select_expressions(item)
+        return [col(quote_preserving_alias_or_name(x)) for x in outer_expressions]
 
     def _create_hash_from_expression(self, expression: exp.Expression) -> str:
         from sqlframe.base.session import _BaseSession
@@ -1503,20 +1512,23 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         """
         return func(self, *args, **kwargs)  # type: ignore
 
-    @operation(Operation.SELECT)
+    @operation(Operation.SELECT_CONSTRAINED)
     def withColumn(self, colName: str, col: Column) -> Self:
         return self.withColumns.__wrapped__(self, {colName: col})  # type: ignore
 
-    @operation(Operation.SELECT)
+    @operation(Operation.SELECT_CONSTRAINED)
     def withColumnRenamed(self, existing: str, new: str) -> Self:
+        col_func = get_func_from_session("col", self.session)
         expression = self.expression.copy()
         existing = self.session._normalize_string(existing)
-        columns = self._get_outer_select_columns(expression)
+        outer_expressions = self._get_outer_select_expressions(expression)
         results = []
         found_match = False
-        for column in columns:
-            if column.alias_or_name == existing:
-                column = column.alias(new)
+        for expr in outer_expressions:
+            column = col_func(expr.copy())
+            if existing == quote_preserving_alias_or_name(expr):
+                if isinstance(column.expression, exp.Alias):
+                    column.expression.set("alias", exp.to_identifier(new))
                 self._update_display_name_mapping([column], [new])
                 found_match = True
             results.append(column)
@@ -1524,7 +1536,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             raise ValueError("Tried to rename a column that doesn't exist")
         return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
 
-    @operation(Operation.SELECT)
+    @operation(Operation.SELECT_CONSTRAINED)
     def withColumnsRenamed(self, colsMap: t.Dict[str, str]) -> Self:
         """
         Returns a new :class:`DataFrame` by renaming multiple columns. If a non-existing column is
@@ -1570,7 +1582,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
 
-    @operation(Operation.SELECT)
+    @operation(Operation.SELECT_CONSTRAINED)
     def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
         """
         Returns a new :class:`DataFrame` by adding multiple columns or replacing the
@@ -1608,13 +1620,14 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         """
         if len(colsMap) != 1:
             raise ValueError("Only a single map is supported")
+        col_func = get_func_from_session("col")
         col_map = {
             self._ensure_and_normalize_col(k): (self._ensure_and_normalize_col(v), k)
             for k, v in colsMap[0].items()
         }
-        existing_cols = self._get_outer_select_columns(self.expression)
-        existing_col_names = [x.alias_or_name for x in existing_cols]
-        select_columns = existing_cols
+        existing_expr = self._get_outer_select_expressions(self.expression)
+        existing_col_names = [x.alias_or_name for x in existing_expr]
+        select_columns = [col_func(x) for x in existing_expr]
         for col, (col_value, display_name) in col_map.items():
             column_name = col.alias_or_name
             existing_col_index = (
@@ -1631,16 +1644,32 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         )
         return self.select.__wrapped__(self, *select_columns, skip_update_display_name_mapping=True)  # type: ignore
 
-    @operation(Operation.SELECT)
+    @operation(Operation.SELECT_CONSTRAINED)
     def drop(self, *cols: t.Union[str, Column]) -> Self:
-        all_columns = self._get_outer_select_columns(self.expression)
-        drop_cols = self._ensure_and_normalize_cols(cols)
-        new_columns = [
-            col
-            for col in all_columns
-            if col.alias_or_name not in [drop_column.alias_or_name for drop_column in drop_cols]
-        ]
-        return self.copy().select(*new_columns, append=False)
+        # Separate string column names from Column objects for different handling
+        column_objs, column_names = partition_to(lambda x: isinstance(x, str), cols, list, set)
+
+        # Normalize only the Column objects (strings will be handled as unqualified)
+        drop_cols = self._ensure_and_normalize_cols(column_objs) if column_objs else []
+
+        # Work directly with the expression's select columns to preserve table qualifiers
+        current_expressions = self.expression.expressions
+        drop_sql = {drop_col.expression.sql() for drop_col in drop_cols}
+
+        # Create a more sophisticated matching function that considers table qualifiers
+        def should_drop_expression(expr: exp.Expression) -> bool:
+            # Check against fully qualified Column objects and
+            # Check against unqualified string column names (drop ALL columns with this name)
+            if expr.sql() in drop_sql or (
+                isinstance(expr, exp.Column) and expr.alias_or_name in column_names
+            ):
+                return True
+            return False
+
+        new_expressions = [expr for expr in current_expressions if not should_drop_expression(expr)]
+        return self.select.__wrapped__(  # type: ignore
+            self, *new_expressions, skip_update_display_name_mapping=True
+        )
 
     @operation(Operation.LIMIT)
     def limit(self, num: int) -> Self:
