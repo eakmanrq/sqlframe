@@ -1502,10 +1502,14 @@ def test_from_unixtime(get_session_and_func):
     assert df.select(from_unixtime("unix_time").alias("ts")).first()[0] == expected
 
 
-def test_unix_timestamp(get_session_and_func):
+def test_unix_timestamp(get_session_and_func, get_func):
     session, unix_timestamp = get_session_and_func("unix_timestamp")
     df = session.createDataFrame([("2015-04-08",)], ["dt"])
     result = df.select(unix_timestamp("dt", "yyyy-MM-dd").alias("unix_time")).first()[0]
+    assert result == 1428451200
+    ts_type = "TIMESTAMP" if isinstance(session, PySparkSession) else "TIMESTAMPNTZ"
+    df = session.createDataFrame([(datetime.datetime(2015, 4, 8),)], schema=f"ts {ts_type}")
+    result = df.select(unix_timestamp("ts").alias("unix_time")).first()[0]
     assert result == 1428451200
 
 
@@ -5003,6 +5007,12 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
     else:
         df = session.createDataFrame([("2016-04-08",)], ["e"])
         assert df.select(to_unix_timestamp(df.e).alias("r")).collect() == [Row(r=None)]
+    ts_type = "TIMESTAMP" if isinstance(session, PySparkSession) else "TIMESTAMPNTZ"
+    df = session.createDataFrame([(datetime.datetime(2015, 4, 8),)], schema=f"ts {ts_type}")
+    result = df.select(
+        to_unix_timestamp("ts", lit("yyyy-MM-dd HH:mm:ss")).alias("unix_time")
+    ).first()[0]
+    assert result == 1428451200
 
 
 def test_to_varchar(get_session_and_func, get_func):

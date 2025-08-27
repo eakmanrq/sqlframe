@@ -1450,6 +1450,9 @@ def unix_timestamp(
 
     session = _get_session()
 
+    if session._is_duckdb or session._is_postgres or session._is_snowflake or session._is_bigquery:
+        timestamp = Column.ensure_col(timestamp).cast("string")
+
     if session._is_bigquery:
         return unix_timestamp_bgutil(timestamp, format)
 
@@ -6342,6 +6345,7 @@ def to_unix_timestamp(
 
     if session._is_duckdb:
         format = format or _BaseSession().default_time_format
+        timestamp = Column.ensure_col(timestamp).cast("string")
 
     if format is not None:
         return Column.invoke_expression_over_column(
