@@ -6,7 +6,6 @@ import string
 import typing as t
 import unicodedata
 
-from more_itertools import partition
 from sqlglot import expressions as exp
 from sqlglot import parse_one, to_table
 from sqlglot.dialects import DuckDB
@@ -538,17 +537,3 @@ def is_relativedelta_like(value: t.Any) -> bool:
         and hasattr(value, "weeks")
         and hasattr(value, "leapdays")
     )
-
-
-T = t.TypeVar("T")
-R1 = t.TypeVar("R1")
-R2 = t.TypeVar("R2")
-
-
-def partition_to(
-    pred: t.Callable[[T], bool],
-    iterable: t.Iterable[T],
-    result1: t.Type[R1],
-    result2: t.Type[R2],
-) -> tuple[R1, R2]:
-    return (lambda x, y: (result1(x), result2(y)))(*partition(pred, iterable))  # type: ignore

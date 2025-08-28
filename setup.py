@@ -22,7 +22,6 @@ setup(
         "prettytable<4",
         "sqlglot>=24.0.0,<27.10",
         "typing_extensions",
-        "more-itertools",
     ],
     extras_require={
         "bigquery": [
