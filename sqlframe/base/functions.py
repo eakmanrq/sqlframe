@@ -37,9 +37,7 @@ def _get_session() -> _BaseSession:
 
 @meta()
 def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
-    from sqlframe.base.session import _BaseSession
-
-    dialect = _BaseSession().input_dialect
+    dialect = _get_session().input_dialect
     if isinstance(column_name, str):
         col_expression = expression.to_column(column_name, dialect=dialect).transform(
             dialect.normalize_identifier
@@ -662,9 +660,7 @@ def grouping_id(*cols: ColumnOrName) -> Column:
 
 @meta()
 def input_file_name() -> Column:
-    from sqlframe.base.session import _BaseSession
-
-    return Column(expression.Literal.string(_BaseSession()._last_loaded_file or ""))
+    return Column(expression.Literal.string(_get_session()._last_loaded_file or ""))
 
 
 @meta()
@@ -959,12 +955,10 @@ def current_timestamp() -> Column:
 
 @meta()
 def date_format(col: ColumnOrName, format: str) -> Column:
-    from sqlframe.base.session import _BaseSession
-
     return Column.invoke_expression_over_column(
         Column(expression.TimeStrToTime(this=Column.ensure_col(col).column_expression)),
         expression.TimeToStr,
-        format=_BaseSession().format_time(format),
+        format=_get_session().format_time(format),
     )
 
 
@@ -3378,10 +3372,9 @@ def get(col: ColumnOrName, index: t.Union[ColumnOrName, int]) -> Column:
 def get_active_spark_context() -> SparkContext:
     """Raise RuntimeError if SparkContext is not initialized,
     otherwise, returns the active SparkContext."""
-    from sqlframe.base.session import _BaseSession
     from sqlframe.spark.session import SparkSession
 
-    session: _BaseSession = _BaseSession()
+    session = _get_session()
     if not isinstance(session, SparkSession):
         raise RuntimeError("This function is only available in SparkSession.")
     return session.spark_session.sparkContext
