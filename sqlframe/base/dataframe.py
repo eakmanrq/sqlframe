@@ -31,6 +31,7 @@ from sqlframe.base.util import (
     get_func_from_session,
     get_tables_from_expression_with_join,
     normalize_string,
+    partition_to,
     quote_preserving_alias_or_name,
     sqlglot_to_spark,
     verify_openai_installed,
@@ -1633,14 +1634,30 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.SELECT)
     def drop(self, *cols: t.Union[str, Column]) -> Self:
-        all_columns = self._get_outer_select_columns(self.expression)
-        drop_cols = self._ensure_and_normalize_cols(cols)
-        new_columns = [
-            col
-            for col in all_columns
-            if col.alias_or_name not in [drop_column.alias_or_name for drop_column in drop_cols]
-        ]
-        return self.copy().select(*new_columns, append=False)
+        # Separate string column names from Column objects for different handling
+        column_objs, column_names = partition_to(lambda x: isinstance(x, str), cols, list, set)
+
+        # Normalize only the Column objects (strings will be handled as unqualified)
+        drop_cols = self._ensure_and_normalize_cols(column_objs) if column_objs else []
+
+        # Work directly with the expression's select columns to preserve table qualifiers
+        current_expressions = self.expression.expressions
+        drop_sql = {drop_col.expression.sql() for drop_col in drop_cols}
+
+        # Create a more sophisticated matching function that considers table qualifiers
+        def should_drop_expression(expr: exp.Expression) -> bool:
+            # Check against fully qualified Column objects and
+            # Check against unqualified string column names (drop ALL columns with this name)
+            if expr.sql() in drop_sql or (
+                isinstance(expr, exp.Column) and expr.alias_or_name in column_names
+            ):
+                return True
+            return False
+
+        new_expressions = [expr for expr in current_expressions if not should_drop_expression(expr)]
+        return self.select.__wrapped__(  # type: ignore
+            self, *new_expressions, skip_update_display_name_mapping=True
+        )
 
     @operation(Operation.LIMIT)
     def limit(self, num: int) -> Self:
