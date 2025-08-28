@@ -27,10 +27,9 @@ class Operation(IntEnum):
     WHERE = 2
     GROUP_BY = 3
     HAVING = 4
-    SELECT_CONSTRAINED = 5
-    SELECT = 6
-    ORDER_BY = 7
-    LIMIT = 8
+    SELECT = 5
+    ORDER_BY = 6
+    LIMIT = 7
 
 
 # We want to decorate a function (self: DF, *args, **kwargs) -> T
@@ -65,7 +64,7 @@ def operation(
                 self.last_op = Operation.NO_OP
             last_op = self.last_op
             new_op = op if op != Operation.NO_OP else last_op
-            if new_op < last_op or (last_op == new_op == Operation.SELECT):
+            if new_op < last_op:
                 self = self._convert_leaf_to_cte()
             df = func(self, *args, **kwargs)
             df.last_op = new_op

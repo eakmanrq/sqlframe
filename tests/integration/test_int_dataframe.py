@@ -2780,3 +2780,27 @@ def test_alias_group_by_column(
     dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/483
+def test_with_column_select(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    data = {
+        "a": [1, None, 2, None, 4, 6, 11],
+        "b": [1, None, 2, 3, 4, 5, 6],
+        "i": list(range(7)),
+    }
+    data = [{key: data[key][i] for key in data.keys()} for i in range(len(data["a"]))]  # type: ignore
+
+    df = pyspark_employee.sparkSession.createDataFrame(data)  # type: ignore
+    window = Window().orderBy(F.col("b").asc_nulls_first()).rowsBetween(-1, 0)
+    df = df.withColumns({"a": F.sum("a").over(window)}).select("a", "i").sort("i")
+
+    dfs = get_df("employee").sparkSession.createDataFrame(data)
+    window = SWindow().orderBy(SF.col("b").asc_nulls_first()).rowsBetween(-1, 0)  # type: ignore
+    dfs = dfs.withColumns({"a": SF.sum("a").over(window)}).select("a", "i").sort("i")  # type: ignore
+
+    compare_frames(df, dfs)

@@ -16,7 +16,7 @@ if t.TYPE_CHECKING:
 pytest_plugins = ["tests.integration.fixtures"]
 
 
-def test_columnt_eq_null_safe(get_session: t.Callable[[], _BaseSession], get_func):
+def test_column_eq_null_safe(get_session: t.Callable[[], _BaseSession], get_func):
     session = get_session()
     df1 = session.createDataFrame([Row(id=1, value="foo"), Row(id=2, value=None)])
     lit = get_func("lit", session)
