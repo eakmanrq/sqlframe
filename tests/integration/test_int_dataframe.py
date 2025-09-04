@@ -2689,3 +2689,91 @@ def test_alias_group_by_column(
     dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_alias_multiple_joins(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+    is_duckdb: t.Callable,
+):
+    if not is_duckdb():
+        pytest.skip("This test only works on DuckDB due to ambiguous columns")
+    type_df = pyspark_employee.sparkSession.createDataFrame(
+        pd.DataFrame(
+            {
+                "TYPE_ID": [1, 2, 3, 4, 5],
+                "STATUS": [1, 2, 3, 1, 3],
+                "name": ["Type1", "Type2", "Type3", "Type4", "Type5"],
+            }
+        )
+    )
+    item_df = pyspark_employee.sparkSession.createDataFrame(
+        pd.DataFrame(
+            {
+                "ITEM_ID": [10, 20, 30, 40, 50],
+                "ITEM_TYPE_REF": [1, 2, 3, 4, 5],
+                "NAME": ["Item1", "Item2", "Item3", "Item4", "Item5"],
+            }
+        )
+    )
+
+    intermediate = (
+        item_df.alias("i")
+        .join(type_df.alias("t"), F.col("i.ITEM_TYPE_REF") == F.col("t.TYPE_ID"))
+        .where(F.col("t.STATUS") == 3)
+    )
+
+    main_df = (
+        item_df.alias("main")
+        .join(type_df.alias("t"), F.col("main.ITEM_TYPE_REF") == F.col("t.TYPE_ID"))
+        .join(
+            intermediate.alias("i"),
+            F.col("main.ITEM_ID") == F.col("i.ITEM_ID"),
+            "left",
+        )
+        .select(F.col("main.ITEM_ID"), F.col("t.STATUS"))
+        .where(F.col("t.STATUS") == 3)
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    type_dfs = session.createDataFrame(
+        pd.DataFrame(
+            {
+                "TYPE_ID": [1, 2, 3, 4, 5],
+                "STATUS": [1, 2, 3, 1, 3],
+                "name": ["Type1", "Type2", "Type3", "Type4", "Type5"],
+            }
+        )
+    )
+    item_dfs = session.createDataFrame(
+        pd.DataFrame(
+            {
+                "ITEM_ID": [10, 20, 30, 40, 50],
+                "ITEM_TYPE_REF": [1, 2, 3, 4, 5],
+                "NAME": ["Item1", "Item2", "Item3", "Item4", "Item5"],
+            }
+        )
+    )
+
+    dfs_intermediate = (
+        item_dfs.alias("i")
+        .join(type_dfs.alias("t"), SF.col("i.ITEM_TYPE_REF") == SF.col("t.TYPE_ID"))
+        .where(SF.col("t.STATUS") == 3)
+    )
+
+    main_dfs = (
+        item_dfs.alias("main")
+        .join(type_dfs.alias("t"), SF.col("main.ITEM_TYPE_REF") == SF.col("t.TYPE_ID"))
+        .join(
+            dfs_intermediate.alias("i"),
+            SF.col("main.ITEM_ID") == SF.col("i.ITEM_ID"),
+            "left",
+        )
+        .select(SF.col("main.ITEM_ID"), SF.col("t.STATUS"))
+        .where(SF.col("STATUS") == 3)
+    )
+
+    compare_frames(main_df, main_dfs, compare_schema=False, sort=True)
