@@ -940,7 +940,7 @@ def nth_value(
 
 @meta()
 def ntile(n: int) -> Column:
-    return Column.invoke_anonymous_function(None, "NTILE", lit(n))
+    return Column.invoke_expression_over_column(lit(n), expression.Ntile)
 
 
 @meta()
@@ -5256,7 +5256,7 @@ def regexp_extract_all(
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["duckdb", "bigquery", "postgres", "snowflake"])
 def regexp_instr(
     str: ColumnOrName, regexp: ColumnOrName, idx: t.Optional[t.Union[int, Column]] = None
 ) -> Column:
@@ -5291,11 +5291,9 @@ def regexp_instr(
     >>> df.select(regexp_instr('str', col("regexp")).alias('d')).collect()
     [Row(d=1)]
     """
-    if idx is None:
-        return Column.invoke_anonymous_function(str, "regexp_instr", regexp)
-    else:
-        idx = lit(idx) if isinstance(idx, int) else idx
-        return Column.invoke_anonymous_function(str, "regexp_instr", regexp, idx)
+    return Column.invoke_expression_over_column(
+        str, expression.RegexpInstr, expression=regexp, group=idx
+    )
 
 
 @meta(unsupported_engines="snowflake")
