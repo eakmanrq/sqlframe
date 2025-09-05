@@ -190,27 +190,27 @@ sum_distinct = sumDistinct
 
 @meta()
 def acos(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ACOS")
+    return Column.invoke_expression_over_column(col, expression.Acos)
 
 
 @meta(unsupported_engines="duckdb")
 def acosh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ACOSH")
+    return Column.invoke_expression_over_column(col, expression.Acosh)
 
 
 @meta()
 def asin(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ASIN")
+    return Column.invoke_expression_over_column(col, expression.Asin)
 
 
 @meta(unsupported_engines="duckdb")
 def asinh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ASINH")
+    return Column.invoke_expression_over_column(col, expression.Asinh)
 
 
 @meta()
 def atan(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ATAN")
+    return Column.invoke_expression_over_column(col, expression.Atan)
 
 
 @meta()
@@ -218,12 +218,12 @@ def atan2(col1: t.Union[ColumnOrName, float], col2: t.Union[ColumnOrName, float]
     col1_value = lit(col1) if isinstance(col1, (int, float)) else col1
     col2_value = lit(col2) if isinstance(col2, (int, float)) else col2
 
-    return Column.invoke_anonymous_function(col1_value, "ATAN2", col2_value)
+    return Column.invoke_expression_over_column(col1_value, expression.Atan2, expression=col2_value)
 
 
 @meta(unsupported_engines="duckdb")
 def atanh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "ATANH")
+    return Column.invoke_expression_over_column(col, expression.Atanh)
 
 
 @meta()
@@ -251,12 +251,12 @@ def cosh(col: ColumnOrName) -> Column:
 
 @meta()
 def cot(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "COT")
+    return Column.invoke_expression_over_column(col, expression.Cot)
 
 
 @meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def csc(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "CSC")
+    return Column.invoke_expression_over_column(col, expression.Csc)
 
 
 @meta()
@@ -362,7 +362,7 @@ def rint(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def sec(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "SEC")
+    return Column.invoke_expression_over_column(col, expression.Sec)
 
 
 @meta()
@@ -372,12 +372,12 @@ def signum(col: ColumnOrName) -> Column:
 
 @meta()
 def sin(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "SIN")
+    return Column.invoke_expression_over_column(col, expression.Sin)
 
 
 @meta(unsupported_engines="duckdb")
 def sinh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "SINH")
+    return Column.invoke_expression_over_column(col, expression.Sinh)
 
 
 @meta()
@@ -2826,7 +2826,7 @@ def make_interval(
 
 @meta(unsupported_engines="*")
 def try_add(left: ColumnOrName, right: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(left, "TRY_ADD", right)
+    return Column.invoke_expression_over_column(left, expression.SafeAdd, expression=right)
 
 
 @meta(unsupported_engines="*")
@@ -2843,12 +2843,12 @@ def try_divide(left: ColumnOrName, right: ColumnOrName) -> Column:
 
 @meta(unsupported_engines="*")
 def try_multiply(left: ColumnOrName, right: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(left, "TRY_MULTIPLY", right)
+    return Column.invoke_expression_over_column(left, expression.SafeMultiply, expression=right)
 
 
 @meta(unsupported_engines="*")
 def try_subtract(left: ColumnOrName, right: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(left, "TRY_SUBTRACT", right)
+    return Column.invoke_expression_over_column(left, expression.SafeSubtract, expression=right)
 
 
 @meta(unsupported_engines="*")
