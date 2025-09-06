@@ -730,6 +730,14 @@ def get_func() -> t.Callable[[str, t.Union[_BaseSession, PySparkSession]], t.Cal
 
 
 @pytest.fixture
+def is_standalone(request: FixtureRequest) -> t.Callable:
+    def _is_standalone() -> bool:
+        return request.node.name.endswith("[standalone]")
+
+    return _is_standalone
+
+
+@pytest.fixture
 def is_duckdb(request: FixtureRequest) -> t.Callable:
     def _is_duckdb() -> bool:
         return request.node.name.endswith("[duckdb]")
