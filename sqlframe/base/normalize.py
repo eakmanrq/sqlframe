@@ -16,19 +16,39 @@ if t.TYPE_CHECKING:
     NORMALIZE_INPUT = t.TypeVar("NORMALIZE_INPUT", bound=t.Union[str, exp.Expression, Column])
 
 
-def normalize(session: SESSION, expression_context: exp.Select, expr: t.List[NORMALIZE_INPUT]):
+def normalize(
+    session: SESSION,
+    expression_context: exp.Select,
+    expr: t.List[NORMALIZE_INPUT],
+    *,
+    remove_identifier_if_possible: bool = True,
+):
     expr = ensure_list(expr)
     expressions = _ensure_expressions(expr)
     for expression in expressions:
         identifiers = expression.find_all(exp.Identifier)
         for identifier in identifiers:
             identifier.transform(session.input_dialect.normalize_identifier)
-            replace_alias_name_with_cte_name(session, expression_context, identifier)
-            replace_branch_and_sequence_ids_with_cte_name(session, expression_context, identifier)
+            replace_alias_name_with_cte_name(
+                session,
+                expression_context,
+                identifier,
+                remove_identifier_if_possible=remove_identifier_if_possible,
+            )
+            replace_branch_and_sequence_ids_with_cte_name(
+                session,
+                expression_context,
+                identifier,
+                remove_identifier_if_possible=remove_identifier_if_possible,
+            )
 
 
 def replace_alias_name_with_cte_name(
-    session: SESSION, expression_context: exp.Select, id: exp.Identifier
+    session: SESSION,
+    expression_context: exp.Select,
+    id: exp.Identifier,
+    *,
+    remove_identifier_if_possible: bool,
 ):
     normalized_id = session._normalize_string(id.alias_or_name)
     if normalized_id in session.name_to_sequence_id_mapping:
@@ -46,10 +66,52 @@ def replace_alias_name_with_cte_name(
             if cte.args["sequence_id"] in session.name_to_sequence_id_mapping[normalized_id]:
                 _set_alias_name(id, cte.alias_or_name)
                 break
+        else:
+            # Fallback: If not found in filtered CTEs, search through ALL CTEs unfiltered
+            for cte in reversed(expression_context.ctes):
+                if cte.args["sequence_id"] in session.name_to_sequence_id_mapping[normalized_id]:
+                    _set_alias_name(id, cte.alias_or_name)
+                    break
+            else:
+                # Final fallback: If this is a qualified column reference (table.column)
+                # and the table doesn't exist in FROM clause, remove the qualifier IF the column is unambiguously available
+                parent = id.parent
+                if parent and isinstance(parent, exp.Column) and remove_identifier_if_possible:
+                    # Check if this table is not available in current context
+                    current_tables = get_cte_names_from_from_clause(expression_context)
+                    if normalized_id not in current_tables:
+                        # Check if this table ID matches any CTE name directly (cross-context CTE reference)
+                        cte_exists = any(
+                            cte.alias_or_name == normalized_id for cte in expression_context.ctes
+                        )
+
+                        if cte_exists:
+                            # This is a reference to a CTE that exists but is not in the current FROM clause
+                            # Get the column name being referenced
+                            column_name = (
+                                _extract_column_name(parent.this)
+                                if hasattr(parent, "this")
+                                else None
+                            )
+
+                            # Only remove qualifier if the column is unambiguously available in current context
+                            if column_name and is_column_unambiguously_available(
+                                expression_context, column_name
+                            ):
+                                parent.set("table", None)
+                            elif column_name and _is_safe_to_remove_qualifier(
+                                expression_context, column_name
+                            ):
+                                # More aggressive fallback for edge cases
+                                parent.set("table", None)
 
 
 def replace_branch_and_sequence_ids_with_cte_name(
-    session: SESSION, expression_context: exp.Select, id: exp.Identifier
+    session: SESSION,
+    expression_context: exp.Select,
+    id: exp.Identifier,
+    *,
+    remove_identifier_if_possible: bool,
 ):
     normalized_id = session._normalize_string(id.alias_or_name)
     if normalized_id in session.known_ids:
@@ -90,6 +152,119 @@ def replace_branch_and_sequence_ids_with_cte_name(
             if normalized_id in (cte.args["branch_id"], cte.args["sequence_id"]):
                 _set_alias_name(id, cte.alias_or_name)
                 return
+
+        # Fallback: If not found in filtered CTEs, search through ALL CTEs unfiltered
+        for cte in reversed(expression_context.ctes):
+            if normalized_id in (cte.args["branch_id"], cte.args["sequence_id"]):
+                _set_alias_name(id, cte.alias_or_name)
+                return
+
+    # Final fallback: If this is a qualified column reference (table.column)
+    # and the table doesn't exist in FROM clause, remove the qualifier IF the column is unambiguously available
+    parent = id.parent
+    if parent and isinstance(parent, exp.Column) and remove_identifier_if_possible:
+        # Check if this table is not available in current context
+        current_tables = get_cte_names_from_from_clause(expression_context)
+        if normalized_id not in current_tables:
+            # Check if this table ID matches any CTE name directly (cross-context CTE reference)
+            cte_exists = any(cte.alias_or_name == normalized_id for cte in expression_context.ctes)
+
+            if cte_exists:
+                # This is a reference to a CTE that exists but is not in the current FROM clause
+                # Get the column name being referenced
+                column_name = _extract_column_name(parent.this) if hasattr(parent, "this") else None
+
+                # Only remove qualifier if the column is unambiguously available in current context
+                if column_name and is_column_unambiguously_available(
+                    expression_context, column_name
+                ):
+                    parent.set("table", None)
+                elif column_name and _is_safe_to_remove_qualifier(expression_context, column_name):
+                    # More aggressive fallback for edge cases
+                    parent.set("table", None)
+
+
+def is_column_unambiguously_available(expression_context: exp.Select, column_name: str) -> bool:
+    """
+    Check if a column name is unambiguously available in the current context.
+    Returns True if the column appears exactly once across all accessible CTEs.
+
+    Enhanced to handle more column expression types and edge cases.
+    """
+    current_tables = get_cte_names_from_from_clause(expression_context)
+    column_count_in_from = 0
+
+    # If no tables in FROM clause, be conservative
+    if not current_tables:
+        return False
+
+    # Count how many times this column appears in accessible CTEs
+    for cte in expression_context.ctes:
+        if cte.alias_or_name in current_tables:
+            if hasattr(cte, "this") and hasattr(cte.this, "expressions"):
+                for expr in cte.this.expressions:
+                    expr_column_name = _extract_column_name(expr)
+
+                    # Case-insensitive comparison for robustness
+                    if expr_column_name and expr_column_name.lower() == column_name.lower():
+                        column_count_in_from += 1
+
+    # Column is unambiguous if it appears exactly once in the FROM clause CTEs
+    return column_count_in_from == 1
+
+
+def _extract_column_name(expr) -> str:
+    """
+    Extract column name from various expression types.
+    Enhanced to handle more SQLGlot expression types.
+    """
+    if hasattr(expr, "alias_or_name") and expr.alias_or_name:
+        return expr.alias_or_name
+    elif hasattr(expr, "this"):
+        if hasattr(expr.this, "this"):
+            return str(expr.this.this)
+        elif hasattr(expr.this, "name"):
+            return str(expr.this.name)
+        else:
+            return str(expr.this)
+    elif hasattr(expr, "name"):
+        return str(expr.name)
+    else:
+        return str(expr)
+
+
+def _is_safe_to_remove_qualifier(expression_context: exp.Select, column_name: str) -> bool:
+    """
+    More aggressive but still safe check for whether it's safe to remove a table qualifier.
+
+    This is used as a fallback when the strict unambiguous check fails, but we still want
+    to handle edge cases that might cause SQLGlot optimizer errors.
+    """
+    current_tables = get_cte_names_from_from_clause(expression_context)
+
+    # If no tables in FROM clause, don't remove qualifier
+    if not current_tables:
+        return False
+
+    # If only one table in FROM clause, it's generally safe to remove qualifier
+    if len(current_tables) == 1:
+        return True
+
+    # For multiple tables, be more conservative but allow for common patterns
+    # Check if the column name appears in any of the FROM clause tables
+    column_found_in_from = False
+    for cte in expression_context.ctes:
+        if cte.alias_or_name in current_tables:
+            if hasattr(cte, "this") and hasattr(cte.this, "expressions"):
+                for expr in cte.this.expressions:
+                    expr_column_name = _extract_column_name(expr)
+                    if expr_column_name and expr_column_name.lower() == column_name.lower():
+                        column_found_in_from = True
+                        break
+
+    # Only remove qualifier if we found the column in the FROM clause tables
+    # This is more aggressive than the unambiguous check, but still reasonably safe
+    return column_found_in_from
 
 
 def get_cte_names_from_from_clause(expression_context: exp.Select) -> t.Set[str]:

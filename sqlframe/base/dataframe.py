@@ -396,12 +396,21 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return Column.ensure_cols(ensure_list(cols))  # type: ignore
 
     def _ensure_and_normalize_cols(
-        self, cols, expression: t.Optional[exp.Select] = None, skip_star_expansion: bool = False
+        self,
+        cols,
+        expression: t.Optional[exp.Select] = None,
+        skip_star_expansion: bool = False,
+        remove_identifier_if_possible: bool = True,
     ) -> t.List[Column]:
         from sqlframe.base.normalize import normalize
 
         cols = self._ensure_list_of_columns(cols)
-        normalize(self.session, expression or self.expression, cols)
+        normalize(
+            self.session,
+            expression or self.expression,
+            cols,
+            remove_identifier_if_possible=remove_identifier_if_possible,
+        )
         if not skip_star_expansion:
             cols = list(flatten([self._expand_star(col) for col in cols]))
         self._resolve_ambiguous_columns(cols)
@@ -1017,9 +1026,17 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return join_column_pairs, join_clause
 
     def _normalize_join_clause(
-        self, join_columns: t.List[Column], join_expression: t.Optional[exp.Select]
+        self,
+        join_columns: t.List[Column],
+        join_expression: t.Optional[exp.Select],
+        *,
+        remove_identifier_if_possible: bool = True,
     ) -> Column:
-        join_columns = self._ensure_and_normalize_cols(join_columns, join_expression)
+        join_columns = self._ensure_and_normalize_cols(
+            join_columns,
+            join_expression,
+            remove_identifier_if_possible=remove_identifier_if_possible,
+        )
         if len(join_columns) > 1:
             join_columns = [functools.reduce(lambda x, y: x & y, join_columns)]
         join_clause = join_columns[0]

@@ -1,5 +1,11 @@
+ifdef UV
+    PIP := uv pip
+else
+    PIP := pip3
+endif
+
 install-dev:
-	pip install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
+	$(PIP) install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
 
 install-pre-commit:
 	pre-commit install
@@ -31,7 +37,7 @@ stubs:
 	stubgen sqlframe/spark/functions.py --output ./ --inspect-mode
 
 package:
-	pip3 install wheel && python3 setup.py sdist bdist_wheel
+	$(PIP) install wheel && python3 setup.py sdist bdist_wheel
 
 publish: package
-	pip3 install twine && python3 -m twine upload dist/*
+	$(PIP) install twine && python3 -m twine upload dist/*
