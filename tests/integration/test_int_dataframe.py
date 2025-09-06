@@ -2777,3 +2777,73 @@ def test_alias_multiple_joins(
     )
 
     compare_frames(main_df, main_dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_join_select_filter(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    is_standalone: t.Callable,
+) -> None:
+    if is_standalone():
+        pytest.skip("This test does not work on standalone due to the count")
+    df1 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["id"])
+    df2 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["ref"])
+
+    result = (
+        df1.join(df2.alias("b"), F.col("id") == F.col("b.ref"))
+        .select("b.ref")
+        .filter(F.col("b.ref") == 1)
+        .count()
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    dfs1 = session.createDataFrame([(1,)], ["id"])
+    dfs2 = session.createDataFrame([(1,)], ["ref"])
+
+    dfs_result = (
+        dfs1.join(dfs2.alias("b"), SF.col("id") == SF.col("b.ref"))
+        .select("b.ref")
+        .filter(SF.col("b.ref") == 1)
+        .count()
+    )
+
+    assert result == dfs_result
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_join_filter_join_filter(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    is_standalone: t.Callable,
+) -> None:
+    if is_standalone():
+        pytest.skip("This test does not work on standalone due to the count")
+    df1 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["id"])
+    df2 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["ref"])
+    df3 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["other"])
+
+    result = (
+        df1.join(df2.alias("b"), F.col("id") == F.col("b.ref"))
+        .filter(F.col("b.ref") == 1)
+        .join(df3.alias("c"), F.col("b.ref") == F.col("c.other"))
+        .filter(F.col("b.ref") == 1)
+        .count()
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    dfs1 = session.createDataFrame([(1,)], ["id"])
+    dfs2 = session.createDataFrame([(1,)], ["ref"])
+    dfs3 = session.createDataFrame([(1,)], ["other"])
+
+    dfs_result = (
+        dfs1.join(dfs2.alias("b"), SF.col("id") == SF.col("b.ref"))
+        .filter(SF.col("b.ref") == 1)
+        .join(dfs3.alias("c"), SF.col("b.ref") == SF.col("c.other"))
+        .filter(SF.col("b.ref") == 1)
+        .count()
+    )
+
+    assert result == dfs_result
