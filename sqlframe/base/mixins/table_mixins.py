@@ -276,7 +276,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             self.expression, other_df.expression.copy().ctes
         )
         condition = self._ensure_and_normalize_cols(
-            condition, join_expression, remove_identifier_if_possible=False
+            condition, self.expression, remove_identifier_if_possible=False
         )
         self._handle_self_join(other_df, condition)
 

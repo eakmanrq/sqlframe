@@ -99,11 +99,6 @@ def replace_alias_name_with_cte_name(
                                 expression_context, column_name
                             ):
                                 parent.set("table", None)
-                            elif column_name and _is_safe_to_remove_qualifier(
-                                expression_context, column_name
-                            ):
-                                # More aggressive fallback for edge cases
-                                parent.set("table", None)
 
 
 def replace_branch_and_sequence_ids_with_cte_name(
@@ -179,9 +174,6 @@ def replace_branch_and_sequence_ids_with_cte_name(
                     expression_context, column_name
                 ):
                     parent.set("table", None)
-                elif column_name and _is_safe_to_remove_qualifier(expression_context, column_name):
-                    # More aggressive fallback for edge cases
-                    parent.set("table", None)
 
 
 def is_column_unambiguously_available(expression_context: exp.Select, column_name: str) -> bool:
@@ -231,40 +223,6 @@ def _extract_column_name(expr) -> str:
         return str(expr.name)
     else:
         return str(expr)
-
-
-def _is_safe_to_remove_qualifier(expression_context: exp.Select, column_name: str) -> bool:
-    """
-    More aggressive but still safe check for whether it's safe to remove a table qualifier.
-
-    This is used as a fallback when the strict unambiguous check fails, but we still want
-    to handle edge cases that might cause SQLGlot optimizer errors.
-    """
-    current_tables = get_cte_names_from_from_clause(expression_context)
-
-    # If no tables in FROM clause, don't remove qualifier
-    if not current_tables:
-        return False
-
-    # If only one table in FROM clause, it's generally safe to remove qualifier
-    if len(current_tables) == 1:
-        return True
-
-    # For multiple tables, be more conservative but allow for common patterns
-    # Check if the column name appears in any of the FROM clause tables
-    column_found_in_from = False
-    for cte in expression_context.ctes:
-        if cte.alias_or_name in current_tables:
-            if hasattr(cte, "this") and hasattr(cte.this, "expressions"):
-                for expr in cte.this.expressions:
-                    expr_column_name = _extract_column_name(expr)
-                    if expr_column_name and expr_column_name.lower() == column_name.lower():
-                        column_found_in_from = True
-                        break
-
-    # Only remove qualifier if we found the column in the FROM clause tables
-    # This is more aggressive than the unambiguous check, but still reasonably safe
-    return column_found_in_from
 
 
 def get_cte_names_from_from_clause(expression_context: exp.Select) -> t.Set[str]:
