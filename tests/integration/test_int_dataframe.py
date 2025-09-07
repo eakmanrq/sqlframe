@@ -2689,3 +2689,161 @@ def test_alias_group_by_column(
     dfs = dfs.groupBy(SF.col("name").alias("Firstname")).count()
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_alias_multiple_joins(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+    is_duckdb: t.Callable,
+):
+    if not is_duckdb():
+        pytest.skip("This test only works on DuckDB due to ambiguous columns")
+    type_df = pyspark_employee.sparkSession.createDataFrame(
+        pd.DataFrame(
+            {
+                "TYPE_ID": [1, 2, 3, 4, 5],
+                "STATUS": [1, 2, 3, 1, 3],
+                "name": ["Type1", "Type2", "Type3", "Type4", "Type5"],
+            }
+        )
+    )
+    item_df = pyspark_employee.sparkSession.createDataFrame(
+        pd.DataFrame(
+            {
+                "ITEM_ID": [10, 20, 30, 40, 50],
+                "ITEM_TYPE_REF": [1, 2, 3, 4, 5],
+                "NAME": ["Item1", "Item2", "Item3", "Item4", "Item5"],
+            }
+        )
+    )
+
+    intermediate = (
+        item_df.alias("i")
+        .join(type_df.alias("t"), F.col("i.ITEM_TYPE_REF") == F.col("t.TYPE_ID"))
+        .where(F.col("t.STATUS") == 3)
+    )
+
+    main_df = (
+        item_df.alias("main")
+        .join(type_df.alias("t"), F.col("main.ITEM_TYPE_REF") == F.col("t.TYPE_ID"))
+        .join(
+            intermediate.alias("i"),
+            F.col("main.ITEM_ID") == F.col("i.ITEM_ID"),
+            "left",
+        )
+        .select(F.col("main.ITEM_ID"), F.col("t.STATUS"))
+        .where(F.col("t.STATUS") == 3)
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    type_dfs = session.createDataFrame(
+        pd.DataFrame(
+            {
+                "TYPE_ID": [1, 2, 3, 4, 5],
+                "STATUS": [1, 2, 3, 1, 3],
+                "name": ["Type1", "Type2", "Type3", "Type4", "Type5"],
+            }
+        )
+    )
+    item_dfs = session.createDataFrame(
+        pd.DataFrame(
+            {
+                "ITEM_ID": [10, 20, 30, 40, 50],
+                "ITEM_TYPE_REF": [1, 2, 3, 4, 5],
+                "NAME": ["Item1", "Item2", "Item3", "Item4", "Item5"],
+            }
+        )
+    )
+
+    dfs_intermediate = (
+        item_dfs.alias("i")
+        .join(type_dfs.alias("t"), SF.col("i.ITEM_TYPE_REF") == SF.col("t.TYPE_ID"))
+        .where(SF.col("t.STATUS") == 3)
+    )
+
+    main_dfs = (
+        item_dfs.alias("main")
+        .join(type_dfs.alias("t"), SF.col("main.ITEM_TYPE_REF") == SF.col("t.TYPE_ID"))
+        .join(
+            dfs_intermediate.alias("i"),
+            SF.col("main.ITEM_ID") == SF.col("i.ITEM_ID"),
+            "left",
+        )
+        .select(SF.col("main.ITEM_ID"), SF.col("t.STATUS"))
+        .where(SF.col("STATUS") == 3)
+    )
+
+    compare_frames(main_df, main_dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_join_select_filter(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    is_standalone: t.Callable,
+) -> None:
+    if is_standalone():
+        pytest.skip("This test does not work on standalone due to the count")
+    df1 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["id"])
+    df2 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["ref"])
+
+    result = (
+        df1.join(df2.alias("b"), F.col("id") == F.col("b.ref"))
+        .select("b.ref")
+        .filter(F.col("b.ref") == 1)
+        .count()
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    dfs1 = session.createDataFrame([(1,)], ["id"])
+    dfs2 = session.createDataFrame([(1,)], ["ref"])
+
+    dfs_result = (
+        dfs1.join(dfs2.alias("b"), SF.col("id") == SF.col("b.ref"))
+        .select("b.ref")
+        .filter(SF.col("b.ref") == 1)
+        .count()
+    )
+
+    assert result == dfs_result
+
+
+# https://github.com/eakmanrq/sqlframe/issues/493
+def test_join_filter_join_filter(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    is_standalone: t.Callable,
+) -> None:
+    if is_standalone():
+        pytest.skip("This test does not work on standalone due to the count")
+    df1 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["id"])
+    df2 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["ref"])
+    df3 = pyspark_employee.sparkSession.createDataFrame([(1,)], ["other"])
+
+    result = (
+        df1.join(df2.alias("b"), F.col("id") == F.col("b.ref"))
+        .filter(F.col("b.ref") == 1)
+        .join(df3.alias("c"), F.col("b.ref") == F.col("c.other"))
+        .filter(F.col("b.ref") == 1)
+        .count()
+    )
+
+    employee = get_df("employee")
+    session = employee.session
+    dfs1 = session.createDataFrame([(1,)], ["id"])
+    dfs2 = session.createDataFrame([(1,)], ["ref"])
+    dfs3 = session.createDataFrame([(1,)], ["other"])
+
+    dfs_result = (
+        dfs1.join(dfs2.alias("b"), SF.col("id") == SF.col("b.ref"))
+        .filter(SF.col("b.ref") == 1)
+        .join(dfs3.alias("c"), SF.col("b.ref") == SF.col("c.other"))
+        .filter(SF.col("b.ref") == 1)
+        .count()
+    )
+
+    assert result == dfs_result

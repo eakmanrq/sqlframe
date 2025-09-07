@@ -275,7 +275,9 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         join_expression = self._add_ctes_to_expression(
             self.expression, other_df.expression.copy().ctes
         )
-        condition = self._ensure_and_normalize_cols(condition, self.expression)
+        condition = self._ensure_and_normalize_cols(
+            condition, self.expression, remove_identifier_if_possible=False
+        )
         self._handle_self_join(other_df, condition)
 
         if isinstance(condition[0].expression, exp.Column) and not clause:
@@ -291,7 +293,9 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                 condition, join_expression, other_df, table_names
             )
         else:
-            join_clause = self._normalize_join_clause(condition, join_expression)
+            join_clause = self._normalize_join_clause(
+                condition, join_expression, remove_identifier_if_possible=False
+            )
         return join_clause
 
     def _ensure_and_normalize_assignments(
