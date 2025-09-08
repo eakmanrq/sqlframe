@@ -644,7 +644,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def _get_expressions(
         self,
-        optimize: bool = True,
+        optimize: bool = False,
         openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
         quote_identifiers: bool = True,
     ) -> t.List[exp.Expression]:
