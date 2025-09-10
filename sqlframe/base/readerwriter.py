@@ -61,14 +61,17 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
     def _to_casted_columns(self, column_mapping: t.Dict) -> t.List[Column]:
         from sqlframe.base.column import Column
 
-        return [
-            Column(
-                exp.cast(
-                    exp.to_column(k), to=exp.DataType.build(v, dialect=self.session.input_dialect)
-                ).as_(k)
+        results = []
+        for k, v in column_mapping.items():
+            column = exp.to_column(k, dialect=self.session.input_dialect)
+            results.append(
+                Column(
+                    exp.cast(
+                        column, to=exp.DataType.build(v, dialect=self.session.input_dialect)
+                    ).as_(column.this)
+                )
             )
-            for k, v in column_mapping.items()
-        ]
+        return results
 
     def format(self, source: str) -> "Self":
         """Specifies the input data source format.

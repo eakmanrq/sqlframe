@@ -145,3 +145,21 @@ def test_read_parquet_optimize(duckdb_session: DuckDBSession):
     )  # Contains a `person_id` and a `person_source_value` column
     df.createOrReplaceTempView("employee")
     duckdb_session.table("employee").sql(optimize=True)  # type: ignore
+
+
+# https://github.com/eakmanrq/sqlframe/issues/499
+def test_quoted_columns_parquet(duckdb_session: DuckDBSession):
+    df = duckdb_session.read.parquet("tests/fixtures/netflix_daily_top_10.parquet")
+    df = (
+        df.filter(F.col("Type") == "TV Show")
+        .groupBy("Title")
+        .agg(F.max(F.col("Days In Top 10")).alias("max_days_in_top_10"))
+        .orderBy(F.desc("max_days_in_top_10"))
+        .limit(4)
+    )
+    assert df.collect() == [
+        Row(**{"Title": "Cocomelon", "max_days_in_top_10": 428}),
+        Row(**{"Title": "Ozark", "max_days_in_top_10": 89}),
+        Row(**{"Title": "Cobra Kai", "max_days_in_top_10": 81}),
+        Row(**{"Title": "Manifest", "max_days_in_top_10": 80}),
+    ]
