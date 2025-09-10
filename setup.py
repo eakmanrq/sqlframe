@@ -45,7 +45,7 @@ setup(
             "pytest-rerunfailures",
             "pytest-xdist>=3.6,<3.9",
             "pre-commit>=3.7,<5",
-            "ruff>=0.4.4,<0.13",
+            "ruff>=0.4.4,<0.14",
             "types-psycopg2>=2.9,<3",
         ],
         "docs": [
