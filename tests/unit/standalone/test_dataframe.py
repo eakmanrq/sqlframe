@@ -178,7 +178,7 @@ def test_lineage(standalone_employee: StandaloneDataFrame):
 def test_unquoted_identifiers(standalone_employee: StandaloneDataFrame):
     assert (
         standalone_employee.sql(dialect="snowflake", pretty=False, quote_identifiers=False)
-        == """SELECT A1.EMPLOYEE_ID AS "employee_id", CAST(A1.FNAME AS TEXT) AS "fname", CAST(A1.LNAME AS TEXT) AS "lname", A1.AGE AS "age", A1.STORE_ID AS "store_id" FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS A1(EMPLOYEE_ID, FNAME, LNAME, AGE, STORE_ID)"""
+        == """SELECT A1.EMPLOYEE_ID AS "employee_id", CAST(A1.FNAME AS VARCHAR) AS "fname", CAST(A1.LNAME AS VARCHAR) AS "lname", A1.AGE AS "age", A1.STORE_ID AS "store_id" FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS A1(EMPLOYEE_ID, FNAME, LNAME, AGE, STORE_ID)"""
     )
 
 
