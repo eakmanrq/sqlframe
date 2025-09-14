@@ -2133,6 +2133,11 @@ def bit_xor(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["postgres", "snowflake"])
 def bit_count(col: ColumnOrName) -> Column:
+    session = _get_session()
+
+    if session._is_duckdb:
+        return Column.invoke_anonymous_function(col, "BIT_COUNT")
+
     return Column.invoke_expression_over_column(col, expression.BitwiseCountAgg)
 
 
