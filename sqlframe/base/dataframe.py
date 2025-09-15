@@ -921,8 +921,30 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def groupBy(self, *cols, **kwargs) -> GROUP_DATA:
         if cols and isinstance(cols[0], list):
             cols = cols[0]  # type: ignore
+
+        # Special handling for groupBy operations with column aliases
+        # `_ensure_and_normalize_cols` sets CTE aliases that may not exist in the final context.
         columns = self._ensure_and_normalize_cols(cols)
-        return self._group_data(self, columns, self.last_op)
+
+        # Post-process the columns to fix any issues with CTE aliases
+        from sqlframe.base.normalize import (
+            _extract_column_name,
+            is_column_unambiguously_available,
+        )
+
+        processed_columns: t.List[Column] = []
+
+        for col in columns:
+            # Check if this column has a table qualifier that might be problematic
+            if col.column_expression.args.get("table"):
+                # Check if the column is unambiguously available without the qualifier
+                column_name = _extract_column_name(this) if (this := col.expression.this) else None
+                if column_name and is_column_unambiguously_available(self.expression, column_name):
+                    # Remove the table qualifier if the column is unambiguous
+                    col.column_expression.set("table", None)
+            processed_columns.append(col)
+
+        return self._group_data(self, processed_columns, self.last_op)
 
     groupby = groupBy
 
