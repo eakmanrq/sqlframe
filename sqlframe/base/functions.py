@@ -1974,8 +1974,30 @@ def regexp_replace(
     )
 
 
-@meta(unsupported_engines="duckdb")
+@meta()
 def initcap(col: ColumnOrName) -> Column:
+    session = _get_session()
+
+    if session._is_duckdb:
+        split_func = get_func_from_session("split")
+        transform_func = get_func_from_session("transform")
+        reduce_func = get_func_from_session("reduce")
+        upper_func = get_func_from_session("upper")
+        lower_func = get_func_from_session("lower")
+        length_func = get_func_from_session("length")
+        concat_func = get_func_from_session("concat")
+        concat_ws_func = get_func_from_session("concat_ws")
+        return reduce_func(
+            transform_func(
+                split_func(col, r"\s+"),
+                lambda w: concat_func(
+                    upper_func(w.substr(1, 1)), lower_func(w.substr(2, length_func(w) - 1))
+                ),
+            ),
+            None,
+            merge=lambda x, y: concat_ws_func(" ", x, y),
+        )
+
     return Column.invoke_expression_over_column(col, expression.Initcap)
 
 
@@ -2686,7 +2708,7 @@ def from_csv(
     return Column.invoke_anonymous_function(col, "FROM_CSV", schema)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def aggregate(
     col: ColumnOrName,
     initialValue: ColumnOrName,
@@ -2694,21 +2716,20 @@ def aggregate(
     finish: t.Optional[t.Callable[[Column], Column]] = None,
 ) -> Column:
     merge_exp = _get_lambda_from_func(merge)
+    kwargs = dict(
+        initial=initialValue,
+        merge=merge_exp,
+    )
+    session = _get_session()
     if finish is not None:
         finish_exp = _get_lambda_from_func(finish)
-        return Column.invoke_expression_over_column(
-            col,
-            expression.Reduce,
-            initial=initialValue,
-            merge=Column(merge_exp),
-            finish=Column(finish_exp),
-        )
-    return Column.invoke_expression_over_column(
-        col, expression.Reduce, initial=initialValue, merge=Column(merge_exp)
-    )
+        kwargs["finish"] = Column(finish_exp)
+    if session._is_duckdb:
+        kwargs.pop("initial", None)
+    return Column.invoke_expression_over_column(col, expression.Reduce, **kwargs)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines="postgres")
 def transform(
     col: ColumnOrName,
     f: t.Union[t.Callable[[Column], Column], t.Callable[[Column, Column], Column]],
