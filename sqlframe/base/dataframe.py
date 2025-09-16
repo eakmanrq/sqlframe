@@ -1665,10 +1665,34 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         def should_drop_expression(expr: exp.Expression) -> bool:
             # Check against fully qualified Column objects and
             # Check against unqualified string column names (drop ALL columns with this name)
-            if expr.sql() in drop_sql or (
-                isinstance(expr, exp.Column) and expr.alias_or_name in column_names
-            ):
+            if expr.sql() in drop_sql:
                 return True
+
+            if isinstance(expr, exp.Column) and (alias_or_name := expr.alias_or_name):
+                # Check direct match first
+                if alias_or_name in column_names:
+                    return True
+
+                # Handle string column references that contain aliases
+                for col_name in column_names:
+                    if ("." in col_name) and alias_or_name == (col_name.split(".", maxsplit=1)[-1]):
+                        # Extract the column name part after the last dot
+                        return True
+
+                # Handle case where normalized columns have table qualifiers but actual expressions
+                # are unqualified. This happens when using aliased column references like
+                # f.col('df.foo')
+
+                # Check if any drop column matches by column name AND table qualifier
+                for drop_col in drop_cols:
+                    if ((drop_expression := drop_col.expression).alias_or_name) == alias_or_name:
+                        if expr_table := expr.table:
+                            drop_table = drop_expression.args.get("table")
+                            if (not drop_table) or (expr_table == drop_table):
+                                return True
+                        else:
+                            return True
+
             return False
 
         new_expressions = [expr for expr in current_expressions if not should_drop_expression(expr)]

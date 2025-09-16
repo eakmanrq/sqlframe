@@ -1865,6 +1865,18 @@ def test_drop_column_single(
     compare_frames(df, dfs)
 
 
+def test_drop_alias_column(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    employee = get_df("employee")
+    df = pyspark_employee.select(F.col("fname"), F.col("age")).drop("age")
+
+    dfs = employee.alias("df").select(SF.col("fname"), SF.col("age")).drop("df.age")
+    compare_frames(df, dfs)
+
+
 def test_drop_column_reference_join(
     pyspark_employee: PySparkDataFrame,
     pyspark_store: PySparkDataFrame,
@@ -1890,6 +1902,61 @@ def test_drop_column_reference_join(
     )
 
     compare_frames(df, dfs, sort=True)
+
+
+def test_drop_column_join_column_df_reference(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df1 = pyspark_employee.sparkSession.createDataFrame(  # type: ignore
+        [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
+    ).alias("df1")
+    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")  # type: ignore
+    df_joined = (
+        df1.join(df2, on=F.col("df1.foo") == F.col("df2.foo"), how="left")
+        .drop(df1.foo)
+        .select(df1.bar, df2.baz, df2.foo)
+    )
+
+    employee = get_df("employee")
+    dfs1 = employee.sparkSession.createDataFrame(
+        [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
+    ).alias("dfs1")
+    dfs2 = employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("dfs2")
+    dfs_joined = (
+        dfs1.join(dfs2, on=SF.col("dfs1.foo") == SF.col("dfs2.foo"), how="left")
+        .drop(dfs1.foo)
+        .select(dfs1.bar, dfs2.baz, dfs2.foo)
+    )
+
+    compare_frames(df_joined, dfs_joined, sort=True, compare_schema=False)
+
+
+def test_drop_join_column_unqualified(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df1 = pyspark_employee.sparkSession.createDataFrame(  # type: ignore
+        [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
+    ).alias("df1")
+    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")  # type: ignore
+    df_joined = (
+        df1.join(df2, on=F.col("df1.foo") == F.col("df2.foo"), how="left").drop("foo")
+        # select the columns to work around column order bug
+    )
+
+    employee = get_df("employee")
+    dfs1 = employee.sparkSession.createDataFrame(
+        [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
+    ).alias("dfs1")
+    dfs2 = employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("dfs2")
+    dfs_joined = dfs1.join(dfs2, on=SF.col("dfs1.foo") == SF.col("dfs2.foo"), how="left").drop(
+        "foo"
+    )
+
+    compare_frames(df_joined, dfs_joined, sort=True, compare_schema=False)
 
 
 def test_limit(
