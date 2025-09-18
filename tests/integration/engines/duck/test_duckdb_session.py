@@ -1,5 +1,5 @@
 import pytest
-from duckdb.duckdb import ConnectionException
+from duckdb import ConnectionException
 from sqlglot import exp
 
 from sqlframe.base.types import Row

@@ -262,7 +262,7 @@ def test_explain(duckdb_employee: DuckDBDataFrame, capsys):
 ┌───────────────────────────┐
 │      COLUMN_DATA_SCAN     │
 │    ────────────────────   │
-│          ~5 Rows          │
+│          ~5 rows          │
 └───────────────────────────┘
 """.strip()
     )

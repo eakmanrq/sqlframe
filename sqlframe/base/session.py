@@ -437,7 +437,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                 for cte in df.expression.ctes:
                     if cte.alias_or_name not in expression_ctes:
                         ctes_to_add.append(cte)
-                expression.set("with", exp.With(expressions=expression.ctes + ctes_to_add))  # type: ignore
+                expression.set("with", exp.With(expressions=ctes_to_add + expression.ctes))  # type: ignore
 
             def replace_temp_view_name_with_cte(node: exp.Expression) -> exp.Expression:
                 if isinstance(node, exp.Table):
