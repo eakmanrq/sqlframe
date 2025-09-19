@@ -2758,6 +2758,25 @@ def test_alias_group_by_column(
     compare_frames(df, dfs, compare_schema=False, sort=True)
 
 
+# https://github.com/eakmanrq/sqlframe/issues/502
+def test_group_by_alias(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    df = pyspark_employee.sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    df = df.groupBy(F.col("name")).count()
+
+    dfs = get_df("employee").sparkSession.createDataFrame(
+        [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")], schema=["age", "name"]
+    )
+    dfs = dfs.alias("df").groupBy(SF.col("df.name")).count()
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
 # https://github.com/eakmanrq/sqlframe/issues/493
 def test_alias_multiple_joins(
     pyspark_employee: PySparkDataFrame,
