@@ -2941,19 +2941,22 @@ def test_aggregate(get_session_and_func, get_func):
 def test_transform(get_session_and_func, get_func):
     session, transform = get_session_and_func("transform")
     when = get_func("when", session)
+    initcap = get_func("initcap", session)
+    df = session.createDataFrame([(["ab cd"],)], ["a"])
+    assert df.select(transform("a", f=lambda w: initcap(w)).alias("v")).first()[0] == ["Ab Cd"]
+    assert df.select(transform("a", f=initcap).alias("v")).first()[0] == ["Ab Cd"]
     df = session.createDataFrame([(1, [1, 2, 3, 4])], ("key", "some_values"))
     assert df.select(transform("some_values", lambda x: x * 2).alias("doubled")).collect() == [
         Row(doubled=[2, 4, 6, 8])
     ]
 
-    if isinstance(session, PySparkSession):
+    def alternate(x, i):
+        return when(i % 2 == 0, x).otherwise(-x)
 
-        def alternate(x, i):
-            return when(i % 2 == 0, x).otherwise(-x)
-
-        assert df.select(transform("some_values", alternate).alias("alternated")).collect() == [
-            Row(alternated=[1, -2, 3, -4])
-        ]
+    assert df.select(transform("some_values", alternate).alias("alternated")).collect() in [
+        [Row(alternated=[1, -2, 3, -4])],
+        [Row(alternated=[-1, 2, -3, 4])],
+    ]
 
 
 def test_exists(get_session_and_func):

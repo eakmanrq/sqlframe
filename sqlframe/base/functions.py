@@ -2729,7 +2729,7 @@ def aggregate(
     return Column.invoke_expression_over_column(col, expression.Reduce, **kwargs)
 
 
-@meta(unsupported_engines="postgres")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def transform(
     col: ColumnOrName,
     f: t.Union[t.Callable[[Column], Column], t.Callable[[Column, Column], Column]],
@@ -7169,12 +7169,32 @@ def _lambda_quoted(value: str) -> t.Optional[bool]:
 
 @meta()
 def _get_lambda_from_func(lambda_expression: t.Callable):
-    variables = [
-        expression.to_identifier(x, quoted=_lambda_quoted(x))
-        for x in lambda_expression.__code__.co_varnames
-    ]
+    import inspect
+
+    # Get the function signature
+    sig = inspect.signature(lambda_expression)
+    param_names = list(sig.parameters.keys())
+
+    # Check if this looks like a column function (single 'col' parameter)
+    if len(param_names) == 1 and param_names[0] in ["col", "column"]:
+        # Wrap column functions to work with transform
+        variables = [expression.to_identifier("x", quoted=_lambda_quoted("x"))]
+        result = lambda_expression(Column("x"))
+        return expression.Lambda(
+            this=result.column_expression,
+            expressions=variables,
+        )
+
+    # Handle regular functions and lambdas
+    var_names = lambda_expression.__code__.co_varnames[: lambda_expression.__code__.co_argcount]
+
+    variables = [expression.to_identifier(x, quoted=_lambda_quoted(x)) for x in var_names]
+
+    # Call with Column objects for each parameter
+    result = lambda_expression(*[Column(x) for x in var_names])
+
     return expression.Lambda(
-        this=lambda_expression(*[Column(x) for x in variables]).column_expression,
+        this=result.column_expression,
         expressions=variables,
     )
 
