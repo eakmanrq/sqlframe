@@ -2067,7 +2067,7 @@ def bit_length(col: ColumnOrName) -> Column:
     if session._is_bigquery:
         return bit_length_from_length(col)
 
-    return Column.invoke_anonymous_function(col, "BIT_LENGTH")
+    return Column.invoke_expression_over_column(col, expression.BitLength)
 
 
 @meta()
