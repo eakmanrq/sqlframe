@@ -4881,10 +4881,9 @@ def parse_url(
     >>> df.select(parse_url(df.a, df.b).alias('r')).collect()
     [Row(r='query=1')]
     """
-    if key is not None:
-        return Column.invoke_anonymous_function(url, "parse_url", partToExtract, key)
-    else:
-        return Column.invoke_anonymous_function(url, "parse_url", partToExtract)
+    return Column.invoke_expression_over_column(
+        url, expression.ParseUrl, part_to_extract=partToExtract, key=key
+    )
 
 
 @meta(unsupported_engines="*")
