@@ -5209,7 +5209,7 @@ def regexp(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(str, "regexp", regexp)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "duckdb"])
 def regexp_count(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     r"""Returns a count of the number of times that the Java regex pattern `regexp` is matched
     in the string `str`.
@@ -5238,7 +5238,7 @@ def regexp_count(str: ColumnOrName, regexp: ColumnOrName) -> Column:
     >>> df.select(regexp_count("str", col("regexp")).alias('d')).collect()
     [Row(d=3)]
     """
-    return Column.invoke_anonymous_function(str, "regexp_count", regexp)
+    return Column.invoke_expression_over_column(str, expression.RegexpCount, expression=regexp)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
