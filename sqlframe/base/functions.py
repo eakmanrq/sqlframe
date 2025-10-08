@@ -241,12 +241,12 @@ ceiling = ceil
 
 @meta()
 def cos(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "COS")
+    return Column.invoke_expression_over_column(col, expression.Cos)
 
 
-@meta(unsupported_engines="duckdb")
+@meta()
 def cosh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "COSH")
+    return Column.invoke_expression_over_column(col, expression.Cosh)
 
 
 @meta()
@@ -382,7 +382,7 @@ def sinh(col: ColumnOrName) -> Column:
 
 @meta()
 def tan(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "TAN")
+    return Column.invoke_expression_over_column(col, expression.Tan)
 
 
 @meta(unsupported_engines="duckdb")
@@ -399,7 +399,7 @@ def degrees(col: ColumnOrName) -> Column:
     if session._is_bigquery:
         return degrees_bgutil(col)
 
-    return Column.invoke_anonymous_function(col, "DEGREES")
+    return Column.invoke_expression_over_column(col, expression.Degrees)
 
 
 toDegrees = degrees
