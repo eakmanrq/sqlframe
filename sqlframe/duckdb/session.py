@@ -42,7 +42,10 @@ class DuckDBSession(
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
         import duckdb
         from duckdb import InvalidInputException
-        from duckdb.typing import VARCHAR
+        try:  # Available from duckdb 1.4.1
+            from duckdb.sqltypes import VARCHAR
+        except ImportError:
+            from duckdb.typing import VARCHAR
 
         if not hasattr(self, "_conn"):
             conn = conn or duckdb.connect()
