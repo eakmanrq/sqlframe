@@ -7,10 +7,7 @@ from sqlframe.base.session import _BaseSession
 from sqlframe.base.util import soundex
 from sqlframe.duckdb.catalog import DuckDBCatalog
 from sqlframe.duckdb.dataframe import DuckDBDataFrame
-from sqlframe.duckdb.readwriter import (
-    DuckDBDataFrameReader,
-    DuckDBDataFrameWriter,
-)
+from sqlframe.duckdb.readwriter import DuckDBDataFrameReader, DuckDBDataFrameWriter
 from sqlframe.duckdb.table import DuckDBTable
 from sqlframe.duckdb.udf import DuckDBUDFRegistration
 
@@ -42,6 +39,7 @@ class DuckDBSession(
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
         import duckdb
         from duckdb import InvalidInputException
+
         try:  # Available from duckdb 1.4.1
             from duckdb.sqltypes import VARCHAR
         except ImportError:
