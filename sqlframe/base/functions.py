@@ -309,7 +309,7 @@ def factorial(col: ColumnOrName) -> Column:
     if session._is_bigquery:
         return factorial_from_case_statement(col)
 
-    return Column.invoke_anonymous_function(col, "FACTORIAL")
+    return Column.invoke_expression_over_column(col, expression.Factorial)
 
 
 @meta()
