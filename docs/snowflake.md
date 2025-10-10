@@ -309,7 +309,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [array_except](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_except.html)
 * [array_intersect](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_intersect.html)
 * [array_join](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_join.html)
-  * Null values are repsented as nothing instead of NULL. Ex: "a," instead of "a,NULL"
+  * Null values are represented as nothing instead of NULL. Ex: "a," instead of "a,NULL"
 * [array_max](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_max.html)
 * [array_min](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_min.html)
 * [array_position](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.array_position.html)
@@ -335,7 +335,7 @@ See something that you would like to see supported? [Open an issue](https://gith
 * [bool_and](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_and.html)
 * [bool_or](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bool_or.html)
 * [bround](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.bround.html)
-  * [Input must be a fixed-point nnumber](https://docs.snowflake.com/en/sql-reference/data-types-numeric.html#label-data-types-for-fixed-point-numbers)
+  * [Input must be a fixed-point number](https://docs.snowflake.com/en/sql-reference/data-types-numeric.html#label-data-types-for-fixed-point-numbers)
 * [btrim](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.btrim.html)
 * [call_function](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.call_function.html)
 * [cbrt](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.cbrt.html)
@@ -677,7 +677,7 @@ update_expr = table_employee.update(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the update statement
+# Executes the update statement
 update_expr.execute()
 
 # Show the result
@@ -705,7 +705,7 @@ delete_expr = table_employee.delete(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the delete statement
+# Executes the delete statement
 delete_expr.execute()
 
 # Show the result
@@ -760,7 +760,7 @@ merge_expr = table_employee.merge(
     ],
 )
 
-# Excecutes the merge statement
+# Executes the merge statement
 merge_expr.execute()
 
 # Show the result

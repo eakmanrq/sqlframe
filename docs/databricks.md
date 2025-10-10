@@ -227,7 +227,7 @@ update_expr = table_employee.update(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the update statement
+# Executes the update statement
 update_expr.execute()
 
 # Show the result
@@ -255,7 +255,7 @@ delete_expr = table_employee.delete(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the delete statement
+# Executes the delete statement
 delete_expr.execute()
 
 # Show the result
@@ -310,7 +310,7 @@ merge_expr = table_employee.merge(
     ],
 )
 
-# Excecutes the merge statement
+# Executes the merge statement
 merge_expr.execute()
 
 # Show the result
@@ -366,7 +366,7 @@ merge_expr = table_employee.merge(
     ],
 )
 
-# Excecutes the merge statement
+# Executes the merge statement
 merge_expr.execute()
 
 # Show the result

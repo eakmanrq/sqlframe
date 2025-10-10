@@ -231,7 +231,7 @@ class DatabricksDataFrameWriter(
             elif mode == "ignore":
                 pass
             else:
-                raise RuntimeError(f"Unssuported mode: {mode}")
+                raise RuntimeError(f"Unsupported mode: {mode}")
 
     def insertInto(
         self,
