@@ -78,7 +78,7 @@ def operation(
 
 # Here decorate a function (self: _BaseGroupedData[DF], *args, **kwargs) -> DF
 # Hence we work with t.Callable[Concatenate[_BaseGroupedData[DF], P], DF]
-# We simplify the parameters, as Pyright (used for VSCode autocomplete) doesn't unterstand this
+# We simplify the parameters, as Pyright (used for VSCode autocomplete) doesn't understand this
 def group_operation(
     op: Operation,
 ) -> t.Callable[[t.Callable[P, DF]], t.Callable[P, DF]]:

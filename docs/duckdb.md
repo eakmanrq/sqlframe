@@ -250,7 +250,7 @@ See something that you would like to see supported? [Open an issue](https://gith
     * SQLFrame Specific: Get the SQL representation of the WindowSpec
 * [stat](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.stat.html)
 * [toArrow](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toArrow.html)
-  * SQLFrame Specific Argument: `batch_size` sets the number of rows to read per-batch and returns a `RecrodBatchReader`
+  * SQLFrame Specific Argument: `batch_size` sets the number of rows to read per-batch and returns a `RecordBatchReader`
 * [toDF](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toDF.html)
 * [toPandas](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.toPandas.html)
 * [union](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.DataFrame.union.html)
@@ -634,7 +634,7 @@ update_expr = table_employee.update(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the update statement
+# Executes the update statement
 update_expr.execute()
 
 # Show the result
@@ -662,7 +662,7 @@ delete_expr = table_employee.delete(
     where=table_employee["id"] == 1,
 )
 
-# Excecutes the delete statement
+# Executes the delete statement
 delete_expr.execute()
 
 # Show the result
