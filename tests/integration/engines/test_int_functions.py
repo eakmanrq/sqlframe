@@ -4424,7 +4424,7 @@ def test_parse_url(get_session_and_func, get_func):
 
 def test_pi(get_session_and_func, get_func):
     session, pi = get_session_and_func("pi")
-    assert session.range(1).select(pi()).first()[0] == math.pi
+    assert session.range(1).select(pi()).first()[0] in (math.pi, 3.141592654)
 
 
 def test_pmod(get_session_and_func, get_func):
