@@ -361,15 +361,31 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
         replacement_mapping = {}
-        for cte in expression.ctes:
+        seen_hashes: t.Dict[str, exp.Identifier] = {}
+        cte_indices_to_remove = []
+
+        for i, cte in enumerate(expression.ctes):
             old_name_id = cte.args["alias"].this
-            new_hashed_id = exp.to_identifier(
-                self._create_hash_from_expression(cte.this), quoted=old_name_id.args["quoted"]
-            )
-            replacement_mapping[old_name_id] = new_hashed_id
+            cte_hash = self._create_hash_from_expression(cte.this)
+
+            if cte_hash in seen_hashes:
+                # Duplicate CTE found - map its old name to the existing hash
+                replacement_mapping[old_name_id] = seen_hashes[cte_hash]
+                cte_indices_to_remove.append(i)
+            else:
+                # New unique CTE - process normally
+                new_hashed_id = exp.to_identifier(cte_hash, quoted=old_name_id.args["quoted"])
+                seen_hashes[cte_hash] = new_hashed_id
+                replacement_mapping[old_name_id] = new_hashed_id
+
             expression = expression.transform(replace_id_value, replacement_mapping).assert_is(
                 exp.Select
             )
+
+        # Remove duplicate CTEs by index in reverse order to avoid index shifting
+        for idx in reversed(cte_indices_to_remove):
+            del expression.args["with"].expressions[idx]
+
         return expression
 
     def _create_cte_from_expression(
