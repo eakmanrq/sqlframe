@@ -385,9 +385,9 @@ def tan(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Tan)
 
 
-@meta(unsupported_engines="duckdb")
+@meta()
 def tanh(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "TANH")
+    return Column.invoke_expression_over_column(col, expression.Tanh)
 
 
 @meta()
@@ -4886,7 +4886,7 @@ def parse_url(
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "snowflake"])
 def pi() -> Column:
     """Returns Pi.
 
@@ -4901,7 +4901,7 @@ def pi() -> Column:
     |3.141592653589793|
     +-----------------+
     """
-    return Column.invoke_anonymous_function(None, "pi")
+    return Column.invoke_expression_over_column(None, expression.Pi)
 
 
 @meta(unsupported_engines="*")

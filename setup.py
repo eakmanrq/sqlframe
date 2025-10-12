@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "prettytable<4",
-        "sqlglot>=24.0.0,<27.26",
+        "sqlglot>=24.0.0,<27.27",
         "typing_extensions",
         "more-itertools",
     ],
