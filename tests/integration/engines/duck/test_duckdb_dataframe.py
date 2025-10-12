@@ -4,6 +4,7 @@ import pytest
 
 from sqlframe.base import types
 from sqlframe.duckdb import DuckDBDataFrame, DuckDBSession
+from sqlframe.duckdb import functions as F
 
 pytest_plugins = ["tests.integration.fixtures"]
 
@@ -266,3 +267,23 @@ def test_explain(duckdb_employee: DuckDBDataFrame, capsys):
 └───────────────────────────┘
 """.strip()
     )
+
+
+def test_duplicate_cte(duckdb_session: DuckDBSession):
+    con = duckdb_session._conn
+
+    con.execute("CREATE VIEW foo AS SELECT 'a' as key, 1 as idx")
+    con.execute("CREATE VIEW bar AS SELECT 'b' as key, 2 as smth")
+
+    foo = duckdb_session.table("foo").filter(F.col("idx") == 1)
+    bar = duckdb_session.table("bar").filter(F.col("smth") == 2)
+
+    df = foo.join(bar, "key", "left")
+
+    df = df.unionByName(df)
+
+    results = duckdb_session._collect(expressions=df._get_expressions(optimize=True))
+    assert results == [
+        types.Row(key="a", idx=1, smth=None),
+        types.Row(key="a", idx=1, smth=None),
+    ]
