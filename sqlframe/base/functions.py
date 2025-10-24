@@ -4108,7 +4108,7 @@ def left(str: ColumnOrName, len: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(str, expression.Left, expression=len)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines="bigquery")
 def like(
     str: ColumnOrName, pattern: ColumnOrName, escapeChar: t.Optional["Column"] = None
 ) -> Column:
