@@ -37,7 +37,7 @@ setup(
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
-            "pyarrow>=10,<22",
+            "pyarrow>=10,<23",
             "pyspark>=2,<3.6",
             "pytest>=8.2.0,<8.5",
             "pytest-forked",
