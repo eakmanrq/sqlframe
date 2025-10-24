@@ -414,7 +414,7 @@ def radians(col: ColumnOrName) -> Column:
     if session._is_bigquery:
         return radians_bgutil(col)
 
-    return Column.invoke_anonymous_function(col, "RADIANS")
+    return Column.invoke_expression_over_column(col, expression.Radians)
 
 
 toRadians = radians
@@ -1078,7 +1078,7 @@ def hour(col: ColumnOrName) -> Column:
     if session._is_bigquery or session._is_postgres:
         return hour_from_extract(col)
 
-    return Column.invoke_anonymous_function(col, "HOUR")
+    return Column.invoke_expression_over_column(col, expression.Hour)
 
 
 @meta()
@@ -1090,7 +1090,7 @@ def minute(col: ColumnOrName) -> Column:
     if session._is_bigquery or session._is_postgres:
         return minute_from_extract(col)
 
-    return Column.invoke_anonymous_function(col, "MINUTE")
+    return Column.invoke_expression_over_column(col, expression.Minute)
 
 
 @meta()
@@ -1102,7 +1102,7 @@ def second(col: ColumnOrName) -> Column:
     if session._is_bigquery or session._is_postgres:
         return second_from_extract(col)
 
-    return Column.invoke_anonymous_function(col, "SECOND")
+    return Column.invoke_expression_over_column(col, expression.Second)
 
 
 @meta()
@@ -1398,7 +1398,7 @@ def next_day(col: ColumnOrName, dayOfWeek: str) -> Column:
     if session._is_bigquery:
         return next_day_bgutil(col, dayOfWeek)
 
-    return Column.invoke_anonymous_function(col, "NEXT_DAY", lit(dayOfWeek))
+    return Column.invoke_expression_over_column(col, expression.NextDay, expression=lit(dayOfWeek))
 
 
 @meta()
@@ -2160,7 +2160,7 @@ def bit_count(col: ColumnOrName) -> Column:
     if session._is_duckdb:
         return Column.invoke_anonymous_function(col, "BIT_COUNT")
 
-    return Column.invoke_expression_over_column(col, expression.BitwiseCountAgg)
+    return Column.invoke_expression_over_column(col, expression.BitwiseCount)
 
 
 @meta(unsupported_engines="*")
@@ -6805,7 +6805,7 @@ def weekday(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "weekday")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def width_bucket(
     v: ColumnOrName,
     min: ColumnOrName,
@@ -6854,7 +6854,9 @@ def width_bucket(
     +----------------------------+
     """
     numBucket = lit(numBucket) if isinstance(numBucket, int) else numBucket
-    return Column.invoke_anonymous_function(v, "width_bucket", min, max, numBucket)
+    return Column.invoke_expression_over_column(
+        v, expression.WidthBucket, min_value=min, max_value=max, num_buckets=numBucket
+    )
 
 
 @meta(unsupported_engines=["*", "spark"])

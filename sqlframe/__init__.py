@@ -6,6 +6,10 @@ import typing as t
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
+from sqlglot.dialects import spark
+
+spark.Spark.Generator.readparquet_sql = lambda self, x: x.sql(dialect="duckdb")  # type: ignore
+
 if t.TYPE_CHECKING:
     from sqlframe.base.session import CONN
 
