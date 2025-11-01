@@ -2938,3 +2938,26 @@ def test_join_filter_join_filter(
     )
 
     assert result == dfs_result
+
+
+# https://github.com/eakmanrq/sqlframe/issues/542
+def test_float_infinity(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    session = pyspark_employee.sparkSession
+    data = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2]}
+    rows = [
+        {key: value[i] for key, value in data.items()}
+        for i in range(len(data[next(iter(data.keys()))]))
+    ]
+    df = session.createDataFrame(rows)  # type: ignore
+    df = df.withColumns({"b": F.col("a") != F.lit(float("inf"))})
+
+    employee = get_df("employee")
+    sf_session = employee.session
+    dfs = sf_session.createDataFrame(rows)
+    dfs = dfs.withColumns({"b": SF.col("a") != SF.lit(float("inf"))})
+
+    compare_frames(df, dfs, compare_schema=False, sort=True)

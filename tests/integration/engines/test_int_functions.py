@@ -122,6 +122,7 @@ def get_types() -> t.Callable:
         ({"cola": 1}, {"cola": 1}),
         (Row(**{"cola": 1, "colb": "test"}), Row(**{"cola": 1, "colb": "test"})),
         (datetime.timedelta(1), datetime.timedelta(1)),
+        (float("inf"), float("inf")),
     ],
 )
 def test_lit(get_session_and_func, arg, expected):
