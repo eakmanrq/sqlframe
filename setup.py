@@ -20,7 +20,7 @@ setup(
     python_requires=">=3.9",
     install_requires=[
         "prettytable<4",
-        "sqlglot>=24.0.0,<27.29",
+        "sqlglot>=24.0.0,<27.30",
         "typing_extensions",
         "more-itertools",
     ],
@@ -32,6 +32,8 @@ setup(
         "dev": [
             "duckdb>=1.2,<1.5",
             "findspark>=2,<3",
+            # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
+            "mirakuru<3.0.0",
             "mypy>=1.10.0,<1.19",
             "openai>=1.30,<3",
             "pandas>=2,<3",
