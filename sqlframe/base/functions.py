@@ -3308,9 +3308,9 @@ def endswith(str: ColumnOrName, suffix: ColumnOrName) -> Column:
     )
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def equal_null(col1: ColumnOrName, col2: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col1, "equal_null", col2)
+    return Column.invoke_expression_over_column(col1, expression.EqualNull, expression=col2)
 
 
 @meta(unsupported_engines="*")
