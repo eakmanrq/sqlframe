@@ -181,19 +181,19 @@ def gizmosql_server():
 
 
 @pytest.fixture(scope="session")
-def gizmosql_tpcds_setup(gizmosql_server) -> GizmoSQLPyConnection:
-    conn = GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
+def gizmosql_tpcds_setup(gizmosql_server):
+    with GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
                                 db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                            "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
                                            DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                            # Not needed if you use a trusted CA-signed TLS cert
                                            },
                                 autocommit=True
-                                )
-    with conn.cursor() as cursor:
-        cursor.execute("INSTALL tpcds").fetchall()
-        cursor.execute("LOAD tpcds").fetchall()
-        cursor.execute("CALL dsdgen(sf=0.01)").fetchall()
+                                ) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("INSTALL tpcds").fetchall()
+            cursor.execute("LOAD tpcds").fetchall()
+            cursor.execute("CALL dsdgen(sf=0.01)").fetchall()
 
 
 @pytest.fixture(scope="function")
