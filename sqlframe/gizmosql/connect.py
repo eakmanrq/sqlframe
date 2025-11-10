@@ -4,7 +4,7 @@ from adbc_driver_flightsql import dbapi as flightsql_dbapi, DatabaseOptions
 
 
 class GizmoSQLAdbcCursor:
-    def __init__(self, parent: "GizmoSQLPyConnection", inner):
+    def __init__(self, parent: "GizmoSQLConnection", inner):
         self._parent = parent
         self._inner = inner
         self._closed = False
@@ -107,7 +107,7 @@ class GizmoSQLAdbcCursor:
             pass
 
 
-class GizmoSQLPyConnection:
+class GizmoSQLConnection:
     """
     Wrapper around flightsql_dbapi.connect() that:
 
@@ -125,7 +125,7 @@ class GizmoSQLPyConnection:
 
     # --- Context manager protocol -------------------------------------------------
 
-    def __enter__(self) -> "GizmoSQLPyConnection":
+    def __enter__(self) -> "GizmoSQLConnection":
         if self._closed:
             raise RuntimeError("Connection already closed")
         return self

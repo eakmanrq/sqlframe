@@ -17,11 +17,11 @@ from sqlframe.gizmosql.table import GizmoSQLTable
 from sqlframe.gizmosql.udf import GizmoSQLUDFRegistration
 
 if t.TYPE_CHECKING:
-    from sqlframe.gizmosql.connection_wrapper import GizmoSQLPyConnection
+    from sqlframe.gizmosql.connect import GizmoSQLConnection
     from sqlframe.base.types import Row
 
 else:
-    GizmoSQLPyConnection = t.Any
+    GizmoSQLConnection = t.Any
 
 
 class GizmoSQLSession(
@@ -31,7 +31,7 @@ class GizmoSQLSession(
         GizmoSQLDataFrameWriter,
         GizmoSQLDataFrame,
         GizmoSQLTable,
-        GizmoSQLPyConnection,  # type: ignore
+        GizmoSQLConnection,  # type: ignore
         GizmoSQLUDFRegistration,
     ]
 ):
@@ -42,12 +42,12 @@ class GizmoSQLSession(
     _table = GizmoSQLTable
     _udf_registration = GizmoSQLUDFRegistration
 
-    def __init__(self, conn: t.Optional[GizmoSQLPyConnection] = None):
+    def __init__(self, conn: t.Optional[GizmoSQLConnection] = None):
         if not hasattr(self, "_conn"):
             super().__init__(conn)
 
     @cached_property
-    def _cur(self) -> GizmoSQLPyConnection:  # type: ignore
+    def _cur(self) -> GizmoSQLConnection:  # type: ignore
         return self._conn.cursor()
 
     @classmethod

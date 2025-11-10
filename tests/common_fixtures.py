@@ -6,7 +6,7 @@ import typing as t
 from pathlib import Path
 
 import docker
-from sqlframe.gizmosql.connection_wrapper import GizmoSQLPyConnection, DatabaseOptions
+from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
 
 # Constants
 GIZMOSQL_PORT = 31337
@@ -182,14 +182,14 @@ def gizmosql_server():
 
 @pytest.fixture(scope="session")
 def gizmosql_tpcds_setup(gizmosql_server):
-    with GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
-                                db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+    with GizmoSQLConnection(uri="grpc+tls://localhost:31337",
+                            db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                            "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
                                            DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                            # Not needed if you use a trusted CA-signed TLS cert
                                            },
-                                autocommit=True
-                                ) as conn:
+                            autocommit=True
+                            ) as conn:
         with conn.cursor() as cursor:
             cursor.execute("INSTALL tpcds").fetchall()
             cursor.execute("LOAD tpcds").fetchall()
@@ -197,15 +197,15 @@ def gizmosql_tpcds_setup(gizmosql_server):
 
 
 @pytest.fixture(scope="function")
-def gizmosql_adbc_connection(gizmosql_tpcds_setup) -> GizmoSQLPyConnection:
-    conn = GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
-                                db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+def gizmosql_adbc_connection(gizmosql_tpcds_setup) -> GizmoSQLConnection:
+    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
+                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                            "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
                                            DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                            # Not needed if you use a trusted CA-signed TLS cert
                                            },
-                                autocommit=True
-                                )
+                              autocommit=True
+                              )
     return conn
 
 
