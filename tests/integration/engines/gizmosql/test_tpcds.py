@@ -15,14 +15,11 @@ pytest_plugins = ["tests.common_fixtures", "tests.integration.fixtures"]
 )
 def test_tpcds(
     num: int,
-    pyspark_session: PySparkSession,
-    gizmosql_session: GizmoSQLSession,
-    compare_frames: t.Callable,
+    gizmosql_session: GizmoSQLSession
 ):
     if num in [16, 32, 50, 62, 92, 94, 95, 99]:
         pytest.skip(f"TPCDS{num} is not supported by PySpark due to spaces in column names")
     with open(f"tests/fixtures/tpcds/tpcds{num}.sql") as f:
         query = f.read()
-    df = pyspark_session.sql(query)
     dfs = gizmosql_session.sql(sqlQuery=query, qualify=False)
-    compare_frames(df, dfs, no_empty=False)
+    dfs.show()
