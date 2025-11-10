@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import os
+import time
 import typing as t
 from pathlib import Path
 
+import docker
+from sqlframe.gizmosql.connection_wrapper import GizmoSQLPyConnection, DatabaseOptions
+
+# Constants
+GIZMOSQL_PORT = 31337
+
 import duckdb
 import pytest
-from pyspark import SparkConf
 from pyspark.sql import SparkSession as PySparkSession
 from pytest_postgresql.janitor import DatabaseJanitor
 
@@ -14,6 +20,7 @@ from sqlframe.base.session import _BaseSession
 from sqlframe.bigquery.session import BigQuerySession
 from sqlframe.databricks.session import DatabricksSession
 from sqlframe.duckdb.session import DuckDBSession
+from sqlframe.gizmosql.session import GizmoSQLSession
 from sqlframe.postgres.session import PostgresSession
 from sqlframe.redshift.session import RedshiftSession
 from sqlframe.snowflake.session import SnowflakeSession
@@ -125,6 +132,92 @@ def duckdb_session() -> DuckDBSession:
     assert connector.fetchone()[1] == "UTC"  # type: ignore
     connector.execute("INSTALL tpcds")
     return DuckDBSession(conn=connector)
+
+
+# Function to wait for a specific log message indicating the container is ready
+def wait_for_container_log(container, timeout=30, poll_interval=1, ready_message="GizmoSQL server - started"):
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        # Get the logs from the container
+        logs = container.logs().decode('utf-8')
+
+        # Check if the ready message is in the logs
+        if ready_message in logs:
+            return True
+
+        # Wait for the next poll
+        time.sleep(poll_interval)
+
+    raise TimeoutError(f"Container did not show '{ready_message}' in logs within {timeout} seconds.")
+
+
+@pytest.fixture(scope="session")
+def gizmosql_server():
+    client = docker.from_env()
+    container = client.containers.run(
+        image="gizmodata/gizmosql:latest",
+        name="sqlframe-gizmosql-test",
+        detach=True,
+        remove=True,
+        tty=True,
+        init=True,
+        ports={f"{GIZMOSQL_PORT}/tcp": GIZMOSQL_PORT},
+        environment={"GIZMOSQL_USERNAME": "gizmosql_username",
+                     "GIZMOSQL_PASSWORD": "gizmosql_password",
+                     "DATABASE_FILENAME": "data/sqlframe.db",
+                     "TLS_ENABLED": "1",
+                     "PRINT_QUERIES": "1"
+                     },
+        stdout=True,
+        stderr=True
+    )
+
+    # Wait for the container to be ready
+    wait_for_container_log(container)
+
+    yield container
+
+    container.stop()
+
+
+@pytest.fixture(scope="session")
+def gizmosql_tpcds_setup(gizmosql_server) -> GizmoSQLPyConnection:
+    conn = GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
+                                db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+                                           "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
+                                           DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
+                                           # Not needed if you use a trusted CA-signed TLS cert
+                                           },
+                                autocommit=True
+                                )
+    with conn.cursor() as cursor:
+        cursor.execute("INSTALL tpcds").fetchall()
+        cursor.execute("LOAD tpcds").fetchall()
+        cursor.execute("CALL dsdgen(sf=0.01)").fetchall()
+
+
+@pytest.fixture(scope="function")
+def gizmosql_adbc_connection(gizmosql_tpcds_setup) -> GizmoSQLPyConnection:
+    conn = GizmoSQLPyConnection(uri="grpc+tls://localhost:31337",
+                                db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+                                           "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
+                                           DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
+                                           # Not needed if you use a trusted CA-signed TLS cert
+                                           },
+                                autocommit=True
+                                )
+    return conn
+
+
+@pytest.fixture(scope="function")
+def gizmosql_session(gizmosql_adbc_connection) -> GizmoSQLSession:
+    conn = gizmosql_adbc_connection
+    with conn.cursor() as cursor:
+        cursor.execute("set TimeZone = 'UTC'").fetchall()
+        cursor.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")
+        assert cursor.fetchone()[1] == "UTC"  # type: ignore
+
+    return GizmoSQLSession(conn=conn)
 
 
 @pytest.fixture
@@ -273,7 +366,7 @@ def _employee_data() -> EmployeeData:
 
 @pytest.fixture(scope="function")
 def standalone_employee(
-    standalone_session: StandaloneSession, _employee_data: EmployeeData
+        standalone_session: StandaloneSession, _employee_data: EmployeeData
 ) -> StandaloneDataFrame:
     sqlf_employee_schema = StandaloneTypes.StructType(
         [

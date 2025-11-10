@@ -29,6 +29,9 @@ from sqlframe.databricks.session import DatabricksSession
 from sqlframe.duckdb import types as DuckDBTypes
 from sqlframe.duckdb.dataframe import DuckDBDataFrame
 from sqlframe.duckdb.session import DuckDBSession
+from sqlframe.gizmosql import types as GizmoSQLTypes
+from sqlframe.gizmosql.dataframe import GizmoSQLDataFrame
+from sqlframe.gizmosql.session import GizmoSQLSession
 from sqlframe.postgres import types as PostgresTypes
 from sqlframe.postgres.dataframe import PostgresDataFrame
 from sqlframe.postgres.session import PostgresSession
@@ -291,6 +294,48 @@ def duckdb_district(duckdb_session: DuckDBSession, _district_data: DistrictData)
     df.createOrReplaceTempView("district")
     return df
 
+@pytest.fixture(scope="function")
+def gizmosql_employee(gizmosql_session: GizmoSQLSession, _employee_data: EmployeeData) -> GizmoSQLDataFrame:
+    gizmosql_employee_schema = GizmoSQLTypes.StructType(
+        [
+            GizmoSQLTypes.StructField("employee_id", GizmoSQLTypes.IntegerType(), False),
+            GizmoSQLTypes.StructField("fname", GizmoSQLTypes.StringType(), False),
+            GizmoSQLTypes.StructField("lname", GizmoSQLTypes.StringType(), False),
+            GizmoSQLTypes.StructField("age", GizmoSQLTypes.IntegerType(), False),
+            GizmoSQLTypes.StructField("store_id", GizmoSQLTypes.IntegerType(), False),
+        ]
+    )
+    df = gizmosql_session.createDataFrame(data=_employee_data, schema=gizmosql_employee_schema)
+    df.createOrReplaceTempView("employee")
+    return df
+
+
+@pytest.fixture(scope="function")
+def gizmosql_store(gizmosql_session: GizmoSQLSession, _store_data: StoreData) -> GizmoSQLDataFrame:
+    gizmosql_store_schema = GizmoSQLTypes.StructType(
+        [
+            GizmoSQLTypes.StructField("store_id", GizmoSQLTypes.IntegerType(), False),
+            GizmoSQLTypes.StructField("store_name", GizmoSQLTypes.StringType(), False),
+            GizmoSQLTypes.StructField("district_id", GizmoSQLTypes.IntegerType(), False),
+            GizmoSQLTypes.StructField("num_sales", GizmoSQLTypes.IntegerType(), False),
+        ]
+    )
+    df = gizmosql_session.createDataFrame(data=_store_data, schema=gizmosql_store_schema)
+    df.createOrReplaceTempView("store")
+    return df
+
+
+@pytest.fixture(scope="function")
+def gizmosql_district(gizmosql_session: GizmoSQLSession, _district_data: DistrictData) -> GizmoSQLDataFrame:
+    gizmosql_district_schema = GizmoSQLTypes.StructType(
+        [
+            GizmoSQLTypes.StructField("district_id", GizmoSQLTypes.IntegerType(), False),
+            GizmoSQLTypes.StructField("district_name", GizmoSQLTypes.StringType(), False),
+        ]
+    )
+    df = gizmosql_session.createDataFrame(data=_district_data, schema=gizmosql_district_schema)
+    df.createOrReplaceTempView("district")
+    return df
 
 @pytest.fixture
 def postgres_employee(
