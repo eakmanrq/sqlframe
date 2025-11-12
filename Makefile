@@ -5,7 +5,7 @@ else
 endif
 
 install-dev:
-	$(PIP) install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
+	$(PIP) install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark,gizmosql]"
 
 install-pre-commit:
 	pre-commit install

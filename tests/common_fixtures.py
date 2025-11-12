@@ -1,19 +1,8 @@
 from __future__ import annotations
 
 import os
-import time
 import typing as t
 from pathlib import Path
-from typing import Any, Generator
-
-import docker
-
-from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
-
-# Constants
-GIZMOSQL_PORT = 31337
-CONTAINER_NAME = "sqlframe-gizmosql-test"
-LOCK_FILE = "/tmp/sqlframe_gizmosql.lock"
 
 import duckdb
 import pytest
@@ -24,7 +13,6 @@ from sqlframe.base.session import _BaseSession
 from sqlframe.bigquery.session import BigQuerySession
 from sqlframe.databricks.session import DatabricksSession
 from sqlframe.duckdb.session import DuckDBSession
-from sqlframe.gizmosql.session import GizmoSQLSession
 from sqlframe.postgres.session import PostgresSession
 from sqlframe.redshift.session import RedshiftSession
 from sqlframe.snowflake.session import SnowflakeSession
@@ -32,7 +20,6 @@ from sqlframe.spark.session import SparkSession
 from sqlframe.standalone import types as StandaloneTypes
 from sqlframe.standalone.dataframe import StandaloneDataFrame
 from sqlframe.standalone.session import StandaloneSession
-from filelock import FileLock
 
 if t.TYPE_CHECKING:
     from databricks.sql import Connection as DatabricksConnection
@@ -137,115 +124,6 @@ def duckdb_session() -> DuckDBSession:
     assert connector.fetchone()[1] == "UTC"  # type: ignore
     connector.execute("INSTALL tpcds")
     return DuckDBSession(conn=connector)
-
-
-# Function to wait for a specific log message indicating the container is ready
-def wait_for_container_log(container, timeout=30, poll_interval=1, ready_message="GizmoSQL server - started"):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        # Get the logs from the container
-        logs = container.logs().decode('utf-8')
-
-        # Check if the ready message is in the logs
-        if ready_message in logs:
-            return True
-
-        # Wait for the next poll
-        time.sleep(poll_interval)
-
-    raise TimeoutError(f"Container did not show '{ready_message}' in logs within {timeout} seconds.")
-
-
-@pytest.fixture(scope="session")
-def gizmosql_server(worker_id):
-    """
-    Start a single GizmoSQL container shared across xdist workers.
-
-    - First worker to grab the lock creates the container.
-    - Others reuse the existing container.
-    - Only gw0 stops/removes it at the end.
-    """
-    client = docker.from_env()
-    lock = FileLock(LOCK_FILE)
-
-    with lock:
-        try:
-            container = client.containers.get(CONTAINER_NAME)
-            # Optionally check it's running/healthy; start if needed.
-            if container.status != "running":
-                container.start()
-        except docker.errors.NotFound:
-            container = client.containers.run(
-                image="gizmodata/gizmosql:latest",
-                name=CONTAINER_NAME,
-                detach=True,
-                remove=False,  # IMPORTANT: we clean up manually
-                tty=True,
-                init=True,
-                ports={f"{GIZMOSQL_PORT}/tcp": GIZMOSQL_PORT},
-                environment={
-                    "GIZMOSQL_USERNAME": "gizmosql_username",
-                    "GIZMOSQL_PASSWORD": "gizmosql_password",
-                    "DATABASE_FILENAME": "data/sqlframe.db",
-                    "TLS_ENABLED": "1",
-                    "PRINT_QUERIES": "1",
-                    "INIT_SQL_COMMANDS": "CALL dsdgen(sf=0.01);"
-                },
-                stdout=True,
-                stderr=True,
-            )
-            wait_for_container_log(container)
-
-    # Everyone yields the same-named container (looked up fresh to avoid stale ref)
-    yield client.containers.get(CONTAINER_NAME)
-
-    # Teardown: only one worker (typically gw0) owns cleanup
-    if worker_id == "gw0":
-        with lock:
-            try:
-                c = client.containers.get(CONTAINER_NAME)
-            except docker.errors.NotFound:
-                c = None
-
-            if c is not None:
-                try:
-                    c.stop()
-                except Exception:
-                    pass
-                try:
-                    c.remove(v=True, force=True)
-                except Exception:
-                    pass
-
-
-@pytest.fixture(scope="function")
-def gizmosql_connection(gizmosql_server):
-    with GizmoSQLConnection(uri="grpc+tls://localhost:31337",
-                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
-                                         "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
-                                         DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
-                                         # Not needed if you use a trusted CA-signed TLS cert
-                                         },
-                              autocommit=True
-                              ) as conn:
-        yield conn
-
-
-@pytest.fixture(scope="function")
-def gizmosql_session(gizmosql_connection) -> GizmoSQLSession:
-    conn = gizmosql_connection
-    with conn.cursor() as cursor:
-        cursor.execute("set TimeZone = 'UTC'").fetchall()
-        cursor.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")
-        assert cursor.fetchone()[1] == "UTC"  # type: ignore
-
-    session = GizmoSQLSession(conn=conn)
-
-    # Register any tables with the Spark catalog
-    for table in session.catalog.listTables():
-        _ = session.table(table.name)
-
-    return session
 
 
 @pytest.fixture

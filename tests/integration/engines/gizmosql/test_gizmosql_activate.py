@@ -1,13 +1,14 @@
+import os
+
 import pytest
 
-import os
 from sqlframe import activate
 from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
 
 
 @pytest.mark.forked
-def test_activate_with_connection(gizmosql_server):
-    # We need to grab a thread-safe connection (we can't use a session fixture)
+def test_activate_with_connection():
+    # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
     conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
                               db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                          "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
@@ -32,8 +33,8 @@ def test_activate_with_connection(gizmosql_server):
 
 
 @pytest.mark.forked
-def test_activate_with_connection_and_input_dialect(gizmosql_server):
-    # We need to grab a thread-safe connection (we can't use a session fixture)
+def test_activate_with_connection_and_input_dialect():
+    # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
     conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
                               db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                          "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
