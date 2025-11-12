@@ -5,8 +5,8 @@ from sqlframe.base.types import Row
 from sqlframe.gizmosql.session import GizmoSQLSession
 
 
-def test_session_from_config(gizmosql_adbc_connection):
-    conn = gizmosql_adbc_connection
+def test_session_from_config(gizmosql_connection):
+    conn = gizmosql_connection
     with conn.cursor() as cursor:
         cursor.execute("CREATE TABLE test_table (cola INT, colb STRING)").fetchall()
     session = GizmoSQLSession.builder.config("sqlframe.conn", conn).getOrCreate()

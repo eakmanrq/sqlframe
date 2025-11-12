@@ -218,7 +218,7 @@ def gizmosql_server(worker_id):
 
 
 @pytest.fixture(scope="function")
-def gizmosql_adbc_connection(gizmosql_server) -> GizmoSQLConnection:
+def gizmosql_connection(gizmosql_server) -> GizmoSQLConnection:
     conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
                               db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                          "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
@@ -231,8 +231,8 @@ def gizmosql_adbc_connection(gizmosql_server) -> GizmoSQLConnection:
 
 
 @pytest.fixture(scope="function")
-def gizmosql_session(gizmosql_adbc_connection) -> GizmoSQLSession:
-    conn = gizmosql_adbc_connection
+def gizmosql_session(gizmosql_connection) -> GizmoSQLSession:
+    conn = gizmosql_connection
     with conn.cursor() as cursor:
         cursor.execute("set TimeZone = 'UTC'").fetchall()
         cursor.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")

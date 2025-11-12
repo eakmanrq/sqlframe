@@ -1,16 +1,28 @@
 import pytest
 
+import os
 from sqlframe import activate
+from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
 
 
-def test_activate_with_connection(gizmosql_adbc_connection):
-    conn = gizmosql_adbc_connection
+@pytest.mark.forked
+def test_activate_with_connection(gizmosql_server):
+    # We need to grab a thread-safe connection (we can't use a session fixture)
+    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
+                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+                                         "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
+                                         DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
+                                         # Not needed if you use a trusted CA-signed TLS cert
+                                         },
+                              autocommit=True
+                              )
     with conn.cursor() as cursor:
+        cursor.execute('DROP SCHEMA IF EXISTS "activate_test_1" CASCADE').fetchall()
         cursor.execute('CREATE SCHEMA "activate_test_1"').fetchall()
         cursor.execute('CREATE TABLE "activate_test_1"."test" (a INT)').fetchall()
         cursor.execute('INSERT INTO "activate_test_1"."test" VALUES (1)').fetchall()
 
-    activate("gizmosql", conn=gizmosql_adbc_connection)
+    activate("gizmosql", conn=conn)
     from pyspark.sql import SparkSession
 
     spark = SparkSession.builder.appName("test").getOrCreate()
@@ -19,12 +31,23 @@ def test_activate_with_connection(gizmosql_adbc_connection):
     assert df.collect() == [(1,)]
 
 
-def test_activate_with_connection_and_input_dialect(gizmosql_adbc_connection):
-    conn = gizmosql_adbc_connection
+@pytest.mark.forked
+def test_activate_with_connection_and_input_dialect(gizmosql_server):
+    # We need to grab a thread-safe connection (we can't use a session fixture)
+    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
+                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
+                                         "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
+                                         DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
+                                         # Not needed if you use a trusted CA-signed TLS cert
+                                         },
+                              autocommit=True
+                              )
     with conn.cursor() as cursor:
-        cursor.execute('CREATE SCHEMA "activate_test_2"').fetchall()
-        cursor.execute('CREATE TABLE "activate_test_2"."test" (a INT)').fetchall()
+        cursor.execute('DROP SCHEMA IF EXISTS "activate_test_2" CASCADE').fetchall()
+        cursor.execute('CREATE OR REPLACE SCHEMA "activate_test_2"').fetchall()
+        cursor.execute('CREATE OR REPLACE TABLE "activate_test_2"."test" (a INT)').fetchall()
         cursor.execute('INSERT INTO "activate_test_2"."test" VALUES (1)').fetchall()
+
     activate("gizmosql", conn=conn, config={"sqlframe.input.dialect": "duckdb"})
     from pyspark.sql import SparkSession
 
