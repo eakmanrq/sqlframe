@@ -45,7 +45,8 @@ jobs:
         pushd /tmp
         curl --location -o gizmosql.zip https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_amd64.zip
         unzip gizmosql.zip
-        ./gizmosql_server --password gizmosql_password &
+        ./gizmosql_server --password gizmosql_password --print-queries &
+        sleep 10
         popd
     - name: Run tests
       run: make local-test
