@@ -48,7 +48,9 @@ class GizmoSQLDataFrame(
     _group_data = GizmoSQLGroupedData
 
     def explain(
-        self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
+        self,
+        extended: t.Optional[t.Union[bool, str]] = None,
+        mode: t.Optional[str] = None,
     ) -> None:
         results = self._get_explain_plan_rows()
         print(results[0][1])
@@ -59,7 +61,9 @@ class GizmoSQLDataFrame(
     @t.overload
     def toArrow(self, batch_size: int) -> RecordBatchReader: ...
 
-    def toArrow(self, batch_size: t.Optional[int] = None) -> t.Union[ArrowTable, RecordBatchReader]:
+    def toArrow(
+        self, batch_size: t.Optional[int] = None
+    ) -> t.Union[ArrowTable, RecordBatchReader]:
         self._collect(skip_rows=True)
         if not batch_size:
             return self.session._last_result.fetch_arrow_table()

@@ -7,7 +7,7 @@ import typing as t
 from sqlframe.base.group import _BaseGroupedData
 
 if t.TYPE_CHECKING:
-    from sqlframe.gizmosql.dataframe import GizmoSQLDataFrame
+    pass
 
 
 class GizmoSQLGroupedData(_BaseGroupedData["GizmoSQLDataFrame"]):

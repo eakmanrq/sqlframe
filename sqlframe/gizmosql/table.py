@@ -1,6 +1,5 @@
 from sqlframe.base.mixins.table_mixins import (
     DeleteSupportMixin,
-    MergeSupportMixin,
     UpdateSupportMixin,
 )
 from sqlframe.base.table import _BaseTable

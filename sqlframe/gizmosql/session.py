@@ -6,13 +6,15 @@ from functools import cached_property
 from sqlframe.base.session import _BaseSession
 from sqlframe.gizmosql.catalog import GizmoSQLCatalog
 from sqlframe.gizmosql.dataframe import GizmoSQLDataFrame
-from sqlframe.gizmosql.readwriter import GizmoSQLDataFrameReader, GizmoSQLDataFrameWriter
+from sqlframe.gizmosql.readwriter import (
+    GizmoSQLDataFrameReader,
+    GizmoSQLDataFrameWriter,
+)
 from sqlframe.gizmosql.table import GizmoSQLTable
 from sqlframe.gizmosql.udf import GizmoSQLUDFRegistration
 
 if t.TYPE_CHECKING:
     from sqlframe.gizmosql.connect import GizmoSQLConnection, GizmoSQLAdbcCursor
-    from sqlframe.base.types import Row
 
 else:
     GizmoSQLConnection = t.Any

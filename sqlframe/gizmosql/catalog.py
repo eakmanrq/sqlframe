@@ -28,15 +28,33 @@ if t.TYPE_CHECKING:
 
 
 class GizmoSQLCatalog(
-    GetCurrentCatalogFromFunctionMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    SetCurrentCatalogFromUseMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    GetCurrentDatabaseFromFunctionMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    CreateTableFromFunctionMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    ListDatabasesFromInfoSchemaMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    ListCatalogsFromInfoSchemaMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    SetCurrentDatabaseFromUseMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    ListTablesFromInfoSchemaMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
-    ListColumnsFromInfoSchemaMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
+    GetCurrentCatalogFromFunctionMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    SetCurrentCatalogFromUseMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    GetCurrentDatabaseFromFunctionMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    CreateTableFromFunctionMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    ListDatabasesFromInfoSchemaMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    ListCatalogsFromInfoSchemaMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    SetCurrentDatabaseFromUseMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    ListTablesFromInfoSchemaMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
+    ListColumnsFromInfoSchemaMixin[
+        "GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"
+    ],
     _BaseCatalog["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
 ):
     TEMP_CATALOG_FILTER = exp.column("table_catalog").eq("temp")
@@ -89,8 +107,12 @@ class GizmoSQLCatalog(
                 self.currentCatalog(), from_dialect="output", to_dialect="input"
             )
             schema = schema_(
-                db=exp.parse_identifier(current_database, dialect=self.session.input_dialect),
-                catalog=exp.parse_identifier(current_catalog, dialect=self.session.input_dialect),
+                db=exp.parse_identifier(
+                    current_database, dialect=self.session.input_dialect
+                ),
+                catalog=exp.parse_identifier(
+                    current_catalog, dialect=self.session.input_dialect
+                ),
             )
         else:
             dbName = normalize_string(dbName, from_dialect="input", is_schema=True)
@@ -126,5 +148,7 @@ class GizmoSQLCatalog(
             normalized_pattern = normalize_string(
                 pattern, from_dialect="input", to_dialect="output", is_pattern=True
             )
-            functions = [x for x in functions if fnmatch.fnmatch(x.name, normalized_pattern)]
+            functions = [
+                x for x in functions if fnmatch.fnmatch(x.name, normalized_pattern)
+            ]
         return functions

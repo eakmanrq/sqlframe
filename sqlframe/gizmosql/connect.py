@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from adbc_driver_flightsql import dbapi as flightsql_dbapi, DatabaseOptions
+from adbc_driver_flightsql import dbapi as flightsql_dbapi
 
 
 class GizmoSQLAdbcCursor:
@@ -80,6 +80,7 @@ class GizmoSQLAdbcCursor:
                 # double-closing the same AdbcStatement (which caused "Underflow" and
                 # now AttributeError when _stmt became None).
                 try:
+
                     def _noop_close(*_args, **_kwargs):
                         return None
 
