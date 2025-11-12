@@ -11,11 +11,12 @@ from sqlframe.gizmosql.table import GizmoSQLTable
 from sqlframe.gizmosql.udf import GizmoSQLUDFRegistration
 
 if t.TYPE_CHECKING:
-    from sqlframe.gizmosql.connect import GizmoSQLConnection
+    from sqlframe.gizmosql.connect import GizmoSQLConnection, GizmoSQLAdbcCursor
     from sqlframe.base.types import Row
 
 else:
     GizmoSQLConnection = t.Any
+    GizmoSQLAdbcCursor = t.Any
 
 
 class GizmoSQLSession(
@@ -42,7 +43,7 @@ class GizmoSQLSession(
             self._last_result = None
 
     @cached_property
-    def _cur(self) -> GizmoSQLConnection:  # type: ignore
+    def _cur(self) -> GizmoSQLAdbcCursor:  # type: ignore
         return self._conn.cursor()
 
     @classmethod

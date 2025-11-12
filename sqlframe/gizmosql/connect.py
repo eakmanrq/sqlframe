@@ -16,7 +16,7 @@ class GizmoSQLAdbcCursor:
             raise RuntimeError("Cursor already closed")
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb):
         # Always close; never suppress the original exception.
         try:
             self.close()
@@ -130,7 +130,7 @@ class GizmoSQLConnection:
             raise RuntimeError("Connection already closed")
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb):
         # Match typical DB-API semantics:
         # - If exception: rollback best-effort.
         # - Else: commit best-effort.
