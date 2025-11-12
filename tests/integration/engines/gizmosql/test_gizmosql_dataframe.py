@@ -273,8 +273,8 @@ def test_duplicate_cte(gizmosql_session: GizmoSQLSession):
     con = gizmosql_session._conn
 
     with con.cursor() as cursor:
-        cursor.execute("CREATE VIEW foo AS SELECT 'a' as key, 1 as idx").fetchall()
-        cursor.execute("CREATE VIEW bar AS SELECT 'b' as key, 2 as smth").fetchall()
+        cursor.execute("CREATE OR REPLACE VIEW foo AS SELECT 'a' as key, 1 as idx").fetchall()
+        cursor.execute("CREATE OR REPLACE VIEW bar AS SELECT 'b' as key, 2 as smth").fetchall()
 
     foo = gizmosql_session.table("foo").filter(F.col("idx") == 1)
     bar = gizmosql_session.table("bar").filter(F.col("smth") == 2)
