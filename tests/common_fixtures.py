@@ -219,7 +219,7 @@ def gizmosql_server(worker_id):
 
 
 @pytest.fixture(scope="function")
-def gizmosql_connection(gizmosql_server) -> Generator[GizmoSQLConnection, Any, None]:
+def gizmosql_connection(gizmosql_server):
     with GizmoSQLConnection(uri="grpc+tls://localhost:31337",
                               db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                          "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
