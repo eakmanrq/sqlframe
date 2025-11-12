@@ -14,7 +14,7 @@ from sqlframe.gizmosql.table import GizmoSQLTable
 from sqlframe.gizmosql.udf import GizmoSQLUDFRegistration
 
 if t.TYPE_CHECKING:
-    from sqlframe.gizmosql.connect import GizmoSQLConnection, GizmoSQLAdbcCursor
+    from sqlframe.gizmosql.connect import GizmoSQLAdbcCursor, GizmoSQLConnection
 
 else:
     GizmoSQLConnection = t.Any

@@ -3,7 +3,7 @@ import os
 import pytest
 
 from sqlframe import activate
-from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
+from sqlframe.gizmosql.connect import GizmoSQLConnection
 
 
 @pytest.mark.forked

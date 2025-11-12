@@ -3,7 +3,7 @@ import os
 import pytest
 
 from sqlframe.gizmosql import GizmoSQLSession
-from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
+from sqlframe.gizmosql.connect import GizmoSQLConnection
 
 # Constants
 GIZMOSQL_PORT = 31337

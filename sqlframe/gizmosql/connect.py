@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from adbc_driver_flightsql import DatabaseOptions
 from adbc_driver_flightsql import dbapi as flightsql_dbapi
 
 
