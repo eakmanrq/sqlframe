@@ -6,6 +6,7 @@ from sqlframe.base.udf import _BaseUDFRegistration
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import DataTypeOrString, UserDefinedFunctionLike
+    from sqlframe.gizmosql.session import GizmoSQLSession
 
 
 class GizmoSQLUDFRegistration(_BaseUDFRegistration["GizmoSQLSession"]):
