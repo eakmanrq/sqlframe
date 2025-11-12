@@ -22,7 +22,7 @@ ENGINE_TO_PREFIX = {
     "spark": "Spark",
     "databricks": "Databricks",
     "standalone": "Standalone",
-    "gizmosql": "GizmoSQL"
+    "gizmosql": "GizmoSQL",
 }
 
 NAME_TO_FILE_OVERRIDE = {

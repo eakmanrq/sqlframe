@@ -47,8 +47,8 @@ def test_print_schema_basic(gizmosql_employee: GizmoSQLDataFrame, capsys):
     gizmosql_employee.printSchema()
     captured = capsys.readouterr()
     assert (
-            captured.out.strip()
-            == """
+        captured.out.strip()
+        == """
 root
  |-- employee_id: int (nullable = true)
  |-- fname: string (nullable = true)
@@ -62,8 +62,8 @@ def test_print_schema_nested(gizmosql_datatypes: GizmoSQLDataFrame, capsys):
     gizmosql_datatypes.printSchema()
     captured = capsys.readouterr()
     assert (
-            captured.out.strip()
-            == """
+        captured.out.strip()
+        == """
 root
  |-- bigint_col: bigint (nullable = true)
  |-- double_col: double (nullable = true)
@@ -258,8 +258,8 @@ def test_to_arrow_batch(gizmosql_employee: GizmoSQLDataFrame):
 def test_explain(gizmosql_employee: GizmoSQLDataFrame, capsys):
     gizmosql_employee.explain()
     assert (
-            capsys.readouterr().out.strip()
-            == """
+        capsys.readouterr().out.strip()
+        == """
 ┌───────────────────────────┐
 │      COLUMN_DATA_SCAN     │
 │    ────────────────────   │

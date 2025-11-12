@@ -11,10 +11,10 @@ from sqlframe.gizmosql import GizmoSQLSession
     list(range(1, 100)),
 )
 def test_tpcds(
-        num: int,
-        pyspark_session: PySparkSession,
-        gizmosql_session_with_tables: GizmoSQLSession,
-        compare_frames: t.Callable,
+    num: int,
+    pyspark_session: PySparkSession,
+    gizmosql_session_with_tables: GizmoSQLSession,
+    compare_frames: t.Callable,
 ):
     if num in [16, 32, 50, 62, 92, 94, 95, 99]:
         pytest.skip(f"TPCDS{num} is not supported by PySpark due to spaces in column names")

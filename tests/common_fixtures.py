@@ -272,7 +272,7 @@ def _employee_data() -> EmployeeData:
 
 @pytest.fixture(scope="function")
 def standalone_employee(
-        standalone_session: StandaloneSession, _employee_data: EmployeeData
+    standalone_session: StandaloneSession, _employee_data: EmployeeData
 ) -> StandaloneDataFrame:
     sqlf_employee_schema = StandaloneTypes.StructType(
         [

@@ -84,9 +84,7 @@ class GizmoSQLDataFrameReader(
             select_column_mapping = column_mapping.copy()
             if merged_options.get("filename"):
                 select_column_mapping["filename"] = "VARCHAR"
-            select_columns = [
-                x.expression for x in self._to_casted_columns(select_column_mapping)
-            ]
+            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
             if format == "csv":
                 merged_options["columns"] = column_mapping  # type: ignore
         else:
@@ -99,20 +97,14 @@ class GizmoSQLDataFrameReader(
             from_clause = f"read_{format}([{paths}], {to_csv(merged_options)})"
         else:
             from_clause = f"'{path}'"
-        df = self.session.sql(
-            exp.select(*select_columns).from_(from_clause), qualify=False
-        )
+        df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
         if select_columns == [exp.Star()]:
-            return self.load(
-                path=path, format=format, schema=df.schema, **merged_options
-            )
+            return self.load(path=path, format=format, schema=df.schema, **merged_options)
         self.session._last_loaded_file = path  # type: ignore
         return df
 
 
-class GizmoSQLDataFrameWriter(
-    _BaseDataFrameWriter["GizmoSQLSession", "GizmoSQLDataFrame"]
-):
+class GizmoSQLDataFrameWriter(_BaseDataFrameWriter["GizmoSQLSession", "GizmoSQLDataFrame"]):
     def _write(self, path: str, mode: t.Optional[str], **options):  # type: ignore
         mode, skip = self._validate_mode(path, mode)
         if skip:

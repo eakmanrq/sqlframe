@@ -49,7 +49,7 @@ setup(
             "pre-commit>=3.7,<5",
             "ruff>=0.4.4,<0.15",
             "types-psycopg2>=2.9,<3",
-            "docker>=7.1.0,<8"
+            "docker>=7.1.0,<8",
         ],
         "docs": [
             "mkdocs==1.4.2",

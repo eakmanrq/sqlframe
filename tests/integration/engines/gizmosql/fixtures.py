@@ -29,12 +29,11 @@ def gizmosql_connection():
                --pull always \
                gizmodata/gizmosql:latest
     """
-    with GizmoSQLConnection(uri="grpc+tcp://localhost:31337",
-                            db_kwargs={"username": "gizmosql_username",
-                                       "password": "gizmosql_password"
-                                       },
-                            autocommit=True
-                            ) as conn:
+    with GizmoSQLConnection(
+        uri="grpc+tcp://localhost:31337",
+        db_kwargs={"username": "gizmosql_username", "password": "gizmosql_password"},
+        autocommit=True,
+    ) as conn:
         yield conn
 
 

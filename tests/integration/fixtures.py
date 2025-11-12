@@ -294,8 +294,11 @@ def duckdb_district(duckdb_session: DuckDBSession, _district_data: DistrictData)
     df.createOrReplaceTempView("district")
     return df
 
+
 @pytest.fixture(scope="function")
-def gizmosql_employee(gizmosql_session: GizmoSQLSession, _employee_data: EmployeeData) -> GizmoSQLDataFrame:
+def gizmosql_employee(
+    gizmosql_session: GizmoSQLSession, _employee_data: EmployeeData
+) -> GizmoSQLDataFrame:
     gizmosql_employee_schema = GizmoSQLTypes.StructType(
         [
             GizmoSQLTypes.StructField("employee_id", GizmoSQLTypes.IntegerType(), False),
@@ -326,7 +329,9 @@ def gizmosql_store(gizmosql_session: GizmoSQLSession, _store_data: StoreData) ->
 
 
 @pytest.fixture(scope="function")
-def gizmosql_district(gizmosql_session: GizmoSQLSession, _district_data: DistrictData) -> GizmoSQLDataFrame:
+def gizmosql_district(
+    gizmosql_session: GizmoSQLSession, _district_data: DistrictData
+) -> GizmoSQLDataFrame:
     gizmosql_district_schema = GizmoSQLTypes.StructType(
         [
             GizmoSQLTypes.StructField("district_id", GizmoSQLTypes.IntegerType(), False),
@@ -336,6 +341,7 @@ def gizmosql_district(gizmosql_session: GizmoSQLSession, _district_data: Distric
     df = gizmosql_session.createDataFrame(data=_district_data, schema=gizmosql_district_schema)
     df.createOrReplaceTempView("district")
     return df
+
 
 @pytest.fixture
 def postgres_employee(

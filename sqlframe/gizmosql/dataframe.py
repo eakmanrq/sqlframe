@@ -62,9 +62,7 @@ class GizmoSQLDataFrame(
     @t.overload
     def toArrow(self, batch_size: int) -> RecordBatchReader: ...
 
-    def toArrow(
-        self, batch_size: t.Optional[int] = None
-    ) -> t.Union[ArrowTable, RecordBatchReader]:
+    def toArrow(self, batch_size: t.Optional[int] = None) -> t.Union[ArrowTable, RecordBatchReader]:
         self._collect(skip_rows=True)
         if not batch_size:
             return self.session._last_result.fetch_arrow_table()
