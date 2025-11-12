@@ -9,7 +9,7 @@ from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
 @pytest.mark.forked
 def test_activate_with_connection():
     # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
-    conn = GizmoSQLConnection(uri="grpc://localhost:31337",
+    conn = GizmoSQLConnection(uri="grpc+tcp://localhost:31337",
                               db_kwargs={"username": "gizmosql_username",
                                          "password": "gizmosql_password"
                                          },
@@ -33,7 +33,7 @@ def test_activate_with_connection():
 @pytest.mark.forked
 def test_activate_with_connection_and_input_dialect():
     # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
-    conn = GizmoSQLConnection(uri="grpc://localhost:31337",
+    conn = GizmoSQLConnection(uri="grpc+tcp://localhost:31337",
                               db_kwargs={"username": "gizmosql_username",
                                          "password": "gizmosql_password"
                                          },

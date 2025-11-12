@@ -29,7 +29,7 @@ def gizmosql_connection():
                --pull always \
                gizmodata/gizmosql:latest
     """
-    with GizmoSQLConnection(uri="grpc://localhost:31337",
+    with GizmoSQLConnection(uri="grpc+tcp://localhost:31337",
                             db_kwargs={"username": "gizmosql_username",
                                        "password": "gizmosql_password"
                                        },

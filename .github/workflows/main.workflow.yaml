@@ -38,5 +38,14 @@ jobs:
       run: make style
     - name: Setup Postgres
       uses: ikalnytskyi/action-setup-postgres@v7
+    - name: Setup GizmoSQL
+      env:
+        INIT_SQL_COMMANDS: "CALL dsdgen(sf=0.01);"
+      run: |
+        pushd /tmp
+        curl --location -o gizmosql.zip https://github.com/gizmodata/gizmosql/releases/latest/download/gizmosql_cli_linux_amd64.zip
+        unzip gizmosql.zip
+        ./gizmosql_server --password gizmosql_password &
+        popd
     - name: Run tests
       run: make local-test
