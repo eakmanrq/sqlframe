@@ -9,11 +9,9 @@ from sqlframe.gizmosql.connect import GizmoSQLConnection, DatabaseOptions
 @pytest.mark.forked
 def test_activate_with_connection():
     # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
-    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
-                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
-                                         "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
-                                         DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
-                                         # Not needed if you use a trusted CA-signed TLS cert
+    conn = GizmoSQLConnection(uri="grpc://localhost:31337",
+                              db_kwargs={"username": "gizmosql_username",
+                                         "password": "gizmosql_password"
                                          },
                               autocommit=True
                               )
@@ -35,11 +33,9 @@ def test_activate_with_connection():
 @pytest.mark.forked
 def test_activate_with_connection_and_input_dialect():
     # We need to grab a thread-safe connection (we can't use a session fixture b/c we are in a fork)
-    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
-                              db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
-                                         "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
-                                         DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
-                                         # Not needed if you use a trusted CA-signed TLS cert
+    conn = GizmoSQLConnection(uri="grpc://localhost:31337",
+                              db_kwargs={"username": "gizmosql_username",
+                                         "password": "gizmosql_password"
                                          },
                               autocommit=True
                               )

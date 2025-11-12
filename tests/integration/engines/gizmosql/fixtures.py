@@ -12,11 +12,26 @@ CONTAINER_NAME = "sqlframe-gizmosql-test"
 
 @pytest.fixture(scope="function")
 def gizmosql_connection():
-    with GizmoSQLConnection(uri="grpc+tls://localhost:31337",
-                            db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
-                                       "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
-                                       DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
-                                       # Not needed if you use a trusted CA-signed TLS cert
+    """
+    First run this to start a gizmosql server for testing:
+    docker run --name sqlframe-gizmosql-test \
+               --detach \
+               --rm \
+               --tty \
+               --init \
+               --publish 31337:31337 \
+               --env TLS_ENABLED="0" \
+               --env GIZMOSQL_USERNAME="gizmosql_username" \
+               --env GIZMOSQL_PASSWORD="gizmosql_password" \
+               --env DATABASE_FILENAME="data/sqlframe.db" \
+               --env INIT_SQL_COMMANDS="CALL dsdgen(sf=0.01);" \
+               --env PRINT_QUERIES="1" \
+               --pull always \
+               gizmodata/gizmosql:latest
+    """
+    with GizmoSQLConnection(uri="grpc://localhost:31337",
+                            db_kwargs={"username": "gizmosql_username",
+                                       "password": "gizmosql_password"
                                        },
                             autocommit=True
                             ) as conn:
