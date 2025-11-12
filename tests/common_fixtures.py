@@ -4,6 +4,7 @@ import os
 import time
 import typing as t
 from pathlib import Path
+from typing import Any, Generator
 
 import docker
 
@@ -218,16 +219,16 @@ def gizmosql_server(worker_id):
 
 
 @pytest.fixture(scope="function")
-def gizmosql_connection(gizmosql_server) -> GizmoSQLConnection:
-    conn = GizmoSQLConnection(uri="grpc+tls://localhost:31337",
+def gizmosql_connection(gizmosql_server) -> Generator[GizmoSQLConnection, Any, None]:
+    with GizmoSQLConnection(uri="grpc+tls://localhost:31337",
                               db_kwargs={"username": os.getenv("GIZMOSQL_USERNAME", "gizmosql_username"),
                                          "password": os.getenv("GIZMOSQL_PASSWORD", "gizmosql_password"),
                                          DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                          # Not needed if you use a trusted CA-signed TLS cert
                                          },
                               autocommit=True
-                              )
-    return conn
+                              ) as conn:
+        yield conn
 
 
 @pytest.fixture(scope="function")
@@ -238,7 +239,13 @@ def gizmosql_session(gizmosql_connection) -> GizmoSQLSession:
         cursor.execute("SELECT * FROM duckdb_settings() WHERE name = 'TimeZone'")
         assert cursor.fetchone()[1] == "UTC"  # type: ignore
 
-    return GizmoSQLSession(conn=conn)
+    session = GizmoSQLSession(conn=conn)
+
+    # Register any tables with the Spark catalog
+    for table in session.catalog.listTables():
+        _ = session.table(table.name)
+
+    return session
 
 
 @pytest.fixture

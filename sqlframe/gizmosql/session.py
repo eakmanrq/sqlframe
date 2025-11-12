@@ -3,13 +3,7 @@ from __future__ import annotations
 import typing as t
 from functools import cached_property
 
-from sqlglot import exp
-from sqlglot.helper import ensure_list
-
 from sqlframe.base.session import _BaseSession
-from sqlframe.base.util import (
-    normalize_string,
-)
 from sqlframe.gizmosql.catalog import GizmoSQLCatalog
 from sqlframe.gizmosql.dataframe import GizmoSQLDataFrame
 from sqlframe.gizmosql.readwriter import GizmoSQLDataFrameReader, GizmoSQLDataFrameWriter
@@ -45,6 +39,7 @@ class GizmoSQLSession(
     def __init__(self, conn: t.Optional[GizmoSQLConnection] = None):
         if not hasattr(self, "_conn"):
             super().__init__(conn)
+            self._last_result = None
 
     @cached_property
     def _cur(self) -> GizmoSQLConnection:  # type: ignore
