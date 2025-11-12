@@ -39,6 +39,8 @@ class GizmoSQLCatalog(
     ListColumnsFromInfoSchemaMixin["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
     _BaseCatalog["GizmoSQLSession", "GizmoSQLDataFrame", "GizmoSQLTable"],
 ):
+    TEMP_CATALOG_FILTER = exp.column("table_catalog").eq("temp")
+
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None
     ) -> t.List[Function]:
