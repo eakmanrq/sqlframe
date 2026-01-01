@@ -2676,7 +2676,6 @@ def test_sort_array(get_session_and_func, get_func):
             Row(r=[1]),
         ]
         return
-    # df = session.createDataFrame([([2, 1, None, 3],), ([1],)], ["data"])
     df = session.range(1).select(
         lit([2, 1, None, 3]).alias("data"),
         lit([1]).alias("data2"),
@@ -2685,12 +2684,9 @@ def test_sort_array(get_session_and_func, get_func):
         sort_array(df.data).alias("data"),
         sort_array(df.data2).alias("data2"),
     ).collect()
-    if isinstance(session, DuckDBSession):
-        assert results1 == [Row(data=[1, 2, 3, None], data2=[1])]
-    else:
-        assert results1 == [
-            Row(data=[None, 1, 2, 3], data2=[1]),
-        ]
+    assert results1 == [
+        Row(data=[None, 1, 2, 3], data2=[1]),
+    ]
     assert df.select(
         sort_array(df.data, asc=False).alias("data"),
         sort_array(df.data2, asc=False).alias("data2"),

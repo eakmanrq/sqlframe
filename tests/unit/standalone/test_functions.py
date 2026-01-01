@@ -27,6 +27,7 @@ def test_invoke_anonymous(name, func):
         "current_catalog",  # Anonymous is needed for spark override
         "localtimestamp",  # Anonymous is needed for spark override
         "skewness",  # Has complex overrides already so just not updating it
+        "sort_array",  # Anonymous is need for some engines but not all
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
