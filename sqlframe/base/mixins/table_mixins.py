@@ -51,7 +51,7 @@ class _BaseTableMixins(_BaseTable, t.Generic[DF]):
     def _ensure_where_condition(
         self, where: t.Optional[t.Union[Column, str, bool]] = None
     ) -> exp.Expression:
-        self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
+        self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
 
         if where is None:
             logger.warning("Empty value for `where`clause. Defaults to `True`.")
@@ -61,7 +61,7 @@ class _BaseTableMixins(_BaseTable, t.Generic[DF]):
             if len(condition_list) > 1:
                 condition_list = [functools.reduce(lambda x, y: x & y, condition_list)]
             for col_expr in condition_list[0].expression.find_all(exp.Column):
-                if col_expr.table == self.expression.args["from"].this.alias_or_name:
+                if col_expr.table == self.expression.args["from_"].this.alias_or_name:
                     col_expr.set("table", exp.to_identifier(self_name))
             condition = condition_list[0].expression
             if isinstance(condition, exp.Alias):
@@ -76,7 +76,7 @@ class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
         set_: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
         where: t.Optional[t.Union[Column, str, bool]] = None,
     ) -> LazyExpression:
-        self_expr = self.expression.ctes[0].this.args["from"].this
+        self_expr = self.expression.ctes[0].this.args["from_"].this
 
         condition = self._ensure_where_condition(where)
         update_set = self._ensure_and_normalize_update_set(set_)
@@ -98,7 +98,7 @@ class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
         self,
         set_: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
     ) -> t.Dict[str, exp.Expression]:
-        self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
+        self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
         update_set = {}
         for key, val in set_.items():
             key_column: Column = self._ensure_and_normalize_col(key)
@@ -109,7 +109,7 @@ class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
 
             val_column: Column = self._ensure_and_normalize_col(val)
             for col_expr in val_column.expression.find_all(exp.Column):
-                if col_expr.table == self.expression.args["from"].this.alias_or_name:
+                if col_expr.table == self.expression.args["from_"].this.alias_or_name:
                     col_expr.set("table", exp.to_identifier(self_name))
                 else:
                     raise ValueError(
@@ -126,7 +126,7 @@ class DeleteSupportMixin(_BaseTableMixins, t.Generic[DF]):
         self,
         where: t.Optional[t.Union[Column, str, bool]] = None,
     ) -> LazyExpression:
-        self_expr = self.expression.ctes[0].this.args["from"].this
+        self_expr = self.expression.ctes[0].this.args["from_"].this
 
         condition = self._ensure_where_condition(where)
         delete_expr = exp.Delete(
@@ -150,8 +150,8 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         condition: t.Union[str, t.List[str], Column, t.List[Column], bool],
         clauses: t.Iterable[t.Union[WhenMatched, WhenNotMatched, WhenNotMatchedBySource]],
     ) -> LazyExpression:
-        self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
-        self_expr = self.expression.ctes[0].this.args["from"].this
+        self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
+        self_expr = self.expression.ctes[0].this.args["from_"].this
 
         other_df = other_df._convert_leaf_to_cte()
 
@@ -165,7 +165,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         )
 
         for col_expr in condition_columns.expression.find_all(exp.Column):
-            if col_expr.table == self.expression.args["from"].this.alias_or_name:
+            if col_expr.table == self.expression.args["from_"].this.alias_or_name:
                 col_expr.set("table", exp.to_identifier(self_name))
             if col_expr.table == other_df.latest_cte_name:
                 col_expr.set("table", exp.to_identifier(other_name))
@@ -183,7 +183,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
                     clause.clause.condition, other_df, True
                 )
                 for col_expr in cond_clause.expression.find_all(exp.Column):
-                    if col_expr.table == self.expression.args["from"].this.alias_or_name:
+                    if col_expr.table == self.expression.args["from_"].this.alias_or_name:
                         col_expr.set("table", exp.to_identifier(self_name))
                     if col_expr.table == other_df.latest_cte_name:
                         col_expr.set("table", exp.to_identifier(other_name))
@@ -284,8 +284,8 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             table_names = [
                 table.alias_or_name
                 for table in [
-                    self.expression.args["from"].this,
-                    other_df.expression.args["from"].this,
+                    self.expression.args["from_"].this,
+                    other_df.expression.args["from_"].this,
                 ]
             ]
 
@@ -305,7 +305,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         ],
         other_df,
     ) -> t.Dict[exp.Column, exp.Expression]:
-        self_name = self.expression.ctes[0].this.args["from"].this.alias_or_name
+        self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
         other_name = self._create_hash_from_expression(other_df.expression)
         update_set = {}
         for key, val in assignments.items():
@@ -329,7 +329,7 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
             for col_expr in val.expression.find_all(exp.Column):
                 if not col_expr.table or col_expr.table == other_df.latest_cte_name:
                     col_expr.set("table", exp.to_identifier(other_name))
-                elif col_expr.table == self.expression.args["from"].this.alias_or_name:
+                elif col_expr.table == self.expression.args["from_"].this.alias_or_name:
                     col_expr.set("table", exp.to_identifier(self_name))
                 else:
                     raise ValueError(
