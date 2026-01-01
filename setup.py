@@ -34,7 +34,7 @@ setup(
             "findspark>=2,<3",
             # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
             "mirakuru<3.0.0",
-            "mypy>=1.10.0,<1.19",
+            "mypy>=1.10.0,<1.20",
             "openai>=1.30,<3",
             "pandas>=2,<3",
             "pandas-stubs>=2,<3",
