@@ -1069,7 +1069,7 @@ def array_min_from_subquery(col: ColumnOrName) -> Column:
         ],
     )
     select.set(
-        "from",
+        "from_",
         expression.From(
             this=explode(col).alias("x").expression,
         ),
@@ -1097,7 +1097,7 @@ def array_max_from_subquery(col: ColumnOrName) -> Column:
         ],
     )
     select.set(
-        "from",
+        "from_",
         expression.From(
             this=explode(col).alias("x").expression,
         ),
