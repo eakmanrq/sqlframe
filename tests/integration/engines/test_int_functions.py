@@ -2129,15 +2129,6 @@ def test_array_append(get_session_and_func, get_func):
     ]
 
 
-def test_array_compact(get_session_and_func):
-    session, array_compact = get_session_and_func("array_compact")
-    df = session.createDataFrame([([1, None, 2, 3],), ([4, 5, None, 4],)], ["data"])
-    assert df.select(array_compact(df.data)).collect() == [
-        Row(value=[1, 2, 3]),
-        Row(value=[4, 5, 4]),
-    ]
-
-
 def test_array_insert(get_session_and_func):
     session, array_insert = get_session_and_func("array_insert")
     df = session.createDataFrame(
@@ -5365,3 +5356,27 @@ def test_infinite(get_session_and_func):
         ]
     )
     assert df.collect() == [Row(a=float("inf")), Row(a=float("-inf"))]
+
+
+def test_array_compact(get_session_and_func, get_types):
+    session, array_compact = get_session_and_func("array_compact")
+    df = session.createDataFrame([([1, None, 2, 3],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[1, 2, 3])]
+    df = session.createDataFrame([([1, None, 2, 3],), ([4, 5, None, 4],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [
+        Row(a=[1, 2, 3]),
+        Row(a=[4, 5, 4]),
+    ]
+    types = get_types(session)
+    schema = types.StructType(
+        [types.StructField("data", types.ArrayType(types.StringType()), True)]
+    )
+    df = session.createDataFrame([([None, None, None],)], schema)
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[])]
+    df = session.createDataFrame([([1, 2, 3],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[1, 2, 3])]
+    schema = types.StructType(
+        [types.StructField("data", types.ArrayType(types.StringType()), True)]
+    )
+    df = session.createDataFrame([([],)], schema)
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[])]
