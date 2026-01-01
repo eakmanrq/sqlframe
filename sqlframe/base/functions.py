@@ -2573,6 +2573,12 @@ def sort_array(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
     if session._is_snowflake:
         return sort_array_using_array_sort(col, asc)
 
+    if session._is_duckdb:
+        asc = True if asc is None else asc
+        order = "ASC" if asc else "DESC"
+        nulls_order = "NULLS_FIRST" if asc else "NULLS_LAST"
+        return Column.invoke_anonymous_function(col, "list_sort", lit(order), lit(nulls_order))
+
     if asc is not None:
         return Column.invoke_expression_over_column(col, expression.SortArray, asc=lit(asc))
     return Column.invoke_expression_over_column(col, expression.SortArray)
