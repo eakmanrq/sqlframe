@@ -2113,8 +2113,11 @@ def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     return Column.invoke_anonymous_function(col, "ARRAY_APPEND", value)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def array_compact(col: ColumnOrName) -> Column:
+    if _get_session()._is_duckdb:
+        filter_func = get_func_from_session("filter")
+        return filter_func(col, lambda x: x.isNotNull())
     return Column.invoke_anonymous_function(col, "ARRAY_COMPACT")
 
 
@@ -2762,7 +2765,7 @@ def forall(col: ColumnOrName, f: t.Callable[[Column], Column]) -> Column:
     return Column.invoke_anonymous_function(col, "FORALL", Column(f_expression))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def filter(
     col: ColumnOrName,
     f: t.Union[t.Callable[[Column], Column], t.Callable[[Column, Column], Column]],
