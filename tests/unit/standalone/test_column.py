@@ -227,18 +227,15 @@ def test_over():
 
 
 def test_get_item():
-    assert F.col("cola").getItem(1).sql() == "ELEMENT_AT(cola, (1 + 1)) AS element_at__cola__"
+    assert F.col("cola").getItem(1).sql() == "cola[1]"
 
 
 def test_get_item_with_array_syntax():
-    assert F.col("cola")[1].sql() == "ELEMENT_AT(cola, (1 + 1)) AS element_at__cola__"
+    assert F.col("cola")[1].sql() == "cola[1]"
 
 
 def test_get_item_by_key_with_array_syntax():
-    assert (
-        F.lit({"key": "value"})["key"].sql()
-        == "ELEMENT_AT(MAP('key', 'value'), 'key') AS element_at__key__"
-    )
+    assert F.lit({"key": "value"})["key"].sql() == "MAP('key', 'value')['key']"
 
 
 def test_contains():
