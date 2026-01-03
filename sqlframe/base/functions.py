@@ -7122,6 +7122,15 @@ def years(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "years")
 
 
+@meta(unsupported_engines="postgres")
+def array_reverse(col: ColumnOrName) -> Column:
+    session = _get_session()
+    if session._is_spark or session._is_databricks:
+        reverse_func = get_func_from_session("reverse")
+        return reverse_func(col)
+    return Column.invoke_expression_over_column(col, expression.ArrayReverse)
+
+
 # SQLFrame specific
 @meta()
 def _is_string(col: ColumnOrName) -> Column:

@@ -5376,3 +5376,15 @@ def test_array_compact(get_session_and_func, get_types):
     )
     df = session.createDataFrame([([],)], schema)
     assert df.select(array_compact(df.data)).collect() == [Row(a=[])]
+
+
+def test_array_reverse(get_session_and_func, get_func):
+    session, array_reverse = get_session_and_func("array_reverse")
+    lit = get_func("lit", session)
+    df = session.range(1).select(
+        lit([2, 1, 3]).alias("data"),
+        lit([1]).alias("data2"),
+    )
+    assert df.select(
+        array_reverse(df.data).alias("r"), array_reverse(df.data2).alias("r2")
+    ).collect() == [Row(r=[3, 1, 2], r2=[1])]
