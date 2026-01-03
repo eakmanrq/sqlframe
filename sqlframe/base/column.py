@@ -509,12 +509,14 @@ class Column:
         |   1| value|
         +----+------+
         """
-        element_at = get_func_from_session("element_at")
         lit = get_func_from_session("lit")
-        key = lit(key) if not isinstance(key, Column) else key
-        if isinstance(key.expression, exp.Literal) and key.expression.is_number:
-            key = key + lit(1)
-        return element_at(self, key)
+        key = key if isinstance(key, Column) else lit(key)
+        return Column(
+            exp.Bracket(
+                this=self.column_expression,
+                expressions=[key.column_expression],  # type: ignore
+            )
+        )
 
     def getField(self, name: t.Any) -> Column:
         """
