@@ -36,8 +36,19 @@ def test_columnt_eq_null_safe(get_session: t.Callable[[], _BaseSession], get_fun
 def test_column_get_item_array(get_session: t.Callable[[], _BaseSession], get_func):
     session = get_session()
     lit = get_func("lit", session)
-    assert session.range(1).select(lit(["a", "b", "c"]).getItem(0).alias("value")).first()[0] == "a"
-    assert session.range(1).select(lit(["a", "b", "c"])[0].alias("value")).first()[0] == "a"
+    df = session.range(1).select(lit(["a", "b", "c"]).alias("arr"))
+    assert df.select(df.arr.getItem(1).alias("value")).first()[0] == "b"
+    assert df.select(df.arr[1].alias("value")).first()[0] == "b"
+
+
+def test_column_get_item_array_another_column(get_session: t.Callable[[], _BaseSession], get_func):
+    session = get_session()
+    lit = get_func("lit", session)
+    df = session.range(1).select(lit(["a", "b", "c"]).alias("arr"), lit(1).alias("index"))
+    if session._is_postgres or session._is_duckdb:
+        df = df.select(df.arr, (df.index + 1).alias("index"))
+    assert df.select(df.arr.getItem(df.index).alias("value")).first()[0] == "b"
+    assert df.select(df.arr[df.index].alias("value")).first()[0] == "b"
 
 
 def test_column_get_item_map(get_session: t.Callable[[], _BaseSession], get_func):
@@ -46,6 +57,18 @@ def test_column_get_item_map(get_session: t.Callable[[], _BaseSession], get_func
     if not isinstance(session, (PostgresSession, BigQuerySession)):
         assert session.range(1).select(lit({"key": "value"}).getItem("key")).first()[0] == "value"
         assert session.range(1).select(lit({"key": "value"})["key"]).first()[0] == "value"
+
+
+def test_column_get_item_map_another_column(get_session: t.Callable[[], _BaseSession], get_func):
+    session = get_session()
+    lit = get_func("lit", session)
+    col = get_func("col", session)
+    if not isinstance(session, (PostgresSession, BigQuerySession)):
+        df = session.range(1).select(
+            lit({"key": "value"}).alias("value"), lit("key").alias("index")
+        )
+        assert df.select(df.value.getItem(col("index"))).first()[0] == "value"
+        assert df.select(df.value[col("index")]).first()[0] == "value"
 
 
 def test_column_get_field_struct(get_session: t.Callable[[], _BaseSession]):

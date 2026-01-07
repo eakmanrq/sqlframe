@@ -275,7 +275,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @property
     def latest_cte_name(self) -> str:
         if not self.expression.ctes:
-            from_exp = self.expression.args["from"]
+            from_exp = self.expression.args["from_"]
             if from_exp.alias_or_name:
                 return from_exp.alias_or_name
             table_alias = from_exp.find(exp.TableAlias)
@@ -384,7 +384,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         # Remove duplicate CTEs by index in reverse order to avoid index shifting
         for idx in reversed(cte_indices_to_remove):
-            del expression.args["with"].expressions[idx]
+            del expression.args["with_"].expressions[idx]
 
         return expression
 
@@ -398,7 +398,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     ) -> t.Tuple[exp.CTE, str]:
         name = name or self._create_hash_from_expression(expression)
         expression_to_cte = expression.copy()
-        expression_to_cte.set("with", None)
+        expression_to_cte.set("with_", None)
         cte = exp.Select().with_(name, as_=expression_to_cte, **kwargs).ctes[0]
         cte.set("branch_id", branch_id)
         cte.set("sequence_id", sequence_id)
@@ -516,10 +516,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         base_expression = self.expression.copy()
         base_expression = self._add_ctes_to_expression(base_expression, other_df.expression.ctes)
         all_ctes = base_expression.ctes
-        other_df.expression.set("with", None)
-        base_expression.set("with", None)
+        other_df.expression.set("with_", None)
+        base_expression.set("with_", None)
         operation = klass(this=base_expression, distinct=distinct, expression=other_df.expression)
-        operation.set("with", exp.With(expressions=all_ctes))
+        operation.set("with_", exp.With(expressions=all_ctes))
         return self.copy(expression=operation)._convert_leaf_to_cte()
 
     def _cache(self, storage_level: str) -> Self:
@@ -529,7 +529,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def _add_ctes_to_expression(self, expression: exp.Select, ctes: t.List[exp.CTE]) -> exp.Select:
         expression = expression.copy()
-        with_expression = expression.args.get("with")
+        with_expression = expression.args.get("with_")
         if with_expression:
             existing_ctes = with_expression.expressions
             existing_cte_names = {x.alias_or_name for x in existing_ctes}
@@ -563,7 +563,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 existing_ctes.append(cte)
         else:
             existing_ctes = ctes
-        expression.set("with", exp.With(expressions=existing_ctes))
+        expression.set("with_", exp.With(expressions=existing_ctes))
         return expression
 
     @classmethod
@@ -595,7 +595,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             cache_storage_level = cte.args.get("cache_storage_level")
             if cache_storage_level:
                 select_expression = cte.this.copy()
-                select_expression.set("with", exp.With(expressions=copy(main_select_ctes)))
+                select_expression.set("with_", exp.With(expressions=copy(main_select_ctes)))
                 select_expression.set("cte_alias_name", cte.alias_or_name)
                 select_expression.set("cache_storage_level", cache_storage_level)
                 select_expressions.append((exp.Cache, select_expression))
@@ -603,7 +603,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 main_select_ctes.append(cte)
         main_select = self.expression.copy()
         if main_select_ctes:
-            main_select.set("with", exp.With(expressions=main_select_ctes))
+            main_select.set("with_", exp.With(expressions=main_select_ctes))
         expression_select_pair = (type(self.output_expression_container), main_select)
         select_expressions.append(expression_select_pair)  # type: ignore
         return select_expressions
@@ -732,11 +732,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             elif expression_type == exp.Insert:
                 expression = df.output_expression_container.copy()  # type: ignore
                 select_without_ctes = select_expression.copy()
-                select_without_ctes.set("with", None)
+                select_without_ctes.set("with_", None)
                 expression.set("expression", select_without_ctes)
 
                 if select_expression.ctes:
-                    expression.set("with", exp.With(expressions=select_expression.ctes))
+                    expression.set("with_", exp.With(expressions=select_expression.ctes))
             elif expression_type == exp.Select:
                 expression = select_expression
             else:

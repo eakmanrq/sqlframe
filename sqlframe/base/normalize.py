@@ -238,7 +238,7 @@ def get_cte_names_from_from_clause(expression_context: exp.Select) -> t.Set[str]
     referenced_cte_names = set()
 
     # Get the main table from FROM clause
-    from_clause = expression_context.args.get("from")
+    from_clause = expression_context.args.get("from_")
     if from_clause and from_clause.this:
         main_table = from_clause.this
         if hasattr(main_table, "alias_or_name") and main_table.alias_or_name:

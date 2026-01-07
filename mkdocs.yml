@@ -9,6 +9,7 @@ nav:
   - "DuckDB": duckdb.md
   - "GizmoSQL": gizmosql.md
   - "Postgres": postgres.md
+  - "Snowflake": snowflake.md
   - "Spark": spark.md
   - "Standalone": standalone.md
   - "Redshift (In-Development)": redshift.md

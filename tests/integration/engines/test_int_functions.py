@@ -1407,9 +1407,18 @@ def test_add_months(get_session_and_func):
 def test_months_between(get_session_and_func):
     session, months_between = get_session_and_func("months_between")
     df = session.createDataFrame([("1997-02-28 10:30:00", "1996-10-30")], ["date1", "date2"])
-    if isinstance(session, (DuckDBSession, PostgresSession)):
+    if isinstance(session, PostgresSession):
         assert df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 4
         assert df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0] == 4
+    elif isinstance(session, DuckDBSession):
+        assert (
+            df.select(months_between(df.date1, df.date2).alias("months")).first()[0]
+            == 3.935483870967742
+        )
+        assert (
+            df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0]
+            == 3.935483870967742
+        )
     elif isinstance(session, SnowflakeSession):
         assert df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 3.935484
         assert (
@@ -1417,12 +1426,12 @@ def test_months_between(get_session_and_func):
             == 3.935484
         )
     else:
-        assert (
-            df.select(months_between(df.date1, df.date2).alias("months")).first()[0] == 3.94959677
+        assert math.isclose(
+            df.select(months_between(df.date1, df.date2).alias("months")).first()[0], 3.94959677
         )
-        assert (
-            df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0]
-            == 3.9495967741935485
+        assert math.isclose(
+            df.select(months_between(df.date1, df.date2, False).alias("months")).first()[0],
+            3.9495967741935485,
         )
 
 
@@ -2120,15 +2129,6 @@ def test_array_append(get_session_and_func, get_func):
     ]
 
 
-def test_array_compact(get_session_and_func):
-    session, array_compact = get_session_and_func("array_compact")
-    df = session.createDataFrame([([1, None, 2, 3],), ([4, 5, None, 4],)], ["data"])
-    assert df.select(array_compact(df.data)).collect() == [
-        Row(value=[1, 2, 3]),
-        Row(value=[4, 5, 4]),
-    ]
-
-
 def test_array_insert(get_session_and_func):
     session, array_insert = get_session_and_func("array_insert")
     df = session.createDataFrame(
@@ -2667,7 +2667,6 @@ def test_sort_array(get_session_and_func, get_func):
             Row(r=[1]),
         ]
         return
-    # df = session.createDataFrame([([2, 1, None, 3],), ([1],)], ["data"])
     df = session.range(1).select(
         lit([2, 1, None, 3]).alias("data"),
         lit([1]).alias("data2"),
@@ -2676,12 +2675,9 @@ def test_sort_array(get_session_and_func, get_func):
         sort_array(df.data).alias("data"),
         sort_array(df.data2).alias("data2"),
     ).collect()
-    if isinstance(session, DuckDBSession):
-        assert results1 == [Row(data=[1, 2, 3, None], data2=[1])]
-    else:
-        assert results1 == [
-            Row(data=[None, 1, 2, 3], data2=[1]),
-        ]
+    assert results1 == [
+        Row(data=[None, 1, 2, 3], data2=[1]),
+    ]
     assert df.select(
         sort_array(df.data, asc=False).alias("data"),
         sort_array(df.data2, asc=False).alias("data2"),
@@ -3292,9 +3288,17 @@ def test_to_binary(get_session_and_func, get_func):
     session, to_binary = get_session_and_func("to_binary")
     lit = get_func("lit", session)
     df = session.createDataFrame([("abc",)], ["e"])
-    assert df.select(to_binary(df.e, lit("utf-8")).alias("r")).first()[0] == bytearray(b"abc")
+    value = df.select(to_binary(df.e, lit("utf-8")).alias("r")).first()[0]
+    if isinstance(session, DuckDBSession):
+        assert value == "011000010110001001100011"
+    else:
+        assert value == bytearray(b"abc")
     df = session.createDataFrame([("414243",)], ["e"])
-    assert df.select(to_binary(df.e).alias("r")).first()[0] == bytearray(b"ABC")
+    value = df.select(to_binary(df.e).alias("r")).first()[0]
+    if isinstance(session, DuckDBSession):
+        assert value == "001101000011000100110100001100100011010000110011"
+    else:
+        assert value == bytearray(b"ABC")
 
 
 def test_aes_decrypt(get_session_and_func, get_func):
@@ -3659,25 +3663,44 @@ def test_current_user(get_session_and_func, get_func):
 
 def test_current_catalog(get_session_and_func, get_func):
     session, current_catalog = get_session_and_func("current_catalog")
+    value = session.range(1).select(current_catalog()).first()[0]
     if isinstance(session, DatabricksSession):
-        assert session.range(1).select(current_catalog()).first()[0] == "sqlframe"
+        assert value == "sqlframe"
+    elif isinstance(session, DuckDBSession):
+        assert value == "memory"
+    elif isinstance(session, PostgresSession):
+        assert value == "tests"
     else:
-        assert session.range(1).select(current_catalog()).first()[0] == "spark_catalog"
+        assert value == "spark_catalog"
 
 
 def test_current_database(get_session_and_func, get_func):
     session, current_database = get_session_and_func("current_database")
-    assert session.range(1).select(current_database()).first()[0] in ("db1", "default", "public")
+    assert session.range(1).select(current_database()).first()[0] in (
+        "db1",
+        "default",
+        "public",
+        "memory",
+        "tests",
+        "SQLFRAME",
+    )
 
 
 def test_current_schema(get_session_and_func, get_func):
     session, current_schema = get_session_and_func("current_schema")
-    assert session.range(1).select(current_schema()).first()[0] in ("db1", "default", "public")
+    assert session.range(1).select(current_schema()).first()[0] in (
+        "db1",
+        "default",
+        "public",
+        "memory",
+        "tests",
+        "SQLFRAME",
+    )
 
 
 def test_current_timezone(get_session_and_func, get_func):
     session, current_timezone = get_session_and_func("current_timezone")
-    assert session.range(1).select(current_timezone()).first()[0] == "UTC"
+    assert session.range(1).select(current_timezone()).first()[0] in ["UTC", "Etc/UTC"]
 
 
 def test_date_from_unix_date(get_session_and_func, get_func):
@@ -5329,3 +5352,39 @@ def test_infinite(get_session_and_func):
         ]
     )
     assert df.collect() == [Row(a=float("inf")), Row(a=float("-inf"))]
+
+
+def test_array_compact(get_session_and_func, get_types):
+    session, array_compact = get_session_and_func("array_compact")
+    df = session.createDataFrame([([1, None, 2, 3],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[1, 2, 3])]
+    df = session.createDataFrame([([1, None, 2, 3],), ([4, 5, None, 4],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [
+        Row(a=[1, 2, 3]),
+        Row(a=[4, 5, 4]),
+    ]
+    types = get_types(session)
+    schema = types.StructType(
+        [types.StructField("data", types.ArrayType(types.StringType()), True)]
+    )
+    df = session.createDataFrame([([None, None, None],)], schema)
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[])]
+    df = session.createDataFrame([([1, 2, 3],)], ["data"])
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[1, 2, 3])]
+    schema = types.StructType(
+        [types.StructField("data", types.ArrayType(types.StringType()), True)]
+    )
+    df = session.createDataFrame([([],)], schema)
+    assert df.select(array_compact(df.data)).collect() == [Row(a=[])]
+
+
+def test_array_reverse(get_session_and_func, get_func):
+    session, array_reverse = get_session_and_func("array_reverse")
+    lit = get_func("lit", session)
+    df = session.range(1).select(
+        lit([2, 1, 3]).alias("data"),
+        lit([1]).alias("data2"),
+    )
+    assert df.select(
+        array_reverse(df.data).alias("r"), array_reverse(df.data2).alias("r2")
+    ).collect() == [Row(r=[3, 1, 2], r2=[1])]

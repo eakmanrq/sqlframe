@@ -166,11 +166,11 @@ def test_expand_star_table_alias(standalone_employee: StandaloneDataFrame):
 def test_lineage(standalone_employee: StandaloneDataFrame):
     assert (
         standalone_employee.lineage("age").source.sql()
-        == "SELECT a1.age AS age FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS a1(employee_id, fname, lname, age, store_id)"
+        == """SELECT "a1"."age" AS "age" FROM (VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100)) AS "a1"("employee_id", "fname", "lname", "age", "store_id")"""
     )
     assert (
         standalone_employee.session.sql("SELECT * FROM employee").lineage("age").source.sql()
-        == "SELECT employee.age AS age FROM employee AS employee"
+        == 'SELECT "employee"."age" AS "age" FROM "employee" AS "employee"'
     )
 
 

@@ -371,7 +371,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
         select_kwargs = {
             "expressions": sel_columns,
-            "from": exp.From(
+            "from_": exp.From(
                 this=exp.Values(
                     expressions=data_expressions,
                     alias=exp.TableAlias(
@@ -437,7 +437,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                 for cte in df.expression.ctes:
                     if cte.alias_or_name not in expression_ctes:
                         ctes_to_add.append(cte)
-                expression.set("with", exp.With(expressions=ctes_to_add + expression.ctes))  # type: ignore
+                expression.set("with_", exp.With(expressions=ctes_to_add + expression.ctes))  # type: ignore
 
             def replace_temp_view_name_with_cte(node: exp.Expression) -> exp.Expression:
                 if isinstance(node, exp.Table):
@@ -454,8 +454,8 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         elif isinstance(expression, (exp.Create, exp.Insert)):
             select_expression = expression.expression.copy()
             if isinstance(expression, exp.Insert):
-                select_expression.set("with", expression.args.get("with"))
-                expression.set("with", None)
+                select_expression.set("with_", expression.args.get("with_"))
+                expression.set("with_", None)
             del expression.args["expression"]
             df = self._create_df(select_expression, output_expression_container=expression)  # type: ignore
             df = df._convert_leaf_to_cte()
