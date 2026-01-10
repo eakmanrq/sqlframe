@@ -7214,8 +7214,15 @@ def _get_lambda_from_func(lambda_expression: t.Callable):
             expressions=variables,
         )
 
-    # Handle regular functions and lambdas
-    var_names = lambda_expression.__code__.co_varnames[: lambda_expression.__code__.co_argcount]
+    # Handle regular functions, lambdas, AND built-in functions
+    # Check if function has __code__ attribute (regular Python functions/lambdas)
+    if hasattr(lambda_expression, "__code__"):
+        # Use __code__ for regular functions and lambdas (preserves exact parameter names)
+        var_names = lambda_expression.__code__.co_varnames[: lambda_expression.__code__.co_argcount]
+    else:
+        # Built-in function without __code__ - use parameter names from signature
+        # This handles operator.add, operator.sub, and other built-in functions
+        var_names = param_names  # type: ignore
 
     variables = [expression.to_identifier(x, quoted=_lambda_quoted(x)) for x in var_names]
 
