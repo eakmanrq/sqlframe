@@ -1,5 +1,6 @@
 name: SQLFrame
 on:
+  workflow_dispatch:
   push:
     branches:
     - main
@@ -24,7 +25,18 @@ jobs:
       PYTEST_XDIST_AUTO_NUM_WORKERS: 4
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    services:
+      gizmosql:
+        image: gizmodata/gizmosql:latest-slim
+        ports:
+          - 31337:31337
+        env:
+          GIZMOSQL_LOG_LEVEL: info
+          GIZMOSQL_USERNAME: gizmosql_username
+          GIZMOSQL_PASSWORD: gizmosql_password
+          DATABASE_FILENAME: /tmp/sqlframe_test.db
+          INIT_SQL_COMMANDS: "CALL dsdgen(sf=0.01);"
     steps:
     - name: Checkout
       uses: actions/checkout@v5

@@ -6,7 +6,6 @@ from pathlib import Path
 
 import duckdb
 import pytest
-from pyspark import SparkConf
 from pyspark.sql import SparkSession as PySparkSession
 from pytest_postgresql.janitor import DatabaseJanitor
 

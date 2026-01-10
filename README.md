@@ -9,6 +9,7 @@ SQLFrame currently supports the following engines:
 * [BigQuery](https://sqlframe.readthedocs.io/en/stable/bigquery/)
 * [Databricks](https://sqlframe.readthedocs.io/en/stable/databricks)
 * [DuckDB](https://sqlframe.readthedocs.io/en/stable/duckdb)
+* [GizmoSQL](https://sqlframe.readthedocs.io/en/stable/gizmosql)
 * [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
 * [Snowflake](https://sqlframe.readthedocs.io/en/stable/snowflake)
 * [Spark](https://sqlframe.readthedocs.io/en/stable/spark)
@@ -38,6 +39,8 @@ pip install "sqlframe[bigquery]"
 pip install "sqlframe[databricks]"
 # DuckDB
 pip install "sqlframe[duckdb]"
+# GizmoSQL
+pip install "sqlframe[gizmosql]"
 # Postgres
 pip install "sqlframe[postgres]"
 # Snowflake
