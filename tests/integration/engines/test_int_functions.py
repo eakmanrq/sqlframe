@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import math
+import operator
 import typing as t
 from collections import Counter
 from decimal import Decimal
@@ -2912,6 +2913,12 @@ def test_aggregate(get_session_and_func, get_func):
     assert (
         df.select(
             aggregate("some_values", lit(0.0).cast("double"), lambda acc, x: acc + x).alias("sum")
+        ).first()[0]
+        == 42.0
+    )
+    assert (
+        df.select(
+            aggregate("some_values", lit(0.0).cast("double"), operator.add).alias("sum")
         ).first()[0]
         == 42.0
     )

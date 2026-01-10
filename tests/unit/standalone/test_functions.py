@@ -1,5 +1,6 @@
 import datetime
 import inspect
+import operator
 
 import pytest
 from sqlglot import expressions as exp
@@ -2818,6 +2819,16 @@ def test_from_csv(expression, expected):
                 lambda accumulator: accumulator * 2,
             ),
             "AGGREGATE(cola, 0, (accumulator, target) -> (accumulator + target), accumulator -> (accumulator * 2))",
+        ),
+        # Test operator.add
+        (
+            SF.aggregate("cola", SF.lit(0), operator.add),
+            "AGGREGATE(cola, 0, (a, b) -> (a + b))",
+        ),
+        # Test operator.mul with finish function
+        (
+            SF.aggregate("cola", SF.lit(1), operator.mul, lambda acc: acc * 2),
+            "AGGREGATE(cola, 1, (a, b) -> (a * b), acc -> (acc * 2))",
         ),
     ],
 )
