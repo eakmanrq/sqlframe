@@ -1271,12 +1271,6 @@ def to_number_using_to_double(col: ColumnOrName, format: ColumnOrName) -> Column
     return Column.invoke_anonymous_function(col, "TO_DOUBLE", format)
 
 
-def array_append_list_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    lit = get_func_from_session("lit")
-    value = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_anonymous_function(col, "LIST_APPEND", value)
-
-
 def array_append_using_array_cat(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     lit = get_func_from_session("lit")
     array = get_func_from_session("array")

@@ -531,7 +531,7 @@ def kurtosis(col: ColumnOrName) -> Column:
     if session._is_duckdb:
         return kurtosis_from_kurtosis_pop(col)
 
-    return Column.invoke_anonymous_function(col, "KURTOSIS")
+    return Column.invoke_expression_over_column(col, expression.Kurtosis)
 
 
 @meta()
@@ -2097,7 +2097,6 @@ def array_agg(col: ColumnOrName) -> Column:
 @meta()
 def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     from sqlframe.base.function_alternatives import (
-        array_append_list_append,
         array_append_using_array_cat,
     )
 
@@ -2106,11 +2105,10 @@ def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     if session._is_bigquery:
         return array_append_using_array_cat(col, value)
 
-    if session._is_duckdb:
-        return array_append_list_append(col, value)
-
     value = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_anonymous_function(col, "ARRAY_APPEND", value)
+    return Column.invoke_expression_over_column(
+        col, expression.ArrayAppend, expression=value.column_expression
+    )
 
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
@@ -2131,10 +2129,12 @@ def array_insert(
     return Column.invoke_anonymous_function(col, "ARRAY_INSERT", pos, value)  # type: ignore
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def array_prepend(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
     value = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_anonymous_function(col, "ARRAY_PREPEND", value)
+    return Column.invoke_expression_over_column(
+        col, expression.ArrayPrepend, expression=value.column_expression
+    )
 
 
 @meta()
@@ -2628,9 +2628,9 @@ def flatten(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Flatten)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres"])
 def map_keys(col: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "MAP_KEYS")
+    return Column.invoke_expression_over_column(col, expression.MapKeys)
 
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
@@ -3125,7 +3125,7 @@ def cardinality(col: ColumnOrName) -> Column:
 
 @meta()
 def char(col: ColumnOrName) -> Column:
-    return Column(expression.Chr(expressions=Column.ensure_col(col).column_expression))
+    return Column(expression.Chr(expressions=[Column.ensure_col(col).column_expression]))
 
 
 @meta()
@@ -3987,7 +3987,7 @@ def json_array_length(col: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col, "json_array_length")
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def json_object_keys(col: ColumnOrName) -> Column:
     """
     Returns all the keys of the outermost JSON object as an array. If a valid JSON object is
@@ -4012,7 +4012,7 @@ def json_object_keys(col: ColumnOrName) -> Column:
     >>> df.select(json_object_keys(df.data).alias('r')).collect()
     [Row(r=None), Row(r=[]), Row(r=['key1', 'key2'])]
     """
-    return Column.invoke_anonymous_function(col, "json_object_keys")
+    return Column.invoke_expression_over_column(col, expression.JSONKeys)
 
 
 @meta(unsupported_engines="postgres")
@@ -4589,7 +4589,9 @@ def map_contains_key(col: ColumnOrName, value: t.Any) -> Column:
     +----------------------------------+
     """
     value = lit(value) if not isinstance(value, Column) else value
-    return Column.invoke_anonymous_function(col, "map_contains_key", value)
+    return Column.invoke_expression_over_column(
+        col, expression.MapContainsKey, key=value.column_expression
+    )
 
 
 @meta(unsupported_engines="*")
