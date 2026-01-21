@@ -12,11 +12,8 @@ SQLFrame currently supports the following engines:
 * [Postgres](https://sqlframe.readthedocs.io/en/stable/postgres)
 * [Snowflake](https://sqlframe.readthedocs.io/en/stable/snowflake)
 * [Spark](https://sqlframe.readthedocs.io/en/stable/spark)
-
-There is also one engine in development. This engine lacks test coverage and robust documentation, but is available for testing:
-
-* [Redshift](https://sqlframe.readthedocs.io/en/stable/redshift)
-
+* [GizmoSQL](https://github.com/gizmodata/sqlframe-gizmosql) (community maintained)
+* [Redshift](https://sqlframe.readthedocs.io/en/stable/redshift) (community maintained)
 
 SQLFrame also has a "Standalone" session that be used to generate SQL without any connection to a database engine.
 

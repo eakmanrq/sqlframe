@@ -1,4 +1,4 @@
-# Redshift (In Development)
+# Redshift (Community Maintained)
 
 ## Installation
 
