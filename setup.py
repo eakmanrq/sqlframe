@@ -36,7 +36,7 @@ setup(
             "mirakuru<3.0.0",
             "mypy>=1.10.0,<1.20",
             "openai>=1.30,<3",
-            "pandas>=2,<3",
+            "pandas>=2,<4",
             "pandas-stubs>=2,<3",
             "psycopg>=3.1,<4",
             "pyarrow>=10,<24",
@@ -59,13 +59,13 @@ setup(
         ],
         "duckdb": [
             "duckdb>=1.2,<1.5",
-            "pandas>=2,<3",
+            "pandas>=2,<4",
         ],
         "openai": [
             "openai>=1.30,<3",
         ],
         "pandas": [
-            "pandas>=2,<3",
+            "pandas>=2,<4",
         ],
         "postgres": [
             "psycopg2>=2.8,<3",
