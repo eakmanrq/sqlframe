@@ -119,7 +119,7 @@ class _BaseGroupedData(t.Generic[DF]):
                 if isinstance(v, str):
                     in_values.append(exp.Literal.string(v))
                 else:
-                    in_values.append(exp.Literal.number(v))
+                    in_values.append(exp.Literal.number(v))  # type: ignore
 
             # Build the pivot node with the fields parameter
             pivot = exp.Pivot(

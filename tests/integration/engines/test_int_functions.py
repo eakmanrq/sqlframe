@@ -5117,8 +5117,6 @@ def test_try_element_at(get_session_and_func, get_func):
     else:
         assert df.select(try_element_at(df.data, lit(-1)).alias("r")).first()[0] == "c"
     df = session.createDataFrame([({"a": 1.0, "b": 2.0},)], ["data"])
-    # if isinstance(session, DuckDBSession):
-    #     assert df.select(try_element_at(df.data, lit("a")).alias("r")).first()[0] == [1.0]
     if isinstance(session, PostgresSession):
         pass
     else:

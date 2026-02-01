@@ -2140,8 +2140,11 @@ def test_array_agg(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_append("cola", "val"), "ARRAY_APPEND(cola, 'val')"),
-        (SF.array_append(SF.col("cola"), SF.col("colb")), "ARRAY_APPEND(cola, colb)"),
+        (SF.array_append("cola", "val"), "ARRAY_APPEND(COALESCE(cola, ARRAY()), 'val')"),
+        (
+            SF.array_append(SF.col("cola"), SF.col("colb")),
+            "ARRAY_APPEND(COALESCE(cola, ARRAY()), colb)",
+        ),
     ],
 )
 def test_array_append(expression, expected):
@@ -2174,8 +2177,11 @@ def test_array_insert(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_prepend("cola", "-"), "ARRAY_PREPEND(cola, '-')"),
-        (SF.array_prepend(SF.col("cola"), SF.col("colb")), "ARRAY_PREPEND(cola, colb)"),
+        (SF.array_prepend("cola", "-"), "ARRAY_PREPEND(COALESCE(cola, ARRAY()), '-')"),
+        (
+            SF.array_prepend(SF.col("cola"), SF.col("colb")),
+            "ARRAY_PREPEND(COALESCE(cola, ARRAY()), colb)",
+        ),
     ],
 )
 def test_array_prepend(expression, expected):

@@ -2113,10 +2113,7 @@ def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def array_compact(col: ColumnOrName) -> Column:
-    if _get_session()._is_duckdb:
-        filter_func = get_func_from_session("filter")
-        return filter_func(col, lambda x: x.isNotNull())
-    return Column.invoke_anonymous_function(col, "ARRAY_COMPACT")
+    return Column.invoke_expression_over_column(col, expression.ArrayCompact)
 
 
 @meta(unsupported_engines="*")
@@ -2126,7 +2123,12 @@ def array_insert(
     value = value if isinstance(value, Column) else lit(value)
     if isinstance(pos, int):
         pos = lit(pos)
-    return Column.invoke_anonymous_function(col, "ARRAY_INSERT", pos, value)  # type: ignore
+    return Column.invoke_expression_over_column(
+        col,
+        expression.ArrayInsert,
+        expression=value.column_expression,
+        position=Column.ensure_col(pos).column_expression,
+    )
 
 
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
@@ -2654,11 +2656,10 @@ def array_repeat(col: ColumnOrName, count: t.Union[ColumnOrName, int]) -> Column
     return Column.invoke_anonymous_function(col, "ARRAY_REPEAT", count_col)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def arrays_zip(*cols: ColumnOrName) -> Column:
-    if len(cols) == 1:
-        return Column.invoke_anonymous_function(cols[0], "ARRAYS_ZIP")
-    return Column.invoke_anonymous_function(cols[0], "ARRAYS_ZIP", *cols[1:])
+    columns = Column.ensure_cols(list(cols))
+    return Column(expression.ArraysZip(expressions=[x.column_expression for x in columns]))
 
 
 @meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
@@ -6548,7 +6549,7 @@ def try_element_at(col: ColumnOrName, extraction: ColumnOrName) -> Column:
         lit = get_func_from_session("lit")
         extraction = Column.ensure_col(extraction)
         if (
-            isinstance(extraction.column_expression, expression.Literal)
+            isinstance(extraction.column_expression, (expression.Literal, expression.Neg))
             and extraction.column_expression.is_number
         ):
             extraction = extraction - lit(1)
