@@ -70,18 +70,40 @@ def lit(value: t.Optional[t.Any] = None) -> Column:
 
 @meta()
 def greatest(*cols: ColumnOrName) -> Column:
-    if len(cols) > 1:
-        return Column.invoke_expression_over_column(
-            cols[0], expression.Greatest, expressions=cols[1:]
+    columns = [x.column_expression for x in Column.ensure_cols(list(cols))]
+    if len(columns) > 1:
+        return Column(
+            expression.Greatest(
+                this=columns[0],
+                expressions=columns[1:],
+                ignore_nulls=True,
+            )
         )
-    return Column.invoke_expression_over_column(cols[0], expression.Greatest)
+    return Column(
+        expression.Greatest(
+            this=columns[0],
+            ignore_nulls=True,
+        )
+    )
 
 
 @meta()
 def least(*cols: ColumnOrName) -> Column:
-    if len(cols) > 1:
-        return Column.invoke_expression_over_column(cols[0], expression.Least, expressions=cols[1:])
-    return Column.invoke_expression_over_column(cols[0], expression.Least)
+    columns = [x.column_expression for x in Column.ensure_cols(list(cols))]
+    if len(columns) > 1:
+        return Column(
+            expression.Least(
+                this=columns[0],
+                expressions=columns[1:],
+                ignore_nulls=True,
+            )
+        )
+    return Column(
+        expression.Least(
+            this=columns[0],
+            ignore_nulls=True,
+        )
+    )
 
 
 @meta()
