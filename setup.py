@@ -37,7 +37,7 @@ setup(
             "mypy>=1.10.0,<1.20",
             "openai>=1.30,<3",
             "pandas>=2,<4",
-            "pandas-stubs>=2,<3",
+            "pandas-stubs>=2,<4",
             "psycopg>=3.1,<4",
             "pyarrow>=10,<24",
             "pyspark>=2,<3.6",
