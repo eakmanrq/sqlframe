@@ -1367,6 +1367,7 @@ def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     if session._is_bigquery:
         to_timestamp_func = get_func_from_session("to_timestamp")
         col = to_timestamp_func(col, format)
+        return Column.invoke_expression_over_column(col, expression.TsOrDsToDate)
 
     if session._is_snowflake:
         format = format or session.default_time_format
