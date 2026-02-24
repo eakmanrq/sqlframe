@@ -5,7 +5,7 @@ repos:
         name: ruff
         description: "Run 'ruff' for extremely fast Python linting"
         entry: ruff check --fix
-        language: python
+        language: system
         types_or: [python, pyi]
         require_serial: true
         files: ^(sqlframe/|tests/)
@@ -13,7 +13,7 @@ repos:
         name: ruff-format
         description: "Run 'ruff format' for extremely fast Python formatting"
         entry: ruff format
-        language: python
+        language: system
         types_or: [python, pyi]
         require_serial: true
         files: ^(sqlframe/|tests/)

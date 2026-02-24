@@ -103,7 +103,7 @@ local_scheme = "no-local-version"
 markers = [
     "bigquery: test for BigQuery",
     "duckdb: test for DuckDB",
-    "local: test that don't rely on external connections",
+    "local: tests that don't rely on external connections",
     "postgres: test for Postgres",
 ]
 addopts = "-n 0 --dist=loadgroup"
