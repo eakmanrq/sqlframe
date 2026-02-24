@@ -1,14 +1,8 @@
-ifdef UV
-    PIP := uv pip
-else
-    PIP := pip3
-endif
-
 lock:
 	uv lock
 
 install-dev:
-	$(PIP) install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
+	uv sync --all-extras
 
 install-pre-commit:
 	pre-commit install
@@ -40,7 +34,7 @@ stubs:
 	stubgen sqlframe/spark/functions.py --output ./ --inspect-mode
 
 package:
-	$(PIP) install build && python3 -m build
+	uv build
 
 publish: package
-	$(PIP) install twine && python3 -m twine upload dist/*
+	uv publish
