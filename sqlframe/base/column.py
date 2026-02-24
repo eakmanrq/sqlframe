@@ -338,12 +338,17 @@ class Column:
         from sqlframe.base.session import _BaseSession
 
         dialect = _BaseSession().input_dialect
-        alias: exp.Expression = normalize_identifiers(
-            exp.parse_identifier(name, dialect=dialect), dialect=dialect
-        )
+        parsed = exp.parse_identifier(name, dialect=dialect)
+        if isinstance(parsed, exp.Identifier):
+            alias_expr: exp.Expression = normalize_identifiers(parsed, dialect=dialect)
+        elif isinstance(parsed, exp.Column):
+            alias_expr = normalize_identifiers(parsed, dialect=dialect).this
+        else:
+            # Reserved word parsed as a non-Identifier (e.g. 'end' → EndStatement in sqlglot v29)
+            alias_expr = exp.to_identifier(name, quoted=True)
         new_expression = exp.Alias(
             this=self.column_expression,
-            alias=alias.this if isinstance(alias, exp.Column) else alias,
+            alias=alias_expr,
         )
         new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
         return Column(new_expression)

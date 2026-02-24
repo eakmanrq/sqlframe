@@ -39,21 +39,28 @@ def _get_session() -> _BaseSession:
 def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
     dialect = _get_session().input_dialect
     if isinstance(column_name, str):
-        col_expression = expression.to_column(column_name, dialect=dialect).transform(
-            dialect.normalize_identifier
-        )
         case_sensitive_expression = expression.to_column(column_name, dialect=dialect)
-        if (
-            not isinstance(
-                case_sensitive_expression, (expression.Star, expression.Literal, expression.Null)
-            )
-            and case_sensitive_expression.this is not None
+        if not isinstance(
+            case_sensitive_expression,
+            (expression.Column, expression.Star, expression.Literal, expression.Null),
         ):
-            col_expression._meta = {
-                "display_name": case_sensitive_expression.this.this,
-                **(col_expression._meta or {}),
-            }
-
+            # Reserved word parsed as a non-Column node (e.g. EndStatement in sqlglot v29).
+            # Force a quoted identifier so it is emitted as "end" rather than the keyword END.
+            col_expression = expression.column(expression.to_identifier(column_name, quoted=True))
+            col_expression._meta = {"display_name": column_name, **(col_expression._meta or {})}
+        else:
+            col_expression = case_sensitive_expression.transform(dialect.normalize_identifier)
+            if (
+                not isinstance(
+                    case_sensitive_expression,
+                    (expression.Star, expression.Literal, expression.Null),
+                )
+                and case_sensitive_expression.this is not None
+            ):
+                col_expression._meta = {
+                    "display_name": case_sensitive_expression.this.this,
+                    **(col_expression._meta or {}),
+                }
         return Column(col_expression)
     return Column(column_name)
 

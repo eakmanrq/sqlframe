@@ -377,7 +377,14 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     alias=exp.TableAlias(
                         this=exp.to_identifier(self._auto_incrementing_name),
                         columns=[
-                            exp.parse_identifier(col_name, dialect=self.input_dialect)
+                            parsed
+                            if isinstance(
+                                parsed := exp.parse_identifier(
+                                    col_name, dialect=self.input_dialect
+                                ),
+                                exp.Identifier,
+                            )
+                            else exp.to_identifier(col_name, quoted=True)
                             for col_name in column_mapping
                         ],
                     ),
