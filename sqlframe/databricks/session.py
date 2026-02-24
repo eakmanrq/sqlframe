@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 
 class DatabricksSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         DatabricksCatalog,
         DatabricksDataFrameReader,
         DatabricksDataFrameWriter,
         DatabricksDataFrame,
         DatabricksTable,
-        DatabricksConnection,  # type: ignore
+        DatabricksConnection,  # type: ignore[type-var]
         DatabricksUDFRegistration,
     ],
 ):

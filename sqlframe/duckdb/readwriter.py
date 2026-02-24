@@ -86,7 +86,7 @@ class DuckDBDataFrameReader(
                 select_column_mapping["filename"] = "VARCHAR"
             select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
             if format == "csv":
-                merged_options["columns"] = column_mapping  # type: ignore
+                merged_options["columns"] = column_mapping
         else:
             select_columns = [exp.Star()]
         if format == "delta":
@@ -111,7 +111,7 @@ class DuckDBDataFrameWriter(_BaseDataFrameWriter["DuckDBSession", "DuckDBDataFra
             return
         if mode == "append":
             raise NotImplementedError("Append mode not supported")
-        options = to_csv(options, equality_char=" ")  # type: ignore
+        options = to_csv(options, equality_char=" ")
         expressions = self._df._get_expressions()
         for i, expression in enumerate(expressions):
             if i < len(expressions) - 1:

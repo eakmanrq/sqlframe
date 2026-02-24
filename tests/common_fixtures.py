@@ -285,5 +285,5 @@ def standalone_employee(
         ]
     )
     df = standalone_session.createDataFrame(data=_employee_data, schema=sqlf_employee_schema)
-    standalone_session.catalog.add_table("employee", sqlf_employee_schema)  # type: ignore
+    standalone_session.catalog.add_table("employee", sqlf_employee_schema)
     return df

@@ -20,13 +20,13 @@ else:
 
 
 class RedshiftSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         RedshiftCatalog,
         RedshiftDataFrameReader,
         RedshiftDataFrameWriter,
         RedshiftDataFrame,
         RedshiftTable,
-        RedshiftConnection,
+        RedshiftConnection,  # type: ignore[type-var]
         RedshiftUDFRegistration,
     ],
 ):

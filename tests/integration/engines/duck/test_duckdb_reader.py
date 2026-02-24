@@ -144,7 +144,7 @@ def test_read_parquet_optimize(duckdb_session: DuckDBSession):
         "tests/fixtures/employee.parquet"
     )  # Contains a `person_id` and a `person_source_value` column
     df.createOrReplaceTempView("employee")
-    duckdb_session.table("employee").sql(optimize=True)  # type: ignore
+    duckdb_session.table("employee").sql(optimize=True)
 
 
 # https://github.com/eakmanrq/sqlframe/issues/499

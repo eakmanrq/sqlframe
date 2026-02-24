@@ -229,8 +229,9 @@ def percentile_approx_without_accuracy_and_plural(
     if accuracy:
         logger.warning("Accuracy is ignored since it is not supported in this dialect")
     if isinstance(percentage, (list, tuple)):
-        return array(*[make_bracket_approx_percentile(p) for p in percentage])
-    return Column(make_bracket_approx_percentile(percentage))  # type: ignore
+        return array(*[make_bracket_approx_percentile(p) for p in percentage])  # type: ignore[arg-type]
+    assert isinstance(percentage, (int, float))
+    return Column(make_bracket_approx_percentile(percentage))
 
 
 def percentile_approx_without_accuracy_and_max_array(
@@ -586,7 +587,7 @@ def add_months_using_func(
             this="ADD_MONTHS",
             expressions=[
                 Column.ensure_col(start).column_expression,
-                months.column_expression,  # type: ignore
+                months.column_expression,
             ],
         )
     )
@@ -994,7 +995,7 @@ def element_at_using_brackets(col: ColumnOrName, value: ColumnOrLiteral) -> Colu
     return Column(
         expression.Bracket(
             this=col_func(col).column_expression,
-            expressions=[value.column_expression],  # type: ignore
+            expressions=[value.column_expression],
         )
     )
 
@@ -1313,9 +1314,9 @@ def try_to_timestamp_safe(col: ColumnOrName, format: t.Optional[ColumnOrName] = 
     from sqlframe.base.session import _BaseSession
 
     return Column.invoke_anonymous_function(
-        _BaseSession().format_time(format),  # type: ignore
+        Column(_BaseSession().format_time(format)),
         "SAFE.PARSE_TIMESTAMP",
-        col,  # type: ignore
+        col,
     )
 
 

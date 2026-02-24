@@ -8,7 +8,7 @@ description = "Turning PySpark Into a Universal DataFrame API"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Ryan Eakman", email = "eakmanrq@gmail.com" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "prettytable<4",
@@ -42,7 +42,7 @@ dev = [
     "findspark>=2,<3",
     # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
     "mirakuru<3.0.0",
-    "mypy>=1.10.0,<1.20",
+    "ty>=0.0.18",
     "openai>=1.30,<3",
     "pandas>=2,<4",
     "pandas-stubs>=2,<3",
@@ -108,12 +108,8 @@ markers = [
 ]
 addopts = "-n 0 --dist=loadgroup"
 
-[tool.mypy]
-disable_error_code = ["import-untyped"]
-
-[[tool.mypy.overrides]]
-module = ["duckdb.*", "pyarrow.*", "findspark.*", "redshift_connector.*"]
-ignore_missing_imports = true
+[tool.ty.rules]
+unresolved-import = "ignore"
 
 [tool.ruff]
 line-length = 100

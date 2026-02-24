@@ -112,4 +112,4 @@ def group_operation(
         wrapper.__wrapped__ = func
         return wrapper
 
-    return decorator  # type: ignore
+    return decorator

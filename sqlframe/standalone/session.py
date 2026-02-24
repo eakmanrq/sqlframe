@@ -14,16 +14,16 @@ from sqlframe.standalone.udf import StandaloneUDFRegistration
 
 
 class StandaloneSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         StandaloneCatalog,
         StandaloneDataFrameReader,
         StandaloneDataFrameWriter,
         StandaloneDataFrame,
         StandaloneTable,
-        object,  # type: ignore
+        object,  # type: ignore[type-var]
         StandaloneUDFRegistration,
     ]
-):  # type: ignore
+):
     _catalog = StandaloneCatalog
     _reader = StandaloneDataFrameReader
     _writer = StandaloneDataFrameWriter

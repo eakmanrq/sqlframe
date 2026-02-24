@@ -28,13 +28,13 @@ else:
 
 
 class SparkSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         SparkCatalog,
         SparkDataFrameReader,
         SparkDataFrameWriter,
         SparkDataFrame,
         SparkTable,
-        PySparkSession,  # type: ignore
+        PySparkSession,  # type: ignore[type-var]
         SparkUDFRegistration,
     ],
 ):
@@ -116,7 +116,7 @@ class SparkSession(
         return True
 
     @classproperty
-    def builder(cls) -> Builder:  # type: ignore
+    def builder(cls) -> Builder:
         """Creates a :class:`Builder` for constructing a :class:`SparkSession`.
 
         .. versionchanged:: 3.4.0
@@ -144,7 +144,7 @@ class SparkSession(
             map: t.Optional[t.Dict[str, OptionalPrimitiveType]] = None,
         ) -> SparkSession.Builder:
             super().config(key, value, map=map)
-            self.builder = self.builder.config(key, value, conf, map=map)
+            self.builder = self.builder.config(key, value, conf, map=map)  # type: ignore[call-overload]
             return self
 
         def master(self, master: str) -> SparkSession.Builder:

@@ -254,7 +254,7 @@ def get_cte_names_from_from_clause(expression_context: exp.Select) -> t.Set[str]
     return referenced_cte_names
 
 
-def normalize_dict(session: SESSION, data: t.Dict) -> t.Dict:
+def normalize_dict(session: SESSION, data: t.Dict) -> t.Any:
     if isinstance(data, dict):
         return {session._normalize_string(k): normalize_dict(session, v) for k, v in data.items()}
     elif isinstance(data, list):

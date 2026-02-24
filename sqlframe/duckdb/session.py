@@ -19,13 +19,13 @@ else:
 
 
 class DuckDBSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         DuckDBCatalog,
         DuckDBDataFrameReader,
         DuckDBDataFrameWriter,
         DuckDBDataFrame,
         DuckDBTable,
-        DuckDBPyConnection,  # type: ignore
+        DuckDBPyConnection,  # type: ignore[type-var]
         DuckDBUDFRegistration,
     ]
 ):
@@ -56,7 +56,7 @@ class DuckDBSession(
             self._last_result = None
 
     @cached_property
-    def _cur(self) -> DuckDBPyConnection:  # type: ignore
+    def _cur(self) -> DuckDBPyConnection:
         return self._conn
 
     @classmethod
@@ -72,7 +72,7 @@ class DuckDBSession(
         return None
 
     def _execute(self, sql: str) -> None:
-        self._last_result = self._cur.execute(sql)  # type: ignore
+        self._last_result = self._cur.execute(sql)
 
     @property
     def _is_duckdb(self) -> bool:

@@ -84,7 +84,7 @@ class DatabricksDataFrame(
             )
         return columns
 
-    @t.overload  # type: ignore
+    @t.overload
     def toArrow(self) -> ArrowTable: ...
 
     @t.overload

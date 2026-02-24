@@ -100,7 +100,8 @@ def get_column_mapping_from_schema_input(
     else:
         value = {x.strip(): None for x in schema}
     return {
-        k: exp.DataType.build(v, dialect=dialect) if v is not None else v for k, v in value.items()
+        str(k): exp.DataType.build(t.cast(str, v), dialect=dialect) if v is not None else v
+        for k, v in value.items()
     }
 
 
@@ -331,7 +332,7 @@ def sqlglot_to_spark(sqlglot_dtype: exp.DataType) -> types.DataType:
                 precision=int(sqlglot_dtype.expressions[0].this.this),
                 scale=int(sqlglot_dtype.expressions[1].this.this),
             )
-        return pyspark_class()
+        return pyspark_class()  # type: ignore[call-arg]
     if sqlglot_dtype.this == exp.DataType.Type.ARRAY:
         return types.ArrayType(sqlglot_to_spark(sqlglot_dtype.expressions[0]))
     elif sqlglot_dtype.this == exp.DataType.Type.MAP:
@@ -486,7 +487,7 @@ def normalize_string(
         elif is_table:
             value_expression = to_table(value_without_star, dialect=from_dialect)
         elif is_datatype:
-            value_without_star = data_type_replacement_mapping.get(from_dialect, {}).get(  # type: ignore
+            value_without_star = data_type_replacement_mapping.get(from_dialect, {}).get(
                 value_without_star, value_without_star
             )
             value_expression = exp.DataType.build(value_without_star, dialect=from_dialect)
@@ -551,4 +552,4 @@ def partition_to(
     result1: t.Type[R1],
     result2: t.Type[R2],
 ) -> tuple[R1, R2]:
-    return (lambda x, y: (result1(x), result2(y)))(*partition(pred, iterable))  # type: ignore
+    return (lambda x, y: (result1(x), result2(y)))(*partition(pred, iterable))

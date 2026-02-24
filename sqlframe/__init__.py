@@ -40,7 +40,7 @@ ACTIVATE_CONFIG = {}
 
 def activate(
     engine: t.Optional[str] = None,
-    conn: t.Optional[CONN] = None,
+    conn: t.Optional[t.Any] = None,
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ) -> None:
     import sqlframe

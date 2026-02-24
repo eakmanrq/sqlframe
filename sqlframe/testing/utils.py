@@ -232,7 +232,9 @@ def assertDataFrameEqual(
         actual_list = sorted(actual_list, key=lambda x: str(x))
         expected_list = sorted(expected_list, key=lambda x: str(x))
 
-    assert_rows_equal(actual_list, expected_list)
+    assert_rows_equal(
+        t.cast(t.List[types.Row], actual_list), t.cast(t.List[types.Row], expected_list)
+    )
 
 
 def assertSchemaEqual(actual: types.StructType, expected: types.StructType):

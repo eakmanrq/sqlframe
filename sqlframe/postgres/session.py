@@ -23,13 +23,13 @@ else:
 
 
 class PostgresSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         PostgresCatalog,
         PostgresDataFrameReader,
         PostgresDataFrameWriter,
         PostgresDataFrame,
         PostgresTable,
-        psycopg2_connection,  # type: ignore
+        psycopg2_connection,  # type: ignore[type-var]
         PostgresUDFRegistration,
     ],
 ):

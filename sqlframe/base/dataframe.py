@@ -437,7 +437,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         from sqlframe.base.normalize import normalize
 
         col = Column.ensure_col(col)
-        normalize(self.session, self.expression, col)
+        normalize(self.session, self.expression, [col])
         self._resolve_ambiguous_columns(col)
         return col
 
@@ -533,10 +533,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if with_expression:
             existing_ctes = with_expression.expressions
             existing_cte_names = {x.alias_or_name for x in existing_ctes}
-            replaced_cte_names = {}  # type: ignore
+            replaced_cte_names = {}
             for cte in ctes:
                 if replaced_cte_names:
-                    cte = cte.transform(replace_id_value, replaced_cte_names)  # type: ignore
+                    cte = cte.transform(replace_id_value, replaced_cte_names)
                 if cte.alias_or_name in existing_cte_names:
                     random_filter = exp.Literal.string(uuid.uuid4().hex)
                     # Add unique where filter to ensure that the hash of the CTE is unique
@@ -666,13 +666,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     ) -> t.List[exp.Expression]:
         df = self._resolve_pending_hints()
         select_expressions = df._get_select_expressions()
-        output_expressions: t.List[t.Union[exp.Select, exp.Cache, exp.Drop]] = []
+        output_expressions: t.List[exp.Expression] = []
         replacement_mapping: t.Dict[exp.Identifier, exp.Identifier] = {}
-        openai_config = (
-            OpenAIConfig.from_dict(openai_config)
-            if openai_config is not None and isinstance(openai_config, dict)
-            else openai_config
-        )
+        if openai_config is not None and isinstance(openai_config, dict):
+            openai_config = OpenAIConfig.from_dict(t.cast(t.Dict[str, t.Any], openai_config))
 
         for expression_type, select_expression in select_expressions:
             select_expression = select_expression.transform(
@@ -694,13 +691,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
 
-            expression: t.Union[exp.Select, exp.Cache, exp.Drop]
+            expression: exp.Expression
             if expression_type == exp.Cache:
                 cache_table_name = df._create_hash_from_expression(select_expression)
                 cache_table = exp.to_table(cache_table_name)
                 original_alias_name = select_expression.args["cte_alias_name"]
 
-                replacement_mapping[exp.to_identifier(original_alias_name)] = exp.to_identifier(  # type: ignore
+                replacement_mapping[exp.to_identifier(original_alias_name)] = exp.to_identifier(
                     cache_table_name
                 )
                 self.session.catalog.add_table(
@@ -727,10 +724,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 # We will drop the "view" if it exists before running the cache table
                 output_expressions.append(exp.Drop(this=cache_table, exists=True, kind="VIEW"))
             elif expression_type == exp.Create:
-                expression = df.output_expression_container.copy()  # type: ignore
+                expression = df.output_expression_container.copy()
                 expression.set("expression", select_expression)
             elif expression_type == exp.Insert:
-                expression = df.output_expression_container.copy()  # type: ignore
+                expression = df.output_expression_container.copy()
                 select_without_ctes = select_expression.copy()
                 select_without_ctes.set("with_", None)
                 expression.set("expression", select_without_ctes)
@@ -743,7 +740,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 raise ValueError(f"Invalid expression type: {expression_type}")
 
             output_expressions.append(expression)
-        return output_expressions  # type: ignore
+        return output_expressions
 
     @t.overload
     def sql(
@@ -799,7 +796,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 client = OpenAI()
                 chat_completed = client.chat.completions.create(
                     messages=[
-                        {  # type: ignore
+                        {
                             "role": "system",
                             "content": openai_config.get_prompt(dialect),
                         },
@@ -831,12 +828,14 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if "joins" not in self.expression.args:
             return
 
-        columns = ensure_list(columns)
+        from sqlframe.base.column import Column
+
+        col_list: t.List[Column] = t.cast(t.List[Column], ensure_list(columns))
         ambiguous_cols: t.List[exp.Column] = list(
             flatten(
                 [
                     sub_col
-                    for col in columns
+                    for col in col_list
                     for sub_col in col.expression.find_all(exp.Column)
                     if not sub_col.table
                 ]
@@ -881,7 +880,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             return self
 
         if isinstance(cols[0], list):
-            cols = cols[0]  # type: ignore
+            cols = cols[0]
         columns = self._ensure_and_normalize_cols(cols)
         if "skip_update_display_name_mapping" not in kwargs:
             unexpanded_columns = self._ensure_and_normalize_cols(cols, skip_star_expansion=True)
@@ -936,7 +935,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @operation(Operation.GROUP_BY)
     def groupBy(self, *cols, **kwargs) -> GROUP_DATA:
         if cols and isinstance(cols[0], list):
-            cols = cols[0]  # type: ignore
+            cols = cols[0]
 
         # Special handling for groupBy operations with column aliases
         # `_ensure_and_normalize_cols` sets CTE aliases that may not exist in the final context.
@@ -1492,7 +1491,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 if i == 0:
                     expression = F.when(column == old_value, new_value)
                 else:
-                    expression = expression.when(column == old_value, new_value)  # type: ignore
+                    expression = expression.when(column == old_value, new_value)
             replacement_mapping[column.alias_or_name] = expression.otherwise(column).alias(
                 column.expression.alias_or_name
             )
@@ -1677,9 +1676,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 existing_col_names.index(column_name) if column_name in existing_col_names else None
             )
             if existing_col_index is not None:
-                select_columns[existing_col_index] = col_value.alias(  # type: ignore
-                    display_name
-                )
+                select_columns[existing_col_index] = col_value.alias(display_name)
             else:
                 select_columns.append(col_value.alias(display_name))
         self._update_display_name_mapping(
@@ -1831,7 +1828,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     @t.overload
     def cube(self, __cols: t.Union[t.List[Column], t.List[str]]) -> GROUP_DATA: ...
 
-    def cube(self, *cols: ColumnOrName) -> GROUP_DATA:  # type: ignore[misc]
+    def cube(self, *cols: ColumnOrName) -> GROUP_DATA:
         """
         Create a multi-dimensional cube for the current :class:`DataFrame` using
         the specified columns, so we can run aggregations on them.
@@ -1980,7 +1977,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     value.alias(valueColumnName).expression,
                 ).from_(df.expression.ctes[-1].alias_or_name)
             )
-        unioned_expression = functools.reduce(lambda x, y: x.union(y, distinct=False), selects)  # type: ignore
+        unioned_expression = functools.reduce(lambda x, y: x.union(y, distinct=False), selects)
         final_expression = self._add_ctes_to_expression(unioned_expression, df.expression.ctes)
         return self.copy(expression=final_expression)._convert_leaf_to_cte()
 

@@ -89,7 +89,7 @@ class SparkDataFrameReader(
             select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
 
             if hasattr(schema, "simpleString"):
-                schema = schema.simpleString()
+                schema = t.cast(t.Any, schema).simpleString()
         else:
             select_columns = [exp.Star()]
 
@@ -127,7 +127,7 @@ class SparkDataFrameReader(
         )
         if select_columns == [exp.Star()] and df.schema:
             return self.load(path=path, format=format, schema=df.schema, **merged_options)
-        self.session._last_loaded_file = path  # type: ignore
+        self.session._last_loaded_file = path
         return df
 
 
