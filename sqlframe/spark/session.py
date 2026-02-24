@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from sqlglot import exp
-from sqlglot.helper import classproperty, ensure_list
+from sqlglot.helper import ensure_list
 
 from sqlframe.base.session import _BaseSession
 from sqlframe.base.util import normalize_string
@@ -115,15 +115,6 @@ class SparkSession(
     def _has_connection(self) -> bool:
         return True
 
-    @classproperty
-    def builder(cls) -> Builder:
-        """Creates a :class:`Builder` for constructing a :class:`SparkSession`.
-
-        .. versionchanged:: 3.4.0
-            Supports Spark Connect.
-        """
-        return cls.Builder()
-
     @property
     def _is_spark(self) -> bool:
         return True
@@ -171,3 +162,5 @@ class SparkSession(
 
         def getOrCreate(self) -> SparkSession:
             return super().getOrCreate()  # type: ignore
+
+    builder = Builder()

@@ -2246,8 +2246,8 @@ def test_bit_count(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.bit_get("cola", "colb"), "BIT_GET(cola, colb)"),
-        (SF.bit_get(SF.col("cola"), SF.col("colb")), "BIT_GET(cola, colb)"),
+        (SF.bit_get("cola", "colb"), "GETBIT(cola, colb)"),
+        (SF.bit_get(SF.col("cola"), SF.col("colb")), "GETBIT(cola, colb)"),
     ],
 )
 def test_bit_get(expression, expected):
@@ -3421,7 +3421,7 @@ def test_count_min_sketch(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.curdate(), "CURDATE()"),
+        (SF.curdate(), "CURRENT_DATE"),
     ],
 )
 def test_curdate(expression, expected):

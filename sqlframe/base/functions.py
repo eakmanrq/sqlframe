@@ -2195,12 +2195,12 @@ def bit_count(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.BitwiseCount)
 
 
-@meta(unsupported_engines="*")
+@meta(unsupported_engines=["bigquery", "postgres"])
 def bit_get(col: ColumnOrName, pos: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col, "BIT_GET", pos)
+    return Column.invoke_expression_over_column(col, expression.Getbit, expression=pos)
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres"])
 def getbit(col: ColumnOrName, pos: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Getbit, expression=pos)
 
@@ -2350,15 +2350,15 @@ def array_position(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta()
 def element_at(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
-    from sqlframe.base.function_alternatives import element_at_using_brackets
-
-    session = _get_session()
-
-    if session._is_bigquery or session._is_duckdb or session._is_postgres or session._is_snowflake:
-        return element_at_using_brackets(col, value)
-
     value_col = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_anonymous_function(col, "ELEMENT_AT", value_col)
+    return Column(
+        expression.Bracket(
+            this=Column.ensure_col(col).column_expression,
+            expressions=[value_col.column_expression],
+            offset=1,
+            safe=False,
+        )
+    )
 
 
 @meta()
@@ -2371,22 +2371,17 @@ def array_remove(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
 
 @meta(unsupported_engines="postgres")
 def array_distinct(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import array_distinct_bgutil
-
     session = _get_session()
 
-    if session._is_bigquery:
-        return array_distinct_bgutil(col)
-
     if session._is_duckdb:
-        # DuckDB's array_distinct removes nulls, but we need to preserve them
+        # DuckDB's LIST_DISTINCT removes nulls, but we need to preserve them
         # Check if original array contains null and append it back if needed
         original_col = Column.ensure_col(col)
-        distinct_result = Column.invoke_anonymous_function(col, "ARRAY_DISTINCT")
+        distinct_result = Column.invoke_expression_over_column(col, expression.ArrayDistinct)
         has_null = array_position(original_col, lit(None)) > lit(0)
         return when(has_null, array_append(distinct_result, lit(None))).otherwise(distinct_result)
 
-    return Column.invoke_anonymous_function(col, "ARRAY_DISTINCT")
+    return Column.invoke_expression_over_column(col, expression.ArrayDistinct)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
@@ -2419,9 +2414,11 @@ def array_union(col1: ColumnOrName, col2: ColumnOrName) -> Column:
     return Column.invoke_anonymous_function(col1, "ARRAY_UNION", Column.ensure_col(col2))
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+@meta(unsupported_engines="postgres")
 def array_except(col1: ColumnOrName, col2: ColumnOrName) -> Column:
-    return Column.invoke_anonymous_function(col1, "ARRAY_EXCEPT", Column.ensure_col(col2))
+    return Column.invoke_expression_over_column(
+        col1, expression.ArrayExcept, expression=Column.ensure_col(col2)
+    )
 
 
 @meta()
@@ -2544,46 +2541,26 @@ def size(col: ColumnOrName) -> Column:
 
 @meta()
 def array_min(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import (
-        array_min_bgutil,
-        array_min_from_sort,
-        array_min_from_subquery,
-    )
+    from sqlframe.base.function_alternatives import array_min_from_subquery
 
     session = _get_session()
-
-    if session._is_bigquery:
-        return array_min_bgutil(col)
-
-    if session._is_duckdb:
-        return array_min_from_sort(col)
 
     if session._is_postgres:
         return array_min_from_subquery(col)
 
-    return Column.invoke_anonymous_function(col, "ARRAY_MIN")
+    return Column.invoke_expression_over_column(col, expression.ArrayMin)
 
 
 @meta()
 def array_max(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import (
-        array_max_bgutil,
-        array_max_from_sort,
-        array_max_from_subquery,
-    )
+    from sqlframe.base.function_alternatives import array_max_from_subquery
 
     session = _get_session()
-
-    if session._is_bigquery:
-        return array_max_bgutil(col)
-
-    if session._is_duckdb:
-        return array_max_from_sort(col)
 
     if session._is_postgres:
         return array_max_from_subquery(col)
 
-    return Column.invoke_anonymous_function(col, "ARRAY_MAX")
+    return Column.invoke_expression_over_column(col, expression.ArrayMax)
 
 
 @meta(unsupported_engines="postgres")
@@ -3201,7 +3178,7 @@ def count_min_sketch(
     return Column.invoke_anonymous_function(col, "count_min_sketch", eps, confidence, seed)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def curdate() -> Column:
     """
     Returns the current date at the start of query evaluation as a :class:`DateType` column.
@@ -3224,7 +3201,7 @@ def curdate() -> Column:
     |    2022-08-26|
     +--------------+
     """
-    return Column.invoke_anonymous_function(None, "curdate")
+    return Column.invoke_expression_over_column(None, expression.CurrentDate)
 
 
 @meta(unsupported_engines=["bigquery", "snowflake"])
@@ -4340,7 +4317,7 @@ def make_dt_interval(
     return Column.invoke_anonymous_function(_days, "make_dt_interval", _hours, _mins, _secs)
 
 
-@meta(unsupported_engines="*")
+@meta()
 def make_timestamp(
     years: ColumnOrName,
     months: ColumnOrName,
@@ -4402,14 +4379,17 @@ def make_timestamp(
     +-----------------------+
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
+    kwargs: t.Dict[str, exp.Expression] = {
+        "year": Column.ensure_col(years).column_expression,
+        "month": Column.ensure_col(months).column_expression,
+        "day": Column.ensure_col(days).column_expression,
+        "hour": Column.ensure_col(hours).column_expression,
+        "min": Column.ensure_col(mins).column_expression,
+        "sec": Column.ensure_col(secs).column_expression,
+    }
     if timezone is not None:
-        return Column.invoke_anonymous_function(
-            years, "make_timestamp", months, days, hours, mins, secs, timezone
-        )
-    else:
-        return Column.invoke_anonymous_function(
-            years, "make_timestamp", months, days, hours, mins, secs
-        )
+        kwargs["zone"] = Column.ensure_col(timezone).column_expression
+    return Column(expression.TimestampFromParts(**kwargs))
 
 
 @meta(unsupported_engines=["*", "databricks"])
