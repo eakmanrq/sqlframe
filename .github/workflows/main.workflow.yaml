@@ -7,7 +7,7 @@ on:
       - 'sqlframe/**'
       - 'tests/**'
       - 'Makefile'
-      - 'setup.py'
+      - 'pyproject.toml'
   pull_request:
     types:
     - synchronize
@@ -16,7 +16,7 @@ on:
     - 'sqlframe/**'
     - 'tests/**'
     - 'Makefile'
-    - 'setup.py'
+    - 'pyproject.toml'
 jobs:
   run-tests:
     runs-on: ubuntu-latest

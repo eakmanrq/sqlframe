@@ -4,26 +4,19 @@ repos:
       - id: ruff
         name: ruff
         description: "Run 'ruff' for extremely fast Python linting"
-        entry: ruff check
-            --force-exclude 
-            --fix
-            --select I
-            --ignore E721
-            --ignore E741
+        entry: ruff check --fix
         language: python
         types_or: [python, pyi]
         require_serial: true
-        additional_dependencies: []
-        files: ^(sqlframe/|tests/|setup.py)
+        files: ^(sqlframe/|tests/)
       - id: ruff-format
         name: ruff-format
         description: "Run 'ruff format' for extremely fast Python formatting"
         entry: ruff format
-          --force-exclude
-          --line-length 100
         language: python
         types_or: [python, pyi]
         require_serial: true
+        files: ^(sqlframe/|tests/)
       - id: mypy
         name: mypy
         entry: mypy sqlframe tests
