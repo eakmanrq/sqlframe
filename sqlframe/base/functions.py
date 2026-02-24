@@ -1519,7 +1519,7 @@ def timestamp_add(unit: str, quantity: ColumnOrName, ts: ColumnOrName) -> Column
             expr = expression.DateSub
             quantity.expression.set("this", str(-int(quantity.expression.this)))
         else:
-            expr = expression.DateAdd  # type: ignore
+            expr = expression.DateAdd
         return Column.invoke_expression_over_column(
             ts, expr, expression=quantity, unit=expression.Var(this=unit.upper())
         )
@@ -4994,8 +4994,8 @@ def pmod(dividend: t.Union[ColumnOrName, float], divisor: t.Union[ColumnOrName, 
     |       1.0|
     +----------+
     """
-    dividend = lit(dividend) if isinstance(dividend, float) else dividend
-    divisor = lit(divisor) if isinstance(divisor, float) else divisor
+    dividend = lit(dividend) if isinstance(dividend, (int, float)) else dividend
+    divisor = lit(divisor) if isinstance(divisor, (int, float)) else divisor
     return Column.invoke_anonymous_function(dividend, "pmod", divisor)
 
 
@@ -7243,11 +7243,14 @@ def _get_lambda_from_func(lambda_expression: t.Callable):
     # Check if function has __code__ attribute (regular Python functions/lambdas)
     if hasattr(lambda_expression, "__code__"):
         # Use __code__ for regular functions and lambdas (preserves exact parameter names)
-        var_names = lambda_expression.__code__.co_varnames[: lambda_expression.__code__.co_argcount]
+        import types as _types
+
+        func_with_code = t.cast(_types.FunctionType, lambda_expression)
+        var_names = func_with_code.__code__.co_varnames[: func_with_code.__code__.co_argcount]
     else:
         # Built-in function without __code__ - use parameter names from signature
         # This handles operator.add, operator.sub, and other built-in functions
-        var_names = param_names  # type: ignore
+        var_names = param_names
 
     variables = [expression.to_identifier(x, quoted=_lambda_quoted(x)) for x in var_names]
 

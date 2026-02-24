@@ -17,9 +17,9 @@ repos:
         types_or: [python, pyi]
         require_serial: true
         files: ^(sqlframe/|tests/)
-      - id: mypy
-        name: mypy
-        entry: mypy sqlframe tests
+      - id: ty
+        name: ty
+        entry: ty check sqlframe tests
         language: system
         types: [ python ]
         files: ^(sqlframe/|tests/)

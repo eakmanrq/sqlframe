@@ -229,7 +229,7 @@ def standalone_store(
         ]
     )
     df = standalone_session.createDataFrame(data=_store_data, schema=sqlf_store_schema)
-    standalone_session.catalog.add_table("store", sqlf_store_schema)  # type: ignore
+    standalone_session.catalog.add_table("store", sqlf_store_schema)
     return df
 
 
@@ -244,7 +244,7 @@ def standalone_district(
         ]
     )
     df = standalone_session.createDataFrame(data=_district_data, schema=sqlf_district_schema)
-    standalone_session.catalog.add_table("district", sqlf_district_schema)  # type: ignore
+    standalone_session.catalog.add_table("district", sqlf_district_schema)
     return df
 
 
@@ -589,7 +589,7 @@ def compare_frames(pyspark_session: PySparkSession) -> t.Callable:
         no_empty: bool = True,
         sort: bool = False,
         optimize: t.Optional[bool] = None,
-    ) -> t.Tuple[PySparkDataFrame, PySparkDataFrame]:
+    ) -> t.Tuple[PySparkDataFrame, t.Any]:
         from sqlframe.base.session import _BaseSession
 
         def compare_schemas(schema_1, schema_2):
@@ -607,14 +607,15 @@ def compare_frames(pyspark_session: PySparkSession) -> t.Callable:
             compare_schema = False
             # We don't care if different engines produce different sorted results
             force_sort = True
-            sqlf_df = sqlf  # type: ignore
-        sqlf_df_results = sqlf_df.collect()  # type: ignore
+            sqlf_df = sqlf
+        sqlf_df_results = sqlf_df.collect()
         spark_df_results = df.collect()
-        if isinstance(sqlf_df, _BaseSession) and sqlf_df.session.SANITIZE_COLUMN_NAMES:
+        if isinstance(sqlf_df, _BaseSession) and sqlf_df.session.SANITIZE_COLUMN_NAMES:  # type: ignore[union-attr]
             sanitized_spark_df_results = []
             for row in spark_df_results:
                 sanitized_row = {
-                    sqlf_df.session._sanitize_column_name(k): v for k, v in row.asDict().items()
+                    sqlf_df.session._sanitize_column_name(k): v  # type: ignore[call-non-callable]
+                    for k, v in row.asDict().items()
                 }
                 sanitized_spark_df_results.append(Row(**sanitized_row))
             spark_df_results = sanitized_spark_df_results

@@ -43,7 +43,7 @@ def ensure_cte(func: t.Callable[P, T]) -> t.Callable[P, T]:
         self = self_class(**object_to_dict(self))
         return func(self, *args, **kwargs)  # type: ignore
 
-    wrapper.__wrapped__ = func  # type: ignore
+    wrapper.__wrapped__ = func
     return wrapper  # type: ignore[return-value]
 
 

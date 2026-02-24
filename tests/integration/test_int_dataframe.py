@@ -254,7 +254,7 @@ def test_where_clause_eq_nullsafe(
     compare_frames: t.Callable,
 ):
     employee = get_df("employee")
-    df_employee = pyspark_employee.where(F.col("age").eqNullSafe(F.lit(37)))
+    df_employee = pyspark_employee.where(F.col("age").eqNullSafe(F.lit(37)))  # type: ignore[call-overload]
     dfs_employee = employee.where(SF.col("age") == SF.lit(37))
     compare_frames(df_employee, dfs_employee)
 
@@ -1252,7 +1252,7 @@ def test_order_by_column_sort_method(
     df = (
         pyspark_store.groupBy(F.col("district_id"))
         .agg(F.min("num_sales").alias("total_sales"))
-        .orderBy(F.col("total_sales").asc(), F.col("district_id").desc())
+        .orderBy(F.col("total_sales").asc(), F.col("district_id").desc())  # type: ignore[call-overload]
     )
 
     dfs = (
@@ -1273,7 +1273,7 @@ def test_order_by_column_sort_method_nulls_last(
     df = (
         pyspark_store.groupBy(F.col("district_id"))
         .agg(F.min("num_sales").alias("total_sales"))
-        .orderBy(F.when(F.col("district_id") == F.lit(2), F.col("district_id")).asc_nulls_last())
+        .orderBy(F.when(F.col("district_id") == F.lit(2), F.col("district_id")).asc_nulls_last())  # type: ignore[call-overload]
     )
 
     dfs = (
@@ -1296,7 +1296,7 @@ def test_order_by_column_sort_method_nulls_first(
     df = (
         pyspark_store.groupBy(F.col("district_id"))
         .agg(F.min("num_sales").alias("total_sales"))
-        .orderBy(F.when(F.col("district_id") == F.lit(1), F.col("district_id")).desc_nulls_first())
+        .orderBy(F.when(F.col("district_id") == F.lit(1), F.col("district_id")).desc_nulls_first())  # type: ignore[call-overload]
     )
 
     dfs = (
@@ -1600,7 +1600,7 @@ def test_fillna_dict_replacement(
     employee = get_df("employee")
     df = pyspark_employee.select(
         F.col("fname"),
-        F.when(F.col("lname").startswith("L"), F.col("lname")).alias("l_lname"),
+        F.when(F.col("lname").startswith("L"), F.col("lname")).alias("l_lname"),  # type: ignore[call-overload]
         F.when(F.col("age") < F.lit(50), F.col("age")).alias("the_age"),
     ).fillna({"fname": "Jacob", "l_lname": "NOT_LNAME"})
 
@@ -1909,10 +1909,10 @@ def test_drop_column_join_column_df_reference(
     get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
-    df1 = pyspark_employee.sparkSession.createDataFrame(  # type: ignore
+    df1 = pyspark_employee.sparkSession.createDataFrame(
         [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
     ).alias("df1")
-    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")  # type: ignore
+    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")
     df_joined = (
         df1.join(df2, on=F.col("df1.foo") == F.col("df2.foo"), how="left")
         .drop(df1.foo)
@@ -1938,10 +1938,10 @@ def test_drop_join_column_unqualified(
     get_df: t.Callable[[str], BaseDataFrame],
     compare_frames: t.Callable,
 ):
-    df1 = pyspark_employee.sparkSession.createDataFrame(  # type: ignore
+    df1 = pyspark_employee.sparkSession.createDataFrame(
         [{"foo": 0, "bar": "a"}, {"foo": 1, "bar": "b"}]
     ).alias("df1")
-    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")  # type: ignore
+    df2 = pyspark_employee.sparkSession.createDataFrame([{"foo": 0, "baz": 1.5}]).alias("df2")
     df_joined = (
         df1.join(df2, on=F.col("df1.foo") == F.col("df2.foo"), how="left").drop("foo")
         # select the columns to work around column order bug
@@ -2459,7 +2459,7 @@ def test_self_join(
     df_filtered = pyspark_employee.where(F.col("age") > 40)
     df_joined = pyspark_employee.join(
         df_filtered,
-        pyspark_employee["employee_id"].eqNullSafe(df_filtered["employee_id"]),
+        pyspark_employee["employee_id"].eqNullSafe(df_filtered["employee_id"]),  # type: ignore[call-overload]
         how="inner",
     )
 
@@ -2952,7 +2952,7 @@ def test_float_infinity(
         {key: value[i] for key, value in data.items()}
         for i in range(len(data[next(iter(data.keys()))]))
     ]
-    df = session.createDataFrame(rows)  # type: ignore
+    df = session.createDataFrame(rows)
     df = df.withColumns({"b": F.col("a") != F.lit(float("inf"))})
 
     employee = get_df("employee")

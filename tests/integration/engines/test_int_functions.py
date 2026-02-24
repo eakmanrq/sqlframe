@@ -84,7 +84,7 @@ def get_window() -> t.Callable:
             from pyspark.sql import Window
 
             return Window
-        from sqlframe.base.window import Window  # type: ignore
+        from sqlframe.base.window import Window
 
         return Window
 
@@ -98,7 +98,7 @@ def get_types() -> t.Callable:
             from pyspark.sql import types
 
             return types
-        from sqlframe.base import types  # type: ignore
+        from sqlframe.base import types
 
         return types
 

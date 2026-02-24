@@ -110,7 +110,7 @@ class DatabricksDataFrameReader(
             select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
 
             if hasattr(schema, "simpleString"):
-                schema = schema.simpleString()
+                schema = t.cast(t.Any, schema).simpleString()
         else:
             select_columns = [exp.Star()]
 
@@ -140,7 +140,7 @@ class DatabricksDataFrameReader(
         )
         if select_columns == [exp.Star()] and df.schema:
             return self.load(path=path, format=format, schema=df.schema, **merged_options)
-        self.session._last_loaded_file = path  # type: ignore
+        self.session._last_loaded_file = path
         return df
 
 
@@ -159,7 +159,7 @@ class DatabricksDataFrameWriter(
         format = str(format or self._state_format_to_write)
         self._write(path, mode, format, partitionBy=partitionBy, **options)
 
-    def _write(self, path: str, mode: t.Optional[str], format: str, **options):  # type: ignore
+    def _write(self, path: str, mode: t.Optional[str], format: str, **options):
         fs_prefix, filepath = split_filepath(path)
         if fs_prefix == "":
             super()._write(filepath, mode, format, **options)
@@ -319,7 +319,7 @@ class DatabricksDataFrameWriter(
                 partition_by = partitionBy
             properties.append(
                 exp.PartitionedByProperty(
-                    this=exp.Tuple(expressions=list(map(sg.to_identifier, partition_by)))
+                    this=exp.Tuple(expressions=[sg.to_identifier(p) for p in partition_by])
                 )
             )
         if clusterBy is not None:
@@ -329,7 +329,7 @@ class DatabricksDataFrameWriter(
                 cluster_by = clusterBy
             properties.append(
                 exp.Cluster(
-                    expressions=[exp.Tuple(expressions=list(map(sg.to_identifier, cluster_by)))]
+                    expressions=[exp.Tuple(expressions=[sg.to_identifier(c) for c in cluster_by])]
                 )
             )
 

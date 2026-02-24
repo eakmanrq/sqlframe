@@ -443,7 +443,7 @@ class DatabricksCatalog(
                 partition_by = partitionBy
             properties.append(
                 exp.PartitionedByProperty(
-                    this=exp.Tuple(expressions=list(map(sg.to_identifier, partition_by)))
+                    this=exp.Tuple(expressions=[sg.to_identifier(p) for p in partition_by])
                 )
             )
         if clusterBy is not None:
@@ -453,7 +453,7 @@ class DatabricksCatalog(
                 cluster_by = clusterBy
             properties.append(
                 exp.Cluster(
-                    expressions=[exp.Tuple(expressions=list(map(sg.to_identifier, cluster_by)))]
+                    expressions=[exp.Tuple(expressions=[sg.to_identifier(c) for c in cluster_by])]
                 )
             )
 

@@ -50,7 +50,7 @@ def sqlf_employee(
         ]
     )
     df = sqlf.createDataFrame(data=_function_employee_data, schema=sqlf_employee_schema)
-    sqlf.catalog.add_table("employee", sqlf_employee_schema)  # type: ignore
+    sqlf.catalog.add_table("employee", sqlf_employee_schema)
     return df
 
 
@@ -65,8 +65,9 @@ def compare_sql() -> t.Callable:
         df_kwargs = {"pretty": pretty, **kwargs}
         if not isinstance(df, Column):
             df_kwargs["optimize"] = df_kwargs.get("optimize", True)
-            df_kwargs["as_list"] = df_kwargs.get("as_list", True)
-        actual_sqls = ensure_list(df.sql(**df_kwargs))
+            actual_sqls = ensure_list(df.sql(as_list=True, **df_kwargs))  # type: ignore[call-overload]
+        else:
+            actual_sqls = ensure_list(df.sql(**df_kwargs))
         expected_statements = ensure_list(expected_statements)
         assert len(actual_sqls) == len(expected_statements)
         for expected, actual in zip(expected_statements, actual_sqls):

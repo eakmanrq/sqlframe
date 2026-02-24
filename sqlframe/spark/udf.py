@@ -6,7 +6,7 @@ from sqlframe.base.udf import _BaseUDFRegistration
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import DataTypeOrString, UserDefinedFunctionLike
-    from sqlframe.spark.session import SparkSession  # type: ignore
+    from sqlframe.spark.session import SparkSession
 
 
 class SparkUDFRegistration(_BaseUDFRegistration["SparkSession"]):

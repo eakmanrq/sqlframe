@@ -10,10 +10,11 @@ if t.TYPE_CHECKING:
 
 
 class DuckDBUDFRegistration(_BaseUDFRegistration["DuckDBSession"]):
-    def register(  # type: ignore
+    def register(
         self,
         name: str,
         f: t.Union[t.Callable[..., t.Any], UserDefinedFunctionLike],
         returnType: t.Optional[DataTypeOrString] = None,
     ) -> UserDefinedFunctionLike:
-        self.sparkSession._conn.create_function(name, f, return_type=returnType)  # type: ignore
+        self.sparkSession._conn.create_function(name, f, return_type=returnType)
+        return f  # type: ignore[return-value]

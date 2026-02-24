@@ -509,7 +509,7 @@ class ListTablesFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF,
         for table in self.session.temp_views.keys():
             tables.append(
                 Table(
-                    name=table,  # type: ignore
+                    name=table,
                     catalog=None,
                     namespace=[],
                     description=None,

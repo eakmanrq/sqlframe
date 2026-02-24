@@ -95,7 +95,7 @@ class PandasLoaderMixin(_BaseDataFrameReader, t.Generic[SESSION, DF]):
 
 
 class PandasWriterMixin(_BaseDataFrameWriter, t.Generic[SESSION, DF]):
-    def _write(self, path: str, mode: t.Optional[str], format: str, **options):  # type: ignore
+    def _write(self, path: str, mode: t.Optional[str], format: str, **options):
         mode, skip = self._validate_mode(path, mode)
         if skip:
             return

@@ -50,7 +50,7 @@ class SnowflakeDataFrame(
         df = self._convert_leaf_to_cte()
         df = df.limit(0)
         df.collect()
-        query_id = self.session._cur.sfqid
+        query_id = self.session._cur.sfqid  # type: ignore[union-attr]
         columns = []
         for row in self.session._collect(f"DESCRIBE RESULT '{query_id}'"):
             null_row = [x for x in row.__fields__ if "?" in x][0]

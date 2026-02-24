@@ -71,7 +71,9 @@ class BigQueryDataFrame(
         job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
         sql = self.session._to_sql(self.expression)
         query_job = self.session._client.query(sql, job_config=job_config)
-        return [field_to_column(field) for field in query_job.schema]
+        schema = query_job.schema
+        assert schema is not None
+        return [field_to_column(field) for field in schema]
 
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None

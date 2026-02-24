@@ -94,12 +94,12 @@ class WindowSpec:
                 value = "UNBOUNDED" if x >= Window.unboundedFollowing else F.lit(x).expression
                 return value, side
 
-        start, start_side = get_value_and_side(start)  # type: ignore
-        end, end_side = get_value_and_side(end)  # type: ignore
+        start_val, start_side = get_value_and_side(start)
+        end_val, end_side = get_value_and_side(end)
         return {
-            "start": start,  # type: ignore
+            "start": start_val,
             "start_side": start_side,
-            "end": end,  # type: ignore
+            "end": end_val,
             "end_side": end_side,
         }
 

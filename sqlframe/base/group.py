@@ -119,7 +119,7 @@ class _BaseGroupedData(t.Generic[DF]):
                 if isinstance(v, str):
                     in_values.append(exp.Literal.string(v))
                 else:
-                    in_values.append(exp.Literal.number(v))  # type: ignore
+                    in_values.append(exp.Literal.number(v))
 
             # Build the pivot node with the fields parameter
             pivot = exp.Pivot(
@@ -138,9 +138,9 @@ class _BaseGroupedData(t.Generic[DF]):
 
             # Create the final select from the pivoted subquery
             final_select_in_values = []
-            for col in in_values:  # type: ignore
+            for col in in_values:
                 for agg_col in cols:
-                    original_name = col.alias_or_name  # type: ignore
+                    original_name = col.alias_or_name
                     if self.session._is_snowflake:
                         # Snowflake takes the provided values, like 'Java', and creates the column as "'Java'"
                         # Therefore the user to select the column would need to use "'Java'"
@@ -149,7 +149,7 @@ class _BaseGroupedData(t.Generic[DF]):
                         # alias is to case-insensitive "Java" so that the user can select it without quotes.
                         # This has a downside that if a user really needed case-sensitive column names then it wouldn't work.
                         new_col = exp.to_column(
-                            col.alias_or_name,  # type: ignore
+                            col.alias_or_name,
                             quoted=True,
                             dialect=self.session.execution_dialect,
                         )
@@ -200,7 +200,7 @@ class _BaseGroupedData(t.Generic[DF]):
             group_by_cols = []
             for grouping_set in self.group_by_cols:
                 all_grouping_sets.append(
-                    exp.Tuple(expressions=[x.column_expression for x in grouping_set])  # type: ignore
+                    exp.Tuple(expressions=[x.column_expression for x in grouping_set])
                 )
                 group_by_cols.extend(grouping_set)  # type: ignore
             group_by_cols = list(dict.fromkeys(group_by_cols))

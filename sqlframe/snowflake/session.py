@@ -41,19 +41,19 @@ class JsonLoadsSnowflakeConverter(SnowflakeConverter):
 
         return conv
 
-    _OBJECT_to_python = _json_loads  # type: ignore
-    _VARIANT_to_python = _json_loads  # type: ignore
-    _ARRAY_to_python = _json_loads  # type: ignore
+    _OBJECT_to_python = _json_loads
+    _VARIANT_to_python = _json_loads  # type: ignore[invalid-method-override]
+    _ARRAY_to_python = _json_loads
 
 
 class SnowflakeSession(
-    _BaseSession[  # type: ignore
+    _BaseSession[
         SnowflakeCatalog,
         SnowflakeDataFrameReader,
         SnowflakeDataFrameWriter,
         SnowflakeDataFrame,
         SnowflakeTable,
-        SnowflakeConnection,  # type: ignore
+        SnowflakeConnection,  # type: ignore[type-var]
         SnowflakeUDFRegistration,
     ],
 ):
@@ -65,7 +65,7 @@ class SnowflakeSession(
     _udf_registration = SnowflakeUDFRegistration
 
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):
-        import snowflake
+        import snowflake.connector
 
         snowflake.connector.cursor.CAN_USE_ARROW_RESULT_FORMAT = False
 
@@ -79,7 +79,7 @@ class SnowflakeSession(
                     support_negative_year=self._conn._support_negative_year,
                 )
             else:
-                self._conn._converter_class = JsonLoadsSnowflakeConverter  # type: ignore
+                self._conn._converter_class = JsonLoadsSnowflakeConverter
 
     @property
     def _is_snowflake(self) -> bool:
