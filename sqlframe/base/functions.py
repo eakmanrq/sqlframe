@@ -45,7 +45,7 @@ def col(column_name: t.Union[ColumnOrName, t.Any]) -> Column:
         case_sensitive_expression = expression.to_column(column_name, dialect=dialect)
         if not isinstance(
             case_sensitive_expression, (expression.Star, expression.Literal, expression.Null)
-        ):
+        ) and case_sensitive_expression.this is not None:
             col_expression._meta = {
                 "display_name": case_sensitive_expression.this.this,
                 **(col_expression._meta or {}),
@@ -2195,12 +2195,12 @@ def bit_count(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.BitwiseCount)
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def bit_get(col: ColumnOrName, pos: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Getbit, expression=pos)
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
 def getbit(col: ColumnOrName, pos: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Getbit, expression=pos)
 
@@ -2553,9 +2553,12 @@ def array_min(col: ColumnOrName) -> Column:
 
 @meta()
 def array_max(col: ColumnOrName) -> Column:
-    from sqlframe.base.function_alternatives import array_max_from_subquery
+    from sqlframe.base.function_alternatives import array_max_from_sort, array_max_from_subquery
 
     session = _get_session()
+
+    if session._is_duckdb:
+        return array_max_from_sort(col)
 
     if session._is_postgres:
         return array_max_from_subquery(col)
@@ -4317,7 +4320,7 @@ def make_dt_interval(
     return Column.invoke_anonymous_function(_days, "make_dt_interval", _hours, _mins, _secs)
 
 
-@meta()
+@meta(unsupported_engines=["duckdb", "postgres"])
 def make_timestamp(
     years: ColumnOrName,
     months: ColumnOrName,
