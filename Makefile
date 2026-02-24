@@ -4,6 +4,9 @@ else
     PIP := pip3
 endif
 
+lock:
+	uv lock
+
 install-dev:
 	$(PIP) install -e ".[bigquery,dev,docs,duckdb,pandas,postgres,redshift,snowflake,databricks,spark]"
 
