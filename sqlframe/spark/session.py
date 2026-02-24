@@ -6,7 +6,7 @@ from sqlglot import exp
 from sqlglot.helper import ensure_list
 
 from sqlframe.base.session import _BaseSession
-from sqlframe.base.util import normalize_string
+from sqlframe.base.util import classproperty, normalize_string
 from sqlframe.spark.catalog import SparkCatalog
 from sqlframe.spark.dataframe import SparkDataFrame
 from sqlframe.spark.readwriter import (
@@ -163,4 +163,6 @@ class SparkSession(
         def getOrCreate(self) -> SparkSession:
             return super().getOrCreate()  # type: ignore
 
-    builder = Builder()
+    @classproperty
+    def builder(cls) -> "Builder":
+        return cls.Builder()

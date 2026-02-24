@@ -32,6 +32,18 @@ if t.TYPE_CHECKING:
     from sqlframe.base.types import StructType
 
 
+class classproperty:
+    """Descriptor that behaves like @property but for class-level access."""
+
+    def __init__(self, func: t.Callable) -> None:
+        self.func = func
+
+    def __get__(self, obj: t.Any, cls: t.Optional[type] = None) -> t.Any:
+        if cls is None:
+            cls = type(obj)
+        return self.func(cls)
+
+
 def decoded_str(value: t.Union[str, bytes]) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8")
