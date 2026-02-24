@@ -37,7 +37,7 @@ stubs:
 	stubgen sqlframe/spark/functions.py --output ./ --inspect-mode
 
 package:
-	$(PIP) install wheel && python3 setup.py sdist bdist_wheel
+	$(PIP) install build && python3 -m build
 
 publish: package
 	$(PIP) install twine && python3 -m twine upload dist/*
