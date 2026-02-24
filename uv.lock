@@ -2730,11 +2730,11 @@ provides-extras = ["bigquery", "databricks", "dev", "docs", "duckdb", "openai", 
 
 [[package]]
 name = "sqlglot"
-version = "28.9.0"
+version = "29.0.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/36/72/cc50543a479a65f4ec24bef0e71529254686a1334c57cb1daebadfc29672/sqlglot-28.9.0.tar.gz", hash = "sha256:5648eaa2d038b5a0bc345f223f375315cfc6a27b2852d4eeaa1b8aaaabccdd2c", size = 5736988 }
+sdist = { url = "https://files.pythonhosted.org/packages/61/12/c3f7533fde302fcd59bebcd4c2e46d5bf0eef21f183c67995bbb010fb578/sqlglot-29.0.1.tar.gz", hash = "sha256:0010b4f77fb996c8d25dd4b16f3654e6da163ff1866ceabc70b24e791c203048", size = 5760786 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/21/ee7d2798ff1f59cd5ca53063a728022da53552cbc0c63d05e120e9c9b794/sqlglot-28.9.0-py3-none-any.whl", hash = "sha256:044fbe85fd2dc0a9d8ea4adb2beefa7ff26fa2320849b08f5c5f3859d7973260", size = 595704 },
+    { url = "https://files.pythonhosted.org/packages/ad/c9/f58c3a17beb650700f9d2eccd410726b6d96df8953663700764ca48636c7/sqlglot-29.0.1-py3-none-any.whl", hash = "sha256:06a473ea6c2b3632ac67bd38e687a6860265bf4156e66b54adeda15d07f00c65", size = 611448 },
 ]
 
 [[package]]
