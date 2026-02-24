@@ -2721,7 +2721,7 @@ requires-dist = [
     { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.4,<0.16" },
     { name = "snowflake-connector-python", extras = ["secure-local-storage"], marker = "extra == 'snowflake'", specifier = ">=3.10.0,<4.3" },
-    { name = "sqlglot", specifier = ">=28.0.0,<28.10" },
+    { name = "sqlglot", specifier = ">=28.0.0,<29.1" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.18" },
     { name = "types-psycopg2", marker = "extra == 'dev'", specifier = ">=2.9,<3" },
     { name = "typing-extensions" },
