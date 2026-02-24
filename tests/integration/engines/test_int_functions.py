@@ -1461,6 +1461,10 @@ def test_to_date(get_session_and_func):
         assert result == datetime.date(1997, 2, 28)
     else:
         assert result == datetime.date(1997, 2, 28)
+    # Compact date format exposes double PARSE_TIMESTAMP bug on BigQuery
+    df2 = session.createDataFrame([("19970228",)], ["t"])
+    result2 = df2.select(to_date(df2.t, "yyyyMMdd").alias("date")).first()[0]
+    assert result2 == datetime.date(1997, 2, 28)
 
 
 def test_to_timestamp(get_session_and_func):
