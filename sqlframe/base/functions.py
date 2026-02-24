@@ -4379,7 +4379,7 @@ def make_timestamp(
     +-----------------------+
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
-    kwargs: t.Dict[str, exp.Expression] = {
+    kwargs: t.Dict[str, expression.Expression] = {
         "year": Column.ensure_col(years).column_expression,
         "month": Column.ensure_col(months).column_expression,
         "day": Column.ensure_col(days).column_expression,
