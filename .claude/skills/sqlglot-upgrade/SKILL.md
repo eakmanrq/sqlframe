@@ -70,7 +70,11 @@ Key rules:
 - The first arg to `invoke_expression_over_column` maps to `this` on the expression
 - Additional args use the keyword names from the expression class definition in `sqlglot/expressions.py`
 - A second positional column argument typically uses `expression=col`
-- Remove engines from `unsupported_engines` that sqlglot now handles natively — check sqlglot's dialect files to confirm
+- Remove engines from `unsupported_engines` that sqlglot now handles natively — **verify by transpiling test SQL** before assuming it works:
+  ```bash
+  python -c "from sqlglot import transpile; print(transpile('SELECT GETBIT(x, 1)', read='spark', write='duckdb'))"
+  ```
+- **Do not assume an engine is supported just because sqlglot has an expression class for it.** The dialect's transpiler may generate incorrect or unsupported SQL (e.g., `get_bit` on DuckDB only works on `BIT` type, not `BIGINT`). Always run integration tests to confirm.
 
 #### Pattern B: Remove Dialect-Specific Workarounds
 
@@ -104,6 +108,8 @@ def array_min(col: ColumnOrName) -> Column:
 
 Check that the removed alternatives are no longer used anywhere before removing them from `function_alternatives.py`.
 
+**Do not remove a workaround just because sqlglot now has an expression class.** The workaround may exist to fix a behavioral difference from Spark (e.g., `array_max_from_sort` for DuckDB makes `array_max` propagate nulls like Spark does, even though DuckDB has a native `list_max`). Verify the behavior matches Spark's by running integration tests before removing workarounds.
+
 #### Pattern C: Expressions with Named Keyword Args
 
 For expressions with multiple named fields (not just `this` and `expression`), build the kwargs dict:
@@ -129,6 +135,17 @@ Look up the field names in `sqlglot/expressions.py` for the target expression cl
 
 If a function was marked `@meta(unsupported_engines="*")` (unsupported everywhere), and sqlglot now has a proper expression for it, change it to `@meta()` and implement using the expression class.
 
+**Verify transpilation for every dialect before marking as supported.** Some functions have optional arguments (e.g., `timezone` in `make_timestamp`) that sqlglot may transpile incorrectly for certain dialects. Use:
+```bash
+python -c "
+from sqlglot import transpile
+# Test both with and without optional args
+print(transpile('SELECT MAKE_TIMESTAMP(y, m, d, h, mi, s)', read='spark', write='duckdb'))
+print(transpile('SELECT MAKE_TIMESTAMP(y, m, d, h, mi, s, tz)', read='spark', write='duckdb'))
+"
+```
+If an optional argument produces incorrect SQL for a dialect, add that dialect back to `unsupported_engines` rather than partially supporting the function.
+
 ### 6. Update Tests
 
 Test expectations in `tests/unit/standalone/test_functions.py` use the raw SQL output. When switching from `invoke_anonymous_function` to a typed expression, the output format may change:
@@ -146,6 +163,13 @@ uv run pytest tests/unit/standalone/test_functions.py::test_bit_get -xvs
 ```bash
 uv run pytest tests/integration/test_functions.py -x
 ```
+
+Integration tests catch behavioral mismatches that unit tests miss (unit tests only check SQL output, not execution results). Common integration failures to watch for:
+
+- **Null propagation differences**: DuckDB's native `list_max`/`list_min` ignore nulls; Spark propagates them. Workarounds in `function_alternatives.py` that use sorting may exist specifically to match Spark's null behavior — don't remove them without verifying.
+- **Type constraints**: Some DuckDB functions only work on specific types (e.g., `get_bit` requires `BIT` type, not `BIGINT`). sqlglot may generate valid-looking SQL that still fails at runtime.
+- **Optional argument support**: A function may work correctly without an optional argument but fail with it on certain dialects (e.g., `make_timestamp` with `timezone` on DuckDB/Postgres).
+- **Reserved word parsing changes**: sqlglot may change how reserved words are parsed across versions (e.g., `end` as a column name). Check for `AttributeError` on `.this` being `None` — guard with `case_sensitive_expression.this is not None` checks.
 
 ### 8. Update Dialect Documentation
 
@@ -176,7 +200,7 @@ Add dialect-specific caveats as indented sub-bullets when behavior differs from 
 | `sqlframe/base/functions.py` | Main function implementations |
 | `sqlframe/base/function_alternatives.py` | Dialect-specific workarounds |
 | `tests/unit/standalone/test_functions.py` | Unit tests (check SQL output) |
-| `setup.py` | sqlglot version constraint |
+| `pyproject.toml` | sqlglot version constraint |
 | `sqlframe/spark/session.py` | SparkSession (uses sqlglot helpers) |
 
 ## Checking sqlglot Expression Classes
