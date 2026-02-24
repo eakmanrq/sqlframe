@@ -3313,7 +3313,7 @@ def test_to_binary(get_session_and_func, get_func):
     df = session.createDataFrame([("abc",)], ["e"])
     value = df.select(to_binary(df.e, lit("utf-8")).alias("r")).first()[0]
     if isinstance(session, DuckDBSession):
-        assert value == "011000010110001001100011"
+        assert value == b"abc"
     else:
         assert value == bytearray(b"abc")
     df = session.createDataFrame([("414243",)], ["e"])

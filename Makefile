@@ -1,5 +1,5 @@
 lock:
-	uv lock
+	uv lock --upgrade
 
 install-dev:
 	uv sync --all-extras
