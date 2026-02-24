@@ -828,6 +828,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if "joins" not in self.expression.args:
             return
 
+        from sqlframe.base.column import Column
+
         col_list: t.List[Column] = t.cast(t.List[Column], ensure_list(columns))
         ambiguous_cols: t.List[exp.Column] = list(
             flatten(

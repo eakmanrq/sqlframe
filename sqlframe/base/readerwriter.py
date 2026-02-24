@@ -504,7 +504,7 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         )
 
     def sql(self, **kwargs) -> t.List[str]:
-        return self._df.sql(pretty=False, optimize=False, as_list=True, **kwargs)
+        return self._df.sql(**{**dict(pretty=False, optimize=False, as_list=True), **kwargs})  # type: ignore[no-matching-overload]
 
     def mode(self, saveMode: t.Optional[str]) -> Self:
         return self.copy(_mode=saveMode)
