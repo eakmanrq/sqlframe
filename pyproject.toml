@@ -41,7 +41,7 @@ dev = [
     "duckdb>=1.2,<1.5",
     "findspark>=2,<3",
     # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
-    "mirakuru<3.0.0",
+    "mirakuru<3.0.3",
     "ty>=0.0.18",
     "openai>=1.30,<3",
     "pandas>=2,<4",
