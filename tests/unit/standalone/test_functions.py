@@ -2140,10 +2140,10 @@ def test_array_agg(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.array_append("cola", "val"), "ARRAY_APPEND(COALESCE(cola, ARRAY()), 'val')"),
+        (SF.array_append("cola", "val"), "ARRAY_APPEND(cola, 'val')"),
         (
             SF.array_append(SF.col("cola"), SF.col("colb")),
-            "ARRAY_APPEND(COALESCE(cola, ARRAY()), colb)",
+            "ARRAY_APPEND(cola, colb)",
         ),
     ],
 )

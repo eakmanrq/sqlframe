@@ -2139,8 +2139,12 @@ def array_append(col: ColumnOrName, value: ColumnOrLiteral) -> Column:
         return array_append_using_array_cat(col, value)
 
     value = value if isinstance(value, Column) else lit(value)
-    return Column.invoke_expression_over_column(
-        col, expression.ArrayAppend, expression=value.column_expression
+    return Column(
+        expression.ArrayAppend(
+            this=Column.ensure_col(col).column_expression,
+            expression=value.column_expression,
+            null_propagation=True,
+        )
     )
 
 
