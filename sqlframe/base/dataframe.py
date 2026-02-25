@@ -1585,15 +1585,16 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         normalized_map = {df.session._normalize_string(k): v for k, v in cols_map.items()}
         found_any = False
+        display_updates: t.Dict[str, str] = {}
         for i, select_expr in enumerate(outer_select.expressions):
             new_name = normalized_map.get(select_expr.alias_or_name)
             if new_name is not None:
+                new_identifier = exp.to_identifier(new_name)
                 if isinstance(select_expr, exp.Alias):
-                    select_expr.set("alias", exp.to_identifier(new_name))
+                    select_expr.set("alias", new_identifier)
                 else:
-                    outer_select.expressions[i] = exp.Alias(
-                        this=select_expr, alias=exp.to_identifier(new_name)
-                    )
+                    outer_select.expressions[i] = exp.Alias(this=select_expr, alias=new_identifier)
+                display_updates[new_identifier.name] = new_name
                 found_any = True
 
         if raise_on_missing and not found_any:
@@ -1601,6 +1602,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         result = df.copy(expression=expression)
         result.last_op = Operation.SELECT
+        result.display_name_mapping.update(display_updates)
         return result
 
     def withColumnRenamed(self, existing: str, new: str) -> Self:
