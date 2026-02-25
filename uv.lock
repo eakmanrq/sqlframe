@@ -1273,14 +1273,14 @@ wheels = [
 
 [[package]]
 name = "mirakuru"
-version = "2.6.1"
+version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "psutil", marker = "sys_platform != 'cygwin'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/57/bfa1e5b904b18f669e03b7c6981bb92fb473b7da9c3b082a875e25bfaa8c/mirakuru-2.6.1.tar.gz", hash = "sha256:95d4f5a5ad406a625e9ca418f20f8e09386a35dad1ea30fd9073e0ae93f712c7", size = 26889, upload-time = "2025-07-02T07:18:41.234Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/23/db9034ba28c7d89a540ffb8ca789f70dc12079108ece1cd1762295d5c807/mirakuru-3.0.2.tar.gz", hash = "sha256:21192186a8680ea7567ca68170261df3785768b12962dd19fe8cccab15ad3441", size = 29338, upload-time = "2026-02-11T19:41:15.42Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/ce/139df7074328119869a1041ce91c082d78287541cf867f9c4c85097c5d8b/mirakuru-2.6.1-py3-none-any.whl", hash = "sha256:4be0bfd270744454fa0c0466b8127b66bd55f4decaf05bbee9b071f2acbd9473", size = 26202, upload-time = "2025-07-02T07:18:39.951Z" },
+    { url = "https://files.pythonhosted.org/packages/49/5f/a3f1a7f1f6e55de9285b03ae7e0d3c2a15e044b6e3f9b53bef5609ca05f2/mirakuru-3.0.2-py3-none-any.whl", hash = "sha256:10e5dac4a8f26872c63e9cdfdc01b775aaa2beb3ced98abc497279d2dc525b8f", size = 27583, upload-time = "2026-02-11T19:41:13.578Z" },
 ]
 
 [[package]]
@@ -2732,7 +2732,7 @@ requires-dist = [
     { name = "findspark", marker = "extra == 'dev'", specifier = ">=2,<3" },
     { name = "google-cloud-bigquery", extras = ["pandas"], marker = "extra == 'bigquery'", specifier = ">=3,<4" },
     { name = "google-cloud-bigquery-storage", marker = "extra == 'bigquery'", specifier = ">=2,<3" },
-    { name = "mirakuru", marker = "extra == 'dev'", specifier = "<3.0.0" },
+    { name = "mirakuru", marker = "extra == 'dev'", specifier = "<3.0.3" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = "==1.4.2" },
     { name = "mkdocs-include-markdown-plugin", marker = "extra == 'docs'", specifier = "==6.0.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = "==9.0.5" },
