@@ -2130,12 +2130,12 @@ wheels = [
 
 [[package]]
 name = "pyspark"
-version = "3.5.8"
+version = "4.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "py4j" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/5a/3806f44eb47387e8af803508cdd6bbc0df784febf4dc010700be04a1ff89/pyspark-3.5.8.tar.gz", hash = "sha256:54cca0767b21b40e3953ad1d30f8601c53abf9cbda763653289cdcfcac52313c", size = 317817299, upload-time = "2026-01-15T11:46:14.487Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/bf/58ee13add151469c25825b7125bbf62c3bdcec05eec4d458fcb5c5516066/pyspark-4.1.1.tar.gz", hash = "sha256:77f78984aa84fbe865c717dd37b49913b4e5c97d76ef6824f932f1aefa6621ec", size = 455359625, upload-time = "2026-01-09T09:38:38.28Z" }
 
 [[package]]
 name = "pytest"
@@ -2750,8 +2750,8 @@ requires-dist = [
     { name = "psycopg2", marker = "extra == 'postgres'", specifier = ">=2.8,<3" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=10,<24" },
     { name = "pymdown-extensions", marker = "extra == 'docs'" },
-    { name = "pyspark", marker = "extra == 'dev'", specifier = ">=2,<3.6" },
-    { name = "pyspark", marker = "extra == 'spark'", specifier = ">=2,<3.6" },
+    { name = "pyspark", marker = "extra == 'dev'", specifier = ">=2,<4.2" },
+    { name = "pyspark", marker = "extra == 'spark'", specifier = ">=2,<4.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.1" },
     { name = "pytest-forked", marker = "extra == 'dev'" },
     { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<9" },
