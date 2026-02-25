@@ -287,3 +287,17 @@ def test_duplicate_cte(duckdb_session: DuckDBSession):
         types.Row(key="a", idx=1, smth=None),
         types.Row(key="a", idx=1, smth=None),
     ]
+
+
+# https://github.com/eakmanrq/sqlframe/issues/512
+def test_select_star_join_with_external_tables(duckdb_session: DuckDBSession):
+    con = duckdb_session._conn
+
+    con.execute("CREATE TABLE t1 AS SELECT 1 AS id, 'a' AS val")
+    con.execute("CREATE TABLE t2 AS SELECT 1 AS id, 'b' AS other")
+
+    left = duckdb_session.sql("SELECT * FROM t1").filter(F.col("val") == "a").select("id", "val")
+    right = duckdb_session.sql("SELECT * FROM t2").select("id")
+
+    result = left.join(right, "id", "leftanti")
+    assert result.count() == 0

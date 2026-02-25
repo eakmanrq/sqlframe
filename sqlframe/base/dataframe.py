@@ -877,7 +877,12 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     cte_lookup[name]
                     for name in ordered_join_cte_names
                     if name in cte_lookup
-                    and ambiguous_col.alias_or_name in cte_lookup[name].this.named_selects
+                    and (
+                        ambiguous_col.alias_or_name in cte_lookup[name].this.named_selects
+                        or any(
+                            isinstance(sel, exp.Star) for sel in cte_lookup[name].this.expressions
+                        )
+                    )
                 ]
                 # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
                 # use the same CTE we used before
@@ -1059,7 +1064,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         for join_column in join_columns:
             num_matching_ctes = 0
             for cte in potential_ctes:
-                if join_column.alias_or_name in cte.this.named_selects:
+                if join_column.alias_or_name in cte.this.named_selects or any(
+                    isinstance(sel, exp.Star) for sel in cte.this.expressions
+                ):
                     left_column = join_column.copy().set_table_name(cte.alias_or_name)
                     right_column = join_column.copy().set_table_name(other_df.latest_cte_name)
                     join_column_pairs.append((left_column, right_column))
