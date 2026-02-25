@@ -1592,24 +1592,52 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def withColumn(self, colName: str, col: Column) -> Self:
         return self.withColumns.__wrapped__(self, {colName: col})  # type: ignore
 
-    @operation(Operation.SELECT)
-    def withColumnRenamed(self, existing: str, new: str) -> Self:
-        expression = self.expression.copy()
-        existing = self.session._normalize_string(existing)
-        columns = self._get_outer_select_columns(expression)
-        results = []
-        found_match = False
-        for column in columns:
-            if column.alias_or_name == existing:
-                column = column.alias(new)
-                self._update_display_name_mapping([column], [new])
-                found_match = True
-            results.append(column)
-        if not found_match:
-            raise ValueError("Tried to rename a column that doesn't exist")
-        return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
+    def _rename_columns(self, cols_map: t.Dict[str, str], raise_on_missing: bool) -> Self:
+        """Rename columns in-place on the expression's SELECT clause.
 
-    @operation(Operation.SELECT)
+        Handles INIT and cases where last_op > SELECT (e.g., ORDER_BY, LIMIT),
+        but intentionally skips the SELECT == SELECT CTE conversion to avoid wrapping
+        join expressions in a CTE that loses table-qualified column references.
+        """
+        df = self
+        if df.last_op == Operation.INIT:
+            df = df._convert_leaf_to_cte()
+            df.last_op = Operation.NO_OP
+        if Operation.SELECT < df.last_op:
+            df = df._convert_leaf_to_cte()
+
+        expression = df.expression.copy()
+        outer_select = expression.find(exp.Select)
+        if not outer_select:
+            if raise_on_missing:
+                raise ValueError("Tried to rename a column that doesn't exist")
+            return df.copy(expression=expression)
+
+        normalized_map = {df.session._normalize_string(k): v for k, v in cols_map.items()}
+        found_any = False
+        display_updates: t.Dict[str, str] = {}
+        for i, select_expr in enumerate(outer_select.expressions):
+            new_name = normalized_map.get(select_expr.alias_or_name)
+            if new_name is not None:
+                new_identifier = exp.to_identifier(new_name)
+                if isinstance(select_expr, exp.Alias):
+                    select_expr.set("alias", new_identifier)
+                else:
+                    outer_select.expressions[i] = exp.Alias(this=select_expr, alias=new_identifier)
+                display_updates[df.session._normalize_string(new_name)] = new_name
+                found_any = True
+
+        if raise_on_missing and not found_any:
+            raise ValueError("Tried to rename a column that doesn't exist")
+
+        result = df.copy(expression=expression)
+        result.last_op = Operation.SELECT
+        result.display_name_mapping.update(display_updates)
+        return result
+
+    def withColumnRenamed(self, existing: str, new: str) -> Self:
+        return self._rename_columns({existing: new}, raise_on_missing=True)
+
     def withColumnsRenamed(self, colsMap: t.Dict[str, str]) -> Self:
         """
         Returns a new :class:`DataFrame` by renaming multiple columns. If a non-existing column is
@@ -1638,22 +1666,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         |    5|      Bob|
         +-----+---------+
         """
-        expression = self.expression.copy()
-        columns = self._get_outer_select_columns(expression)
-        results = []
-
-        # Normalize the keys in colsMap
-        normalized_cols_map = {self.session._normalize_string(k): v for k, v in colsMap.items()}
-
-        for column in columns:
-            col_name = column.alias_or_name
-            if col_name in normalized_cols_map:
-                new_name = normalized_cols_map[col_name]
-                column = column.alias(new_name)
-                self._update_display_name_mapping([column], [new_name])
-            results.append(column)
-
-        return self.select.__wrapped__(self, *results, skip_update_display_name_mapping=True)  # type: ignore
+        return self._rename_columns(colsMap, raise_on_missing=False)
 
     @operation(Operation.SELECT)
     def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
