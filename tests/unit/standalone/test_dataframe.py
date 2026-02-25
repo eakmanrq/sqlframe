@@ -6,6 +6,7 @@ from sqlglot import expressions as exp
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.standalone import functions as F
 from sqlframe.standalone.dataframe import StandaloneDataFrame
+from sqlframe.standalone.session import StandaloneSession
 
 pytest_plugins = ["tests.common_fixtures", "tests.unit.standalone.fixtures"]
 
@@ -199,3 +200,40 @@ def test_aliased_group_by(standalone_employee: StandaloneDataFrame):
         .sql(pretty=False)
         == "SELECT CAST(`a1`.`fname` AS STRING) AS `fname`, COUNT(*) AS `count` FROM VALUES (1, 'Jack', 'Shephard', 37, 1), (2, 'John', 'Locke', 65, 1), (3, 'Kate', 'Austen', 37, 2), (4, 'Claire', 'Littleton', 27, 2), (5, 'Hugo', 'Reyes', 29, 100) AS `a1`(`employee_id`, `fname`, `lname`, `age`, `store_id`) GROUP BY CAST(`a1`.`fname` AS STRING)"
     )
+
+
+# https://github.com/eakmanrq/sqlframe/issues/549
+def test_chained_with_column_renamed_after_join(standalone_session: StandaloneSession):
+    """Test that chaining multiple withColumnRenamed after a join doesn't produce duplicate columns."""
+    from sqlframe.standalone import types as T
+
+    schema_a = T.StructType(
+        [
+            T.StructField("foo", T.IntegerType(), False),
+            T.StructField("bar", T.StringType(), False),
+            T.StructField("baz", T.IntegerType(), False),
+        ]
+    )
+    schema_b = T.StructType(
+        [
+            T.StructField("foo", T.IntegerType(), False),
+            T.StructField("baz", T.IntegerType(), False),
+            T.StructField("qux", T.StringType(), False),
+        ]
+    )
+    df_a = standalone_session.createDataFrame([(1, "a", 10)], schema=schema_a)
+    df_b = standalone_session.createDataFrame([(1, 20, "b")], schema=schema_b)
+
+    joined = df_a.join(df_b, df_a["foo"] == df_b["foo"])
+    renamed = joined.withColumnRenamed("bar", "bar2").withColumnRenamed("qux", "qux2")
+
+    sql = renamed.sql(pretty=False)
+    # The SQL should have correct table-qualified references for both tables
+    # Before the fix, the CTE conversion caused all ambiguous columns to resolve to `a1`
+    assert "`a2`.`foo`" in sql, f"Expected a2.foo in SQL but got: {sql}"
+    assert "`a2`.`baz`" in sql, f"Expected a2.baz in SQL but got: {sql}"
+    columns = renamed.columns
+    assert "bar2" in columns
+    assert "qux2" in columns
+    assert "bar" not in columns
+    assert "qux" not in columns
