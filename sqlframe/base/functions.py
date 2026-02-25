@@ -544,12 +544,16 @@ def skewness(col: ColumnOrName) -> Column:
             * (count_col - lit_func(2))
             / (sqrt_func(count_col * (count_col - lit_func(1))))
         )
-        return (
+        result = (
             when_func(count_col == lit_func(0), lit_func(None))
             .when(count_col == lit_func(1), lit_func(None))
             .when(count_col == lit_func(2), lit_func(0.0))
             .otherwise(full_calc)
         )
+        window_func_expr = Column.invoke_anonymous_function(col, func_name).column_expression
+        result.column_expression._meta = result.column_expression._meta or {}
+        result.column_expression._meta["window_func"] = window_func_expr
+        return result
 
     return Column.invoke_anonymous_function(col, func_name)
 

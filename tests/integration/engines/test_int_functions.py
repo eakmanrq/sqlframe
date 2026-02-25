@@ -716,6 +716,17 @@ def test_skewness(get_session_and_func):
     assert df.agg(skewness(df.a)).collect() == [Row(value=0.0)]
 
 
+def test_skewness_over_window(get_session_and_func, get_window):
+    session, skewness = get_session_and_func("skewness")
+    Window = get_window(session)
+    df = session.createDataFrame(
+        [[1, "a"], [1, "a"], [2, "a"], [3, "b"], [3, "b"], [4, "b"]], ["c", "g"]
+    )
+    result = df.withColumn("skew", skewness("c").over(Window.partitionBy("g"))).collect()
+    assert result is not None
+    assert len(result) == 6
+
+
 def test_kurtosis(get_session_and_func):
     session, kurtosis = get_session_and_func("kurtosis")
     if isinstance(session, SnowflakeSession):
