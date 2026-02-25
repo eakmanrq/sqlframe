@@ -2161,6 +2161,13 @@ def test_array_append(get_session_and_func, get_func):
     assert df.select(array_append(df.c1, "x")).collect() == [
         Row(value=["b", "a", "c", "x"]),
     ]
+    # NULL array should return NULL, not [value]
+    when = get_func("when", session)
+    col = get_func("col", session)
+    df_null = session.range(1).select(when(lit(False), lit(["a"])).alias("c1"))
+    assert df_null.select(array_append(col("c1"), "x")).collect() == [
+        Row(value=None),
+    ]
 
 
 def test_array_insert(get_session_and_func):
