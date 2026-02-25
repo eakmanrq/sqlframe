@@ -1594,7 +1594,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     select_expr.set("alias", new_identifier)
                 else:
                     outer_select.expressions[i] = exp.Alias(this=select_expr, alias=new_identifier)
-                display_updates[new_identifier.name] = new_name
+                display_updates[df.session._normalize_string(new_name)] = new_name
                 found_any = True
 
         if raise_on_missing and not found_any:
