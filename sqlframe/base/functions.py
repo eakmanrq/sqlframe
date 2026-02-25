@@ -1485,7 +1485,20 @@ def unix_timestamp(
 
     session = _get_session()
 
-    if session._is_duckdb or session._is_postgres or session._is_snowflake or session._is_bigquery:
+    if session._is_duckdb:
+        if format is not None:
+            timestamp = Column.ensure_col(timestamp).cast("string")
+            return Column.invoke_expression_over_column(
+                timestamp,
+                expression.StrToUnix,
+                format=session.format_time(format),
+            ).cast("bigint")
+        return Column.invoke_expression_over_column(
+            Column.ensure_col(timestamp).cast("timestampntz"),
+            expression.TimeToUnix,
+        ).cast("bigint")
+
+    if session._is_postgres or session._is_snowflake or session._is_bigquery:
         timestamp = Column.ensure_col(timestamp).cast("string")
 
     if session._is_bigquery:
@@ -6405,8 +6418,15 @@ def to_unix_timestamp(
     session = _get_session()
 
     if session._is_duckdb:
-        format = format or session.default_time_format
-        timestamp = Column.ensure_col(timestamp).cast("string")
+        if format is not None:
+            timestamp = Column.ensure_col(timestamp).cast("string")
+            return Column.invoke_expression_over_column(
+                timestamp, expression.StrToUnix, format=session.format_time(format)
+            )
+        return Column.invoke_expression_over_column(
+            Column.ensure_col(timestamp).cast("timestampntz"),
+            expression.TimeToUnix,
+        ).cast("bigint")
 
     if format is not None:
         return Column.invoke_expression_over_column(

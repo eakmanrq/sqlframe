@@ -1549,6 +1549,12 @@ def test_unix_timestamp(get_session_and_func, get_func):
     df = session.createDataFrame([(datetime.datetime(2015, 4, 8),)], schema=f"ts {ts_type}")
     result = df.select(unix_timestamp("ts").alias("unix_time")).first()[0]
     assert result == 1428451200
+    # Regression test: unix_timestamp on a TIMESTAMP column (TIMESTAMPTZ in DuckDB)
+    # should not fail with STRPTIME type mismatch. See: https://github.com/eakmanrq/sqlframe/issues/474
+    if isinstance(session, DuckDBSession):
+        df = session.createDataFrame([(datetime.datetime(2015, 4, 8),)], schema="ts TIMESTAMP")
+        result = df.select(unix_timestamp("ts").alias("unix_time")).first()[0]
+        assert result == 1428451200
 
 
 def test_from_utc_timestamp(get_session_and_func):
@@ -5074,6 +5080,12 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
         to_unix_timestamp("ts", lit("yyyy-MM-dd HH:mm:ss")).alias("unix_time")
     ).first()[0]
     assert result == 1428451200
+    # Regression test: to_unix_timestamp on a TIMESTAMP column (TIMESTAMPTZ in DuckDB)
+    # should not fail with STRPTIME type mismatch. See: https://github.com/eakmanrq/sqlframe/issues/474
+    if isinstance(session, DuckDBSession):
+        df = session.createDataFrame([(datetime.datetime(2015, 4, 8),)], schema="ts TIMESTAMP")
+        result = df.select(to_unix_timestamp("ts").alias("unix_time")).first()[0]
+        assert result == 1428451200
 
 
 def test_to_varchar(get_session_and_func, get_func):
