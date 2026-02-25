@@ -2541,6 +2541,54 @@ def test_union_common_root_again(
     compare_frames(df_final, dfs_final, compare_schema=False)
 
 
+# https://github.com/eakmanrq/sqlframe/issues/400
+def test_union_with_anti_join_common_root(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    compare_frames: t.Callable,
+):
+    """Test that filter -> withColumn -> join -> left_anti -> left join -> unionByName
+    produces correct results (no WHERE clause duplication in UNION ALL branches)."""
+    session = get_df("employee").session
+    pyspark_session = pyspark_employee.sparkSession
+
+    # Create simple foo and bar data tables
+    foo_data = [("a", "b"), ("a", "x"), ("b", "x")]
+    bar_data = [("a", "b", 5), ("a", "c", 4)]
+
+    pyspark_foo = pyspark_session.createDataFrame(foo_data, ["key1", "key2"])
+    pyspark_bar = pyspark_session.createDataFrame(bar_data, ["key1", "key2", "value"])
+
+    foo = session.createDataFrame(foo_data, "key1 string, key2 string")
+    bar = session.createDataFrame(bar_data, "key1 string, key2 string, value int")
+
+    # ---- PySpark reference ----
+    normal_foo = pyspark_foo.filter(F.col("key2") != "x")
+    normal_foo_joined = normal_foo.join(pyspark_bar, ["key1", "key2"], "inner")
+    foo_with_x = pyspark_foo.filter(F.col("key2") == "x")
+    foo_with_x = foo_with_x.withColumn("key2", F.lit("b"))
+    found_hits = foo_with_x.join(pyspark_bar, ["key1", "key2"], "inner")
+    unfound_hits = foo_with_x.join(found_hits, ["key1", "key2"], "left_anti")
+    unfound_hits = unfound_hits.withColumn("key2", F.lit("b"))
+    unfound_hits = unfound_hits.join(pyspark_bar, ["key1", "key2"], "left")
+    foo_with_x_replaced = found_hits.unionByName(unfound_hits)
+    pyspark_df = normal_foo_joined.unionByName(foo_with_x_replaced)
+
+    # ---- sqlframe ----
+    sf_normal_foo = foo.filter(SF.col("key2") != "x")
+    sf_normal_foo_joined = sf_normal_foo.join(bar, ["key1", "key2"], "inner")
+    sf_foo_with_x = foo.filter(SF.col("key2") == "x")
+    sf_foo_with_x = sf_foo_with_x.withColumn("key2", SF.lit("b"))
+    sf_found_hits = sf_foo_with_x.join(bar, ["key1", "key2"], "inner")
+    sf_unfound_hits = sf_foo_with_x.join(sf_found_hits, ["key1", "key2"], "left_anti")
+    sf_unfound_hits = sf_unfound_hits.withColumn("key2", SF.lit("b"))
+    sf_unfound_hits = sf_unfound_hits.join(bar, ["key1", "key2"], "left")
+    sf_foo_with_x_replaced = sf_found_hits.unionByName(sf_unfound_hits)
+    sqlf_df = sf_normal_foo_joined.unionByName(sf_foo_with_x_replaced)
+
+    compare_frames(pyspark_df, sqlf_df, compare_schema=False, sort=True)
+
+
 # https://github.com/eakmanrq/sqlframe/issues/277
 def test_filtering_join_key(
     pyspark_employee: PySparkDataFrame,
