@@ -538,6 +538,17 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 if replaced_cte_names:
                     cte = cte.transform(replace_id_value, replaced_cte_names)
                 if cte.alias_or_name in existing_cte_names:
+                    existing_cte = next(
+                        c for c in existing_ctes if c.alias_or_name == cte.alias_or_name
+                    )
+                    if self._create_hash_from_expression(
+                        existing_cte.this
+                    ) == self._create_hash_from_expression(cte.this) and existing_cte.args.get(
+                        "sequence_id"
+                    ) == cte.args.get("sequence_id"):
+                        # Same content and same origin: this is a common ancestor CTE shared by
+                        # both branches — reuse the existing one instead of creating a duplicate.
+                        continue
                     random_filter = exp.Literal.string(uuid.uuid4().hex)
                     # Add unique where filter to ensure that the hash of the CTE is unique
                     cte.set(
@@ -852,17 +863,21 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             resolved_column_position: t.Dict[exp.Column, int] = {
                 col.copy(): -1 for col in ambiguous_cols
             }
+            cte_lookup = {cte.alias_or_name: cte for cte in self.expression.ctes}
             for ambiguous_col in ambiguous_cols:
-                ctes = (
-                    list(reversed(self.expression.ctes))
-                    if self.expression.args["joins"][0].args.get("side", "") == "right"
-                    else self.expression.ctes
+                # Use FROM clause table order (left-to-right for normal joins,
+                # right-to-left for RIGHT joins) instead of CTE list order. This is
+                # semantically correct and avoids misresolution when a shared ancestor
+                # CTE sits earlier in the CTE list than the actual join tables.
+                join_side = self.expression.args["joins"][0].args.get("side", "")
+                ordered_join_cte_names = (
+                    list(reversed(cte_names_in_join)) if join_side == "right" else cte_names_in_join
                 )
                 ctes_with_column = [
-                    cte
-                    for cte in ctes
-                    if cte.alias_or_name in cte_names_in_join
-                    and ambiguous_col.alias_or_name in cte.this.named_selects
+                    cte_lookup[name]
+                    for name in ordered_join_cte_names
+                    if name in cte_lookup
+                    and ambiguous_col.alias_or_name in cte_lookup[name].this.named_selects
                 ]
                 # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
                 # use the same CTE we used before
@@ -1099,10 +1114,25 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             how = "inner"
 
         other_df = other._convert_leaf_to_cte()
+        other_leaf_cte = other_df.expression.ctes[-1]
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
         # We will determine actual "join on" expression later so we don't provide it at first
         join_type = JOIN_TYPE_MAPPING.get(how, how).replace("_", " ")
-        join_expression = join_expression.join(join_expression.ctes[-1].alias, join_type=join_type)
+        # Find the right table: if other's leaf CTE was reused (skipped as duplicate),
+        # it already exists in join_expression under its original name. Otherwise the
+        # newly added (possibly renamed) CTE is at the end of the list.
+        other_leaf_name = other_leaf_cte.alias_or_name
+        other_leaf_seq_id = other_leaf_cte.args.get("sequence_id")
+        effective_join_alias = next(
+            (
+                c.alias_or_name
+                for c in join_expression.ctes
+                if c.alias_or_name == other_leaf_name
+                and c.args.get("sequence_id") == other_leaf_seq_id
+            ),
+            join_expression.ctes[-1].alias,
+        )
+        join_expression = join_expression.join(effective_join_alias, join_type=join_type)
         self_columns = self._get_outer_select_columns(join_expression)
         other_columns = self._get_outer_select_columns(other_df.expression)
         join_columns = self._ensure_and_normalize_cols(on)
