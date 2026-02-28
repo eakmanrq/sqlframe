@@ -29,13 +29,14 @@ def test_activate_testing():
 
 def test_activate_no_engine():
     activate()
-    findspark.init()
-    # A way that people check if pyspark is available
-    from pyspark import context
+    try:
+        findspark.init()
+        # A way that people check if pyspark is available
+        from pyspark import context
 
-    assert isinstance(context, MagicMock)
-
-    deactivate()
+        assert isinstance(context, MagicMock)
+    finally:
+        deactivate()
 
     from pyspark import context
 

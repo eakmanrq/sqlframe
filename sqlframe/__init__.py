@@ -101,6 +101,8 @@ def deactivate() -> None:
         try:
             sys.modules[k] = importlib.import_module(k)
         except (ImportError, AttributeError):
+            # AttributeError: pyspark.pandas (via pyspark.testing) triggers
+            # "np.NaN was removed in NumPy 2.0" on import
             pass
     ACTIVATE_CONFIG.clear()
 
