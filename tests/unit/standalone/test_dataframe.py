@@ -1,6 +1,7 @@
 import typing as t
 
 import pytest
+import sqlglot
 from sqlglot import expressions as exp
 
 from sqlframe.base.exceptions import UnsupportedOperationError
@@ -292,8 +293,6 @@ def test_join_select_join_alias_resolution(standalone_session: StandaloneSession
     # After the first join is wrapped into a CTE, "store.store_id" in the second join's
     # ON clause should resolve to the wrapper CTE, not the inner store CTE.
     # Parse the outer query's FROM/JOIN tables and verify the ON clause only references those.
-    import sqlglot
-
     parsed = sqlglot.parse_one(sql, dialect="spark")
     # Get tables in the outer FROM clause
     from_tables = set()
