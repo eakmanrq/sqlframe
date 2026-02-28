@@ -3009,3 +3009,62 @@ def test_float_infinity(
     dfs = dfs.withColumns({"b": SF.col("a") != SF.lit(float("inf"))})
 
     compare_frames(df, dfs, compare_schema=False, sort=True)
+
+
+# https://github.com/eakmanrq/sqlframe/issues/184
+def test_join_select_join_with_aliases(
+    pyspark_employee: PySparkDataFrame,
+    get_df: t.Callable[[str], BaseDataFrame],
+    is_standalone: t.Callable,
+    compare_frames: t.Callable,
+) -> None:
+    if is_standalone():
+        pytest.skip("This test does not work on standalone due to execution")
+    session = pyspark_employee.sparkSession
+    df1 = session.createDataFrame([(10, "Jack", 10)], ["employee_id", "fname", "store_id"])
+    df2 = session.createDataFrame([(10, "Main St")], ["store_id", "store_name"])
+    df3 = session.createDataFrame([(10, "Downtown")], ["district_id", "district_name"])
+
+    result = (
+        df1.alias("employee")
+        .join(
+            df2.filter(F.col("store_name") != "test").alias("store"),
+            on=F.col("employee.employee_id") == F.col("store.store_id"),
+        )
+        .select(
+            F.col("employee.employee_id"),
+            F.col("employee.fname"),
+            F.col("store.store_id"),
+            F.col("store.store_name"),
+        )
+        .join(
+            df3.alias("district"),
+            on=F.col("store.store_id") == F.col("district.district_id"),
+        )
+    )
+
+    employee = get_df("employee")
+    sf_session = employee.session
+    dfs1 = sf_session.createDataFrame([(10, "Jack", 10)], ["employee_id", "fname", "store_id"])
+    dfs2 = sf_session.createDataFrame([(10, "Main St")], ["store_id", "store_name"])
+    dfs3 = sf_session.createDataFrame([(10, "Downtown")], ["district_id", "district_name"])
+
+    dfs_result = (
+        dfs1.alias("employee")
+        .join(
+            dfs2.filter(SF.col("store_name") != "test").alias("store"),
+            on=SF.col("employee.employee_id") == SF.col("store.store_id"),
+        )
+        .select(
+            SF.col("employee.employee_id"),
+            SF.col("employee.fname"),
+            SF.col("store.store_id"),
+            SF.col("store.store_name"),
+        )
+        .join(
+            dfs3.alias("district"),
+            on=SF.col("store.store_id") == SF.col("district.district_id"),
+        )
+    )
+
+    compare_frames(result, dfs_result, compare_schema=False)

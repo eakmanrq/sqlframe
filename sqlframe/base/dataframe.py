@@ -447,6 +447,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         df = self._resolve_pending_hints()
         sequence_id = sequence_id or df.sequence_id
         expression = df.expression.copy()
+        # Collect sequence_ids of CTEs referenced in the FROM clause before wrapping.
+        # These will be used to propagate alias mappings to the wrapper CTE.
+        from_table_names = set()
+        from_clause = expression.args.get("from_")
+        if from_clause and from_clause.this:
+            from_table_names.add(from_clause.this.alias_or_name)
+        if expression.args.get("joins"):
+            for table in get_tables_from_expression_with_join(expression):
+                from_table_names.add(table.alias_or_name)
+        from_sequence_ids = {
+            cte.args["sequence_id"]
+            for cte in expression.ctes
+            if cte.alias_or_name in from_table_names
+        }
         cte_expression, cte_name = df._create_cte_from_expression(
             expression=expression, branch_id=self.branch_id, sequence_id=sequence_id, name=name
         )
@@ -455,6 +469,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         )
         sel_columns = df._get_outer_select_columns(cte_expression)
         new_expression = new_expression.from_(cte_name).select(*[x.expression for x in sel_columns])
+        # Propagate alias mappings: alias names that pointed to inner FROM-clause CTEs
+        # should also point to the wrapper CTE so they resolve correctly in subsequent operations
+        for seq_ids in df.session.name_to_sequence_id_mapping.values():
+            if any(sid in from_sequence_ids for sid in seq_ids) and sequence_id not in seq_ids:
+                seq_ids.append(sequence_id)
         return df.copy(expression=new_expression, sequence_id=sequence_id)
 
     def _resolve_pending_hints(self) -> Self:
