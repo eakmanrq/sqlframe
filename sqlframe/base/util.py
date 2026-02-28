@@ -515,10 +515,6 @@ def normalize_string(
             value_expression = exp.DataType.build(value_without_star, dialect=from_dialect)
         elif is_column:
             value_expression = exp.to_column(value_without_star, dialect=from_dialect)
-            if value_expression.alias_or_name != value_without_star:
-                value_expression = exp.Column(
-                    this=exp.to_identifier(value_without_star, quoted=True)
-                )
         elif is_query:
             value_expression = parse_one(value, dialect=from_dialect)
         else:
