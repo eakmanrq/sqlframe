@@ -706,7 +706,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                                 desc.fget(self) if isinstance(desc, property) else desc.func(self)
                             )
                         except AttributeError as e:
-                            raise RuntimeError(str(e)) from e
+                            raise RuntimeError(f"Error accessing attribute {item!r}: {e!r}") from e
                     raise AttributeError(item)
             return self
 
