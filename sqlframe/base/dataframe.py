@@ -453,8 +453,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         from_sequence_ids: t.Set[str] = set()
         if has_joins:
             from_table_names = {
-                table.alias_or_name
-                for table in get_tables_from_expression_with_join(expression)
+                table.alias_or_name for table in get_tables_from_expression_with_join(expression)
             }
             from_sequence_ids = {
                 cte.args["sequence_id"]
