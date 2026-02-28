@@ -702,7 +702,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     desc = cls.__dict__[item]
                     if isinstance(desc, (property, cached_property)):
                         try:
-                            return desc.fget(self) if isinstance(desc, property) else desc.func(self)
+                            return (
+                                desc.fget(self) if isinstance(desc, property) else desc.func(self)
+                            )
                         except AttributeError as e:
                             raise RuntimeError(str(e)) from e
                     raise AttributeError(item)
