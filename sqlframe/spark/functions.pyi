@@ -25,6 +25,7 @@ from sqlframe.base.functions import array_position as array_position
 from sqlframe.base.functions import array_prepend as array_prepend
 from sqlframe.base.functions import array_remove as array_remove
 from sqlframe.base.functions import array_repeat as array_repeat
+from sqlframe.base.functions import array_reverse as array_reverse
 from sqlframe.base.functions import array_size as array_size
 from sqlframe.base.functions import array_sort as array_sort
 from sqlframe.base.functions import array_union as array_union
@@ -231,9 +232,7 @@ from sqlframe.base.functions import min as min
 from sqlframe.base.functions import min_by as min_by
 from sqlframe.base.functions import minute as minute
 from sqlframe.base.functions import mode as mode
-from sqlframe.base.functions import (
-    monotonically_increasing_id as monotonically_increasing_id,
-)
+from sqlframe.base.functions import monotonically_increasing_id as monotonically_increasing_id
 from sqlframe.base.functions import month as month
 from sqlframe.base.functions import months as months
 from sqlframe.base.functions import months_between as months_between
@@ -344,6 +343,7 @@ from sqlframe.base.functions import sum_distinct as sum_distinct
 from sqlframe.base.functions import sumDistinct as sumDistinct
 from sqlframe.base.functions import tan as tan
 from sqlframe.base.functions import tanh as tanh
+from sqlframe.base.functions import timestamp_add as timestamp_add
 from sqlframe.base.functions import timestamp_micros as timestamp_micros
 from sqlframe.base.functions import timestamp_millis as timestamp_millis
 from sqlframe.base.functions import timestamp_seconds as timestamp_seconds
