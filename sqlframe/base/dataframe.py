@@ -457,9 +457,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 for table in get_tables_from_expression_with_join(expression)
             }
             from_sequence_ids = {
-                cte.args.get("sequence_id")
+                cte.args["sequence_id"]
                 for cte in expression.ctes
-                if cte.alias_or_name in from_table_names and cte.args.get("sequence_id")
+                if cte.alias_or_name in from_table_names and "sequence_id" in cte.args
             }
         cte_expression, cte_name = df._create_cte_from_expression(
             expression=expression, branch_id=self.branch_id, sequence_id=sequence_id, name=name
