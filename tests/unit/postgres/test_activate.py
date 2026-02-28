@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.postgres import Column as PostgresColumn
 from sqlframe.postgres import (
     PostgresCatalog,
@@ -19,7 +17,6 @@ from sqlframe.postgres import functions as PostgresF
 from sqlframe.postgres import types as PostgresTypes
 
 
-@pytest.mark.forked
 def test_activate_postgres(check_pyspark_imports):
     check_pyspark_imports(
         "postgres",

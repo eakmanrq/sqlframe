@@ -100,7 +100,7 @@ def deactivate() -> None:
     for k in pyspark_imports:
         try:
             sys.modules[k] = importlib.import_module(k)
-        except ImportError:
+        except (ImportError, AttributeError):
             pass
     ACTIVATE_CONFIG.clear()
 
