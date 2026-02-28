@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from sqlframe import activate, deactivate
 from sqlframe.bigquery import (
