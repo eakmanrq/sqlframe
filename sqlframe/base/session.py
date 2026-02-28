@@ -35,6 +35,7 @@ from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
     is_relativedelta_like,
     normalize_string,
+    safe_parse_identifier,
     verify_pandas_installed,
 )
 
@@ -559,7 +560,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             return []
         case_sensitive_cols = []
         for col in self._cur.description:
-            col_id = exp.parse_identifier(col[0], dialect=self.execution_dialect)
+            col_id = safe_parse_identifier(col[0], dialect=self.execution_dialect)
             col_id._meta = {"case_sensitive": True, **(col_id._meta or {})}
             case_sensitive_cols.append(col_id)
         columns = [

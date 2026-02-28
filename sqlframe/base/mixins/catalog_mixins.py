@@ -654,7 +654,10 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
         return [
             Column(
                 name=normalize_string(
-                    x["column_name"], from_dialect="execution", to_dialect="output"
+                    x["column_name"],
+                    from_dialect="execution",
+                    to_dialect="output",
+                    to_string_literal=True,
                 ),
                 description=None,
                 dataType=normalize_string(
