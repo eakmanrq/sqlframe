@@ -85,6 +85,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
     _udf_registration: t.Type[UDF_REGISTRATION]
 
     SANITIZE_COLUMN_NAMES = False
+    DICT_AS_MAP = True
 
     def __init__(
         self,
@@ -285,6 +286,16 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     row_types.append((row_name, default_type))
                 return "struct<" + ", ".join(f"{k}: {v}" for (k, v) in row_types) + ">"
             elif isinstance(value, dict):
+                if not self.DICT_AS_MAP:
+                    struct_types = []
+                    for k, v in value.items():
+                        default_type = get_default_data_type(v)
+                        if not default_type:
+                            continue
+                        struct_types.append((str(k), default_type))
+                    if not struct_types:
+                        return None
+                    return "struct<" + ", ".join(f"{k}: {v}" for (k, v) in struct_types) + ">"
                 sample_row = seq_get(list(value.items()), 0)
                 if not sample_row:
                     return None
@@ -343,6 +354,17 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     else None
                 )
         column_mapping = updated_mapping
+
+        def _dict_to_row(value: t.Any) -> t.Any:
+            if isinstance(value, dict):
+                return Row(**{k: _dict_to_row(v) for k, v in value.items()})
+            if isinstance(value, (list, set)):
+                return type(value)(_dict_to_row(v) for v in value)
+            return value
+
+        def _maybe_convert(value: t.Any) -> t.Any:
+            return _dict_to_row(value) if not self.DICT_AS_MAP else value
+
         data_expressions = []
         for row in rows:
             if isinstance(row, (list, tuple, dict)):
@@ -353,9 +375,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                     row = row.asDict()
                 if isinstance(row, dict):
                     row = row.values()
-                data_expressions.append(exp.tuple_(*[F.lit(x).column_expression for x in row]))
+                data_expressions.append(
+                    exp.tuple_(*[F.lit(_maybe_convert(x)).column_expression for x in row])
+                )
             else:
-                data_expressions.append(exp.tuple_(*[F.lit(row).column_expression]))
+                data_expressions.append(exp.tuple_(*[F.lit(_maybe_convert(row)).column_expression]))
 
         if column_mapping:
             sel_columns = [

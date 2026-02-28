@@ -40,6 +40,8 @@ class PostgresSession(
     _table = PostgresTable
     _udf_registration = PostgresUDFRegistration
 
+    DICT_AS_MAP = False
+
     def __init__(self, conn: t.Optional[psycopg2_connection] = None):
         if not hasattr(self, "_conn"):
             super().__init__(conn)

@@ -1,4 +1,5 @@
 import typing as t
+from unittest.mock import patch
 
 import pytest
 
@@ -93,6 +94,31 @@ def test_nested_struct(standalone_session: StandaloneSession, compare_sql: t.Cal
     df = standalone_session.createDataFrame([[types.Row(cola=1, colb="test")]])
     expected = "SELECT CAST(`a1`.`_1` AS STRUCT<`cola`: BIGINT, `colb`: STRING>) AS `_1` FROM VALUES (STRUCT(1 AS `cola`, 'test' AS `colb`)) AS `a1`(`_1`)"
     compare_sql(df, expected)
+
+
+def test_dict_as_map(standalone_session: StandaloneSession, compare_sql: t.Callable):
+    df = standalone_session.createDataFrame([[{"key": "value"}]])
+    expected = "SELECT CAST(`a1`.`_1` AS MAP<STRING, STRING>) AS `_1` FROM VALUES (MAP('key', 'value')) AS `a1`(`_1`)"
+    compare_sql(df, expected)
+
+
+def test_dict_as_struct(standalone_session: StandaloneSession, compare_sql: t.Callable):
+    with patch.object(type(standalone_session), "DICT_AS_MAP", False):
+        df = standalone_session.createDataFrame(
+            t.cast(
+                t.Sequence[t.Dict[str, t.Any]],
+                [{"country": "DE", "title": {"headline": "haferflocki"}}],
+            )
+        )
+        expected = "SELECT CAST(`a1`.`country` AS STRING) AS `country`, CAST(`a1`.`title` AS STRUCT<`headline`: STRING>) AS `title` FROM VALUES ('DE', STRUCT('haferflocki' AS `headline`)) AS `a1`(`country`, `title`)"
+        compare_sql(df, expected)
+
+
+def test_nested_dict_as_struct(standalone_session: StandaloneSession, compare_sql: t.Callable):
+    with patch.object(type(standalone_session), "DICT_AS_MAP", False):
+        df = standalone_session.createDataFrame(t.cast(t.Any, [[{"a": {"b": 1}}]]))
+        expected = "SELECT CAST(`a1`.`_1` AS STRUCT<`a`: STRUCT<`b`: BIGINT>>) AS `_1` FROM VALUES (STRUCT(STRUCT(1 AS `b`) AS `a`)) AS `a1`(`_1`)"
+        compare_sql(df, expected)
 
 
 def test_sql_select_only(standalone_session: StandaloneSession, compare_sql: t.Callable):
