@@ -455,9 +455,9 @@ def spark_to_sqlglot(spark_dtype: types.DataType) -> exp.DataType:
 def safe_parse_identifier(raw_name: str, dialect: DialectType = None) -> exp.Identifier:
     """Create an Identifier from a raw identifier name (e.g., from DB cursor description
     or information_schema). Unlike parse_identifier, this does not interpret single quotes
-    as SQL string delimiters, preserving the original name."""
+    as SQL string delimiters, preserving the original name. Always returns an exp.Identifier."""
     parsed = exp.parse_identifier(raw_name, dialect=dialect)
-    if parsed.this == raw_name:
+    if isinstance(parsed, exp.Identifier) and parsed.this == raw_name:
         return parsed
     return exp.to_identifier(raw_name, quoted=True)
 
