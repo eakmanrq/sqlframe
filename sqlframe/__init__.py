@@ -36,6 +36,7 @@ NAME_TO_FILE_OVERRIDE = {
 }
 
 ACTIVATE_CONFIG = {}
+_SAVED_PYSPARK_MODULES: t.Dict[str, t.Any] = {}
 
 
 def activate(
@@ -45,6 +46,14 @@ def activate(
 ) -> None:
     import sqlframe
     from sqlframe import testing
+
+    # Save original pyspark modules so deactivate() can restore them
+    # without re-importing (which would lose class-level state like
+    # SparkContext._active_spark_context).
+    _SAVED_PYSPARK_MODULES.clear()
+    for k, v in sys.modules.items():
+        if k.startswith("pyspark"):
+            _SAVED_PYSPARK_MODULES[k] = v
 
     pyspark_mock = MagicMock()
     pyspark_mock.__file__ = "pyspark"
@@ -92,18 +101,24 @@ def activate(
 def deactivate() -> None:
     pyspark_imports = [k for k in sys.modules if k.startswith("pyspark")]
 
-    for k, v in sys.modules.copy().items():
-        if k in pyspark_imports:
-            del sys.modules[k]
-    # Try importing the pyspark imports again and see if pyspark is installed and therefore available
-    # if not then nothing will change
     for k in pyspark_imports:
-        try:
-            sys.modules[k] = importlib.import_module(k)
-        except (ImportError, AttributeError):
-            # AttributeError: pyspark.pandas (via pyspark.testing) triggers
-            # "np.NaN was removed in NumPy 2.0" on import
-            pass
+        del sys.modules[k]
+
+    if _SAVED_PYSPARK_MODULES:
+        # Restore the original module objects to preserve class-level state
+        for k, v in _SAVED_PYSPARK_MODULES.items():
+            sys.modules[k] = v
+        _SAVED_PYSPARK_MODULES.clear()
+    else:
+        # No saved modules — pyspark wasn't imported before activate().
+        # Try importing fresh to see if pyspark is installed.
+        for k in pyspark_imports:
+            try:
+                sys.modules[k] = importlib.import_module(k)
+            except (ImportError, AttributeError):
+                # AttributeError: pyspark.pandas (via pyspark.testing) triggers
+                # "np.NaN was removed in NumPy 2.0" on import
+                pass
     ACTIVATE_CONFIG.clear()
 
 
