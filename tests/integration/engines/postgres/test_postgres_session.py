@@ -1,5 +1,6 @@
 from sqlglot import exp, parse_one
 
+from sqlframe.base.types import Row
 from sqlframe.postgres.session import PostgresSession
 
 pytest_plugins = ["tests.common_fixtures"]
@@ -18,3 +19,9 @@ def test_session_from_config(function_scoped_postgres):
         "colb": exp.DataType.build("STRING", dialect=session.output_dialect),
     }
     assert session.execution_dialect_name == "postgres"
+
+
+def test_create_dataframe_dict_as_struct(postgres_session: PostgresSession):
+    df = postgres_session.createDataFrame([{"country": "DE", "city": "Berlin"}])
+    result = df.collect()
+    assert result == [Row(country="DE", city="Berlin")]

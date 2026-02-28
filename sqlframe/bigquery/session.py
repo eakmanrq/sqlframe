@@ -40,6 +40,7 @@ class BigQuerySession(
 
     QUALIFY_INFO_SCHEMA_WITH_DATABASE = True
     SANITIZE_COLUMN_NAMES = True
+    DICT_AS_MAP = False
 
     def __init__(
         self, conn: t.Optional[BigQueryConnection] = None, default_dataset: t.Optional[str] = None

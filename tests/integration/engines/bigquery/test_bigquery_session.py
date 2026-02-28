@@ -1,7 +1,10 @@
 import pytest
 from sqlglot import exp
 
+from sqlframe.base.types import Row
 from sqlframe.bigquery.session import BigQuerySession
+
+pytest_plugins = ["tests.common_fixtures"]
 
 pytestmark = [
     pytest.mark.bigquery,
@@ -19,3 +22,9 @@ def test_session_from_config():
     columns = session.catalog.get_columns("db1.test_table")
     assert columns == {"cola": exp.DataType.build("BIGINT"), "colb": exp.DataType.build("TEXT")}
     assert session.execution_dialect_name == "bigquery"
+
+
+def test_create_dataframe_dict_as_struct(bigquery_session: BigQuerySession):
+    df = bigquery_session.createDataFrame([{"country": "DE", "city": "Berlin"}])
+    result = df.collect()
+    assert result == [Row(country="DE", city="Berlin")]
