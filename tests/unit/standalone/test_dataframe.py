@@ -1,6 +1,7 @@
 import typing as t
 
 import pytest
+import sqlglot
 from sqlglot import expressions as exp
 
 from sqlframe.base.exceptions import UnsupportedOperationError
@@ -237,3 +238,73 @@ def test_chained_with_column_renamed_after_join(standalone_session: StandaloneSe
     assert "qux2" in columns
     assert "bar" not in columns
     assert "qux" not in columns
+
+
+# https://github.com/eakmanrq/sqlframe/issues/184
+def test_join_select_join_alias_resolution(standalone_session: StandaloneSession):
+    """Test that alias references resolve correctly after join().select().join() chain."""
+    from sqlframe.standalone import types as T
+
+    # Both employee and store share "store_id" column to reproduce the ambiguity issue
+    employee_schema = T.StructType(
+        [
+            T.StructField("employee_id", T.IntegerType(), False),
+            T.StructField("fname", T.StringType(), False),
+            T.StructField("store_id", T.IntegerType(), False),
+        ]
+    )
+    store_schema = T.StructType(
+        [
+            T.StructField("store_id", T.IntegerType(), False),
+            T.StructField("store_name", T.StringType(), False),
+        ]
+    )
+    district_schema = T.StructType(
+        [
+            T.StructField("district_id", T.IntegerType(), False),
+            T.StructField("district_name", T.StringType(), False),
+        ]
+    )
+
+    employee = standalone_session.createDataFrame([(10, "Jack", 10)], schema=employee_schema)
+    store = standalone_session.createDataFrame([(10, "Main St")], schema=store_schema)
+    district = standalone_session.createDataFrame([(10, "Downtown")], schema=district_schema)
+
+    result = (
+        employee.alias("employee")
+        .join(
+            store.filter(F.col("store_name") != "test").alias("store"),
+            on=F.col("employee.employee_id") == F.col("store.store_id"),
+        )
+        .select(
+            F.col("employee.employee_id"),
+            F.col("employee.fname"),
+            F.col("employee.store_id"),
+            F.col("store.store_id"),
+            F.col("store.store_name"),
+        )
+        .join(
+            district.alias("district"),
+            on=F.col("store.store_id") == F.col("district.district_id"),
+        )
+    )
+
+    sql = result.sql(pretty=False, optimize=False)
+    # After the first join is wrapped into a CTE, "store.store_id" in the second join's
+    # ON clause should resolve to the wrapper CTE, not the inner store CTE.
+    # Parse the outer query's FROM/JOIN tables and verify the ON clause only references those.
+    parsed = sqlglot.parse_one(sql, dialect="spark")
+    # Get tables in the outer FROM clause
+    from_tables = set()
+    if parsed.args.get("from_"):
+        from_tables.add(parsed.args["from_"].this.alias_or_name)
+    if parsed.args.get("joins"):
+        for join in parsed.args["joins"]:
+            from_tables.add(join.this.alias_or_name)
+    # Get tables referenced in the ON clause
+    on_clause = parsed.args["joins"][-1].args["on"]
+    on_tables = {col.table for col in on_clause.find_all(exp.Column) if col.table}
+    # All tables in ON clause must be in FROM clause
+    assert on_tables.issubset(from_tables), (
+        f"ON clause references {on_tables - from_tables} which are not in FROM {from_tables}"
+    )

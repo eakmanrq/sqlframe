@@ -447,6 +447,19 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         df = self._resolve_pending_hints()
         sequence_id = sequence_id or df.sequence_id
         expression = df.expression.copy()
+        # When wrapping a join expression into a CTE, collect the sequence_ids of CTEs
+        # in the FROM clause so we can propagate alias mappings to the wrapper CTE.
+        has_joins = bool(expression.args.get("joins"))
+        from_sequence_ids: t.Set[str] = set()
+        if has_joins:
+            from_table_names = {
+                table.alias_or_name for table in get_tables_from_expression_with_join(expression)
+            }
+            from_sequence_ids = {
+                cte.args["sequence_id"]
+                for cte in expression.ctes
+                if cte.alias_or_name in from_table_names and "sequence_id" in cte.args
+            }
         cte_expression, cte_name = df._create_cte_from_expression(
             expression=expression, branch_id=self.branch_id, sequence_id=sequence_id, name=name
         )
@@ -455,6 +468,14 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         )
         sel_columns = df._get_outer_select_columns(cte_expression)
         new_expression = new_expression.from_(cte_name).select(*[x.expression for x in sel_columns])
+        # Propagate alias mappings: alias names that pointed to inner FROM-clause CTEs
+        # should also point to the wrapper CTE so they resolve correctly in subsequent operations.
+        # Only needed when wrapping a join expression, as that's when alias names reference
+        # multiple CTEs that get folded into the wrapper.
+        if from_sequence_ids:
+            for seq_ids in df.session.name_to_sequence_id_mapping.values():
+                if any(sid in from_sequence_ids for sid in seq_ids) and sequence_id not in seq_ids:
+                    seq_ids.append(sequence_id)
         return df.copy(expression=new_expression, sequence_id=sequence_id)
 
     def _resolve_pending_hints(self) -> Self:
