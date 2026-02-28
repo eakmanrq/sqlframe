@@ -301,3 +301,26 @@ def test_select_star_join_with_external_tables(duckdb_session: DuckDBSession):
 
     result = left.join(right, "id", "leftanti")
     assert result.count() == 0
+
+
+# https://github.com/eakmanrq/sqlframe/issues/553
+def test_special_characters_in_column_names(duckdb_session: DuckDBSession):
+    con = duckdb_session._conn
+    con.execute(
+        """CREATE VIEW special_cols AS SELECT 'a' AS "'ABC'", 'b' AS "Map_CD1_%", 'c' AS "\u2018ABC\u2019" """
+    )
+
+    df = duckdb_session.table("special_cols")
+
+    # Verify schema works without BinderException
+    schema = df.schema
+    assert len(schema.fields) == 3
+    field_names = [f.name for f in schema.fields]
+    assert field_names == ["`'abc'`", "`map_cd1_%`", "\u2018abc\u2019"]
+
+    # Verify collect works - Row keys preserve original case from cursor description
+    result = df.collect()
+    assert len(result) == 1
+    assert result[0]["'ABC'"] == "a"
+    assert result[0]["Map_CD1_%"] == "b"
+    assert result[0]["\u2018ABC\u2019"] == "c"

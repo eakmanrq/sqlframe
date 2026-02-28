@@ -452,6 +452,16 @@ def spark_to_sqlglot(spark_dtype: types.DataType) -> exp.DataType:
     raise NotImplementedError(f"Unsupported data type: {spark_dtype}")
 
 
+def safe_parse_identifier(raw_name: str, dialect: DialectType = None) -> exp.Identifier:
+    """Create an Identifier from a raw identifier name (e.g., from DB cursor description
+    or information_schema). Unlike parse_identifier, this does not interpret single quotes
+    as SQL string delimiters, preserving the original name. Always returns an exp.Identifier."""
+    parsed = exp.parse_identifier(raw_name, dialect=dialect)
+    if isinstance(parsed, exp.Identifier) and parsed.this == raw_name:
+        return parsed
+    return exp.to_identifier(raw_name, quoted=True)
+
+
 def normalize_string(
     value: t.Union[str, exp.Expression],
     from_dialect: DialectType = None,
@@ -508,7 +518,7 @@ def normalize_string(
         elif is_query:
             value_expression = parse_one(value, dialect=from_dialect)
         else:
-            value_expression = exp.parse_identifier(value_without_star, dialect=from_dialect)
+            value_expression = safe_parse_identifier(value_without_star, dialect=from_dialect)
     elif isinstance(value, exp.Expression):
         star_positions = []
         value_expression = value.copy()
