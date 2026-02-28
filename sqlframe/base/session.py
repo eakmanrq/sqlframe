@@ -693,6 +693,21 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             self._session_kwargs = {}
 
         def __getattr__(self, item) -> Self:
+            # When a @property raises AttributeError, Python falls through to __getattr__.
+            # If the attribute is defined on the class as a property, the error came from
+            # the property getter, not from a missing attribute. Re-invoke it to surface
+            # the real error instead of silently returning self.
+            for cls in type(self).__mro__:
+                if item in cls.__dict__:
+                    desc = cls.__dict__[item]
+                    if isinstance(desc, (property, cached_property)):
+                        try:
+                            return (
+                                desc.fget(self) if isinstance(desc, property) else desc.func(self)
+                            )
+                        except AttributeError as e:
+                            raise RuntimeError(f"Error accessing attribute {item!r}: {e!r}") from e
+                    raise AttributeError(item)
             return self
 
         def __call__(self, *args, **kwargs):

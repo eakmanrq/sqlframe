@@ -136,3 +136,21 @@ def test_sql_insert(standalone_session: StandaloneSession, compare_sql: t.Callab
 
 def test_session_create_builder_patterns():
     assert StandaloneSession.builder.appName("abc").getOrCreate() == StandaloneSession()
+
+
+def test_builder_getattr_does_not_swallow_property_errors():
+    """Test that AttributeError raised inside a session property is not silently
+    swallowed by Builder.__getattr__, which would cause getOrCreate() to return
+    the Builder instead of raising. See: https://github.com/eakmanrq/sqlframe/issues/558"""
+    from sqlframe.base.session import _BaseSession
+
+    class FailingBuilder(_BaseSession.Builder):
+        @property
+        def session(self):
+            hostname = None
+            # Simulates the error from databricks-sql-connector when params are missing
+            hostname.startswith("https://")  # type: ignore[union-attr]
+
+    builder = FailingBuilder()
+    with pytest.raises(RuntimeError):
+        builder.getOrCreate()
