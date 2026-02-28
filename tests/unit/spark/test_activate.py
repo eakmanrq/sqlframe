@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.spark import Column as SparkColumn
 from sqlframe.spark import Row as SparkRow
 from sqlframe.spark import (
@@ -19,7 +17,6 @@ from sqlframe.spark import functions as SparkF
 from sqlframe.spark import types as SparkTypes
 
 
-@pytest.mark.forked
 def test_replace_pyspark_spark(check_pyspark_imports):
     check_pyspark_imports(
         "spark",

@@ -1,6 +1,6 @@
-import pytest
+from unittest.mock import MagicMock
 
-from sqlframe import activate
+from sqlframe import activate, deactivate
 from sqlframe.bigquery import (
     BigQueryCatalog,
     BigQueryDataFrame,
@@ -20,7 +20,6 @@ from sqlframe.bigquery import functions as BigQueryF
 from sqlframe.bigquery import types as BigQueryTypes
 
 
-@pytest.mark.forked
 def test_activate_bigquery(check_pyspark_imports):
     check_pyspark_imports(
         "bigquery",
@@ -42,11 +41,15 @@ def test_activate_bigquery(check_pyspark_imports):
     )
 
 
-@pytest.mark.forked
 def test_activate_bigquery_default_dataset():
-    activate("bigquery", config={"default_dataset": "sqlframe.sqlframe_test"})
-    from pyspark.sql import SparkSession
+    mock_conn = MagicMock()
+    mock_conn._client = MagicMock()
+    activate("bigquery", conn=mock_conn, config={"default_dataset": "sqlframe.sqlframe_test"})
+    try:
+        from pyspark.sql import SparkSession
 
-    assert SparkSession == BigQuerySession
-    spark = SparkSession.builder.appName("test").getOrCreate()
-    assert spark.default_dataset == "sqlframe.sqlframe_test"
+        assert SparkSession == BigQuerySession
+        spark = SparkSession.builder.appName("test").getOrCreate()
+        assert spark.default_dataset == "sqlframe.sqlframe_test"
+    finally:
+        deactivate()

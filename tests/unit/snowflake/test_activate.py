@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.snowflake import Column as SnowflakeColumn
 from sqlframe.snowflake import Row as SnowflakeRow
 from sqlframe.snowflake import (
@@ -19,7 +17,6 @@ from sqlframe.snowflake import functions as SnowflakeF
 from sqlframe.snowflake import types as SnowflakeTypes
 
 
-@pytest.mark.forked
 def test_activate_snowflake(check_pyspark_imports):
     check_pyspark_imports(
         "snowflake",

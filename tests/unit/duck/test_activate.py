@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.duckdb import Column as DuckDBColumn
 from sqlframe.duckdb import (
     DuckDBCatalog,
@@ -19,7 +17,6 @@ from sqlframe.duckdb import functions as DuckDBF
 from sqlframe.duckdb import types as DuckDBTypes
 
 
-@pytest.mark.forked
 def test_activate_duckdb(check_pyspark_imports):
     check_pyspark_imports(
         "duckdb",

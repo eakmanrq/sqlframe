@@ -1,6 +1,4 @@
-import pytest
-
-from sqlframe import activate
+from sqlframe import activate, deactivate
 from sqlframe.databricks import Column as DatabricksColumn
 from sqlframe.databricks import (
     DatabricksCatalog,
@@ -20,7 +18,6 @@ from sqlframe.databricks import functions as DatabricksF
 from sqlframe.databricks import types as DatabricksTypes
 
 
-@pytest.mark.forked
 def test_activate_databricks(check_pyspark_imports):
     check_pyspark_imports(
         "databricks",
@@ -42,9 +39,11 @@ def test_activate_databricks(check_pyspark_imports):
     )
 
 
-@pytest.mark.forked
 def test_activate_databricks_default_dataset():
     activate("databricks")
-    from pyspark.sql import SparkSession
+    try:
+        from pyspark.sql import SparkSession
 
-    assert SparkSession == DatabricksSession
+        assert SparkSession == DatabricksSession
+    finally:
+        deactivate()

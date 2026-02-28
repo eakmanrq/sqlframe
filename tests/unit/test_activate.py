@@ -1,41 +1,42 @@
 from unittest.mock import MagicMock
 
 import findspark
-import pytest
 
 from sqlframe import activate, activate_context, deactivate
 from sqlframe import testing as SQLFrameTesting
 
 
-@pytest.mark.forked
 def test_activate_testing():
     activate()
-    findspark.init()
-    from pyspark import testing
+    try:
+        findspark.init()
+        from pyspark import testing
 
-    assert testing == SQLFrameTesting
-    assert testing.assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
-    assert testing.assertSchemaEqual == SQLFrameTesting.assertSchemaEqual
-    from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
+        assert testing == SQLFrameTesting
+        assert testing.assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
+        assert testing.assertSchemaEqual == SQLFrameTesting.assertSchemaEqual
+        from pyspark.testing import assertDataFrameEqual, assertSchemaEqual
 
-    assert assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
-    assert assertSchemaEqual == SQLFrameTesting.assertSchemaEqual
-    import pyspark.testing as testing
+        assert assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
+        assert assertSchemaEqual == SQLFrameTesting.assertSchemaEqual
+        import pyspark.testing as testing
 
-    assert testing == SQLFrameTesting
-    assert testing.assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
+        assert testing == SQLFrameTesting
+        assert testing.assertDataFrameEqual == SQLFrameTesting.assertDataFrameEqual
+    finally:
+        deactivate()
 
 
-@pytest.mark.forked
 def test_activate_no_engine():
     activate()
-    findspark.init()
-    # A way that people check if pyspark is available
-    from pyspark import context
+    try:
+        findspark.init()
+        # A way that people check if pyspark is available
+        from pyspark import context
 
-    assert isinstance(context, MagicMock)
-
-    deactivate()
+        assert isinstance(context, MagicMock)
+    finally:
+        deactivate()
 
     from pyspark import context
 
@@ -44,7 +45,6 @@ def test_activate_no_engine():
     assert context is not None
 
 
-@pytest.mark.forked
 def test_activate_no_engine_context_manager():
     with activate_context():
         findspark.init()
@@ -59,7 +59,6 @@ def test_activate_no_engine_context_manager():
     assert context is not None
 
 
-@pytest.mark.forked
 def test_activate_testing_context_manager():
     with activate_context():
         findspark.init()
