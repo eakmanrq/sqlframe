@@ -315,6 +315,8 @@ def test_special_characters_in_column_names(duckdb_session: DuckDBSession):
     # Verify schema works without BinderException
     schema = df.schema
     assert len(schema.fields) == 3
+    field_names = [f.name for f in schema.fields]
+    assert field_names == ["`'abc'`", "`map_cd1_%`", "\u2018abc\u2019"]
 
     # Verify collect works - Row keys preserve original case from cursor description
     result = df.collect()
