@@ -27,4 +27,7 @@ def rescope_sparksession_singleton():
     from sqlframe.base.session import _BaseSession
 
     _BaseSession._instance = None
+    for cls in _BaseSession.__subclasses__():
+        if hasattr(cls, "Builder"):
+            cls.builder = cls.Builder()
     yield
