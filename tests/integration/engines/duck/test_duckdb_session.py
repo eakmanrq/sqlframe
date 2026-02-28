@@ -19,7 +19,6 @@ def test_session_from_config():
     assert session.execution_dialect_name == "duckdb"
 
 
-@pytest.mark.forked
 def test_session_stop(duckdb_session: DuckDBSession):
     assert duckdb_session.range(1, 2).collect() == [Row(id=1)]
     duckdb_session.stop()
@@ -27,7 +26,6 @@ def test_session_stop(duckdb_session: DuckDBSession):
         duckdb_session.range(1, 10).collect()
 
 
-@pytest.mark.forked
 def test_session_new_session(duckdb_session: DuckDBSession):
     # Remove old session
     assert duckdb_session.range(1, 2).collect() == [Row(id=1)]
