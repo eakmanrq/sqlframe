@@ -475,7 +475,27 @@ class Column:
         )
 
     def over(self, window: WindowSpec) -> Column:
-        column_expression = self.column_expression.meta.get("window_func", self.column_expression)
+        column_expression = self.column_expression
+        # Some functions store a different expression to use in window context
+        # (e.g., first_value/last_value in DuckDB use different functions for
+        # aggregate vs window)
+        window_func = column_expression.meta.get("window_func")
+        if window_func:
+            window_expression = window.expression.copy()
+            window_expression.set("this", window_func)
+            return Column(window_expression)
+        # For complex expressions containing aggregate functions (e.g., skewness
+        # conversion formula), wrap each aggregate sub-expression individually
+        # with the window specification
+        if not isinstance(column_expression, exp.AggFunc):
+            agg_nodes = list(column_expression.find_all(exp.AggFunc))
+            if agg_nodes:
+                result = column_expression.copy()
+                for agg_node in result.find_all(exp.AggFunc):
+                    windowed = window.expression.copy()
+                    windowed.set("this", agg_node.copy())
+                    agg_node.replace(windowed)
+                return Column(result)
         window_expression = window.expression.copy()
         window_expression.set("this", column_expression)
         return Column(window_expression)
