@@ -324,3 +324,17 @@ def test_special_characters_in_column_names(duckdb_session: DuckDBSession):
     assert result[0]["'ABC'"] == "a"
     assert result[0]["Map_CD1_%"] == "b"
     assert result[0]["\u2018ABC\u2019"] == "c"
+
+
+# https://github.com/eakmanrq/sqlframe/issues/557
+def test_dict_rows_missing_columns(duckdb_session: DuckDBSession):
+    df = duckdb_session.createDataFrame(
+        [{"name": "xxx"}, {"name": "yyy"}],
+        schema={"_id": "varchar", "name": "varchar"},
+    )
+    result = df.collect()
+    assert len(result) == 2
+    assert result[0]["_id"] is None
+    assert result[0]["name"] == "xxx"
+    assert result[1]["_id"] is None
+    assert result[1]["name"] == "yyy"

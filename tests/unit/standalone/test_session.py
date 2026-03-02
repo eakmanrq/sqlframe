@@ -42,6 +42,28 @@ def test_cdf_dict_rows(standalone_session: StandaloneSession, compare_sql: t.Cal
     compare_sql(df, expected)
 
 
+def test_cdf_dict_rows_missing_columns(
+    standalone_session: StandaloneSession, compare_sql: t.Callable
+):
+    df = standalone_session.createDataFrame(
+        [{"name": "xxx"}, {"name": "yyy"}],
+        schema={"_id": "string", "name": "string"},
+    )
+    expected = "SELECT CAST(`a1`.`_id` AS STRING) AS `_id`, CAST(`a1`.`name` AS STRING) AS `name` FROM VALUES (NULL, 'xxx'), (NULL, 'yyy') AS `a1`(`_id`, `name`)"
+    compare_sql(df, expected)
+
+
+def test_cdf_dict_rows_reordered_keys(
+    standalone_session: StandaloneSession, compare_sql: t.Callable
+):
+    df = standalone_session.createDataFrame(
+        [{"colb": "test", "cola": 1}],
+        schema={"cola": "bigint", "colb": "string"},
+    )
+    expected = "SELECT CAST(`a1`.`cola` AS BIGINT) AS `cola`, CAST(`a1`.`colb` AS STRING) AS `colb` FROM VALUES (1, 'test') AS `a1`(`cola`, `colb`)"
+    compare_sql(df, expected)
+
+
 def test_cdf_str_schema(standalone_session: StandaloneSession, compare_sql: t.Callable):
     df = standalone_session.createDataFrame([[1, "test"]], "cola INT, colb STRING")
     expected = "SELECT `a1`.`cola` AS `cola`, CAST(`a1`.`colb` AS STRING) AS `colb` FROM VALUES (1, 'test') AS `a1`(`cola`, `colb`)"

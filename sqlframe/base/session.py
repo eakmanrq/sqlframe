@@ -375,7 +375,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                 if isinstance(row, Row):
                     row = row.asDict()
                 if isinstance(row, dict):
-                    row = row.values()
+                    row = [row.get(col_name) for col_name in column_mapping]
                 data_expressions.append(
                     exp.tuple_(*[F.lit(_maybe_convert(x)).column_expression for x in row])
                 )
