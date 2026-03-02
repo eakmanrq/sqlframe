@@ -488,10 +488,10 @@ class Column:
         # conversion formula), wrap each aggregate sub-expression individually
         # with the window specification
         if not isinstance(column_expression, exp.AggFunc):
-            agg_nodes = list(column_expression.find_all(exp.AggFunc))
+            result = column_expression.copy()
+            agg_nodes = list(result.find_all(exp.AggFunc))
             if agg_nodes:
-                result = column_expression.copy()
-                for agg_node in result.find_all(exp.AggFunc):
+                for agg_node in agg_nodes:
                     windowed = window.expression.copy()
                     windowed.set("this", agg_node.copy())
                     agg_node.replace(windowed)

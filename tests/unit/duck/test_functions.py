@@ -1,6 +1,7 @@
 import math
 
 import pytest
+from sqlglot import exp
 
 from sqlframe.duckdb import DuckDBSession, Window
 from sqlframe.duckdb import functions as F
@@ -44,3 +45,11 @@ def test_skewness_window_matches_aggregate(session):
         .collect()[0][0]
     )
     assert math.isclose(agg_result, window_result)
+
+
+def test_skewness_expression_generates_correct_dialect_names():
+    """exp.Skewness should generate the correct function name per dialect."""
+    skew = exp.Skewness(this=exp.Column(this=exp.to_identifier("a")))
+    assert "SKEWNESS" in skew.sql(dialect="duckdb")
+    assert "SKEW" in skew.sql(dialect="snowflake")
+    assert "SKEWNESS" in skew.sql(dialect="spark")
