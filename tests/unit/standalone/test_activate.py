@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.standalone import Column as StandaloneColumn
 from sqlframe.standalone import Row as StandaloneRow
 from sqlframe.standalone import (
@@ -19,7 +17,6 @@ from sqlframe.standalone import functions as StandaloneF
 from sqlframe.standalone import types as StandaloneTypes
 
 
-@pytest.mark.forked
 def test_activate_standalone(check_pyspark_imports):
     check_pyspark_imports(
         "standalone",

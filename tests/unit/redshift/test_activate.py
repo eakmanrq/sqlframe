@@ -1,5 +1,3 @@
-import pytest
-
 from sqlframe.redshift import Column as RedshiftColumn
 from sqlframe.redshift import (
     RedshiftCatalog,
@@ -19,7 +17,6 @@ from sqlframe.redshift import functions as RedshiftF
 from sqlframe.redshift import types as RedshiftTypes
 
 
-@pytest.mark.forked
 def test_activate_redshift(check_pyspark_imports):
     check_pyspark_imports(
         "redshift",
