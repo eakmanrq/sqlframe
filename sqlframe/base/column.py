@@ -486,8 +486,10 @@ class Column:
             return Column(window_expression)
         # For complex expressions containing aggregate functions (e.g., skewness
         # conversion formula), wrap each aggregate sub-expression individually
-        # with the window specification
-        if not isinstance(column_expression, exp.AggFunc):
+        # with the window specification. Skip expressions that are aggregate
+        # modifiers (IgnoreNulls, RespectNulls) — these should be wrapped
+        # together with their aggregate as a single window function.
+        if not isinstance(column_expression, (exp.AggFunc, exp.IgnoreNulls, exp.RespectNulls)):
             result = column_expression.copy()
             agg_nodes = list(result.find_all(exp.AggFunc))
             if agg_nodes:
