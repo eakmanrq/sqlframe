@@ -527,11 +527,6 @@ def var_pop(col: ColumnOrName) -> Column:
 def skewness(col: ColumnOrName) -> Column:
     session = _get_session()
 
-    func_name = "SKEWNESS"
-
-    if session._is_snowflake:
-        func_name = "SKEW"
-
     if session._is_duckdb or session._is_snowflake:
         col = Column.ensure_col(col)
         when_func = get_func_from_session("when")
@@ -540,22 +535,18 @@ def skewness(col: ColumnOrName) -> Column:
         lit_func = get_func_from_session("lit")
         sqrt_func = get_func_from_session("sqrt")
         full_calc = (
-            Column.invoke_anonymous_function(col, func_name)
+            Column.invoke_expression_over_column(col, expression.Skewness)
             * (count_col - lit_func(2))
             / (sqrt_func(count_col * (count_col - lit_func(1))))
         )
-        result = (
+        return (
             when_func(count_col == lit_func(0), lit_func(None))
             .when(count_col == lit_func(1), lit_func(None))
             .when(count_col == lit_func(2), lit_func(0.0))
             .otherwise(full_calc)
         )
-        window_func_expr = Column.invoke_anonymous_function(col, func_name).column_expression
-        result.column_expression._meta = result.column_expression._meta or {}
-        result.column_expression._meta["window_func"] = window_func_expr
-        return result
 
-    return Column.invoke_anonymous_function(col, func_name)
+    return Column.invoke_expression_over_column(col, expression.Skewness)
 
 
 @meta(unsupported_engines=["bigquery", "postgres"])
