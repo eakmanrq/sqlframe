@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import enum
 import functools
-import itertools
 import json
 import logging
 import sys
@@ -25,7 +24,32 @@ from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
 
 from sqlframe.base.catalog import Column as CatalogColumn
-from sqlframe.base.operations import Operation, operation
+from sqlframe.base.operations import Operation
+from sqlframe.base.plan import (
+    AliasNode,
+    CacheNode,
+    DistinctNode,
+    DropDuplicatesNode,
+    DropNaNode,
+    DropNode,
+    FillNaNode,
+    FilterNode,
+    GroupByNode,
+    HintNode,
+    JoinNode,
+    LimitNode,
+    PlanNode,
+    RenameColumnsNode,
+    ReplaceNode,
+    SelectNode,
+    SetOpNode,
+    SortNode,
+    SourceNode,
+    ToDFNode,
+    UnionByNameNode,
+    UnpivotNode,
+    WithColumnsNode,
+)
 from sqlframe.base.transforms import replace_id_value
 from sqlframe.base.util import (
     get_func_from_session,
@@ -221,7 +245,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def __init__(
         self,
         session: SESSION,
-        expression: exp.Select,
+        expression: t.Optional[exp.Select] = None,
         branch_id: t.Optional[str] = None,
         sequence_id: t.Optional[str] = None,
         join_on_uuid: t.Optional[str] = None,
@@ -230,10 +254,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         pending_hints: t.Optional[t.List[exp.Expression]] = None,
         output_expression_container: t.Optional[OutputExpressionContainer] = None,
         display_name_mapping: t.Optional[t.Dict[str, str]] = None,
+        _plan: t.Optional[PlanNode] = None,
         **kwargs,
     ):
         self.session = session
-        self.expression: exp.Select = expression
         self.branch_id = branch_id or self.session._random_branch_id
         self.sequence_id = sequence_id or self.session._random_sequence_id
         self.join_on_uuid = join_on_uuid or str(uuid4())
@@ -244,6 +268,41 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         self.output_expression_container = output_expression_container or exp.Select()
         self.temp_views: t.List[exp.Select] = []
         self.display_name_mapping = display_name_mapping or {}
+        # Plan infrastructure: store the logical plan and lazily compiled expression
+        if _plan is not None:
+            self._plan: PlanNode = _plan
+            self._cached_expression: t.Optional[exp.Select] = None
+        elif expression is not None:
+            self._plan = SourceNode(
+                expression=expression,
+                branch_id=self.branch_id,
+                sequence_id=self.sequence_id,
+                last_op=self.last_op,
+            )
+            self._cached_expression = expression
+        else:
+            raise ValueError("Either expression or _plan must be provided")
+
+    @property
+    def expression(self) -> exp.Select:
+        if self._cached_expression is None:
+            from sqlframe.base.compiler import PlanCompiler
+
+            state = PlanCompiler(self.session).compile_with_state(self._plan)
+            self._cached_expression = state.expression
+            # Flow back metadata computed during compilation
+            self.display_name_mapping.update(state.display_name_mapping)
+        return self._cached_expression
+
+    @expression.setter
+    def expression(self, value: exp.Select) -> None:
+        self._cached_expression = value
+        self._plan = SourceNode(
+            expression=value,
+            branch_id=self.branch_id,
+            sequence_id=self.sequence_id,
+            last_op=self.last_op,
+        )
 
     def __getattr__(self, column_name: str) -> Column:
         return self[column_name]
@@ -516,9 +575,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             expression.set("hint", hint_expression)
         return df
 
-    def _hint(self, hint_name: str, args: t.List[Column]) -> Self:
+    def _build_hint_expression(self, hint_name: str, args: t.List[Column]) -> exp.Expression:
         hint_name = hint_name.upper()
-        hint_expression = (
+        return (
             exp.JoinHint(
                 this=hint_name,
                 expressions=[exp.to_table(parameter.alias_or_name) for parameter in args],
@@ -528,9 +587,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 this=hint_name, expressions=[parameter.expression for parameter in args]
             )
         )
-        new_df = self.copy()
-        new_df.pending_hints.append(hint_expression)
-        return new_df
 
     def _set_operation(self, klass: t.Callable, other: Self, distinct: bool) -> Self:
         other_df = other._convert_leaf_to_cte()
@@ -542,11 +598,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         operation = klass(this=base_expression, distinct=distinct, expression=other_df.expression)
         operation.set("with_", exp.With(expressions=all_ctes))
         return self.copy(expression=operation)._convert_leaf_to_cte()
-
-    def _cache(self, storage_level: str) -> Self:
-        df = self._convert_leaf_to_cte()
-        df.expression.ctes[-1].set("cache_storage_level", storage_level)
-        return df
 
     def _add_ctes_to_expression(self, expression: exp.Select, ctes: t.List[exp.CTE]) -> exp.Select:
         expression = expression.copy()
@@ -707,7 +758,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             select_expression = select_expression.transform(
                 replace_id_value, replacement_mapping
             ).assert_is(exp.Select)
-            self._set_display_names(select_expression)
+            df._set_display_names(select_expression)
             if optimize:
                 select_expression = t.cast(
                     exp.Select,
@@ -854,7 +905,42 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def copy(self, **kwargs) -> Self:
         kwargs["join_on_uuid"] = str(uuid4())
+        # When a new expression is provided, clear the plan so __init__ wraps it in SourceNode
+        if "expression" in kwargs:
+            kwargs["_plan"] = None
         return self.__class__(**object_to_dict(self, **kwargs))
+
+    def _with_plan(self, plan: PlanNode, **overrides) -> Self:
+        """Create a new DataFrame with a plan node, inheriting metadata from self.
+
+        Unlike copy(), this does NOT deep-copy the expression or use object_to_dict.
+        It creates a lightweight DataFrame that records the plan node and defers
+        expression building to the compiler.
+        """
+        # Compute effective last_op matching @operation decorator behavior:
+        # - If plan.operation is not NO_OP, use it directly
+        # - If NO_OP, inherit parent's last_op (with INIT → NO_OP adjustment)
+        parent_last_op = self.last_op
+        if parent_last_op == Operation.INIT:
+            parent_last_op = Operation.NO_OP
+        if plan.operation != Operation.NO_OP:
+            new_last_op = plan.operation
+        else:
+            new_last_op = parent_last_op
+
+        return self.__class__(
+            session=self.session,
+            branch_id=overrides.pop("branch_id", self.branch_id),
+            sequence_id=overrides.pop("sequence_id", self.sequence_id),
+            known_uuids=overrides.pop("known_uuids", self.known_uuids.copy()),
+            last_op=new_last_op,
+            pending_hints=overrides.pop("pending_hints", list(self.pending_hints)),
+            output_expression_container=self.output_expression_container,
+            display_name_mapping=overrides.pop(
+                "display_name_mapping", dict(self.display_name_mapping)
+            ),
+            _plan=plan,
+        )
 
     def _resolve_ambiguous_columns(self, columns: t.Union[Column, t.List[Column]]) -> None:
         if "joins" not in self.expression.args:
@@ -915,102 +1001,52 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 if cte:
                     ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
 
-    @operation(Operation.SELECT)
     def select(self, *cols, **kwargs) -> Self:
         if not cols:
             return self
+        return self._with_plan(SelectNode(parent=self._plan, cols=cols, kwargs=kwargs))
 
-        if isinstance(cols[0], list):
-            cols = cols[0]
-        columns = self._ensure_and_normalize_cols(cols)
-        if "skip_update_display_name_mapping" not in kwargs:
-            unexpanded_columns = self._ensure_and_normalize_cols(cols, skip_star_expansion=True)
-            user_cols = list(cols)
-            star_columns = []
-            for index, user_col in enumerate(cols):
-                if "*" in (user_col if isinstance(user_col, str) else user_col.alias_or_name):
-                    star_columns.append(index)
-            for index in star_columns:
-                unexpanded_columns.pop(index)
-                user_cols.pop(index)
-            self._update_display_name_mapping(unexpanded_columns, user_cols)
-        kwargs["append"] = kwargs.get("append", False)
-        # If an expression is `CAST(x AS DATETYPE)` then we want to alias so that `x` is the result column name
-        columns = [
-            col.alias(col.expression.alias_or_name)
-            if isinstance(col.expression, exp.Cast) and col.expression.alias_or_name
-            else col
-            for col in columns
-        ]
-        return self.copy(
-            expression=self.expression.select(*[x.expression for x in columns], **kwargs), **kwargs
-        )
-
-    @operation(Operation.NO_OP)
     def alias(self, name: str, **kwargs) -> Self:
         from sqlframe.base.column import Column
 
         new_sequence_id = self.session._random_sequence_id
-        df = self.copy()
-        for join_hint in df.pending_join_hints:
+        # Update pending join hints eagerly (they reference the old sequence_id)
+        pending_join_hints = list(self.pending_join_hints)
+        for join_hint in pending_join_hints:
             for expression in join_hint.expressions:
                 if expression.alias_or_name == self.sequence_id:
                     expression.set("this", Column.ensure_col(new_sequence_id).expression)
-        df.session._add_alias_to_mapping(name, new_sequence_id)
-        return df._convert_leaf_to_cte(sequence_id=new_sequence_id)
+        # Register the alias mapping eagerly (needed for column resolution)
+        self.session._add_alias_to_mapping(name, new_sequence_id)
+        return self._with_plan(
+            AliasNode(parent=self._plan, name=name, new_sequence_id=new_sequence_id),
+            sequence_id=new_sequence_id,
+        )
 
-    @operation(Operation.WHERE)
     def where(self, column: t.Union[Column, str, bool], **kwargs) -> Self:
-        if isinstance(column, str):
-            col = self._ensure_and_normalize_col(
-                sqlglot.parse_one(column, dialect=self.session.input_dialect)
-            )
-        else:
-            col = self._ensure_and_normalize_col(column)
-        if isinstance(col.expression, exp.Alias):
-            col.expression = col.expression.this
-        return self.copy(expression=self.expression.where(col.expression))
+        return self._with_plan(FilterNode(parent=self._plan, condition=column))
 
     filter = where
 
-    @operation(Operation.GROUP_BY)
     def groupBy(self, *cols, **kwargs) -> GROUP_DATA:
         if cols and isinstance(cols[0], list):
             cols = cols[0]
-
-        # Special handling for groupBy operations with column aliases
-        # `_ensure_and_normalize_cols` sets CTE aliases that may not exist in the final context.
-        columns = self._ensure_and_normalize_cols(cols)
-
-        # Post-process the columns to fix any issues with CTE aliases
-        from sqlframe.base.normalize import (
-            _extract_column_name,
-            is_column_unambiguously_available,
-        )
-
-        processed_columns: t.List[Column] = []
-
-        for col in columns:
-            # Check if this column has a table qualifier that might be problematic
-            if col.column_expression.args.get("table"):
-                # Check if the column is unambiguously available without the qualifier
-                column_name = _extract_column_name(this) if (this := col.expression.this) else None
-                if column_name and is_column_unambiguously_available(self.expression, column_name):
-                    # Remove the table qualifier if the column is unambiguous
-                    col.column_expression.set("table", None)
-            processed_columns.append(col)
-
-        return self._group_data(self, processed_columns, self.last_op)
+        return self._group_data(self, list(cols), self.last_op)
 
     groupby = groupBy
 
-    @operation(Operation.SELECT)
     def agg(self, *exprs, **kwargs) -> Self:
-        cols = self._ensure_and_normalize_cols(exprs)
-        self._update_display_name_mapping(cols, exprs)
-        return self.groupBy().agg(*cols)
+        from sqlframe.base.plan import GroupAggNode
 
-    @operation(Operation.FROM)
+        return self._with_plan(
+            GroupAggNode(
+                parent=GroupByNode(parent=self._plan, cols=()),
+                group_by_cols=[],
+                agg_exprs=tuple(exprs),
+                df_agg=True,
+            )
+        )
+
     def crossJoin(self, other: DF) -> Self:
         """Returns the cartesian product with another :class:`DataFrame`.
 
@@ -1048,7 +1084,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         | 16|  Bob|    85|
         +---+-----+------+
         """
-        return self.join.__wrapped__(self, other, how="cross")  # type: ignore
+        return self.join(other, how="cross")
 
     def _handle_self_join(self, other_df: DF, join_columns: t.List[Column]):
         # If the two dataframes being joined come from the same branch, we then check if they have any columns that
@@ -1122,7 +1158,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         join_clause = join_columns[0]
         return join_clause
 
-    @operation(Operation.FROM)
     def join(
         self,
         other: Self,
@@ -1130,8 +1165,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         how: str = "inner",
         **kwargs,
     ) -> Self:
-        from sqlframe.base.functions import coalesce
-
         if (on is None) and ("cross" not in how):
             logger.warning("Got no value for on. This appears to change the join to a cross join.")
             how = "cross"
@@ -1141,245 +1174,104 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             logger.warning("Got cross join with an 'on' value. This will result in an inner join.")
             how = "inner"
 
-        other_df = other._convert_leaf_to_cte()
-        other_leaf_cte = other_df.expression.ctes[-1]
-        join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
-        # We will determine actual "join on" expression later so we don't provide it at first
-        join_type = JOIN_TYPE_MAPPING.get(how, how).replace("_", " ")
-        # Find the right table: if other's leaf CTE was reused (skipped as duplicate),
-        # it already exists in join_expression under its original name. Otherwise the
-        # newly added (possibly renamed) CTE is at the end of the list.
-        other_leaf_name = other_leaf_cte.alias_or_name
-        other_leaf_seq_id = other_leaf_cte.args.get("sequence_id")
-        effective_join_alias = next(
-            (
-                c.alias_or_name
-                for c in join_expression.ctes
-                if c.alias_or_name == other_leaf_name
-                and c.args.get("sequence_id") == other_leaf_seq_id
+        return self._with_plan(
+            JoinNode(
+                parent=self._plan,
+                other=other._plan,
+                on=on,
+                how=how,
+                left_branch_id=self.branch_id,
+                right_branch_id=other.branch_id,
+                left_known_uuids=self.known_uuids.copy(),
+                right_known_uuids=other.known_uuids.copy(),
+                left_pending_hints=list(self.pending_hints),
+                right_pending_hints=list(other.pending_hints),
             ),
-            join_expression.ctes[-1].alias,
+            pending_hints=[],
         )
-        join_expression = join_expression.join(effective_join_alias, join_type=join_type)
-        self_columns = self._get_outer_select_columns(join_expression)
-        other_columns = self._get_outer_select_columns(other_df.expression)
-        join_columns = self._ensure_and_normalize_cols(on)
-        self._handle_self_join(other_df, join_columns)
 
-        # Determines the join clause and select columns to be used passed on what type of columns were provided for
-        # the join. The columns returned changes based on how the on expression is provided.
-        select_columns = (
-            self_columns
-            if join_type in ["left anti", "left semi"]
-            else self_columns + other_columns
-        )
-        if join_type != "cross":
-            if isinstance(join_columns[0].expression, exp.Column):
-                """
-                Unique characteristics of join on column names only:
-                * The column names are put at the front of the select list
-                * The column names are deduplicated across the entire select list and only the column names (other dups are allowed)
-                """
-                table_names = [
-                    table.alias_or_name
-                    for table in get_tables_from_expression_with_join(join_expression)
-                ]
-
-                join_column_pairs, join_clause = self._handle_join_column_names_only(
-                    join_columns, join_expression, other_df, table_names
-                )
-                join_column_names = [
-                    coalesce(
-                        left_col.sql(dialect=self.session.input_dialect),
-                        right_col.sql(dialect=self.session.input_dialect),
-                    ).alias(left_col.alias_or_name)
-                    if join_type == "full outer"
-                    else left_col.alias_or_name
-                    for left_col, right_col in join_column_pairs
-                ]
-                # To match spark behavior only the join clause gets deduplicated and it gets put in the front of the column list
-                select_column_names: list[str | Column] = [
-                    (
-                        column.alias_or_name
-                        if not isinstance(column.expression.this, exp.Star)
-                        else column.sql()
-                    )
-                    for column in select_columns
-                ]
-                select_column_names = [
-                    column_name
-                    for column_name in select_column_names
-                    if column_name
-                    not in [
-                        x.alias_or_name if not isinstance(x, str) else x for x in join_column_names
-                    ]
-                ]
-                select_column_names = join_column_names + select_column_names
-            else:
-                """
-                Unique characteristics of join on expressions:
-                * There is no deduplication of the results.
-                * The left join dataframe columns go first and right come after. No sort preference is given to join columns
-                """
-                join_clause = self._normalize_join_clause(join_columns, join_expression)
-                select_column_names = [column.alias_or_name for column in select_columns]
-
-            # Update the on expression with the actual join clause to replace the dummy one from before
-        else:
-            select_column_names = [column.alias_or_name for column in select_columns]
-            join_clause = None
-        join_expression.args["joins"][-1].set("on", join_clause.expression if join_clause else None)
-        new_df = self.copy(expression=join_expression)
-        new_df.pending_join_hints.extend(self.pending_join_hints)
-        new_df.pending_hints.extend(other_df.pending_hints)
-        new_df = new_df.select.__wrapped__(  # type: ignore
-            new_df, *select_column_names, skip_update_display_name_mapping=True
-        )
-        return new_df
-
-    @operation(Operation.ORDER_BY)
     def orderBy(
         self,
         *cols: t.Union[str, Column],
         ascending: t.Optional[t.Union[t.Any, t.List[t.Any]]] = None,
     ) -> Self:
-        """
-        This implementation lets any ordered columns take priority over whatever is provided in `ascending`. Spark
-        has irregular behavior and can result in runtime errors. Users shouldn't be mixing the two anyways so this
-        is unlikely to come up.
-        """
-        columns = self._ensure_and_normalize_cols(cols)
-        pre_ordered_col_indexes = [
-            i for i, col in enumerate(columns) if isinstance(col.expression, exp.Ordered)
-        ]
-        if ascending is None:
-            ascending = [True] * len(columns)
-        elif not isinstance(ascending, list):
-            ascending = [ascending] * len(columns)
-        ascending = [bool(x) for i, x in enumerate(ascending)]
-        assert len(columns) == len(ascending), (
-            "The length of items in ascending must equal the number of columns provided"
-        )
-        col_and_ascending = list(zip(columns, ascending))
-        order_by_columns = [
-            (
-                sqlglot.parse_one(
-                    f"{col.expression.sql(dialect=self.session.input_dialect)} {'DESC' if not asc else ''}",
-                    dialect=self.session.input_dialect,
-                    into=exp.Ordered,
-                )
-                if i not in pre_ordered_col_indexes
-                else columns[i].column_expression
-            )
-            for i, (col, asc) in enumerate(col_and_ascending)
-        ]
-        return self.copy(expression=self.expression.order_by(*order_by_columns))
+        return self._with_plan(SortNode(parent=self._plan, cols=cols, ascending=ascending))
 
     sort = orderBy
 
-    @operation(Operation.FROM)
     def union(self, other: Self) -> Self:
-        return self._set_operation(exp.Union, other, False)
+        return self._with_plan(
+            SetOpNode(
+                parent=self._plan,
+                other=other._plan,
+                op_class=exp.Union,
+                distinct=False,
+            )
+        )
 
     unionAll = union
 
-    @operation(Operation.FROM)
     def unionByName(self, other: Self, allowMissingColumns: bool = False) -> Self:
-        l_columns = self._columns
-        r_columns = other._columns
-        if not allowMissingColumns:
-            l_expressions = l_columns
-            r_expressions = l_columns
-        else:
-            l_expressions = []
-            r_expressions = []
-            r_columns_unused = copy(r_columns)
-            for l_column in l_columns:
-                l_expressions.append(l_column)
-                if l_column in r_columns:
-                    r_expressions.append(l_column)
-                    r_columns_unused.remove(l_column)
-                else:
-                    r_expressions.append(exp.alias_(exp.Null(), l_column, copy=False))
-            for r_column in r_columns_unused:
-                l_expressions.append(exp.alias_(exp.Null(), r_column, copy=False))
-                r_expressions.append(r_column)
-        r_df = (
-            other.copy()._convert_leaf_to_cte().select(*self._ensure_list_of_columns(r_expressions))
+        return self._with_plan(
+            UnionByNameNode(
+                parent=self._plan,
+                other=other._plan,
+                allow_missing_columns=allowMissingColumns,
+            )
         )
-        l_df = self.copy()
-        if allowMissingColumns:
-            l_df = l_df._convert_leaf_to_cte().select(*self._ensure_list_of_columns(l_expressions))
-        return l_df._set_operation(exp.Union, r_df, False)
 
-    @operation(Operation.FROM)
     def intersect(self, other: Self) -> Self:
-        return self._set_operation(exp.Intersect, other, True)
-
-    @operation(Operation.FROM)
-    def intersectAll(self, other: Self) -> Self:
-        return self._set_operation(exp.Intersect, other, False)
-
-    @operation(Operation.FROM)
-    def exceptAll(self, other: Self) -> Self:
-        return self._set_operation(exp.Except, other, False)
-
-    @operation(Operation.SELECT)
-    def distinct(self) -> Self:
-        return self.copy(expression=self.expression.distinct())
-
-    @operation(Operation.SELECT)
-    def dropDuplicates(self, subset: t.Optional[t.List[str]] = None):
-        from sqlframe.base import functions as F
-        from sqlframe.base.window import Window
-
-        if not subset:
-            return self.distinct()
-        column_names = ensure_list(subset)
-        window = Window.partitionBy(*column_names).orderBy(*column_names)
-        return (
-            self.copy()
-            .withColumn("row_num", F.row_number().over(window))
-            .where(F.col("row_num") == F.lit(1))
-            .drop("row_num")
+        return self._with_plan(
+            SetOpNode(
+                parent=self._plan,
+                other=other._plan,
+                op_class=exp.Intersect,
+                distinct=True,
+            )
         )
+
+    def intersectAll(self, other: Self) -> Self:
+        return self._with_plan(
+            SetOpNode(
+                parent=self._plan,
+                other=other._plan,
+                op_class=exp.Intersect,
+                distinct=False,
+            )
+        )
+
+    def exceptAll(self, other: Self) -> Self:
+        return self._with_plan(
+            SetOpNode(
+                parent=self._plan,
+                other=other._plan,
+                op_class=exp.Except,
+                distinct=False,
+            )
+        )
+
+    def distinct(self) -> Self:
+        return self._with_plan(DistinctNode(parent=self._plan))
+
+    def dropDuplicates(self, subset: t.Optional[t.List[str]] = None):
+        return self._with_plan(DropDuplicatesNode(parent=self._plan, subset=subset))
 
     drop_duplicates = dropDuplicates
 
-    @operation(Operation.FROM)
     def dropna(
         self,
         how: str = "any",
         thresh: t.Optional[int] = None,
         subset: t.Optional[t.Union[str, t.Tuple[str, ...], t.List[str]]] = None,
     ) -> Self:
-        from sqlframe.base import functions as F
-
-        minimum_non_null = thresh or 0  # will be determined later if thresh is null
-        new_df = self.copy()
-        all_columns = self._get_outer_select_columns(new_df.expression)
-        if subset:
-            null_check_columns = self._ensure_and_normalize_cols(subset)
-        else:
-            null_check_columns = all_columns
-        if thresh is None:
-            minimum_num_nulls = 1 if how == "any" else len(null_check_columns)
-        else:
-            minimum_num_nulls = len(null_check_columns) - minimum_non_null + 1
-        if minimum_num_nulls > len(null_check_columns):
-            raise RuntimeError(
-                f"The minimum num nulls for dropna must be less than or equal to the number of columns. "
-                f"Minimum num nulls: {minimum_num_nulls}, Num Columns: {len(null_check_columns)}"
+        return self._with_plan(
+            DropNaNode(
+                parent=self._plan,
+                how=how,
+                thresh=thresh,
+                subset=subset,
             )
-        if_null_checks = [
-            F.when(column.isNull(), F.lit(1)).otherwise(F.lit(0)) for column in null_check_columns
-        ]
-        nulls_added_together = functools.reduce(lambda x, y: x + y, if_null_checks)
-        num_nulls = nulls_added_together.alias("num_nulls")
-        new_df = new_df.select(num_nulls, append=True)
-        filtered_df = new_df.where(F.col("num_nulls") < F.lit(minimum_num_nulls))
-        final_df = filtered_df.select(*all_columns)
-        return final_df
+        )
 
     def _get_explain_plan_rows(self) -> t.List[Row]:
         sql_queries = self.sql(
@@ -1464,100 +1356,33 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         results = self._get_explain_plan_rows()
         print(results[0][0])
 
-    @operation(Operation.FROM)
     def fillna(
         self,
         value: t.Union[PrimitiveType, t.Dict[str, PrimitiveType]],
         subset: t.Optional[t.Union[str, t.Tuple[str, ...], t.List[str]]] = None,
     ) -> Self:
-        """
-        Functionality Difference: If you provide a value to replace a null and that type conflicts
-        with the type of the column then PySpark will just ignore your replacement.
-        This will try to cast them to be the same in some cases. So they won't always match.
-        Best to not mix types so make sure replacement is the same type as the column
-
-        Possibility for improvement: Use `typeof` function to get the type of the column
-        and check if it matches the type of the value provided. If not then make it null.
-        """
-        from sqlframe.base import functions as F
-
-        values = None
-        columns = None
-        new_df = self.copy()
-        all_columns = self._get_outer_select_columns(new_df.expression)
-        all_column_mapping = {column.alias_or_name: column for column in all_columns}
-        if isinstance(value, dict):
-            values = list(value.values())
-            columns = self._ensure_and_normalize_cols(list(value))
-        if not columns:
-            columns = self._ensure_and_normalize_cols(subset) if subset else all_columns
-        if not values:
-            assert not isinstance(value, dict)
-            values = [value] * len(columns)
-        value_columns = [F.lit(value) for value in values]
-
-        null_replacement_mapping = {
-            column.alias_or_name: (
-                F.when(column.isNull(), value).otherwise(column).alias(column.alias_or_name)
+        return self._with_plan(
+            FillNaNode(
+                parent=self._plan,
+                value=value,
+                subset=subset,
             )
-            for column, value in zip(columns, value_columns)
-        }
-        null_replacement_mapping = {**all_column_mapping, **null_replacement_mapping}
-        null_replacement_columns = [
-            null_replacement_mapping[column.alias_or_name] for column in all_columns
-        ]
-        new_df = new_df.select(*null_replacement_columns)
-        return new_df
+        )
 
-    @operation(Operation.FROM)
     def replace(
         self,
         to_replace: t.Union[bool, int, float, str, t.List, t.Dict],
         value: t.Optional[t.Union[bool, int, float, str, t.List]] = None,
         subset: t.Optional[t.Collection[ColumnOrName] | ColumnOrName] = None,
     ) -> Self:
-        from sqlframe.base import functions as F
-        from sqlframe.base.column import Column
-
-        old_values = None
-        new_df = self.copy()
-        all_columns = self._get_outer_select_columns(new_df.expression)
-        all_column_mapping = {column.alias_or_name: column for column in all_columns}
-
-        columns = self._ensure_and_normalize_cols(subset) if subset else all_columns
-        if isinstance(to_replace, dict):
-            old_values = list(to_replace)
-            new_values = list(to_replace.values())
-        elif not old_values and isinstance(to_replace, list):
-            assert isinstance(value, list), "value must be a list since the replacements are a list"
-            assert len(to_replace) == len(value), (
-                "the replacements and values must be the same length"
+        return self._with_plan(
+            ReplaceNode(
+                parent=self._plan,
+                to_replace=to_replace,
+                value=value,
+                subset=subset,
             )
-            old_values = to_replace
-            new_values = value
-        else:
-            old_values = [to_replace] * len(columns)
-            new_values = [value] * len(columns)
-        old_values = [F.lit(value) for value in old_values]
-        new_values = [F.lit(value) for value in new_values]
-
-        replacement_mapping = {}
-        for column in columns:
-            # expression = Column(None)
-            expression = F.lit(None)
-            for i, (old_value, new_value) in enumerate(zip(old_values, new_values)):
-                if i == 0:
-                    expression = F.when(column == old_value, new_value)
-                else:
-                    expression = expression.when(column == old_value, new_value)
-            replacement_mapping[column.alias_or_name] = expression.otherwise(column).alias(
-                column.expression.alias_or_name
-            )
-
-        replacement_mapping = {**all_column_mapping, **replacement_mapping}
-        replacement_columns = [replacement_mapping[column.alias_or_name] for column in all_columns]
-        new_df = new_df.select(*replacement_columns)
-        return new_df
+        )
 
     def transform(self, func: t.Callable[..., DF], *args: t.Any, **kwargs: t.Any) -> Self:
         """Returns a new :class:`DataFrame`. Concise syntax for chaining custom transformations.
@@ -1616,52 +1441,17 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         """
         return func(self, *args, **kwargs)  # type: ignore
 
-    @operation(Operation.SELECT)
     def withColumn(self, colName: str, col: Column) -> Self:
-        return self.withColumns.__wrapped__(self, {colName: col})  # type: ignore
+        return self.withColumns({colName: col})
 
     def _rename_columns(self, cols_map: t.Dict[str, str], raise_on_missing: bool) -> Self:
-        """Rename columns in-place on the expression's SELECT clause.
-
-        Handles INIT and cases where last_op > SELECT (e.g., ORDER_BY, LIMIT),
-        but intentionally skips the SELECT == SELECT CTE conversion to avoid wrapping
-        join expressions in a CTE that loses table-qualified column references.
-        """
-        df = self
-        if df.last_op == Operation.INIT:
-            df = df._convert_leaf_to_cte()
-            df.last_op = Operation.NO_OP
-        if Operation.SELECT < df.last_op:
-            df = df._convert_leaf_to_cte()
-
-        expression = df.expression.copy()
-        outer_select = expression.find(exp.Select)
-        if not outer_select:
-            if raise_on_missing:
-                raise ValueError("Tried to rename a column that doesn't exist")
-            return df.copy(expression=expression)
-
-        normalized_map = {df.session._normalize_string(k): v for k, v in cols_map.items()}
-        found_any = False
-        display_updates: t.Dict[str, str] = {}
-        for i, select_expr in enumerate(outer_select.expressions):
-            new_name = normalized_map.get(select_expr.alias_or_name)
-            if new_name is not None:
-                new_identifier = exp.to_identifier(new_name)
-                if isinstance(select_expr, exp.Alias):
-                    select_expr.set("alias", new_identifier)
-                else:
-                    outer_select.expressions[i] = exp.Alias(this=select_expr, alias=new_identifier)
-                display_updates[df.session._normalize_string(new_name)] = new_name
-                found_any = True
-
-        if raise_on_missing and not found_any:
-            raise ValueError("Tried to rename a column that doesn't exist")
-
-        result = df.copy(expression=expression)
-        result.last_op = Operation.SELECT
-        result.display_name_mapping.update(display_updates)
-        return result
+        return self._with_plan(
+            RenameColumnsNode(
+                parent=self._plan,
+                cols_map=cols_map,
+                raise_on_missing=raise_on_missing,
+            )
+        )
 
     def withColumnRenamed(self, existing: str, new: str) -> Self:
         return self._rename_columns({existing: new}, raise_on_missing=True)
@@ -1696,7 +1486,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         """
         return self._rename_columns(colsMap, raise_on_missing=False)
 
-    @operation(Operation.SELECT)
     def withColumns(self, *colsMap: t.Dict[str, Column]) -> Self:
         """
         Returns a new :class:`DataFrame` by adding multiple columns or replacing the
@@ -1732,85 +1521,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         |  5|  Bob|   7|   8|
         +---+-----+----+----+
         """
-        if len(colsMap) != 1:
-            raise ValueError("Only a single map is supported")
-        col_map = {
-            self._ensure_and_normalize_col(k): (self._ensure_and_normalize_col(v), k)
-            for k, v in colsMap[0].items()
-        }
-        existing_cols = self._get_outer_select_columns(self.expression)
-        existing_col_names = [x.alias_or_name for x in existing_cols]
-        select_columns = existing_cols
-        for col, (col_value, display_name) in col_map.items():
-            column_name = col.alias_or_name
-            existing_col_index = (
-                existing_col_names.index(column_name) if column_name in existing_col_names else None
-            )
-            if existing_col_index is not None:
-                select_columns[existing_col_index] = col_value.alias(display_name)
-            else:
-                select_columns.append(col_value.alias(display_name))
-        self._update_display_name_mapping(
-            [col for col in col_map], [name for _, name in col_map.values()]
-        )
-        return self.select.__wrapped__(self, *select_columns, skip_update_display_name_mapping=True)  # type: ignore
+        return self._with_plan(WithColumnsNode(parent=self._plan, cols_map=colsMap))
 
-    @operation(Operation.SELECT)
     def drop(self, *cols: t.Union[str, Column]) -> Self:
-        # Separate string column names from Column objects for different handling
-        column_objs, column_names = partition_to(lambda x: isinstance(x, str), cols, list, set)
+        return self._with_plan(DropNode(parent=self._plan, cols=cols))
 
-        # Normalize only the Column objects (strings will be handled as unqualified)
-        drop_cols = self._ensure_and_normalize_cols(column_objs) if column_objs else []
-
-        # Work directly with the expression's select columns to preserve table qualifiers
-        current_expressions = self.expression.expressions
-        drop_sql = {drop_col.expression.sql() for drop_col in drop_cols}
-
-        # Create a more sophisticated matching function that considers table qualifiers
-        def should_drop_expression(expr: exp.Expression) -> bool:
-            # Check against fully qualified Column objects and
-            # Check against unqualified string column names (drop ALL columns with this name)
-            if expr.sql() in drop_sql:
-                return True
-
-            if isinstance(expr, exp.Column) and (alias_or_name := expr.alias_or_name):
-                # Check direct match first
-                if alias_or_name in column_names:
-                    return True
-
-                # Handle string column references that contain aliases
-                for col_name in column_names:
-                    if ("." in col_name) and alias_or_name == (col_name.split(".", maxsplit=1)[-1]):
-                        # Extract the column name part after the last dot
-                        return True
-
-                # Handle case where normalized columns have table qualifiers but actual expressions
-                # are unqualified. This happens when using aliased column references like
-                # f.col('df.foo')
-
-                # Check if any drop column matches by column name AND table qualifier
-                for drop_col in drop_cols:
-                    if ((drop_expression := drop_col.expression).alias_or_name) == alias_or_name:
-                        if expr_table := expr.table:
-                            drop_table = drop_expression.args.get("table")
-                            if (not drop_table) or (expr_table == drop_table):
-                                return True
-                        else:
-                            return True
-
-            return False
-
-        new_expressions = [expr for expr in current_expressions if not should_drop_expression(expr)]
-        return self.select.__wrapped__(  # type: ignore
-            self, *new_expressions, skip_update_display_name_mapping=True
-        )
-
-    @operation(Operation.LIMIT)
     def limit(self, num: int) -> Self:
-        if limit_exp := self.expression.args.get("limit"):
-            num = min(num, int(limit_exp.expression.this))
-        return self.copy(expression=self.expression.limit(num))
+        return self._with_plan(LimitNode(parent=self._plan, num=num))
 
     def toDF(self, *cols: str) -> Self:
         """Returns a new :class:`DataFrame` that with new specified column names
@@ -1845,18 +1562,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         | 16|  Bob|
         +---+-----+
         """
-        if len(cols) != len(self._columns):
-            raise ValueError(
-                f"Number of column names does not match number of columns: {len(cols)} != {len(self._columns)}"
-            )
-        expression = self.expression.copy()
-        expression = expression.select(
-            *[exp.alias_(col, new_col) for col, new_col in zip(expression.expressions, cols)],
-            append=False,
-        )
-        return self.copy(expression=expression)
+        return self._with_plan(ToDFNode(parent=self._plan, col_names=cols))
 
-    @operation(Operation.NO_OP)
     def hint(self, name: str, *parameters: t.Optional[t.Union[str, int]]) -> Self:
         from sqlframe.base.column import Column
 
@@ -1866,32 +1573,30 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             if parameters
             else Column.ensure_cols([self.sequence_id])
         )
-        return self._hint(name, parameter_columns)
+        hint_expression = self._build_hint_expression(name, parameter_columns)
+        return self._with_plan(HintNode(parent=self._plan, hint_expression=hint_expression))
 
-    @operation(Operation.NO_OP)
     def repartition(self, numPartitions: t.Union[int, ColumnOrName], *cols: ColumnOrName) -> Self:
         num_partition_cols = self._ensure_list_of_columns(numPartitions)
-        columns = self._ensure_and_normalize_cols(cols)
+        columns = self._ensure_list_of_columns(cols)
         args = num_partition_cols + columns
-        return self._hint("repartition", args)
+        hint_expression = self._build_hint_expression("repartition", args)
+        return self._with_plan(HintNode(parent=self._plan, hint_expression=hint_expression))
 
-    @operation(Operation.NO_OP)
     def coalesce(self, numPartitions: int) -> Self:
         lit = get_func_from_session("lit")
-
         num_partitions = lit(numPartitions)
-        return self._hint("coalesce", [num_partitions])
+        hint_expression = self._build_hint_expression("coalesce", [num_partitions])
+        return self._with_plan(HintNode(parent=self._plan, hint_expression=hint_expression))
 
-    @operation(Operation.NO_OP)
     def cache(self) -> Self:
-        return self._cache(storage_level="MEMORY_AND_DISK")
+        return self._with_plan(CacheNode(parent=self._plan, storage_level="MEMORY_AND_DISK"))
 
-    @operation(Operation.NO_OP)
     def persist(self, storageLevel: StorageLevel = "MEMORY_AND_DISK_SER") -> Self:
         """
         Storage Level Options: https://spark.apache.org/docs/3.0.0-preview/sql-ref-syntax-aux-cache-cache-table.html
         """
-        return self._cache(storageLevel)
+        return self._with_plan(CacheNode(parent=self._plan, storage_level=storageLevel))
 
     @t.overload
     def cube(self, *cols: ColumnOrName) -> GROUP_DATA: ...
@@ -1938,13 +1643,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         +-----+----+-----+
         """
 
-        columns = self._ensure_and_normalize_cols(cols)
-        grouping_columns: t.List[t.List[Column]] = []
-        for i in reversed(range(len(columns) + 1)):
-            grouping_columns.extend([list(x) for x in itertools.combinations(columns, i)])
-        return self._group_data(self, grouping_columns, self.last_op)
+        columns = self._ensure_list_of_columns(cols)
+        return self._group_data(self, columns, self.last_op, is_cube=True)
 
-    @operation(Operation.SELECT)
     def unpivot(
         self,
         ids: t.Union[ColumnOrName, t.Collection[ColumnOrName]],
@@ -2026,31 +1727,15 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         --------
         DataFrame.melt
         """
-        from sqlframe.base import functions as F
-
-        id_columns = self._ensure_and_normalize_cols(ids)
-        if not values:
-            outer_selects = self._get_outer_select_columns(self.expression)
-            values = [
-                column
-                for column in outer_selects
-                if column.alias_or_name not in {x.alias_or_name for x in id_columns}
-            ]
-        value_columns = self._ensure_and_normalize_cols(values)
-
-        df = self._convert_leaf_to_cte()
-        selects = []
-        for value in value_columns:
-            selects.append(
-                exp.select(
-                    *[x.column_expression for x in id_columns],
-                    F.lit(value.alias_or_name).alias(variableColumnName).expression,
-                    value.alias(valueColumnName).expression,
-                ).from_(df.expression.ctes[-1].alias_or_name)
+        return self._with_plan(
+            UnpivotNode(
+                parent=self._plan,
+                ids=ids,
+                values=values,
+                variable_column_name=variableColumnName,
+                value_column_name=valueColumnName,
             )
-        unioned_expression = functools.reduce(lambda x, y: x.union(y, distinct=False), selects)
-        final_expression = self._add_ctes_to_expression(unioned_expression, df.expression.ctes)
-        return self.copy(expression=final_expression)._convert_leaf_to_cte()
+        )
 
     def collect(self) -> t.List[Row]:
         return self._collect()
