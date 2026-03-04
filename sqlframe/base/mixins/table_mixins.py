@@ -57,7 +57,9 @@ class _BaseTableMixins(_BaseTable, t.Generic[DF]):
             logger.warning("Empty value for `where`clause. Defaults to `True`.")
             condition: exp.Expression = exp.Boolean(this=True)
         else:
-            condition_list = self._ensure_and_normalize_cols(where, self.expression)
+            from sqlframe.base.normalize import ensure_and_normalize_cols
+
+            condition_list = ensure_and_normalize_cols(self.session, self.expression, where)
             if len(condition_list) > 1:
                 condition_list = [functools.reduce(lambda x, y: x & y, condition_list)]
             for col_expr in condition_list[0].expression.find_all(exp.Column):
@@ -98,16 +100,18 @@ class UpdateSupportMixin(_BaseTableMixins, t.Generic[DF]):
         self,
         set_: t.Dict[t.Union[Column, str], t.Union[Column, "ColumnOrLiteral", exp.Expression]],
     ) -> t.Dict[str, exp.Expression]:
+        from sqlframe.base.normalize import ensure_and_normalize_col
+
         self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
         update_set = {}
         for key, val in set_.items():
-            key_column: Column = self._ensure_and_normalize_col(key)
+            key_column: Column = ensure_and_normalize_col(self.session, self.expression, key)
             key_expr = list(key_column.expression.find_all(exp.Column))
             if len(key_expr) > 1:
                 raise ValueError(f"Can only update one a single column at a time.")
             key = key_expr[0].alias_or_name
 
-            val_column: Column = self._ensure_and_normalize_col(val)
+            val_column: Column = ensure_and_normalize_col(self.session, self.expression, val)
             for col_expr in val_column.expression.find_all(exp.Column):
                 if col_expr.table == self.expression.args["from_"].this.alias_or_name:
                     col_expr.set("table", exp.to_identifier(self_name))
@@ -275,8 +279,10 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         join_expression = self._add_ctes_to_expression(
             self.expression, other_df.expression.copy().ctes
         )
-        condition = self._ensure_and_normalize_cols(
-            condition, self.expression, remove_identifier_if_possible=False
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
+        condition = ensure_and_normalize_cols(
+            self.session, self.expression, condition, remove_identifier_if_possible=False
         )
         self._handle_self_join(other_df, condition)
 
@@ -305,18 +311,20 @@ class MergeSupportMixin(_BaseTable, t.Generic[DF]):
         ],
         other_df,
     ) -> t.Dict[exp.Column, exp.Expression]:
+        from sqlframe.base.normalize import ensure_and_normalize_col, ensure_and_normalize_cols
+
         self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
         other_name = self._create_hash_from_expression(other_df.expression)
         update_set = {}
         for key, val in assignments.items():
-            key_column: Column = self._ensure_and_normalize_col(key)
+            key_column: Column = ensure_and_normalize_col(self.session, self.expression, key)
             key_expr = list(key_column.expression.find_all(exp.Column))
             if len(key_expr) > 1:
                 raise ValueError(f"Target expression `{key_expr}` should be a single column.")
             column_key = exp.column(key_expr[0].alias_or_name)
 
-            val = self._ensure_and_normalize_col(val)
-            val = self._ensure_and_normalize_cols(val, other_df.expression)[0]
+            val = ensure_and_normalize_col(self.session, self.expression, val)
+            val = ensure_and_normalize_cols(self.session, other_df.expression, val)[0]
             if self.branch_id == other_df.branch_id:
                 other_df_unique_uuids = other_df.known_uuids - self.known_uuids
                 for col_expr in val.expression.find_all(exp.Column):

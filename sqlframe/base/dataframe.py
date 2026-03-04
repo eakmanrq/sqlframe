@@ -19,7 +19,7 @@ from prettytable import PrettyTable
 from sqlglot import Dialect, maybe_parse
 from sqlglot import expressions as exp
 from sqlglot import lineage as sqlglot_lineage
-from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
+from sqlglot.helper import ensure_list, object_to_dict, seq_get
 from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
 
@@ -463,43 +463,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         cte.set("sequence_id", sequence_id)
         return cte, name
 
-    def _ensure_list_of_columns(
-        self, cols: t.Optional[t.Union[ColumnOrLiteral, t.Collection[ColumnOrLiteral]]]
-    ) -> t.List[Column]:
-        from sqlframe.base.column import Column
-
-        return Column.ensure_cols(ensure_list(cols))  # type: ignore
-
-    def _ensure_and_normalize_cols(
-        self,
-        cols,
-        expression: t.Optional[exp.Select] = None,
-        skip_star_expansion: bool = False,
-        remove_identifier_if_possible: bool = True,
-    ) -> t.List[Column]:
-        from sqlframe.base.normalize import normalize
-
-        cols = self._ensure_list_of_columns(cols)
-        normalize(
-            self.session,
-            expression or self.expression,
-            cols,
-            remove_identifier_if_possible=remove_identifier_if_possible,
-        )
-        if not skip_star_expansion:
-            cols = list(flatten([self._expand_star(col) for col in cols]))
-        self._resolve_ambiguous_columns(cols)
-        return cols
-
-    def _ensure_and_normalize_col(self, col):
-        from sqlframe.base.column import Column
-        from sqlframe.base.normalize import normalize
-
-        col = Column.ensure_col(col)
-        normalize(self.session, self.expression, [col])
-        self._resolve_ambiguous_columns(col)
-        return col
-
     def _convert_leaf_to_cte(
         self, sequence_id: t.Optional[str] = None, name: t.Optional[str] = None
     ) -> Self:
@@ -690,44 +653,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         expression_select_pair = (type(self.output_expression_container), main_select)
         select_expressions.append(expression_select_pair)  # type: ignore
         return select_expressions
-
-    def _expand_star(self, col: Column) -> t.List[Column]:
-        from sqlframe.base.column import Column
-
-        if isinstance(col.column_expression, exp.Star):
-            return self._get_outer_select_columns(self.expression)
-        elif (
-            isinstance(col.column_expression, exp.Column)
-            and isinstance(col.column_expression.this, exp.Star)
-            and col.column_expression.args.get("table")
-        ):
-            for cte in self.expression.ctes:
-                if cte.alias_or_name == col.column_expression.args["table"].this:
-                    return [
-                        Column.ensure_col(exp.column(x.column_alias_or_name, cte.alias_or_name))
-                        for x in self._get_outer_select_columns(cte)
-                    ]
-            raise ValueError(
-                f"Could not find table to expand star: {col.column_expression.args['table']}"
-            )
-        return [col]
-
-    def _update_display_name_mapping(
-        self, normalized_columns: t.List[Column], user_input: t.Iterable[ColumnOrName]
-    ) -> None:
-        from sqlframe.base.column import Column
-
-        normalized_aliases = [x.alias_or_name for x in normalized_columns]
-        user_display_names = [
-            x.expression.meta.get("display_name") if isinstance(x, Column) else x
-            for x in user_input
-        ]
-        zipped = {
-            k: v
-            for k, v in dict(zip(normalized_aliases, user_display_names)).items()
-            if v is not None
-        }
-        self.display_name_mapping.update(zipped)
 
     def _set_display_names(self, select_expression: exp.Select) -> None:
         for index, column in enumerate(select_expression.expressions):
@@ -942,65 +867,6 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             _plan=plan,
         )
 
-    def _resolve_ambiguous_columns(self, columns: t.Union[Column, t.List[Column]]) -> None:
-        if "joins" not in self.expression.args:
-            return
-
-        from sqlframe.base.column import Column
-
-        col_list: t.List[Column] = t.cast(t.List[Column], ensure_list(columns))
-        ambiguous_cols: t.List[exp.Column] = list(
-            flatten(
-                [
-                    sub_col
-                    for col in col_list
-                    for sub_col in col.expression.find_all(exp.Column)
-                    if not sub_col.table
-                ]
-            )
-        )
-        if ambiguous_cols:
-            join_table_identifiers = [
-                x.this for x in get_tables_from_expression_with_join(self.expression)
-            ]
-            cte_names_in_join = [x.this for x in join_table_identifiers]
-            # If we have columns that resolve to multiple CTE expressions then we want to use each CTE left-to-right
-            # (or right to left if a right join) and therefore we allow multiple columns with the same
-            # name in the result. This matches the behavior of Spark.
-            resolved_column_position: t.Dict[exp.Column, int] = {
-                col.copy(): -1 for col in ambiguous_cols
-            }
-            cte_lookup = {cte.alias_or_name: cte for cte in self.expression.ctes}
-            for ambiguous_col in ambiguous_cols:
-                # Use FROM clause table order (left-to-right for normal joins,
-                # right-to-left for RIGHT joins) instead of CTE list order. This is
-                # semantically correct and avoids misresolution when a shared ancestor
-                # CTE sits earlier in the CTE list than the actual join tables.
-                join_side = self.expression.args["joins"][0].args.get("side", "")
-                ordered_join_cte_names = (
-                    list(reversed(cte_names_in_join)) if join_side == "right" else cte_names_in_join
-                )
-                ctes_with_column = [
-                    cte_lookup[name]
-                    for name in ordered_join_cte_names
-                    if name in cte_lookup
-                    and (
-                        ambiguous_col.alias_or_name in cte_lookup[name].this.named_selects
-                        or any(
-                            isinstance(sel, exp.Star) for sel in cte_lookup[name].this.expressions
-                        )
-                    )
-                ]
-                # Check if there is a CTE with this column that we haven't used before. If so, use it. Otherwise,
-                # use the same CTE we used before
-                cte = seq_get(ctes_with_column, resolved_column_position[ambiguous_col] + 1)
-                if cte:
-                    resolved_column_position[ambiguous_col] += 1
-                else:
-                    cte = seq_get(ctes_with_column, resolved_column_position[ambiguous_col])
-                if cte:
-                    ambiguous_col.set("table", exp.to_identifier(cte.alias_or_name))
-
     def select(self, *cols, **kwargs) -> Self:
         if not cols:
             return self
@@ -1148,9 +1014,12 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         *,
         remove_identifier_if_possible: bool = True,
     ) -> Column:
-        join_columns = self._ensure_and_normalize_cols(
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
+        join_columns = ensure_and_normalize_cols(
+            self.session,
+            join_expression or self.expression,
             join_columns,
-            join_expression,
             remove_identifier_if_possible=remove_identifier_if_possible,
         )
         if len(join_columns) > 1:
@@ -1566,10 +1435,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def hint(self, name: str, *parameters: t.Optional[t.Union[str, int]]) -> Self:
         from sqlframe.base.column import Column
+        from sqlframe.base.normalize import ensure_list_of_columns
 
         parameter_list = ensure_list(parameters)
         parameter_columns = (
-            self._ensure_list_of_columns(parameter_list)
+            ensure_list_of_columns(parameter_list)
             if parameters
             else Column.ensure_cols([self.sequence_id])
         )
@@ -1577,8 +1447,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self._with_plan(HintNode(parent=self._plan, hint_expression=hint_expression))
 
     def repartition(self, numPartitions: t.Union[int, ColumnOrName], *cols: ColumnOrName) -> Self:
-        num_partition_cols = self._ensure_list_of_columns(numPartitions)
-        columns = self._ensure_list_of_columns(cols)
+        from sqlframe.base.normalize import ensure_list_of_columns
+
+        num_partition_cols = ensure_list_of_columns(numPartitions)
+        columns = ensure_list_of_columns(cols)
         args = num_partition_cols + columns
         hint_expression = self._build_hint_expression("repartition", args)
         return self._with_plan(HintNode(parent=self._plan, hint_expression=hint_expression))
@@ -1643,7 +1515,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         +-----+----+-----+
         """
 
-        columns = self._ensure_list_of_columns(cols)
+        from sqlframe.base.normalize import ensure_list_of_columns
+
+        columns = ensure_list_of_columns(cols)
         return self._group_data(self, columns, self.last_op, is_cube=True)
 
     def unpivot(
@@ -1807,8 +1681,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             )
 
     def lineage(self, col: ColumnOrName, optimize: bool = True) -> sqlglot_lineage.Node:
+        from sqlframe.base.normalize import ensure_and_normalize_col
+
         return sqlglot_lineage.lineage(
-            column=self._ensure_and_normalize_col(col).alias_or_name,
+            column=ensure_and_normalize_col(self.session, self.expression, col).alias_or_name,
             sql=self._get_expressions(optimize=optimize)[0],
             schema=self.session.catalog._schema,
         )

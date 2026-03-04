@@ -421,8 +421,12 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         if empty_df:
             sel_expression = sel_expression.where(exp.false())
         df = self._create_df(sel_expression)
-        df._update_display_name_mapping(
-            df._ensure_and_normalize_cols(list(column_mapping.keys())), list(column_mapping.keys())
+        from sqlframe.base.normalize import ensure_and_normalize_cols, update_display_name_mapping
+
+        update_display_name_mapping(
+            df.display_name_mapping,
+            ensure_and_normalize_cols(self, df.expression, list(column_mapping.keys())),
+            list(column_mapping.keys()),
         )
         return df
 

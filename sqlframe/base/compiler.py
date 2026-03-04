@@ -378,17 +378,20 @@ class PlanCompiler:
     def _compile_filter(self, node: FilterNode) -> CompilationState:
         import sqlglot
 
+        from sqlframe.base.normalize import ensure_and_normalize_col
+
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.WHERE)
-        temp_df = self._create_temp_df(state)
 
         condition = node.condition
         if isinstance(condition, str):
-            col = temp_df._ensure_and_normalize_col(
-                sqlglot.parse_one(condition, dialect=self.session.input_dialect)
+            col = ensure_and_normalize_col(
+                self.session,
+                state.expression,
+                sqlglot.parse_one(condition, dialect=self.session.input_dialect),
             )
         else:
-            col = temp_df._ensure_and_normalize_col(condition)
+            col = ensure_and_normalize_col(self.session, state.expression, condition)
         if isinstance(col.expression, exp.Alias):
             col.expression = col.expression.this
 
@@ -414,11 +417,17 @@ class PlanCompiler:
         if isinstance(cols[0], list):
             cols = cols[0]
 
-        temp_df = self._create_temp_df(state)
-        columns = temp_df._ensure_and_normalize_cols(cols)
+        from sqlframe.base.normalize import (
+            ensure_and_normalize_cols,
+            update_display_name_mapping,
+        )
+
+        columns = ensure_and_normalize_cols(self.session, state.expression, cols)
 
         if "skip_update_display_name_mapping" not in kwargs:
-            unexpanded_columns = temp_df._ensure_and_normalize_cols(cols, skip_star_expansion=True)
+            unexpanded_columns = ensure_and_normalize_cols(
+                self.session, state.expression, cols, skip_star_expansion=True
+            )
             user_cols = list(cols)
             star_columns = []
             for index, user_col in enumerate(cols):
@@ -427,8 +436,7 @@ class PlanCompiler:
             for index in star_columns:
                 unexpanded_columns.pop(index)
                 user_cols.pop(index)
-            temp_df._update_display_name_mapping(unexpanded_columns, user_cols)
-            state.display_name_mapping = temp_df.display_name_mapping
+            update_display_name_mapping(state.display_name_mapping, unexpanded_columns, user_cols)
 
         kwargs["append"] = kwargs.get("append", False)
 
@@ -447,11 +455,12 @@ class PlanCompiler:
     def _compile_sort(self, node: SortNode) -> CompilationState:
         import sqlglot
 
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.ORDER_BY)
-        temp_df = self._create_temp_df(state)
 
-        columns = temp_df._ensure_and_normalize_cols(node.cols)
+        columns = ensure_and_normalize_cols(self.session, state.expression, node.cols)
         pre_ordered_col_indexes = [
             i for i, col in enumerate(columns) if isinstance(col.expression, exp.Ordered)
         ]
@@ -530,16 +539,23 @@ class PlanCompiler:
 
         skip_cte_wrap = self._can_skip_with_columns_cte_wrap(state, node)
 
+        from sqlframe.base.normalize import (
+            ensure_and_normalize_col,
+            ensure_and_normalize_cols,
+            update_display_name_mapping,
+        )
+
         if skip_cte_wrap:
             # Fast path: append new column expressions directly to existing SELECT.
             # Safe because all columns are NEW and don't reference newly added columns.
-            temp_df = self._create_temp_df(state)
             cols_map = node.cols_map
             if len(cols_map) != 1:
                 raise ValueError("Only a single map is supported")
 
             for col_name, col_value in cols_map[0].items():
-                normalized_value = temp_df._ensure_and_normalize_col(col_value)
+                normalized_value = ensure_and_normalize_col(
+                    self.session, state.expression, col_value
+                )
                 new_expr = normalized_value.alias(col_name).expression
                 state.expression = state.expression.select(new_expr, append=True)
                 normalized_name = self.session._normalize_string(col_name)
@@ -551,13 +567,15 @@ class PlanCompiler:
 
         # Standard path: CTE wrap then rebuild SELECT
         state = self._maybe_wrap_cte(state, Operation.SELECT)
-        temp_df = self._create_temp_df(state)
 
         cols_map = node.cols_map
         if len(cols_map) != 1:
             raise ValueError("Only a single map is supported")
         col_map = {
-            temp_df._ensure_and_normalize_col(k): (temp_df._ensure_and_normalize_col(v), k)
+            ensure_and_normalize_col(self.session, state.expression, k): (
+                ensure_and_normalize_col(self.session, state.expression, v),
+                k,
+            )
             for k, v in cols_map[0].items()
         }
         existing_cols = self._get_outer_select_columns(state.expression)
@@ -574,14 +592,15 @@ class PlanCompiler:
                 all_new = False
             else:
                 select_columns.append(col_value.alias(display_name))
-        temp_df._update_display_name_mapping(
-            [col for col in col_map], [name for _, name in col_map.values()]
+        update_display_name_mapping(
+            state.display_name_mapping,
+            [col for col in col_map],
+            [name for _, name in col_map.values()],
         )
-        state.display_name_mapping = temp_df.display_name_mapping
 
         # Normalize columns (resolves ambiguous references in join contexts)
         # then apply CAST aliasing
-        columns = temp_df._ensure_and_normalize_cols(select_columns)
+        columns = ensure_and_normalize_cols(self.session, state.expression, select_columns)
         columns = [
             col.alias(col.expression.alias_or_name)
             if isinstance(col.expression, exp.Cast) and col.expression.alias_or_name
@@ -600,18 +619,22 @@ class PlanCompiler:
         return state
 
     def _compile_drop(self, node: DropNode) -> CompilationState:
+        from sqlframe.base.normalize import ensure_and_normalize_cols
         from sqlframe.base.util import partition_to
 
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.SELECT)
-        temp_df = self._create_temp_df(state)
 
         cols = node.cols
         # Separate string column names from Column objects for different handling
         column_objs, column_names = partition_to(lambda x: isinstance(x, str), cols, list, set)
 
         # Normalize only the Column objects (strings will be handled as unqualified)
-        drop_cols = temp_df._ensure_and_normalize_cols(column_objs) if column_objs else []
+        drop_cols = (
+            ensure_and_normalize_cols(self.session, state.expression, column_objs)
+            if column_objs
+            else []
+        )
 
         # Work directly with the expression's select columns to preserve table qualifiers
         current_expressions = state.expression.expressions
@@ -657,12 +680,10 @@ class PlanCompiler:
                 f"{len(cols)} != {len(existing_expressions)}"
             )
 
-        expression = state.expression.copy()
-        expression = expression.select(
-            *[exp.alias_(col, new_col) for col, new_col in zip(expression.expressions, cols)],
+        state.expression = state.expression.select(
+            *[exp.alias_(col, new_col) for col, new_col in zip(state.expression.expressions, cols)],
             append=False,
         )
-        state.expression = expression
         return state
 
     def _compile_rename_columns(self, node: RenameColumnsNode) -> CompilationState:
@@ -680,12 +701,11 @@ class PlanCompiler:
         if Operation.SELECT < state.last_op:
             state = self._convert_leaf_to_cte(state)
 
-        expression = state.expression.copy()
+        expression = state.expression
         outer_select = expression.find(exp.Select)
         if not outer_select:
             if node.raise_on_missing:
                 raise ValueError("Tried to rename a column that doesn't exist")
-            state.expression = expression
             return state
 
         normalized_map = {self.session._normalize_string(k): v for k, v in node.cols_map.items()}
@@ -705,7 +725,6 @@ class PlanCompiler:
         if node.raise_on_missing and not found_any:
             raise ValueError("Tried to rename a column that doesn't exist")
 
-        state.expression = expression
         state.last_op = Operation.SELECT
         state.display_name_mapping.update(display_updates)
         return state
@@ -753,8 +772,9 @@ class PlanCompiler:
         right_state = self._compile_node(node.other)
         right_state = self._convert_leaf_to_cte(right_state)
 
-        base_expression = left_state.expression.copy()
-        base_expression = self._add_ctes_to_expression(base_expression, right_state.expression.ctes)
+        base_expression = self._add_ctes_to_expression(
+            left_state.expression, right_state.expression.ctes
+        )
         all_ctes = base_expression.ctes
         right_state.expression.set("with_", None)
         base_expression.set("with_", None)
@@ -810,16 +830,14 @@ class PlanCompiler:
                 l_expressions.append(exp.alias_(exp.Null(), r_column, copy=False))
                 r_expressions.append(r_column)
 
+        from sqlframe.base.normalize import ensure_list_of_columns
+
         # Build right side: CTE + select
-        r_df = r_temp_df._convert_leaf_to_cte().select(
-            *r_temp_df._ensure_list_of_columns(r_expressions)
-        )
+        r_df = r_temp_df._convert_leaf_to_cte().select(*ensure_list_of_columns(r_expressions))
         # Build left side
         l_df = l_temp_df
         if node.allow_missing_columns:
-            l_df = l_temp_df._convert_leaf_to_cte().select(
-                *l_temp_df._ensure_list_of_columns(l_expressions)
-            )
+            l_df = l_temp_df._convert_leaf_to_cte().select(*ensure_list_of_columns(l_expressions))
         # Perform the union using _set_operation on the DataFrames
         result_df = l_df._set_operation(exp.Union, r_df, False)
         # Compile the result's plan
@@ -831,17 +849,19 @@ class PlanCompiler:
     # -------------------------------------------------------------------
 
     def _compile_dropna(self, node: DropNaNode) -> CompilationState:
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.FROM)
-        temp_df = self._create_temp_df(state)
-        temp_df.last_op = state.last_op
 
         from sqlframe.base import functions as F
 
         minimum_non_null = node.thresh or 0
-        all_columns = self._get_outer_select_columns(temp_df.expression)
+        all_columns = self._get_outer_select_columns(state.expression)
         if node.subset:
-            null_check_columns = temp_df._ensure_and_normalize_cols(node.subset)
+            null_check_columns = ensure_and_normalize_cols(
+                self.session, state.expression, node.subset
+            )
         else:
             null_check_columns = all_columns
         if node.thresh is None:
@@ -860,6 +880,8 @@ class PlanCompiler:
         ]
         nulls_added_together = functools.reduce(lambda x, y: x + y, if_null_checks)
         num_nulls = nulls_added_together.alias("num_nulls")
+        temp_df = self._create_temp_df(state)
+        temp_df.last_op = state.last_op
         result_df = (
             temp_df.select(num_nulls, append=True)
             .where(F.col("num_nulls") < F.lit(minimum_num_nulls))
@@ -870,23 +892,25 @@ class PlanCompiler:
         return result_state
 
     def _compile_fillna(self, node: FillNaNode) -> CompilationState:
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.FROM)
-        temp_df = self._create_temp_df(state)
-        temp_df.last_op = state.last_op
 
         from sqlframe.base import functions as F
 
         values = None
         columns = None
-        all_columns = self._get_outer_select_columns(temp_df.expression)
+        all_columns = self._get_outer_select_columns(state.expression)
         all_column_mapping = {column.alias_or_name: column for column in all_columns}
         if isinstance(node.value, dict):
             values = list(node.value.values())
-            columns = temp_df._ensure_and_normalize_cols(list(node.value))
+            columns = ensure_and_normalize_cols(self.session, state.expression, list(node.value))
         if not columns:
             columns = (
-                temp_df._ensure_and_normalize_cols(node.subset) if node.subset else all_columns
+                ensure_and_normalize_cols(self.session, state.expression, node.subset)
+                if node.subset
+                else all_columns
             )
         if not values:
             assert not isinstance(node.value, dict)
@@ -903,24 +927,30 @@ class PlanCompiler:
         null_replacement_columns = [
             null_replacement_mapping[column.alias_or_name] for column in all_columns
         ]
+        temp_df = self._create_temp_df(state)
+        temp_df.last_op = state.last_op
         result_df = temp_df.select(*null_replacement_columns)
         result_state = self.compile_with_state(result_df._plan)
         result_state.last_op = Operation.FROM
         return result_state
 
     def _compile_replace(self, node: ReplaceNode) -> CompilationState:
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.FROM)
-        temp_df = self._create_temp_df(state)
-        temp_df.last_op = state.last_op
 
         from sqlframe.base import functions as F
 
         old_values = None
-        all_columns = self._get_outer_select_columns(temp_df.expression)
+        all_columns = self._get_outer_select_columns(state.expression)
         all_column_mapping = {column.alias_or_name: column for column in all_columns}
 
-        columns = temp_df._ensure_and_normalize_cols(node.subset) if node.subset else all_columns
+        columns = (
+            ensure_and_normalize_cols(self.session, state.expression, node.subset)
+            if node.subset
+            else all_columns
+        )
         to_replace = node.to_replace
         value = node.value
         if isinstance(to_replace, dict):
@@ -953,6 +983,8 @@ class PlanCompiler:
 
         replacement_mapping = {**all_column_mapping, **replacement_mapping}
         replacement_columns = [replacement_mapping[column.alias_or_name] for column in all_columns]
+        temp_df = self._create_temp_df(state)
+        temp_df.last_op = state.last_op
         result_df = temp_df.select(*replacement_columns)
         result_state = self.compile_with_state(result_df._plan)
         result_state.last_op = Operation.FROM
@@ -966,13 +998,12 @@ class PlanCompiler:
         import functools as ft
 
         from sqlframe.base import functions as F
+        from sqlframe.base.normalize import ensure_and_normalize_cols
 
         state = self._compile_node(node.parent)
         state = self._maybe_wrap_cte(state, Operation.SELECT)
-        temp_df = self._create_temp_df(state)
-        temp_df.last_op = state.last_op
 
-        id_columns = temp_df._ensure_and_normalize_cols(node.ids)
+        id_columns = ensure_and_normalize_cols(self.session, state.expression, node.ids)
         values = node.values
         if not values:
             outer_selects = self._get_outer_select_columns(state.expression)
@@ -981,8 +1012,10 @@ class PlanCompiler:
                 for column in outer_selects
                 if column.alias_or_name not in {x.alias_or_name for x in id_columns}
             ]
-        value_columns = temp_df._ensure_and_normalize_cols(values)
+        value_columns = ensure_and_normalize_cols(self.session, state.expression, values)
 
+        temp_df = self._create_temp_df(state)
+        temp_df.last_op = state.last_op
         df = temp_df._convert_leaf_to_cte()
         selects = []
         for value in value_columns:
@@ -1076,9 +1109,12 @@ class PlanCompiler:
         other_columns = self._get_outer_select_columns(right_state.expression)
 
         # 9. Normalize join columns against the left expression
-        left_temp_df = self._create_temp_df(left_state)
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         join_columns = (
-            left_temp_df._ensure_and_normalize_cols(node.on) if node.on is not None else []
+            ensure_and_normalize_cols(self.session, left_state.expression, node.on)
+            if node.on is not None
+            else []
         )
 
         # 10. Handle self-join: resolve column table qualifiers for the right side
@@ -1168,9 +1204,10 @@ class PlanCompiler:
                 select_column_names = join_column_names + select_column_names
             else:
                 # Expression join: normalize against the full join expression
-                normalized_join_columns = left_temp_df._ensure_and_normalize_cols(
-                    join_columns,
+                normalized_join_columns = ensure_and_normalize_cols(
+                    self.session,
                     join_expression,
+                    join_columns,
                     remove_identifier_if_possible=True,
                 )
                 if len(normalized_join_columns) > 1:
@@ -1219,7 +1256,9 @@ class PlanCompiler:
         """
         from sqlframe.base.normalize import (
             _extract_column_name,
+            ensure_and_normalize_cols,
             is_column_unambiguously_available,
+            update_display_name_mapping,
         )
 
         # 1. Compile the base DataFrame's plan
@@ -1233,9 +1272,10 @@ class PlanCompiler:
         state = self._maybe_wrap_cte(state, Operation.GROUP_BY)
 
         # 4. Normalize group-by columns
-        group_temp_df = self._create_temp_df(state)
         group_by_cols = (
-            group_temp_df._ensure_and_normalize_cols(node.parent.cols) if node.parent.cols else []
+            ensure_and_normalize_cols(self.session, state.expression, node.parent.cols)
+            if node.parent.cols
+            else []
         )
         # Post-process: remove table qualifiers for unambiguous columns
         for col in group_by_cols:
@@ -1248,13 +1288,11 @@ class PlanCompiler:
         state = self._maybe_wrap_cte(state, Operation.SELECT)
 
         # 6. Normalize agg expressions
-        agg_temp_df = self._create_temp_df(state)
-        agg_cols = agg_temp_df._ensure_and_normalize_cols(node.agg_exprs)
+        agg_cols = ensure_and_normalize_cols(self.session, state.expression, node.agg_exprs)
 
         # 7. Handle display name mapping for DataFrame.agg()
         if node.df_agg:
-            agg_temp_df._update_display_name_mapping(agg_cols, node.agg_exprs)
-            state.display_name_mapping = agg_temp_df.display_name_mapping
+            update_display_name_mapping(state.display_name_mapping, agg_cols, node.agg_exprs)
 
         # 8. Build the expression
         if not node.is_cube:
@@ -1314,11 +1352,14 @@ class PlanCompiler:
         state = self._maybe_wrap_cte(state, Operation.SELECT)
 
         # 4. Normalize group-by columns and agg expressions
-        temp_df = self._create_temp_df(state)
+        from sqlframe.base.normalize import ensure_and_normalize_cols
+
         group_by_cols = (
-            temp_df._ensure_and_normalize_cols(node.group_by_cols) if node.group_by_cols else []
+            ensure_and_normalize_cols(self.session, state.expression, node.group_by_cols)
+            if node.group_by_cols
+            else []
         )
-        cols = temp_df._ensure_and_normalize_cols(node.agg_exprs)
+        cols = ensure_and_normalize_cols(self.session, state.expression, node.agg_exprs)
 
         pivot_col = node.parent.pivot_col
         pivot_values = node.parent.pivot_values
