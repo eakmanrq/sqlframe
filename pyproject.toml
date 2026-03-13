@@ -48,7 +48,7 @@ dev = [
     "pandas-stubs>=2,<4",
     "psycopg>=3.1,<4",
     "pyarrow>=10,<24",
-    "pyspark>=2,<3.6",
+    "pyspark>=2,<4.2",
     "pytest>=8.2.0,<9.1",
     "pytest-forked",
     "pytest-postgresql>=6,<9",
@@ -85,7 +85,7 @@ snowflake = [
     "snowflake-connector-python[secure-local-storage]>=3.10.0,<4.4",
 ]
 spark = [
-    "pyspark>=2,<3.6",
+    "pyspark>=2,<4.2",
 ]
 
 [tool.setuptools.packages.find]
