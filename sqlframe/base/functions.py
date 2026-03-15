@@ -2509,17 +2509,23 @@ def from_json(
         else:
             schema_str = None
 
-        if schema_str is not None:
-            schema_lower = schema_str.lower()
-            if not any(schema_lower.startswith(prefix) for prefix in ("struct", "array", "map")):
-                schema_str = f"STRUCT<{schema_str}>"
-            target_dtype = expression.DataType.build(schema_str, dialect="spark")
-            col_expr = Column.ensure_col(col).column_expression
-            cast_expr = expression.Cast(
+        if schema_str is None:
+            raise ValueError(
+                "DuckDB does not support Column expressions as schema for from_json(). "
+                "Please provide a StructType, ArrayType, MapType, or string schema."
+            )
+
+        schema_lower = schema_str.lower()
+        if not any(schema_lower.startswith(prefix) for prefix in ("struct", "array", "map")):
+            schema_str = f"STRUCT<{schema_str}>"
+        target_dtype = expression.DataType.build(schema_str, dialect="spark")
+        col_expr = Column.ensure_col(col).column_expression
+        return Column(
+            expression.Cast(
                 this=expression.ParseJSON(this=col_expr),
                 to=target_dtype,
             )
-            return Column(cast_expr)
+        )
 
     if isinstance(schema, (ArrayType, StructType)):
         schema = schema.simpleString()
