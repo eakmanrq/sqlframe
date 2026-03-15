@@ -5560,15 +5560,14 @@ def test_collation(get_session_and_func):
     session, collation = get_session_and_func("collation")
     df = session.createDataFrame([("Spark SQL",)], ["a"])
     result = df.select(collation("a")).first()[0]
-    assert isinstance(result, str)
+    assert result == "SYSTEM.BUILTIN.UTF8_BINARY"
 
 
 def test_from_xml(get_session_and_func):
     session, from_xml = get_session_and_func("from_xml")
     df = session.createDataFrame([("<p><a>1</a></p>",)], ["xml"])
     result = df.select(from_xml("xml", "a INT").alias("r")).first()[0]
-    assert result is not None
-    assert result.a is not None
+    assert result.a == 1
 
 
 def test_input_file_block_length(get_session_and_func):
@@ -5617,9 +5616,7 @@ def test_make_time(get_session_and_func, get_func):
     session, make_time = get_session_and_func("make_time")
     lit = get_func("lit", session)
     result = session.range(1).select(make_time(lit(6), lit(30), lit(45))).first()[0]
-    assert result.hour == 6
-    assert result.minute == 30
-    assert result.second == 45
+    assert result == datetime.time(6, 30, 45)
 
 
 def test_make_valid_utf8(get_session_and_func):
@@ -5632,8 +5629,13 @@ def test_make_valid_utf8(get_session_and_func):
 def test_parse_json(get_session_and_func, get_func):
     session, parse_json = get_session_and_func("parse_json")
     lit = get_func("lit", session)
-    result = session.range(1).select(parse_json(lit('{"key": 42}'))).first()[0]
-    assert result is not None
+    variant_get = get_func("variant_get", session)
+    result = (
+        session.range(1)
+        .select(variant_get(parse_json(lit('{"key": 42}')), lit("$.key"), lit("INT")))
+        .first()[0]
+    )
+    assert result == 42
 
 
 def test_quote(get_session_and_func):
@@ -5654,20 +5656,20 @@ def test_schema_of_variant(get_session_and_func):
     session, schema_of_variant = get_session_and_func("schema_of_variant")
     df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     result = df.select(schema_of_variant("v")).first()[0]
-    assert "key" in result.lower()
+    assert result == "OBJECT<key: BIGINT>"
 
 
 def test_schema_of_variant_agg(get_session_and_func):
     session, schema_of_variant_agg = get_session_and_func("schema_of_variant_agg")
     df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     result = df.select(schema_of_variant_agg("v")).first()[0]
-    assert "key" in result.lower()
+    assert result == "OBJECT<key: BIGINT>"
 
 
 def test_schema_of_xml(get_session_and_func):
     session, schema_of_xml = get_session_and_func("schema_of_xml")
     result = session.range(1).select(schema_of_xml("<p><a>1</a></p>")).first()[0]
-    assert "a" in result.lower()
+    assert result == "STRUCT<a: BIGINT>"
 
 
 def test_string_agg_distinct(get_session_and_func):
@@ -5690,40 +5692,41 @@ def test_time_trunc(get_session_and_func, get_func):
     lit = get_func("lit", session)
     df = session.sql("SELECT TIME '06:30:45' AS t")
     result = df.select(time_trunc(lit("hour"), "t")).first()[0]
-    assert result.hour == 6
-    assert result.minute == 0
-    assert result.second == 0
+    assert result == datetime.time(6, 0, 0)
 
 
 def test_to_time(get_session_and_func):
     session, to_time = get_session_and_func("to_time")
     df = session.createDataFrame([("06:30:45",)], ["a"])
     result = df.select(to_time("a")).first()[0]
-    assert result.hour == 6
-    assert result.minute == 30
-    assert result.second == 45
+    assert result == datetime.time(6, 30, 45)
 
 
-def test_to_variant_object(get_session_and_func):
+def test_to_variant_object(get_session_and_func, get_func):
     session, to_variant_object = get_session_and_func("to_variant_object")
+    schema_of_variant = get_func("schema_of_variant", session)
     df = session.sql("SELECT struct(1 AS key, 'value' AS val) AS s")
-    result = df.select(to_variant_object("s")).first()[0]
-    assert result is not None
+    variant_col = df.select(to_variant_object("s").alias("v"))
+    result = variant_col.select(schema_of_variant("v")).first()[0]
+    assert result == "OBJECT<key: BIGINT, val: STRING>"
 
 
-def test_to_xml(get_session_and_func):
+def test_to_xml(get_session_and_func, get_func):
     session, to_xml = get_session_and_func("to_xml")
-    df = session.sql("SELECT struct(1 AS a) AS s")
-    result = df.select(to_xml("s")).first()[0]
-    assert result is not None
-    assert "<a>" in result
+    struct = get_func("struct", session)
+    df = session.createDataFrame([(2, "Alice")], ["age", "name"])
+    result = df.select(to_xml(struct("age", "name"), {"rowTag": "person"})).first()[0]
+    assert result == "<person>\n    <age>2</age>\n    <name>Alice</name>\n</person>"
 
 
 def test_try_make_interval(get_session_and_func, get_func):
     session, try_make_interval = get_session_and_func("try_make_interval")
     lit = get_func("lit", session)
     result = session.range(1).select(try_make_interval(years=lit(1), months=lit(2))).first()[0]
+    # interval string representation includes years and months
     assert result is not None
+    assert "1" in str(result)
+    assert "2" in str(result)
 
 
 def test_try_make_timestamp(get_session_and_func):
@@ -5769,7 +5772,11 @@ def test_try_mod(get_session_and_func, get_func):
 def test_try_parse_json(get_session_and_func, get_func):
     session, try_parse_json = get_session_and_func("try_parse_json")
     lit = get_func("lit", session)
-    assert session.range(1).select(try_parse_json(lit('{"key": 42}'))).first()[0] is not None
+    try_variant_get = get_func("try_variant_get", session)
+    valid = session.range(1).select(
+        try_variant_get(try_parse_json(lit('{"key": 42}')), lit("$.key"), lit("INT"))
+    )
+    assert valid.first()[0] == 42
     assert session.range(1).select(try_parse_json(lit("not json"))).first()[0] is None
 
 
@@ -5803,7 +5810,7 @@ def test_try_to_time(get_session_and_func):
     session, try_to_time = get_session_and_func("try_to_time")
     df = session.createDataFrame([("06:30:45",), ("invalid",)], ["a"])
     result = df.select(try_to_time("a")).collect()
-    assert result[0][0].hour == 6
+    assert result[0][0] == datetime.time(6, 30, 45)
     assert result[1][0] is None
 
 
