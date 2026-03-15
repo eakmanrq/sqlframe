@@ -597,7 +597,7 @@ def compare_frames(pyspark_session: PySparkSession) -> t.Callable:
         def compare_schemas(schema_1, schema_2):
             for schema in [schema_1, schema_2]:
                 for struct_field in schema.fields:
-                    struct_field.func_metadata = {}
+                    struct_field.metadata = {}
             assert schema_1 == schema_2
 
         force_sort = sort

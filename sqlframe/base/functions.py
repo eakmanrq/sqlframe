@@ -7205,15 +7205,10 @@ def bitmap_and_agg(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["bigquery", "postgres"])
 def collate(col: ColumnOrName, collation: str) -> Column:
-    session = _get_session()
-    if session._is_duckdb:
-        collation_expr = expression.Identifier(this=collation)
-    else:
-        collation_expr = expression.Literal.string(collation)
     return Column(
         expression.Collate(
             this=Column.ensure_col(col).column_expression,
-            expression=collation_expr,
+            expression=expression.Var(this=collation),
         )
     )
 

@@ -4982,8 +4982,8 @@ def test_chr(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.collate("cola", "UTF8_LCASE"), "cola COLLATE 'UTF8_LCASE'"),
-        (SF.collate(SF.col("cola"), "UTF8_LCASE"), "cola COLLATE 'UTF8_LCASE'"),
+        (SF.collate("cola", "UTF8_LCASE"), "cola COLLATE UTF8_LCASE"),
+        (SF.collate(SF.col("cola"), "UTF8_LCASE"), "cola COLLATE UTF8_LCASE"),
     ],
 )
 def test_collate(expression, expected):

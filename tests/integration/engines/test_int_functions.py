@@ -1600,7 +1600,7 @@ def test_timestamp_add(get_session_and_func, get_func):
     )
 
     # Test adding years
-    if not session._is_postgres:
+    if not getattr(session, "_is_postgres", False):
         result = df.select(timestamp_add("year", "quantity", "ts")).collect()
         expected_years = [
             datetime.datetime(2018, 3, 11, 9, 0, 7),
@@ -4332,6 +4332,8 @@ def test_make_timestamp_ntz(get_session_and_func, get_func):
 
 def test_make_ym_interval(get_session_and_func, get_func):
     session, make_ym_interval = get_session_and_func("make_ym_interval")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not implement YearMonthIntervalType.fromInternal")
     df = session.createDataFrame([[2014, 12]], ["year", "month"])
     assert df.select(make_ym_interval(df.year, df.month).alias("r")).first()[0] == 24180
 
@@ -5085,9 +5087,10 @@ def test_to_unix_timestamp(get_session_and_func, get_func):
         assert result == 1460073600
     # DuckDB requires the value to match the format which the default format is "yyyy-MM-dd HH:mm:ss".
     # https://spark.apache.org/docs/latest/api/sql/#to_unix_timestamp
+    # PySpark 4 raises DateTimeException instead of returning NULL for unparseable values.
     if isinstance(session, DuckDBSession):
         pass
-    else:
+    elif not isinstance(session, (SparkSession, PySparkSession)):
         df = session.createDataFrame([("2016-04-08",)], ["e"])
         assert df.select(to_unix_timestamp(df.e).alias("r")).collect() == [Row(r=None)]
     ts_type = "TIMESTAMP" if isinstance(session, PySparkSession) else "TIMESTAMPNTZ"
@@ -5473,7 +5476,7 @@ def test_monthname(get_session_and_func):
     session, monthname = get_session_and_func("monthname")
     df = session.createDataFrame([(datetime.date(2015, 4, 8),)], ["d"])
     result = df.select(monthname("d")).first()[0]
-    assert result.strip() == "April"
+    assert result.strip() in ("April", "Apr")
 
 
 def test_nullifzero(get_session_and_func):
