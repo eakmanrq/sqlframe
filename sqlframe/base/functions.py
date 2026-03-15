@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
 
     from sqlframe.base._typing import ColumnOrLiteral, ColumnOrName
     from sqlframe.base.session import DF, _BaseSession
-    from sqlframe.base.types import ArrayType, StructType
+    from sqlframe.base.types import ArrayType, MapType, StructType
 
 logger = logging.getLogger(__name__)
 
@@ -2487,13 +2487,42 @@ def json_tuple(col: ColumnOrName, *fields: str) -> Column:
     return Column.invoke_anonymous_function(col, "JSON_TUPLE", *[lit(field) for field in fields])
 
 
-@meta(unsupported_engines=["bigquery", "duckdb", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def from_json(
     col: ColumnOrName,
-    schema: t.Union[ArrayType, StructType, Column, str],
+    schema: t.Union[ArrayType, MapType, StructType, Column, str],
     options: t.Optional[t.Dict[str, str]] = None,
 ) -> Column:
-    from sqlframe.base.types import ArrayType, StructType
+    from sqlframe.base.types import ArrayType, MapType, StructType
+
+    session = _get_session()
+    if session._is_duckdb:
+        if options:
+            logger.warning(
+                "Options for `from_json()` ignored, since not supported in this dialect."
+            )
+
+        if isinstance(schema, (ArrayType, MapType, StructType)):
+            schema_str = schema.simpleString()
+        elif isinstance(schema, str):
+            schema_str = schema
+        else:
+            raise ValueError(
+                "DuckDB does not support Column expressions as schema for from_json(). "
+                "Please provide a StructType, ArrayType, MapType, or string schema."
+            )
+
+        schema_lower = schema_str.lower()
+        if not any(schema_lower.startswith(prefix) for prefix in ("struct", "array", "map")):
+            schema_str = f"STRUCT<{schema_str}>"
+        target_dtype = expression.DataType.build(schema_str, dialect="spark")
+        col_expr = Column.ensure_col(col).column_expression
+        return Column(
+            expression.Cast(
+                this=expression.ParseJSON(this=col_expr),
+                to=target_dtype,
+            )
+        )
 
     if isinstance(schema, (ArrayType, StructType)):
         schema = schema.simpleString()
