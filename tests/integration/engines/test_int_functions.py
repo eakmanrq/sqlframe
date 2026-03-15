@@ -2588,14 +2588,12 @@ def test_from_json(get_session_and_func, get_types, get_func):
     schema = types.ArrayType(types.StructType([types.StructField("a", types.IntegerType())]))
     df = session.createDataFrame(data, ("key", "value"))
     assert df.select(from_json(df.value, schema).alias("json")).collect() == [Row(json=[Row(a=1)])]
-    try:
+    if isinstance(session, PySparkSession):
         schema_of_json = get_func_from_session("schema_of_json", session)
         schema = schema_of_json(lit("""{"a": 0}"""))
         assert df.select(from_json(df.value, schema).alias("json")).collect() == [
             Row(json=Row(a=None))
         ]
-    except AttributeError:
-        pass
     data = [(1, """[1, 2, 3]""")]
     schema = types.ArrayType(types.IntegerType())
     df = session.createDataFrame(data, ("key", "value"))
