@@ -7226,7 +7226,7 @@ def collation(col: ColumnOrName) -> Column:
 @meta(unsupported_engines="bigquery")
 def current_time(precision: t.Optional[int] = None) -> Column:
     session = _get_session()
-    if session._is_postgres:
+    if getattr(session, "_is_postgres", False):
         return Column(expression.Var(this="LOCALTIME"))
     return Column(expression.CurrentTime())
 

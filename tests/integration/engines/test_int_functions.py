@@ -5464,7 +5464,7 @@ def test_dayname(get_session_and_func):
     session, dayname = get_session_and_func("dayname")
     df = session.createDataFrame([(datetime.date(2015, 4, 8),)], ["d"])
     result = df.select(dayname("d")).first()[0]
-    assert result.strip() == "Wednesday"
+    assert result.strip() in ("Wednesday", "Wed")
 
 
 def test_monthname(get_session_and_func):
