@@ -5652,14 +5652,14 @@ def test_randstr(get_session_and_func, get_func):
 
 def test_schema_of_variant(get_session_and_func):
     session, schema_of_variant = get_session_and_func("schema_of_variant")
-    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     result = df.select(schema_of_variant("v")).first()[0]
     assert "key" in result.lower()
 
 
 def test_schema_of_variant_agg(get_session_and_func):
     session, schema_of_variant_agg = get_session_and_func("schema_of_variant_agg")
-    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     result = df.select(schema_of_variant_agg("v")).first()[0]
     assert "key" in result.lower()
 
@@ -5785,9 +5785,9 @@ def test_try_parse_url(get_session_and_func, get_func):
 def test_try_reflect(get_session_and_func, get_func):
     session, try_reflect = get_session_and_func("try_reflect")
     lit = get_func("lit", session)
-    result = session.range(1).select(
-        try_reflect(lit("java.lang.Math"), lit("abs"), lit(-5))
-    ).first()[0]
+    result = (
+        session.range(1).select(try_reflect(lit("java.lang.Math"), lit("abs"), lit(-5))).first()[0]
+    )
     assert result == 5
 
 
@@ -5821,7 +5821,7 @@ def test_try_validate_utf8(get_session_and_func):
 
 def test_try_variant_get(get_session_and_func):
     session, try_variant_get = get_session_and_func("try_variant_get")
-    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     assert df.select(try_variant_get("v", "$.key", "INT")).first()[0] == 42
     assert df.select(try_variant_get("v", "$.missing", "INT")).first()[0] is None
 
@@ -5834,5 +5834,5 @@ def test_validate_utf8(get_session_and_func):
 
 def test_variant_get(get_session_and_func):
     session, variant_get = get_session_and_func("variant_get")
-    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
     assert df.select(variant_get("v", "$.key", "INT")).first()[0] == 42
