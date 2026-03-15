@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
 
     from sqlframe.base._typing import ColumnOrLiteral, ColumnOrName
     from sqlframe.base.session import DF, _BaseSession
-    from sqlframe.base.types import ArrayType, StructType
+    from sqlframe.base.types import ArrayType, MapType, StructType
 
 logger = logging.getLogger(__name__)
 
@@ -2490,7 +2490,7 @@ def json_tuple(col: ColumnOrName, *fields: str) -> Column:
 @meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
 def from_json(
     col: ColumnOrName,
-    schema: t.Union[ArrayType, StructType, Column, str],
+    schema: t.Union[ArrayType, MapType, StructType, Column, str],
     options: t.Optional[t.Dict[str, str]] = None,
 ) -> Column:
     from sqlframe.base.types import ArrayType, MapType, StructType
