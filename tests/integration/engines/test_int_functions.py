@@ -5448,3 +5448,93 @@ def test_array_reverse(get_session_and_func, get_func):
     assert df.select(
         array_reverse(df.data).alias("r"), array_reverse(df.data2).alias("r2")
     ).collect() == [Row(r=[3, 1, 2], r2=[1])]
+
+
+def test_current_time(get_session_and_func):
+    import datetime
+
+    session, current_time = get_session_and_func("current_time")
+    result = session.range(1).select(current_time()).first()[0]
+    assert isinstance(result, datetime.time)
+
+
+def test_dayname(get_session_and_func):
+    import datetime
+
+    session, dayname = get_session_and_func("dayname")
+    df = session.createDataFrame([(datetime.date(2015, 4, 8),)], ["d"])
+    result = df.select(dayname("d")).first()[0]
+    assert result.strip() == "Wednesday"
+
+
+def test_monthname(get_session_and_func):
+    import datetime
+
+    session, monthname = get_session_and_func("monthname")
+    df = session.createDataFrame([(datetime.date(2015, 4, 8),)], ["d"])
+    result = df.select(monthname("d")).first()[0]
+    assert result.strip() == "April"
+
+
+def test_nullifzero(get_session_and_func):
+    session, nullifzero = get_session_and_func("nullifzero")
+    df = session.createDataFrame([(0,), (1,), (None,)], ["a"])
+    result = df.select(nullifzero("a")).collect()
+    assert result == [Row(value=None), Row(value=1), Row(value=None)]
+
+
+def test_zeroifnull(get_session_and_func):
+    session, zeroifnull = get_session_and_func("zeroifnull")
+    df = session.createDataFrame([(None,), (1,), (0,)], ["a"])
+    result = df.select(zeroifnull("a")).collect()
+    assert result == [Row(value=0), Row(value=1), Row(value=0)]
+
+
+def test_session_user(get_session_and_func):
+    session, session_user = get_session_and_func("session_user")
+    result = session.range(1).select(session_user()).first()[0]
+    assert result is not None
+
+
+def test_timestamp_diff(get_session_and_func):
+    import datetime
+
+    session, timestamp_diff = get_session_and_func("timestamp_diff")
+    df = session.createDataFrame(
+        [
+            (
+                datetime.datetime(2016, 3, 11, 9, 0, 7),
+                datetime.datetime(2016, 3, 11, 9, 0, 12),
+            )
+        ],
+        ["start", "end"],
+    )
+    result = df.select(timestamp_diff("SECOND", "start", "end")).first()[0]
+    assert result == 5
+
+
+def test_uniform(get_session_and_func, get_func):
+    session, uniform = get_session_and_func("uniform")
+    lit = get_func("lit", session)
+    result = session.range(1).select(uniform(lit(0), lit(10), lit(42))).first()[0]
+    assert 0 <= result <= 10
+
+
+def test_uuid(get_session_and_func):
+    session, uuid = get_session_and_func("uuid")
+    result = session.range(1).select(uuid()).first()[0]
+    assert result is not None
+    assert len(str(result)) == 36
+
+
+def test_collate(get_session_and_func):
+    session, collate = get_session_and_func("collate")
+    from sqlframe.duckdb import DuckDBSession
+
+    df = session.createDataFrame([("abc",)], ["a"])
+    if isinstance(session, DuckDBSession):
+        # DuckDB uses different collation names
+        result = df.select(collate("a", "nocase")).first()[0]
+    else:
+        result = df.select(collate("a", "UTF8_LCASE")).first()[0]
+    assert result == "abc"

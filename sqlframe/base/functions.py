@@ -7198,6 +7198,444 @@ def array_reverse(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ArrayReverse)
 
 
+@meta(unsupported_engines="*")
+def bitmap_and_agg(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "BITMAP_AND_AGG")
+
+
+@meta(unsupported_engines=["bigquery", "postgres"])
+def collate(col: ColumnOrName, collation: str) -> Column:
+    session = _get_session()
+    if session._is_duckdb:
+        collation_expr = expression.Identifier(this=collation)
+    else:
+        collation_expr = expression.Literal.string(collation)
+    return Column(
+        expression.Collate(
+            this=Column.ensure_col(col).column_expression,
+            expression=collation_expr,
+        )
+    )
+
+
+@meta(unsupported_engines="*")
+def collation(col: ColumnOrName) -> Column:
+    return Column.invoke_expression_over_column(col, expression.Collation)
+
+
+@meta(unsupported_engines="bigquery")
+def current_time(precision: t.Optional[int] = None) -> Column:
+    session = _get_session()
+    if session._is_postgres:
+        return Column(expression.Var(this="LOCALTIME"))
+    return Column(expression.CurrentTime())
+
+
+@meta(unsupported_engines=["bigquery", "postgres"])
+def dayname(col: ColumnOrName) -> Column:
+    return Column.invoke_expression_over_column(col, expression.Dayname)
+
+
+@meta(unsupported_engines="*")
+def from_xml(
+    col: ColumnOrName,
+    schema: t.Union["StructType", Column, str],
+    options: t.Optional[t.Mapping[str, str]] = None,
+) -> Column:
+    if isinstance(schema, Column):
+        schema_col = schema
+    elif isinstance(schema, str):
+        schema_col = lit(schema)
+    else:
+        schema_col = lit(schema.simpleString())
+    return Column.invoke_anonymous_function(col, "from_xml", schema_col)
+
+
+@meta(unsupported_engines="*")
+def input_file_block_length() -> Column:
+    return Column.invoke_anonymous_function(None, "input_file_block_length")
+
+
+@meta(unsupported_engines="*")
+def input_file_block_start() -> Column:
+    return Column.invoke_anonymous_function(None, "input_file_block_start")
+
+
+@meta(unsupported_engines="*")
+def is_valid_utf8(str: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "is_valid_utf8")
+
+
+@meta(unsupported_engines="*")
+def is_variant_null(v: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(v, "is_variant_null")
+
+
+@meta(unsupported_engines="*")
+def listagg(col: ColumnOrName, delimiter: t.Optional[t.Union[Column, str, bytes]] = None) -> Column:
+    if delimiter is not None:
+        delimiter_col = (
+            lit(delimiter.decode("utf-8") if isinstance(delimiter, bytes) else delimiter)
+            if isinstance(delimiter, (str, bytes))
+            else Column.ensure_col(delimiter)
+        )
+        return Column.invoke_anonymous_function(col, "listagg", delimiter_col)
+    return Column.invoke_anonymous_function(col, "listagg")
+
+
+@meta(unsupported_engines="*")
+def listagg_distinct(
+    col: ColumnOrName, delimiter: t.Optional[t.Union[Column, str, bytes]] = None
+) -> Column:
+    if delimiter is not None:
+        delimiter_col = (
+            lit(delimiter.decode("utf-8") if isinstance(delimiter, bytes) else delimiter)
+            if isinstance(delimiter, (str, bytes))
+            else Column.ensure_col(delimiter)
+        )
+        return Column.invoke_anonymous_function(col, "listagg_distinct", delimiter_col)
+    return Column.invoke_anonymous_function(col, "listagg_distinct")
+
+
+@meta(unsupported_engines="*")
+def make_time(hour: ColumnOrName, minute: ColumnOrName, second: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(hour, "make_time", minute, second)
+
+
+@meta(unsupported_engines="*")
+def make_valid_utf8(str: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "make_valid_utf8")
+
+
+@meta(unsupported_engines=["bigquery", "postgres"])
+def monthname(col: ColumnOrName) -> Column:
+    return Column.invoke_expression_over_column(col, expression.Monthname)
+
+
+@meta()
+def nullifzero(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Nullif(
+            this=Column.ensure_col(col).column_expression,
+            expression=expression.Literal.number(0),
+        )
+    )
+
+
+@meta(unsupported_engines="*")
+def parse_json(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "parse_json")
+
+
+@meta(unsupported_engines="*")
+def quote(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "quote")
+
+
+@meta(unsupported_engines="*")
+def randstr(
+    length: t.Union[Column, int],
+    seed: t.Optional[t.Union[Column, int]] = None,
+) -> Column:
+    length_col = Column.ensure_col(length) if isinstance(length, Column) else lit(length)
+    if seed is not None:
+        seed_col = Column.ensure_col(seed) if isinstance(seed, Column) else lit(seed)
+        return Column(
+            expression.Randstr(
+                this=length_col.column_expression,
+                seed=seed_col.column_expression,
+            )
+        )
+    return Column(expression.Randstr(this=length_col.column_expression))
+
+
+@meta(unsupported_engines="*")
+def schema_of_variant(v: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(v, "schema_of_variant")
+
+
+@meta(unsupported_engines="*")
+def schema_of_variant_agg(v: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(v, "schema_of_variant_agg")
+
+
+@meta(unsupported_engines="*")
+def schema_of_xml(
+    xml: t.Union[Column, str], options: t.Optional[t.Mapping[str, str]] = None
+) -> Column:
+    xml_col = Column.ensure_col(xml) if isinstance(xml, Column) else lit(xml)
+    return Column.invoke_anonymous_function(xml_col, "schema_of_xml")
+
+
+@meta()
+def session_user() -> Column:
+    return Column(expression.SessionUser())
+
+
+@meta(unsupported_engines="*")
+def string_agg_distinct(
+    col: ColumnOrName, delimiter: t.Optional[t.Union[Column, str, bytes]] = None
+) -> Column:
+    return listagg_distinct(col, delimiter)
+
+
+@meta(unsupported_engines="*")
+def time_diff(unit: ColumnOrName, start: ColumnOrName, end: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(unit, "time_diff", start, end)
+
+
+@meta(unsupported_engines="*")
+def time_trunc(unit: ColumnOrName, time: ColumnOrName) -> Column:
+    return Column(
+        expression.TimeTrunc(
+            this=Column.ensure_col(time).column_expression,
+            unit=Column.ensure_col(unit).column_expression,
+        )
+    )
+
+
+@meta(unsupported_engines=["bigquery", "postgres"])
+def timestamp_diff(unit: str, start: ColumnOrName, end: ColumnOrName) -> Column:
+    return Column(
+        expression.TimestampDiff(
+            this=Column.ensure_col(end).column_expression,
+            expression=Column.ensure_col(start).column_expression,
+            unit=expression.Var(this=unit.upper()),
+        )
+    )
+
+
+@meta(unsupported_engines="*")
+def to_time(str: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(str, "to_time", format)
+    return Column.invoke_anonymous_function(str, "to_time")
+
+
+@meta(unsupported_engines="*")
+def to_variant_object(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "to_variant_object")
+
+
+@meta(unsupported_engines="*")
+def to_xml(col: ColumnOrName, options: t.Optional[t.Mapping[str, str]] = None) -> Column:
+    return Column.invoke_anonymous_function(col, "to_xml")
+
+
+@meta(unsupported_engines="*")
+def try_make_interval(
+    years: t.Optional[ColumnOrName] = None,
+    months: t.Optional[ColumnOrName] = None,
+    weeks: t.Optional[ColumnOrName] = None,
+    days: t.Optional[ColumnOrName] = None,
+    hours: t.Optional[ColumnOrName] = None,
+    mins: t.Optional[ColumnOrName] = None,
+    secs: t.Optional[ColumnOrName] = None,
+) -> Column:
+    columns = _ensure_column_of_optionals([years, months, weeks, days, hours, mins, secs])
+    if not columns:
+        raise ValueError("At least one value must be provided")
+    return Column.invoke_anonymous_function(columns[0], "TRY_MAKE_INTERVAL", *columns[1:])
+
+
+@meta(unsupported_engines="*")
+def try_make_timestamp(
+    years: t.Optional[ColumnOrName] = None,
+    months: t.Optional[ColumnOrName] = None,
+    days: t.Optional[ColumnOrName] = None,
+    hours: t.Optional[ColumnOrName] = None,
+    mins: t.Optional[ColumnOrName] = None,
+    secs: t.Optional[ColumnOrName] = None,
+    timezone: t.Optional[ColumnOrName] = None,
+    date: t.Optional[ColumnOrName] = None,
+    time: t.Optional[ColumnOrName] = None,
+) -> Column:
+    if date is not None or time is not None:
+        date_col = Column.ensure_col(date) if date is not None else lit(None)
+        time_col = Column.ensure_col(time) if time is not None else lit(None)
+        return Column.invoke_anonymous_function(date_col, "try_make_timestamp", time_col)
+    columns = _ensure_column_of_optionals([years, months, days, hours, mins, secs, timezone])
+    if not columns:
+        raise ValueError("At least one value must be provided")
+    return Column.invoke_anonymous_function(columns[0], "try_make_timestamp", *columns[1:])
+
+
+@meta(unsupported_engines="*")
+def try_make_timestamp_ltz(
+    years: ColumnOrName,
+    months: ColumnOrName,
+    days: ColumnOrName,
+    hours: ColumnOrName,
+    mins: ColumnOrName,
+    secs: ColumnOrName,
+    timezone: t.Optional[ColumnOrName] = None,
+) -> Column:
+    if timezone is not None:
+        return Column.invoke_anonymous_function(
+            years, "try_make_timestamp_ltz", months, days, hours, mins, secs, timezone
+        )
+    return Column.invoke_anonymous_function(
+        years, "try_make_timestamp_ltz", months, days, hours, mins, secs
+    )
+
+
+@meta(unsupported_engines="*")
+def try_make_timestamp_ntz(
+    years: t.Optional[ColumnOrName] = None,
+    months: t.Optional[ColumnOrName] = None,
+    days: t.Optional[ColumnOrName] = None,
+    hours: t.Optional[ColumnOrName] = None,
+    mins: t.Optional[ColumnOrName] = None,
+    secs: t.Optional[ColumnOrName] = None,
+    date: t.Optional[ColumnOrName] = None,
+    time: t.Optional[ColumnOrName] = None,
+) -> Column:
+    if date is not None or time is not None:
+        date_col = Column.ensure_col(date) if date is not None else lit(None)
+        time_col = Column.ensure_col(time) if time is not None else lit(None)
+        return Column.invoke_anonymous_function(date_col, "try_make_timestamp_ntz", time_col)
+    columns = _ensure_column_of_optionals([years, months, days, hours, mins, secs])
+    if not columns:
+        raise ValueError("At least one value must be provided")
+    return Column.invoke_anonymous_function(columns[0], "try_make_timestamp_ntz", *columns[1:])
+
+
+@meta(unsupported_engines="*")
+def try_mod(left: ColumnOrName, right: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(left, "try_mod", right)
+
+
+@meta(unsupported_engines="*")
+def try_parse_json(col: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(col, "try_parse_json")
+
+
+@meta(unsupported_engines="*")
+def try_parse_url(
+    url: ColumnOrName,
+    partToExtract: ColumnOrName,
+    key: t.Optional[ColumnOrName] = None,
+) -> Column:
+    if key is not None:
+        return Column.invoke_anonymous_function(url, "try_parse_url", partToExtract, key)
+    return Column.invoke_anonymous_function(url, "try_parse_url", partToExtract)
+
+
+@meta(unsupported_engines="*")
+def try_reflect(*cols: ColumnOrName) -> Column:
+    if len(cols) > 1:
+        return Column.invoke_anonymous_function(cols[0], "try_reflect", *cols[1:])
+    return Column.invoke_anonymous_function(cols[0], "try_reflect")
+
+
+@meta(unsupported_engines="*")
+def try_to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(col, "try_to_date", lit(format))
+    return Column.invoke_anonymous_function(col, "try_to_date")
+
+
+@meta(unsupported_engines="*")
+def try_to_time(str: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+    if format is not None:
+        return Column.invoke_anonymous_function(str, "try_to_time", format)
+    return Column.invoke_anonymous_function(str, "try_to_time")
+
+
+@meta(unsupported_engines="*")
+def try_url_decode(str: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "try_url_decode")
+
+
+@meta(unsupported_engines="*")
+def try_validate_utf8(str: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "try_validate_utf8")
+
+
+@meta(unsupported_engines="*")
+def try_variant_get(
+    v: ColumnOrName,
+    path: t.Union[Column, str],
+    targetType: str,
+) -> Column:
+    path_col = lit(path) if isinstance(path, str) else Column.ensure_col(path)
+    return Column.invoke_anonymous_function(v, "try_variant_get", path_col, lit(targetType))
+
+
+@meta(unsupported_engines=["bigquery", "duckdb", "postgres"])
+def uniform(
+    min: t.Union[Column, int, float],
+    max: t.Union[Column, int, float],
+    seed: t.Optional[t.Union[Column, int]] = None,
+) -> Column:
+    min_col = Column.ensure_col(min) if isinstance(min, Column) else lit(min)
+    max_col = Column.ensure_col(max) if isinstance(max, Column) else lit(max)
+    if seed is not None:
+        seed_col = Column.ensure_col(seed) if isinstance(seed, Column) else lit(seed)
+        return Column(
+            expression.Uniform(
+                this=min_col.column_expression,
+                expression=max_col.column_expression,
+                seed=seed_col.column_expression,
+            )
+        )
+    return Column(
+        expression.Uniform(
+            this=min_col.column_expression,
+            expression=max_col.column_expression,
+        )
+    )
+
+
+@meta()
+def uuid(seed: t.Optional[t.Union[Column, int]] = None) -> Column:
+    session = _get_session()
+    if session._is_postgres:
+        return Column(
+            expression.cast(
+                expression.Anonymous(this="gen_random_uuid", expressions=[]),
+                to=expression.DataType.build("text"),
+            )
+        )
+    if seed is not None:
+        seed_col = Column.ensure_col(seed) if isinstance(seed, Column) else lit(seed)
+        return Column.invoke_anonymous_function(None, "uuid", seed_col)
+    return Column.invoke_anonymous_function(None, "uuid")
+
+
+@meta(unsupported_engines="*")
+def validate_utf8(str: ColumnOrName) -> Column:
+    return Column.invoke_anonymous_function(str, "validate_utf8")
+
+
+@meta(unsupported_engines="*")
+def variant_get(
+    v: ColumnOrName,
+    path: t.Union[Column, str],
+    targetType: str,
+) -> Column:
+    path_col = lit(path) if isinstance(path, str) else Column.ensure_col(path)
+    return Column.invoke_anonymous_function(v, "variant_get", path_col, lit(targetType))
+
+
+@meta()
+def zeroifnull(col: ColumnOrName) -> Column:
+    return Column(
+        expression.Coalesce(
+            expressions=[
+                Column.ensure_col(col).column_expression,
+                expression.Literal.number(0),
+            ]
+        )
+    )
+
+
+column = col
+random = rand
+chr = char
+string_agg = listagg
+
+
 # SQLFrame specific
 @meta()
 def _is_string(col: ColumnOrName) -> Column:
