@@ -29,12 +29,10 @@ def test_invoke_anonymous(name, func):
         "localtimestamp",  # Anonymous is needed for spark override
         "skewness",  # Has complex overrides already so just not updating it
         "sort_array",  # Anonymous is need for some engines but not all
-        "collate",  # parses as exp.Collate, not Anonymous
-        "listagg",  # parses as exp.GroupConcat, not Anonymous
-        "string_agg",  # parses as exp.GroupConcat, not Anonymous
-        "uuid",  # parses as exp.Uuid, not Anonymous
-        "parse_json",  # parses as exp.ParseJSON, not Anonymous
-        "time_diff",  # parses as exp.TimeDiff, not Anonymous
+        "listagg",  # GroupConcat always emits a separator; anonymous needed for no-separator LISTAGG(col)
+        "string_agg",  # alias for listagg
+        "parse_json",  # ParseJSON in Spark dialect is a no-op; anonymous needed to emit PARSE_JSON(col)
+        "time_diff",  # Anonymous needed: exp.TimeDiff generates TIMEDIFF not Spark's TIME_DIFF(unit, start, end)
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)

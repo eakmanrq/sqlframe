@@ -1600,7 +1600,7 @@ def test_timestamp_add(get_session_and_func, get_func):
     )
 
     # Test adding years
-    if not getattr(session, "_is_postgres", False):
+    if not isinstance(session, PostgresSession):
         result = df.select(timestamp_add("year", "quantity", "ts")).collect()
         expected_years = [
             datetime.datetime(2018, 3, 11, 9, 0, 7),

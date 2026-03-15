@@ -7585,7 +7585,7 @@ def uniform(
 @meta()
 def uuid(seed: t.Optional[t.Union[Column, int]] = None) -> Column:
     session = _get_session()
-    if session._is_postgres:
+    if getattr(session, "_is_postgres", False):
         return Column(
             expression.cast(
                 expression.Anonymous(this="gen_random_uuid", expressions=[]),
@@ -7594,8 +7594,8 @@ def uuid(seed: t.Optional[t.Union[Column, int]] = None) -> Column:
         )
     if seed is not None:
         seed_col = Column.ensure_col(seed) if isinstance(seed, Column) else lit(seed)
-        return Column.invoke_anonymous_function(None, "uuid", seed_col)
-    return Column.invoke_anonymous_function(None, "uuid")
+        return Column(expression.Anonymous(this="uuid", expressions=[seed_col.column_expression]))
+    return Column(expression.Uuid())
 
 
 @meta(unsupported_engines="*")
