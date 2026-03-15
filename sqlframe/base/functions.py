@@ -2507,9 +2507,6 @@ def from_json(
         elif isinstance(schema, str):
             schema_str = schema
         else:
-            schema_str = None
-
-        if schema_str is None:
             raise ValueError(
                 "DuckDB does not support Column expressions as schema for from_json(). "
                 "Please provide a StructType, ArrayType, MapType, or string schema."
