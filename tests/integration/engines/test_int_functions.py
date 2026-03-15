@@ -5541,3 +5541,298 @@ def test_collate(get_session_and_func):
     else:
         result = df.select(collate("a", "UTF8_LCASE")).first()[0]
     assert result == "abc"
+
+
+def test_bitmap_and_agg(get_session_and_func):
+    session, bitmap_and_agg = get_session_and_func("bitmap_and_agg")
+    # bitmap_and_agg requires bitmap values created by bitmap_construct_agg
+    df = session.sql(
+        "SELECT bitmap_and_agg(bm) AS r FROM ("
+        "  SELECT bitmap_construct_agg(id) AS bm FROM (SELECT 1 AS id UNION ALL SELECT 2 AS id)"
+        "  UNION ALL"
+        "  SELECT bitmap_construct_agg(id) AS bm FROM (SELECT 1 AS id UNION ALL SELECT 3 AS id)"
+        ")"
+    )
+    assert df.first()[0] is not None
+
+
+def test_collation(get_session_and_func):
+    session, collation = get_session_and_func("collation")
+    df = session.createDataFrame([("Spark SQL",)], ["a"])
+    result = df.select(collation("a")).first()[0]
+    assert isinstance(result, str)
+
+
+def test_from_xml(get_session_and_func):
+    session, from_xml = get_session_and_func("from_xml")
+    df = session.createDataFrame([("<p><a>1</a></p>",)], ["xml"])
+    result = df.select(from_xml("xml", "a INT").alias("r")).first()[0]
+    assert result is not None
+    assert result.a is not None
+
+
+def test_input_file_block_length(get_session_and_func):
+    session, input_file_block_length = get_session_and_func("input_file_block_length")
+    result = session.range(1).select(input_file_block_length()).first()[0]
+    assert result == -1  # -1 when not reading from a file
+
+
+def test_input_file_block_start(get_session_and_func):
+    session, input_file_block_start = get_session_and_func("input_file_block_start")
+    result = session.range(1).select(input_file_block_start()).first()[0]
+    assert result == -1  # -1 when not reading from a file
+
+
+def test_is_valid_utf8(get_session_and_func):
+    session, is_valid_utf8 = get_session_and_func("is_valid_utf8")
+    df = session.createDataFrame([("Spark SQL",), (None,)], ["a"])
+    result = df.select(is_valid_utf8("a")).collect()
+    assert result[0][0] is True
+    assert result[1][0] is None
+
+
+def test_is_variant_null(get_session_and_func):
+    session, is_variant_null = get_session_and_func("is_variant_null")
+    df = session.sql("SELECT parse_json('null') AS v, parse_json('42') AS v2")
+    result = df.select(is_variant_null("v"), is_variant_null("v2")).first()
+    assert result[0] is True
+    assert result[1] is False
+
+
+def test_listagg(get_session_and_func):
+    session, listagg = get_session_and_func("listagg")
+    df = session.createDataFrame([("a",), ("b",), ("c",)], ["name"])
+    result = df.select(listagg("name", ",")).first()[0]
+    assert set(result.split(",")) == {"a", "b", "c"}
+
+
+def test_listagg_distinct(get_session_and_func):
+    session, listagg_distinct = get_session_and_func("listagg_distinct")
+    df = session.createDataFrame([("a",), ("b",), ("a",)], ["name"])
+    result = df.select(listagg_distinct("name", ",")).first()[0]
+    assert set(result.split(",")) == {"a", "b"}
+
+
+def test_make_time(get_session_and_func, get_func):
+    session, make_time = get_session_and_func("make_time")
+    lit = get_func("lit", session)
+    result = session.range(1).select(make_time(lit(6), lit(30), lit(45))).first()[0]
+    assert result.hour == 6
+    assert result.minute == 30
+    assert result.second == 45
+
+
+def test_make_valid_utf8(get_session_and_func):
+    session, make_valid_utf8 = get_session_and_func("make_valid_utf8")
+    df = session.createDataFrame([("Spark SQL",)], ["a"])
+    result = df.select(make_valid_utf8("a")).first()[0]
+    assert result == "Spark SQL"
+
+
+def test_parse_json(get_session_and_func, get_func):
+    session, parse_json = get_session_and_func("parse_json")
+    lit = get_func("lit", session)
+    result = session.range(1).select(parse_json(lit('{"key": 42}'))).first()[0]
+    assert result is not None
+
+
+def test_quote(get_session_and_func):
+    session, quote = get_session_and_func("quote")
+    df = session.createDataFrame([("hello",)], ["a"])
+    result = df.select(quote("a")).first()[0]
+    assert result == "'hello'"
+
+
+def test_randstr(get_session_and_func, get_func):
+    session, randstr = get_session_and_func("randstr")
+    lit = get_func("lit", session)
+    result = session.range(1).select(randstr(lit(5), lit(42))).first()[0]
+    assert len(result) == 5
+
+
+def test_schema_of_variant(get_session_and_func):
+    session, schema_of_variant = get_session_and_func("schema_of_variant")
+    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    result = df.select(schema_of_variant("v")).first()[0]
+    assert "key" in result.lower()
+
+
+def test_schema_of_variant_agg(get_session_and_func):
+    session, schema_of_variant_agg = get_session_and_func("schema_of_variant_agg")
+    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    result = df.select(schema_of_variant_agg("v")).first()[0]
+    assert "key" in result.lower()
+
+
+def test_schema_of_xml(get_session_and_func):
+    session, schema_of_xml = get_session_and_func("schema_of_xml")
+    result = session.range(1).select(schema_of_xml("<p><a>1</a></p>")).first()[0]
+    assert "a" in result.lower()
+
+
+def test_string_agg_distinct(get_session_and_func):
+    session, string_agg_distinct = get_session_and_func("string_agg_distinct")
+    df = session.createDataFrame([("a",), ("b",), ("a",)], ["name"])
+    result = df.select(string_agg_distinct("name", ",")).first()[0]
+    assert set(result.split(",")) == {"a", "b"}
+
+
+def test_time_diff(get_session_and_func, get_func):
+    session, time_diff = get_session_and_func("time_diff")
+    lit = get_func("lit", session)
+    df = session.sql("SELECT TIME '01:00:00' AS start, TIME '02:00:00' AS end")
+    result = df.select(time_diff(lit("SECOND"), "start", "end")).first()[0]
+    assert result == 3600
+
+
+def test_time_trunc(get_session_and_func, get_func):
+    session, time_trunc = get_session_and_func("time_trunc")
+    lit = get_func("lit", session)
+    df = session.sql("SELECT TIME '06:30:45' AS t")
+    result = df.select(time_trunc(lit("hour"), "t")).first()[0]
+    assert result.hour == 6
+    assert result.minute == 0
+    assert result.second == 0
+
+
+def test_to_time(get_session_and_func):
+    session, to_time = get_session_and_func("to_time")
+    df = session.createDataFrame([("06:30:45",)], ["a"])
+    result = df.select(to_time("a")).first()[0]
+    assert result.hour == 6
+    assert result.minute == 30
+    assert result.second == 45
+
+
+def test_to_variant_object(get_session_and_func):
+    session, to_variant_object = get_session_and_func("to_variant_object")
+    df = session.sql("SELECT struct(1 AS key, 'value' AS val) AS s")
+    result = df.select(to_variant_object("s")).first()[0]
+    assert result is not None
+
+
+def test_to_xml(get_session_and_func):
+    session, to_xml = get_session_and_func("to_xml")
+    df = session.sql("SELECT struct(1 AS a) AS s")
+    result = df.select(to_xml("s")).first()[0]
+    assert result is not None
+    assert "<a>" in result
+
+
+def test_try_make_interval(get_session_and_func, get_func):
+    session, try_make_interval = get_session_and_func("try_make_interval")
+    lit = get_func("lit", session)
+    result = session.range(1).select(try_make_interval(years=lit(1), months=lit(2))).first()[0]
+    assert result is not None
+
+
+def test_try_make_timestamp(get_session_and_func):
+    session, try_make_timestamp = get_session_and_func("try_make_timestamp")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887]], ["year", "month", "day", "hour", "min", "sec"]
+    )
+    result = df.select(
+        try_make_timestamp(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+    ).first()[0]
+    assert result == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_try_make_timestamp_ltz(get_session_and_func):
+    session, try_make_timestamp_ltz = get_session_and_func("try_make_timestamp_ltz")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887]], ["year", "month", "day", "hour", "min", "sec"]
+    )
+    result = df.select(
+        try_make_timestamp_ltz(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+    ).first()[0]
+    assert result == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_try_make_timestamp_ntz(get_session_and_func):
+    session, try_make_timestamp_ntz = get_session_and_func("try_make_timestamp_ntz")
+    df = session.createDataFrame(
+        [[2014, 12, 28, 6, 30, 45.887]], ["year", "month", "day", "hour", "min", "sec"]
+    )
+    result = df.select(
+        try_make_timestamp_ntz(df.year, df.month, df.day, df.hour, df.min, df.sec).alias("r")
+    ).first()[0]
+    assert result == datetime.datetime(2014, 12, 28, 6, 30, 45, 887000)
+
+
+def test_try_mod(get_session_and_func, get_func):
+    session, try_mod = get_session_and_func("try_mod")
+    lit = get_func("lit", session)
+    assert session.range(1).select(try_mod(lit(5), lit(2))).first()[0] == 1
+    assert session.range(1).select(try_mod(lit(5), lit(0))).first()[0] is None
+
+
+def test_try_parse_json(get_session_and_func, get_func):
+    session, try_parse_json = get_session_and_func("try_parse_json")
+    lit = get_func("lit", session)
+    assert session.range(1).select(try_parse_json(lit('{"key": 42}'))).first()[0] is not None
+    assert session.range(1).select(try_parse_json(lit("not json"))).first()[0] is None
+
+
+def test_try_parse_url(get_session_and_func, get_func):
+    session, try_parse_url = get_session_and_func("try_parse_url")
+    lit = get_func("lit", session)
+    df = session.createDataFrame([("http://spark.apache.org/path?query=1",)], ["url"])
+    assert df.select(try_parse_url("url", lit("HOST"))).first()[0] == "spark.apache.org"
+    assert df.select(try_parse_url("url", lit("QUERY"), lit("query"))).first()[0] == "1"
+    assert session.range(1).select(try_parse_url(lit("invalid://"), lit("HOST"))).first()[0] is None
+
+
+def test_try_reflect(get_session_and_func, get_func):
+    session, try_reflect = get_session_and_func("try_reflect")
+    lit = get_func("lit", session)
+    result = session.range(1).select(
+        try_reflect(lit("java.lang.Math"), lit("abs"), lit(-5))
+    ).first()[0]
+    assert result == 5
+
+
+def test_try_to_date(get_session_and_func):
+    session, try_to_date = get_session_and_func("try_to_date")
+    df = session.createDataFrame([("2016-12-31",), ("invalid",)], ["a"])
+    result = df.select(try_to_date("a", "yyyy-MM-dd")).collect()
+    assert result[0][0] == datetime.date(2016, 12, 31)
+    assert result[1][0] is None
+
+
+def test_try_to_time(get_session_and_func):
+    session, try_to_time = get_session_and_func("try_to_time")
+    df = session.createDataFrame([("06:30:45",), ("invalid",)], ["a"])
+    result = df.select(try_to_time("a")).collect()
+    assert result[0][0].hour == 6
+    assert result[1][0] is None
+
+
+def test_try_url_decode(get_session_and_func):
+    session, try_url_decode = get_session_and_func("try_url_decode")
+    df = session.createDataFrame([("hello%20world",)], ["a"])
+    assert df.select(try_url_decode("a")).first()[0] == "hello world"
+
+
+def test_try_validate_utf8(get_session_and_func):
+    session, try_validate_utf8 = get_session_and_func("try_validate_utf8")
+    df = session.createDataFrame([("Spark SQL",)], ["a"])
+    assert df.select(try_validate_utf8("a")).first()[0] == "Spark SQL"
+
+
+def test_try_variant_get(get_session_and_func):
+    session, try_variant_get = get_session_and_func("try_variant_get")
+    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    assert df.select(try_variant_get("v", "$.key", "INT")).first()[0] == 42
+    assert df.select(try_variant_get("v", "$.missing", "INT")).first()[0] is None
+
+
+def test_validate_utf8(get_session_and_func):
+    session, validate_utf8 = get_session_and_func("validate_utf8")
+    df = session.createDataFrame([("Spark SQL",)], ["a"])
+    assert df.select(validate_utf8("a")).first()[0] == "Spark SQL"
+
+
+def test_variant_get(get_session_and_func):
+    session, variant_get = get_session_and_func("variant_get")
+    df = session.sql('SELECT parse_json(\'{"key": 42}\') AS v')
+    assert df.select(variant_get("v", "$.key", "INT")).first()[0] == 42
