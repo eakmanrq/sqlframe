@@ -113,6 +113,7 @@ from sqlframe.base.functions import first_value as first_value
 from sqlframe.base.functions import flatten as flatten
 from sqlframe.base.functions import floor as floor
 from sqlframe.base.functions import format_string as format_string
+from sqlframe.base.functions import from_json as from_json
 from sqlframe.base.functions import from_unixtime as from_unixtime
 from sqlframe.base.functions import get_json_object as get_json_object
 from sqlframe.base.functions import greatest as greatest
