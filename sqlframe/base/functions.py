@@ -7222,7 +7222,19 @@ def collation(col: ColumnOrName) -> Column:
 def current_time(precision: t.Optional[int] = None) -> Column:
     session = _get_session()
     if getattr(session, "_is_postgres", False):
+        if precision is not None:
+            return Column(
+                expression.Anonymous(
+                    this="LOCALTIME", expressions=[expression.Literal.number(precision)]
+                )
+            )
         return Column(expression.Var(this="LOCALTIME"))
+    if precision is not None:
+        return Column(
+            expression.Anonymous(
+                this="CURRENT_TIME", expressions=[expression.Literal.number(precision)]
+            )
+        )
     return Column(expression.CurrentTime())
 
 
@@ -7243,6 +7255,9 @@ def from_xml(
         schema_col = lit(schema)
     else:
         schema_col = lit(schema.simpleString())
+    if options:
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
+        return Column.invoke_anonymous_function(col, "from_xml", schema_col, options_col)
     return Column.invoke_anonymous_function(col, "from_xml", schema_col)
 
 
@@ -7359,6 +7374,9 @@ def schema_of_xml(
     xml: t.Union[Column, str], options: t.Optional[t.Mapping[str, str]] = None
 ) -> Column:
     xml_col = Column.ensure_col(xml) if isinstance(xml, Column) else lit(xml)
+    if options:
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
+        return Column.invoke_anonymous_function(xml_col, "schema_of_xml", options_col)
     return Column.invoke_anonymous_function(xml_col, "schema_of_xml")
 
 
@@ -7401,10 +7419,11 @@ def timestamp_diff(unit: str, start: ColumnOrName, end: ColumnOrName) -> Column:
 
 
 @meta(unsupported_engines="*")
-def to_time(str: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+def to_time(col: ColumnOrName, format: t.Optional[t.Union[Column, str]] = None) -> Column:
     if format is not None:
-        return Column.invoke_anonymous_function(str, "to_time", format)
-    return Column.invoke_anonymous_function(str, "to_time")
+        format_col = lit(format) if isinstance(format, str) else format
+        return Column.invoke_anonymous_function(col, "to_time", format_col)
+    return Column.invoke_anonymous_function(col, "to_time")
 
 
 @meta(unsupported_engines="*")
@@ -7534,10 +7553,11 @@ def try_to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
 
 
 @meta(unsupported_engines="*")
-def try_to_time(str: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
+def try_to_time(col: ColumnOrName, format: t.Optional[t.Union[Column, str]] = None) -> Column:
     if format is not None:
-        return Column.invoke_anonymous_function(str, "try_to_time", format)
-    return Column.invoke_anonymous_function(str, "try_to_time")
+        format_col = lit(format) if isinstance(format, str) else format
+        return Column.invoke_anonymous_function(col, "try_to_time", format_col)
+    return Column.invoke_anonymous_function(col, "try_to_time")
 
 
 @meta(unsupported_engines="*")
