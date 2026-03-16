@@ -7414,6 +7414,9 @@ def to_variant_object(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines="*")
 def to_xml(col: ColumnOrName, options: t.Optional[t.Mapping[str, str]] = None) -> Column:
+    if options:
+        options_col = create_map([lit(str(x)) for x in _flatten(options.items())])
+        return Column.invoke_anonymous_function(col, "to_xml", options_col)
     return Column.invoke_anonymous_function(col, "to_xml")
 
 

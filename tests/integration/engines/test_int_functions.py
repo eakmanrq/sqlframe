@@ -5590,9 +5590,14 @@ def test_is_valid_utf8(get_session_and_func):
     assert result[1][0] is None
 
 
-def test_is_variant_null(get_session_and_func):
+def test_is_variant_null(get_session_and_func, get_func):
     session, is_variant_null = get_session_and_func("is_variant_null")
-    df = session.sql("SELECT parse_json('null') AS v, parse_json('42') AS v2")
+    lit = get_func("lit", session)
+    parse_json = get_func("parse_json", session)
+    df = session.range(1).select(
+        parse_json(lit("null")).alias("v"),
+        parse_json(lit("42")).alias("v2"),
+    )
     result = df.select(is_variant_null("v"), is_variant_null("v2")).first()
     assert result[0] is True
     assert result[1] is False
@@ -5607,6 +5612,8 @@ def test_listagg(get_session_and_func):
 
 def test_listagg_distinct(get_session_and_func):
     session, listagg_distinct = get_session_and_func("listagg_distinct")
+    if isinstance(session, SparkSession):
+        pytest.skip("Spark SQL does not support LISTAGG_DISTINCT")
     df = session.createDataFrame([("a",), ("b",), ("a",)], ["name"])
     result = df.select(listagg_distinct("name", ",")).first()[0]
     assert set(result.split(",")) == {"a", "b"}
@@ -5614,6 +5621,8 @@ def test_listagg_distinct(get_session_and_func):
 
 def test_make_time(get_session_and_func, get_func):
     session, make_time = get_session_and_func("make_time")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not support the TIME type")
     lit = get_func("lit", session)
     result = session.range(1).select(make_time(lit(6), lit(30), lit(45))).first()[0]
     assert result == datetime.time(6, 30, 45)
@@ -5632,7 +5641,7 @@ def test_parse_json(get_session_and_func, get_func):
     variant_get = get_func("variant_get", session)
     result = (
         session.range(1)
-        .select(variant_get(parse_json(lit('{"key": 42}')), lit("$.key"), lit("INT")))
+        .select(variant_get(parse_json(lit('{"key": 42}')), "$.key", "INT"))
         .first()[0]
     )
     assert result == 42
@@ -5652,16 +5661,20 @@ def test_randstr(get_session_and_func, get_func):
     assert len(result) == 5
 
 
-def test_schema_of_variant(get_session_and_func):
+def test_schema_of_variant(get_session_and_func, get_func):
     session, schema_of_variant = get_session_and_func("schema_of_variant")
-    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
+    lit = get_func("lit", session)
+    parse_json = get_func("parse_json", session)
+    df = session.range(1).select(parse_json(lit('{"key": 42}')).alias("v"))
     result = df.select(schema_of_variant("v")).first()[0]
     assert result == "OBJECT<key: BIGINT>"
 
 
-def test_schema_of_variant_agg(get_session_and_func):
+def test_schema_of_variant_agg(get_session_and_func, get_func):
     session, schema_of_variant_agg = get_session_and_func("schema_of_variant_agg")
-    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
+    lit = get_func("lit", session)
+    parse_json = get_func("parse_json", session)
+    df = session.range(1).select(parse_json(lit('{"key": 42}')).alias("v"))
     result = df.select(schema_of_variant_agg("v")).first()[0]
     assert result == "OBJECT<key: BIGINT>"
 
@@ -5674,6 +5687,8 @@ def test_schema_of_xml(get_session_and_func):
 
 def test_string_agg_distinct(get_session_and_func):
     session, string_agg_distinct = get_session_and_func("string_agg_distinct")
+    if isinstance(session, SparkSession):
+        pytest.skip("Spark SQL does not support LISTAGG_DISTINCT")
     df = session.createDataFrame([("a",), ("b",), ("a",)], ["name"])
     result = df.select(string_agg_distinct("name", ",")).first()[0]
     assert set(result.split(",")) == {"a", "b"}
@@ -5681,6 +5696,8 @@ def test_string_agg_distinct(get_session_and_func):
 
 def test_time_diff(get_session_and_func, get_func):
     session, time_diff = get_session_and_func("time_diff")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not support the TIME type")
     lit = get_func("lit", session)
     df = session.sql("SELECT TIME '01:00:00' AS start, TIME '02:00:00' AS end")
     result = df.select(time_diff(lit("SECOND"), "start", "end")).first()[0]
@@ -5689,6 +5706,8 @@ def test_time_diff(get_session_and_func, get_func):
 
 def test_time_trunc(get_session_and_func, get_func):
     session, time_trunc = get_session_and_func("time_trunc")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not support the TIME type")
     lit = get_func("lit", session)
     df = session.sql("SELECT TIME '06:30:45' AS t")
     result = df.select(time_trunc(lit("hour"), "t")).first()[0]
@@ -5697,6 +5716,8 @@ def test_time_trunc(get_session_and_func, get_func):
 
 def test_to_time(get_session_and_func):
     session, to_time = get_session_and_func("to_time")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not support the TIME type")
     df = session.createDataFrame([("06:30:45",)], ["a"])
     result = df.select(to_time("a")).first()[0]
     assert result == datetime.time(6, 30, 45)
@@ -5721,6 +5742,8 @@ def test_to_xml(get_session_and_func, get_func):
 
 def test_try_make_interval(get_session_and_func, get_func):
     session, try_make_interval = get_session_and_func("try_make_interval")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not implement CalendarIntervalType.fromInternal")
     lit = get_func("lit", session)
     result = session.range(1).select(try_make_interval(years=lit(1), months=lit(2))).first()[0]
     # interval string representation includes years and months
@@ -5774,7 +5797,7 @@ def test_try_parse_json(get_session_and_func, get_func):
     lit = get_func("lit", session)
     try_variant_get = get_func("try_variant_get", session)
     valid = session.range(1).select(
-        try_variant_get(try_parse_json(lit('{"key": 42}')), lit("$.key"), lit("INT"))
+        try_variant_get(try_parse_json(lit('{"key": 42}')), "$.key", "INT")
     )
     assert valid.first()[0] == 42
     assert session.range(1).select(try_parse_json(lit("not json"))).first()[0] is None
@@ -5795,7 +5818,7 @@ def test_try_reflect(get_session_and_func, get_func):
     result = (
         session.range(1).select(try_reflect(lit("java.lang.Math"), lit("abs"), lit(-5))).first()[0]
     )
-    assert result == 5
+    assert result == "5"  # reflect/try_reflect always returns a string
 
 
 def test_try_to_date(get_session_and_func):
@@ -5808,6 +5831,8 @@ def test_try_to_date(get_session_and_func):
 
 def test_try_to_time(get_session_and_func):
     session, try_to_time = get_session_and_func("try_to_time")
+    if isinstance(session, (SparkSession, PySparkSession)):
+        pytest.skip("PySpark 4 does not support the TIME type")
     df = session.createDataFrame([("06:30:45",), ("invalid",)], ["a"])
     result = df.select(try_to_time("a")).collect()
     assert result[0][0] == datetime.time(6, 30, 45)
@@ -5826,9 +5851,11 @@ def test_try_validate_utf8(get_session_and_func):
     assert df.select(try_validate_utf8("a")).first()[0] == "Spark SQL"
 
 
-def test_try_variant_get(get_session_and_func):
+def test_try_variant_get(get_session_and_func, get_func):
     session, try_variant_get = get_session_and_func("try_variant_get")
-    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
+    lit = get_func("lit", session)
+    parse_json = get_func("parse_json", session)
+    df = session.range(1).select(parse_json(lit('{"key": 42}')).alias("v"))
     assert df.select(try_variant_get("v", "$.key", "INT")).first()[0] == 42
     assert df.select(try_variant_get("v", "$.missing", "INT")).first()[0] is None
 
@@ -5839,7 +5866,9 @@ def test_validate_utf8(get_session_and_func):
     assert df.select(validate_utf8("a")).first()[0] == "Spark SQL"
 
 
-def test_variant_get(get_session_and_func):
+def test_variant_get(get_session_and_func, get_func):
     session, variant_get = get_session_and_func("variant_get")
-    df = session.sql("SELECT parse_json('{\"key\": 42}') AS v")
+    lit = get_func("lit", session)
+    parse_json = get_func("parse_json", session)
+    df = session.range(1).select(parse_json(lit('{"key": 42}')).alias("v"))
     assert df.select(variant_get("v", "$.key", "INT")).first()[0] == 42
