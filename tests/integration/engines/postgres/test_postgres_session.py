@@ -1,9 +1,14 @@
+import pytest
 from sqlglot import exp, parse_one
 
 from sqlframe.base.types import Row
 from sqlframe.postgres.session import PostgresSession
 
 pytest_plugins = ["tests.common_fixtures"]
+pytestmark = [
+    pytest.mark.postgres,
+    pytest.mark.xdist_group("postgres_tests"),
+]
 
 
 def test_session_from_config(function_scoped_postgres):

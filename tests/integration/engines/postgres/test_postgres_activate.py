@@ -1,6 +1,12 @@
+import pytest
+
 from sqlframe import activate, deactivate
 
 pytest_plugins = ["tests.common_fixtures"]
+pytestmark = [
+    pytest.mark.postgres,
+    pytest.mark.xdist_group("postgres_tests"),
+]
 
 
 def test_activate_with_connection(function_scoped_postgres):

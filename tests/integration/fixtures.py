@@ -80,6 +80,8 @@ ENGINE_PARAMETERS = [
         marks=[
             pytest.mark.postgres,
             pytest.mark.local,
+            # Set xdist group in order to serialize tests
+            pytest.mark.xdist_group("postgres_tests"),
         ],
     ),
     pytest.param(

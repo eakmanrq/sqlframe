@@ -4,6 +4,10 @@ from sqlframe.base.catalog import CatalogMetadata, Column, Database, Function, T
 from sqlframe.postgres.session import PostgresSession
 
 pytest_plugins = ["tests.integration.fixtures"]
+pytestmark = [
+    pytest.mark.postgres,
+    pytest.mark.xdist_group("postgres_tests"),
+]
 
 
 def test_current_catalog(postgres_session: PostgresSession):
