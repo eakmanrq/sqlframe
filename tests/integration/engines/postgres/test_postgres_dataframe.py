@@ -6,6 +6,10 @@ from sqlframe.base import types
 from sqlframe.postgres import PostgresDataFrame, PostgresSession
 
 pytest_plugins = ["tests.integration.fixtures"]
+pytestmark = [
+    pytest.mark.postgres,
+    pytest.mark.xdist_group("postgres_tests"),
+]
 
 
 @pytest.fixture()

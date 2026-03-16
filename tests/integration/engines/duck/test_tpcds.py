@@ -24,6 +24,7 @@ def test_tpcds(
 ):
     if num in [16, 32, 50, 62, 92, 94, 95, 99]:
         pytest.skip(f"TPCDS{num} is not supported by PySpark due to spaces in column names")
+    load_tpcds(gen_tpcds, pyspark_session)
     load_tpcds(gen_tpcds, duckdb_session)
     with open(f"tests/fixtures/tpcds/tpcds{num}.sql") as f:
         query = f.read()
