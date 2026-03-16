@@ -182,7 +182,7 @@ df.show(5)
 
 ### Functions
 
-All functions through 3.5 are supported. Please [open an issue](https://github.com/eakmanrq/sqlframe/issues) if you encounter a function not implemented. 
+All functions through 4.0 are supported. Please [open an issue](https://github.com/eakmanrq/sqlframe/issues) if you encounter a function not implemented.
 
 ### GroupedData Class
 
