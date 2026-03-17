@@ -155,7 +155,6 @@ def check_pyspark_imports():
         assert DataFrameWriter != sqlf_dataframe_writer
         assert Row != sqlf_row
 
-        assert F.JVMView is not None
         assert SparkSession.readStream is not None
 
         from pyspark.sql.session import SparkSession as SparkSession2

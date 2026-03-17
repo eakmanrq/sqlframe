@@ -29,6 +29,10 @@ def test_invoke_anonymous(name, func):
         "localtimestamp",  # Anonymous is needed for spark override
         "skewness",  # Has complex overrides already so just not updating it
         "sort_array",  # Anonymous is need for some engines but not all
+        "listagg",  # GroupConcat always emits a separator; anonymous needed for no-separator LISTAGG(col)
+        "string_agg",  # alias for listagg
+        "parse_json",  # ParseJSON in Spark dialect is a no-op; anonymous needed to emit PARSE_JSON(col)
+        "time_diff",  # Anonymous needed: exp.TimeDiff generates TIMEDIFF not Spark's TIME_DIFF(unit, start, end)
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
@@ -4949,4 +4953,590 @@ def test_xpath_string(expression, expected):
     ],
 )
 def test_years(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.bitmap_and_agg("cola"), "BITMAP_AND_AGG(cola)"),
+        (SF.bitmap_and_agg(SF.col("cola")), "BITMAP_AND_AGG(cola)"),
+    ],
+)
+def test_bitmap_and_agg(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.chr(SF.lit(65)), "CHR(65)"),
+    ],
+)
+def test_chr(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.collate("cola", "UTF8_LCASE"), "cola COLLATE UTF8_LCASE"),
+        (SF.collate(SF.col("cola"), "UTF8_LCASE"), "cola COLLATE UTF8_LCASE"),
+    ],
+)
+def test_collate(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.collation("cola"), "COLLATION(cola)"),
+        (SF.collation(SF.col("cola")), "COLLATION(cola)"),
+    ],
+)
+def test_collation(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.column("cola"), "cola"),
+    ],
+)
+def test_column_alias(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_schema(), "CURRENT_DATABASE()"),
+    ],
+)
+def test_current_schema(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.current_time(), "CURRENT_TIME()"),
+    ],
+)
+def test_current_time(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.dayname("cola"), "DAYNAME(cola)"),
+        (SF.dayname(SF.col("cola")), "DAYNAME(cola)"),
+    ],
+)
+def test_dayname(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.from_xml("cola", "struct<id:int>"), "FROM_XML(cola, 'struct<id:int>')"),
+        (SF.from_xml(SF.col("cola"), "struct<id:int>"), "FROM_XML(cola, 'struct<id:int>')"),
+    ],
+)
+def test_from_xml(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.input_file_block_length(), "INPUT_FILE_BLOCK_LENGTH()"),
+    ],
+)
+def test_input_file_block_length(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.input_file_block_start(), "INPUT_FILE_BLOCK_START()"),
+    ],
+)
+def test_input_file_block_start(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.is_valid_utf8("cola"), "IS_VALID_UTF8(cola)"),
+        (SF.is_valid_utf8(SF.col("cola")), "IS_VALID_UTF8(cola)"),
+    ],
+)
+def test_is_valid_utf8(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.is_variant_null("cola"), "IS_VARIANT_NULL(cola)"),
+        (SF.is_variant_null(SF.col("cola")), "IS_VARIANT_NULL(cola)"),
+    ],
+)
+def test_is_variant_null(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.listagg("cola"), "LISTAGG(cola)"),
+        (SF.listagg(SF.col("cola")), "LISTAGG(cola)"),
+        (SF.listagg("cola", ","), "LISTAGG(cola, ',')"),
+    ],
+)
+def test_listagg(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.listagg_distinct("cola"), "LISTAGG_DISTINCT(cola)"),
+        (SF.listagg_distinct(SF.col("cola")), "LISTAGG_DISTINCT(cola)"),
+    ],
+)
+def test_listagg_distinct(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.make_time("cola", "colb", "colc"), "MAKE_TIME(cola, colb, colc)"),
+        (
+            SF.make_time(SF.col("cola"), SF.col("colb"), SF.col("colc")),
+            "MAKE_TIME(cola, colb, colc)",
+        ),
+    ],
+)
+def test_make_time(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.make_valid_utf8("cola"), "MAKE_VALID_UTF8(cola)"),
+        (SF.make_valid_utf8(SF.col("cola")), "MAKE_VALID_UTF8(cola)"),
+    ],
+)
+def test_make_valid_utf8(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.monthname("cola"), "MONTHNAME(cola)"),
+        (SF.monthname(SF.col("cola")), "MONTHNAME(cola)"),
+    ],
+)
+def test_monthname(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.nullifzero("cola"), "NULLIF(cola, 0)"),
+        (SF.nullifzero(SF.col("cola")), "NULLIF(cola, 0)"),
+    ],
+)
+def test_nullifzero(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.parse_json("cola"), "PARSE_JSON(cola)"),
+        (SF.parse_json(SF.col("cola")), "PARSE_JSON(cola)"),
+    ],
+)
+def test_parse_json(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.quote("cola"), "QUOTE(cola)"),
+        (SF.quote(SF.col("cola")), "QUOTE(cola)"),
+    ],
+)
+def test_quote(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.random(), "RAND()"),
+    ],
+)
+def test_random(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.randstr(SF.lit(10)), "RANDSTR(10)"),
+    ],
+)
+def test_randstr(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.schema_of_variant("cola"), "SCHEMA_OF_VARIANT(cola)"),
+        (SF.schema_of_variant(SF.col("cola")), "SCHEMA_OF_VARIANT(cola)"),
+    ],
+)
+def test_schema_of_variant(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.schema_of_variant_agg("cola"), "SCHEMA_OF_VARIANT_AGG(cola)"),
+        (SF.schema_of_variant_agg(SF.col("cola")), "SCHEMA_OF_VARIANT_AGG(cola)"),
+    ],
+)
+def test_schema_of_variant_agg(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.schema_of_xml(SF.lit("<a>1</a>")), "SCHEMA_OF_XML('<a>1</a>')"),
+    ],
+)
+def test_schema_of_xml(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.session_user(), "SESSION_USER"),
+    ],
+)
+def test_session_user(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.string_agg("cola"), "LISTAGG(cola)"),
+        (SF.string_agg(SF.col("cola")), "LISTAGG(cola)"),
+    ],
+)
+def test_string_agg(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.string_agg_distinct("cola"), "LISTAGG_DISTINCT(cola)"),
+        (SF.string_agg_distinct(SF.col("cola")), "LISTAGG_DISTINCT(cola)"),
+    ],
+)
+def test_string_agg_distinct(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.time_diff(SF.lit("SECOND"), "cola", "colb"), "TIME_DIFF('SECOND', cola, colb)"),
+    ],
+)
+def test_time_diff(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.time_trunc(SF.lit("HOUR"), "cola"), "TIME_TRUNC(cola, HOUR)"),
+    ],
+)
+def test_time_trunc(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.timestamp_diff("SECOND", "cola", "colb"), "TIMESTAMPDIFF(SECOND, cola, colb)"),
+    ],
+)
+def test_timestamp_diff(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_time("cola"), "TO_TIME(cola)"),
+        (SF.to_time("cola", SF.lit("HH:mm:ss")), "TO_TIME(cola, 'HH:mm:ss')"),
+        (SF.to_time(SF.col("cola")), "TO_TIME(cola)"),
+    ],
+)
+def test_to_time(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_variant_object("cola"), "TO_VARIANT_OBJECT(cola)"),
+        (SF.to_variant_object(SF.col("cola")), "TO_VARIANT_OBJECT(cola)"),
+    ],
+)
+def test_to_variant_object(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.to_xml("cola"), "TO_XML(cola)"),
+        (SF.to_xml(SF.col("cola")), "TO_XML(cola)"),
+    ],
+)
+def test_to_xml(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_make_interval(SF.lit(1), SF.lit(2)), "TRY_MAKE_INTERVAL(1, 2)"),
+    ],
+)
+def test_try_make_interval(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.try_make_timestamp(
+                SF.lit(2021), SF.lit(1), SF.lit(1), SF.lit(0), SF.lit(0), SF.lit(0)
+            ),
+            "TRY_MAKE_TIMESTAMP(2021, 1, 1, 0, 0, 0)",
+        ),
+    ],
+)
+def test_try_make_timestamp(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.try_make_timestamp_ltz(
+                SF.lit(2021), SF.lit(1), SF.lit(1), SF.lit(0), SF.lit(0), SF.lit(0)
+            ),
+            "TRY_MAKE_TIMESTAMP_LTZ(2021, 1, 1, 0, 0, 0)",
+        ),
+    ],
+)
+def test_try_make_timestamp_ltz(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (
+            SF.try_make_timestamp_ntz(
+                SF.lit(2021), SF.lit(1), SF.lit(1), SF.lit(0), SF.lit(0), SF.lit(0)
+            ),
+            "TRY_MAKE_TIMESTAMP_NTZ(2021, 1, 1, 0, 0, 0)",
+        ),
+    ],
+)
+def test_try_make_timestamp_ntz(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_mod("cola", "colb"), "TRY_MOD(cola, colb)"),
+        (SF.try_mod(SF.col("cola"), SF.col("colb")), "TRY_MOD(cola, colb)"),
+    ],
+)
+def test_try_mod(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_parse_json("cola"), "TRY_PARSE_JSON(cola)"),
+        (SF.try_parse_json(SF.col("cola")), "TRY_PARSE_JSON(cola)"),
+    ],
+)
+def test_try_parse_json(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_parse_url("cola", "colb"), "TRY_PARSE_URL(cola, colb)"),
+        (SF.try_parse_url("cola", "colb", "colc"), "TRY_PARSE_URL(cola, colb, colc)"),
+    ],
+)
+def test_try_parse_url(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_reflect(SF.lit("class"), SF.lit("method")), "TRY_REFLECT('class', 'method')"),
+    ],
+)
+def test_try_reflect(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_to_date("cola"), "TRY_TO_DATE(cola)"),
+        (SF.try_to_date("cola", "yyyy-MM-dd"), "TRY_TO_DATE(cola, 'yyyy-MM-dd')"),
+        (SF.try_to_date(SF.col("cola")), "TRY_TO_DATE(cola)"),
+    ],
+)
+def test_try_to_date(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_to_time("cola"), "TRY_TO_TIME(cola)"),
+        (SF.try_to_time(SF.col("cola")), "TRY_TO_TIME(cola)"),
+    ],
+)
+def test_try_to_time(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_url_decode("cola"), "TRY_URL_DECODE(cola)"),
+        (SF.try_url_decode(SF.col("cola")), "TRY_URL_DECODE(cola)"),
+    ],
+)
+def test_try_url_decode(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_validate_utf8("cola"), "TRY_VALIDATE_UTF8(cola)"),
+        (SF.try_validate_utf8(SF.col("cola")), "TRY_VALIDATE_UTF8(cola)"),
+    ],
+)
+def test_try_validate_utf8(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.try_variant_get("cola", "$.a", "INT"), "TRY_VARIANT_GET(cola, '$.a', 'INT')"),
+        (SF.try_variant_get(SF.col("cola"), "$.a", "INT"), "TRY_VARIANT_GET(cola, '$.a', 'INT')"),
+    ],
+)
+def test_try_variant_get(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.uniform(SF.lit(0), SF.lit(10)), "UNIFORM(0, 10)"),
+        (SF.uniform(SF.lit(0), SF.lit(10), SF.lit(42)), "UNIFORM(0, 10, 42)"),
+    ],
+)
+def test_uniform(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.uuid(), "UUID()"),
+        (SF.uuid(SF.lit(42)), "UUID(42)"),
+    ],
+)
+def test_uuid(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.validate_utf8("cola"), "VALIDATE_UTF8(cola)"),
+        (SF.validate_utf8(SF.col("cola")), "VALIDATE_UTF8(cola)"),
+    ],
+)
+def test_validate_utf8(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.variant_get("cola", "$.a", "INT"), "VARIANT_GET(cola, '$.a', 'INT')"),
+        (SF.variant_get(SF.col("cola"), "$.a", "INT"), "VARIANT_GET(cola, '$.a', 'INT')"),
+    ],
+)
+def test_variant_get(expression, expected):
+    assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        (SF.zeroifnull("cola"), "COALESCE(cola, 0)"),
+        (SF.zeroifnull(SF.col("cola")), "COALESCE(cola, 0)"),
+    ],
+)
+def test_zeroifnull(expression, expected):
     assert expression.column_expression.sql(dialect="spark") == expected
