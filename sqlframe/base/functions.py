@@ -2455,7 +2455,10 @@ def posexplode(col: ColumnOrName) -> Column:
 
 @meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
 def explode_outer(col: ColumnOrName) -> Column:
-    return Column.invoke_expression_over_column(col, expression.ExplodeOuter)
+    # In sqlglot v30+, ExplodeOuter became a trait and can't be instantiated directly.
+    # Use _ExplodeOuter (Explode + ExplodeOuter combined class) when available.
+    expr_cls = getattr(expression, "_ExplodeOuter", expression.ExplodeOuter)
+    return Column.invoke_expression_over_column(col, expr_cls)
 
 
 @meta(unsupported_engines=["duckdb", "postgres", "snowflake"])
