@@ -33,6 +33,7 @@ def test_invoke_anonymous(name, func):
         "string_agg",  # alias for listagg
         "parse_json",  # ParseJSON in Spark dialect is a no-op; anonymous needed to emit PARSE_JSON(col)
         "time_diff",  # Anonymous needed: exp.TimeDiff generates TIMEDIFF not Spark's TIME_DIFF(unit, start, end)
+        "array_position",  # wrapped in coalesce to return 0 instead of NULL when not found
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
