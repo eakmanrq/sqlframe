@@ -82,7 +82,7 @@ redshift = [
     "redshift_connector>=2.1.1,<2.2.0",
 ]
 snowflake = [
-    "snowflake-connector-python[secure-local-storage]>=3.10.0,<4.4",
+    "snowflake-connector-python[secure-local-storage]>=3.10.0,<4.5",
 ]
 spark = [
     "pyspark>=4,<4.2",
