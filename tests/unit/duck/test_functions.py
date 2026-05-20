@@ -69,6 +69,9 @@ def test_percentile_matches_spark_continuous_interpolation(session):
         F.percentile("z", 0.3).alias("z"),
     ).collect()[0]
 
+    assert isinstance(result.a, float)
+    assert isinstance(result.b, float)
+    assert isinstance(result.z, float)
     assert math.isclose(result.a, 1.2000000000000002)
     assert math.isclose(result.b, 4.0)
     assert math.isclose(result.z, 7.6)
