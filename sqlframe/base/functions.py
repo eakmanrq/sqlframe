@@ -807,7 +807,7 @@ def percentile(
     if frequency:
         logger.warning("Frequency is not supported in all engines")
     return Column.invoke_expression_over_column(
-        col, expression.PercentileDisc, expression=lit(percentage)
+        col, expression.PercentileCont, expression=lit(percentage)
     )
 
 
