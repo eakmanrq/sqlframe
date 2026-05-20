@@ -53,3 +53,22 @@ def test_skewness_expression_generates_correct_dialect_names():
     assert "SKEWNESS" in skew.sql(dialect="duckdb")
     assert "SKEW" in skew.sql(dialect="snowflake")
     assert "SKEWNESS" in skew.sql(dialect="spark")
+
+
+def test_percentile_matches_spark_continuous_interpolation(session):
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    rows = [
+        {key: value[index] for key, value in data.items()}
+        for index in range(len(data[next(iter(data.keys()))]))
+    ]
+    df = session.createDataFrame(rows)
+
+    result = df.select(
+        F.percentile("a", 0.1).alias("a"),
+        F.percentile("b", 0.5).alias("b"),
+        F.percentile("z", 0.3).alias("z"),
+    ).collect()[0]
+
+    assert math.isclose(result.a, 1.2000000000000002)
+    assert math.isclose(result.b, 4.0)
+    assert math.isclose(result.z, 7.6)
