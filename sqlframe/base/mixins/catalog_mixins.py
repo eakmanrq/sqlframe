@@ -60,7 +60,7 @@ class _BaseInfoSchemaMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
 
 
 class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
-    CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
+    CURRENT_CATALOG_EXPRESSION: exp.Expr = exp.func("current_catalog")
 
     def currentCatalog(self) -> str:
         """Returns the current default catalog in this session.
@@ -82,7 +82,7 @@ class GetCurrentCatalogFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TA
 
 
 class GetCurrentDatabaseFromFunctionMixin(_BaseCatalog, t.Generic[SESSION, DF, TABLE]):
-    CURRENT_DATABASE_EXPRESSION: exp.Expression = exp.func("current_schema")
+    CURRENT_DATABASE_EXPRESSION: exp.Expr = exp.func("current_schema")
 
     def currentDatabase(self) -> str:
         """Returns the current default schema in this session.

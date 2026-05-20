@@ -536,7 +536,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def _collect(
         self,
-        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        expressions: t.Union[str, exp.Expr, t.List[str], t.List[exp.Expr]],
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,
@@ -573,7 +573,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def _fetchdf(
         self,
-        expressions: t.Union[exp.Expression, t.List[exp.Expression]],
+        expressions: t.Union[exp.Expr, t.List[exp.Expr]],
         *,
         quote_identifiers: bool = True,
     ) -> pd.DataFrame:
@@ -583,16 +583,16 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         all_expressions = [None] + ensure_list(expressions)
         for an_expression in all_expressions[:-1]:
             if an_expression:
-                self._execute(self._to_sql(an_expression, quote_identifiers=quote_identifiers))  # type: ignore
+                self._execute(self._to_sql(an_expression, quote_identifiers=quote_identifiers))
         assert all_expressions[-1] is not None
         return read_sql_query(
-            self._to_sql(all_expressions[-1], quote_identifiers=quote_identifiers),  # type: ignore
+            self._to_sql(all_expressions[-1], quote_identifiers=quote_identifiers),
             self._conn,
         )
 
     def _to_sql(
         self,
-        sql: t.Union[str, exp.Expression],
+        sql: t.Union[str, exp.Expr],
         *,
         dialect: DialectType = None,
         quote_identifiers: bool = True,
@@ -610,17 +610,17 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def _optimize(
         self,
-        expression: exp.Expression,
+        expression: exp.Expr,
         dialect: t.Optional[Dialect] = None,
         quote_identifiers: bool = True,
-    ) -> exp.Expression:
+    ) -> exp.Expr:
         dialect = dialect or self.input_dialect
         normalize_identifiers(expression, dialect=dialect)
         rules = list(OPTIMIZER_RULES)
         if quote_identifiers:
             quote_identifiers_func(expression, dialect=dialect)
         else:
-            rules.remove(quote_identifiers_func)
+            rules = [rule for rule in rules if rule is not quote_identifiers_func]
         return optimize(
             expression,
             dialect=dialect,

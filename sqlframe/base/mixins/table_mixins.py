@@ -50,12 +50,12 @@ def ensure_cte(func: t.Callable[P, T]) -> t.Callable[P, T]:
 class _BaseTableMixins(_BaseTable, t.Generic[DF]):
     def _ensure_where_condition(
         self, where: t.Optional[t.Union[Column, str, bool]] = None
-    ) -> exp.Expression:
+    ) -> exp.Expr:
         self_name = self.expression.ctes[0].this.args["from_"].this.alias_or_name
 
         if where is None:
             logger.warning("Empty value for `where`clause. Defaults to `True`.")
-            condition: exp.Expression = exp.Boolean(this=True)
+            condition: exp.Expr = exp.Boolean(this=True)
         else:
             condition_list = self._ensure_and_normalize_cols(where, self.expression)
             if len(condition_list) > 1:

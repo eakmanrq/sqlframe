@@ -5,7 +5,6 @@ from __future__ import annotations
 import typing as t
 
 from sqlglot import expressions as exp
-from sqlglot.helper import ensure_list
 
 from sqlframe.base.column import Column
 from sqlframe.base.util import get_tables_from_expression_with_join
@@ -13,7 +12,7 @@ from sqlframe.base.util import get_tables_from_expression_with_join
 if t.TYPE_CHECKING:
     from sqlframe.base.dataframe import SESSION
 
-    NORMALIZE_INPUT = t.TypeVar("NORMALIZE_INPUT", bound=t.Union[str, exp.Expression, Column])
+    NORMALIZE_INPUT = t.TypeVar("NORMALIZE_INPUT", bound=t.Union[str, exp.Expr, Column])
 
 
 def normalize(
@@ -23,7 +22,6 @@ def normalize(
     *,
     remove_identifier_if_possible: bool = True,
 ):
-    expr = ensure_list(expr)
     expressions = _ensure_expressions(expr)
     for expression in expressions:
         identifiers = expression.find_all(exp.Identifier)

@@ -81,8 +81,8 @@ class WindowSpec:
 
     def _calc_start_end(
         self, start: int, end: int
-    ) -> t.Dict[str, t.Optional[t.Union[str, exp.Expression]]]:
-        def get_value_and_side(x: int) -> t.Tuple[t.Union[str, exp.Expression], t.Optional[str]]:
+    ) -> t.Dict[str, t.Optional[t.Union[str, exp.Expr]]]:
+        def get_value_and_side(x: int) -> t.Tuple[t.Union[str, exp.Expr], t.Optional[str]]:
             if x == Window.currentRow:
                 return "CURRENT ROW", None
             if x < 0:

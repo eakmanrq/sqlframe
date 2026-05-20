@@ -1727,8 +1727,12 @@ def concat_ws(sep: str, *cols: ColumnOrName) -> Column:
     if session._is_bigquery:
         return concat_ws_from_array_to_string(sep, *cols)
 
-    return Column.invoke_expression_over_column(
-        None, expression.ConcatWs, expressions=[lit(sep)] + list(cols)
+    return Column(
+        expression.ConcatWs(
+            expressions=[lit(sep).column_expression]
+            + [Column.ensure_col(col).column_expression for col in cols],
+            coalesce=True,
+        )
     )
 
 
@@ -3478,7 +3482,7 @@ def get_active_spark_context() -> SparkContext:
     session = _get_session()
     if not isinstance(session, SparkSession):
         raise RuntimeError("This function is only available in SparkSession.")
-    return session.spark_session.sparkContext
+    return getattr(session.spark_session, "sparkContext")
 
 
 @meta()
@@ -4436,7 +4440,7 @@ def make_timestamp(
     +-----------------------+
     >>> spark.conf.unset("spark.sql.session.timeZone")
     """
-    kwargs: t.Dict[str, expression.Expression] = {
+    kwargs: t.Dict[str, expression.Expr] = {
         "year": Column.ensure_col(years).column_expression,
         "month": Column.ensure_col(months).column_expression,
         "day": Column.ensure_col(days).column_expression,

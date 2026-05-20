@@ -40,7 +40,7 @@ class SnowflakeCatalog(
     ListColumnsFromInfoSchemaMixin["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
     _BaseCatalog["SnowflakeSession", "SnowflakeDataFrame", "SnowflakeTable"],
 ):
-    CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
+    CURRENT_CATALOG_EXPRESSION: exp.Expr = exp.func("current_database")
     UPPERCASE_INFO_SCHEMA = True
 
     def listFunctions(

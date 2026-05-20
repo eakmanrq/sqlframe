@@ -97,7 +97,7 @@ def pyspark_session(tmp_path_factory, gen_tpcds: t.List[Path]) -> PySparkSession
         .appName("Unit-tests")
         .getOrCreate()
     )
-    spark.sparkContext.setLogLevel("ERROR")
+    getattr(spark, "sparkContext").setLogLevel("ERROR")
     spark.sql("DROP DATABASE IF EXISTS db1 CASCADE")
     spark.sql("CREATE DATABASE db1")
     spark.sql("CREATE TABLE db1.table1 (id INTEGER, name STRING)")

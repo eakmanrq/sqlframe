@@ -63,7 +63,7 @@ class SparkSession(
 
     def _collect(
         self,
-        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        expressions: t.Union[str, exp.Expr, t.List[str], t.List[exp.Expr]],
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,
@@ -75,7 +75,7 @@ class SparkSession(
                 if isinstance(expression, exp.Expression)
                 else expression
             )
-            self._execute(sql)  # type: ignore
+            self._execute(sql)
         if skip_rows:
             return []
         assert self._last_df is not None
@@ -97,7 +97,7 @@ class SparkSession(
 
     def _fetchdf(
         self,
-        expressions: t.Union[exp.Expression, t.List[exp.Expression]],
+        expressions: t.Union[exp.Expr, t.List[exp.Expr]],
         *,
         quote_identifiers: bool = True,
     ) -> pd.DataFrame:
@@ -107,7 +107,7 @@ class SparkSession(
                 if isinstance(expression, exp.Expression)
                 else expression
             )
-            self._execute(sql)  # type: ignore
+            self._execute(sql)
         assert self._last_df is not None
         return self._last_df.toPandas()
 

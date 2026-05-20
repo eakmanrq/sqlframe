@@ -34,6 +34,7 @@ def test_invoke_anonymous(name, func):
         "parse_json",  # ParseJSON in Spark dialect is a no-op; anonymous needed to emit PARSE_JSON(col)
         "time_diff",  # Anonymous needed: exp.TimeDiff generates TIMEDIFF not Spark's TIME_DIFF(unit, start, end)
         "array_position",  # wrapped in coalesce to return 0 instead of NULL when not found
+        "named_struct",  # SQLGlot parses named_struct as Struct, which emits STRUCT instead
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
@@ -3054,10 +3055,10 @@ def test_try_avg(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
-        (SF.try_divide("cola", "colb"), "IF(colb <> 0, cola / colb, NULL)"),
+        (SF.try_divide("cola", "colb"), "TRY_DIVIDE(cola, colb)"),
         (
             SF.try_divide(SF.col("cola"), SF.col("colb")),
-            "IF(colb <> 0, cola / colb, NULL)",
+            "TRY_DIVIDE(cola, colb)",
         ),
     ],
 )

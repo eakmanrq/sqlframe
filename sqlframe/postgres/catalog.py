@@ -35,7 +35,7 @@ class PostgresCatalog(
     ListTablesFromInfoSchemaMixin["PostgresSession", "PostgresDataFrame", "PostgresTable"],
     _BaseCatalog["PostgresSession", "PostgresDataFrame", "PostgresTable"],
 ):
-    CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.column("current_catalog")
+    CURRENT_CATALOG_EXPRESSION: exp.Expr = exp.column("current_catalog")
     TEMP_SCHEMA_FILTER = exp.column("table_schema").like("pg_temp_%")
 
     def listColumns(
