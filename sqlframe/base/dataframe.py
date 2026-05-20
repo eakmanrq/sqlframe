@@ -695,10 +695,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         optimize: bool = False,
         openai_config: t.Optional[t.Union[t.Dict[str, t.Any], OpenAIConfig]] = None,
         quote_identifiers: bool = True,
-    ) -> t.List[exp.Expression]:
+    ) -> t.List[exp.Expr]:
         df = self._resolve_pending_hints()
         select_expressions = df._get_select_expressions()
-        output_expressions: t.List[exp.Expression] = []
+        output_expressions: t.List[exp.Expr] = []
         replacement_mapping: t.Dict[exp.Identifier, exp.Identifier] = {}
         if openai_config is not None and isinstance(openai_config, dict):
             openai_config = OpenAIConfig.from_dict(t.cast(t.Dict[str, t.Any], openai_config))
@@ -1194,6 +1194,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         right_col.sql(dialect=self.session.input_dialect),
                     ).alias(left_col.alias_or_name)
                     if join_type == "full outer"
+                    else right_col.alias(left_col.alias_or_name)
+                    if join_type == "right outer"
                     else left_col.alias_or_name
                     for left_col, right_col in join_column_pairs
                 ]

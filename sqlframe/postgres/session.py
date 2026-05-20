@@ -57,7 +57,7 @@ $$ LANGUAGE plpgsql;""")
 
     def _collect(
         self,
-        expressions: t.Union[str, exp.Expression, t.List[str], t.List[exp.Expression]],
+        expressions: t.Union[str, exp.Expr, t.List[str], t.List[exp.Expr]],
         *,
         quote_identifiers: bool = True,
         skip_normalization: bool = False,

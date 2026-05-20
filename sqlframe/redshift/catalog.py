@@ -37,7 +37,7 @@ class RedshiftCatalog(
     ListColumnsFromInfoSchemaMixin["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
     _BaseCatalog["RedshiftSession", "RedshiftDataFrame", "RedshiftTable"],
 ):
-    CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_database")
+    CURRENT_CATALOG_EXPRESSION: exp.Expr = exp.func("current_database")
 
     def listFunctions(
         self, dbName: t.Optional[str] = None, pattern: t.Optional[str] = None

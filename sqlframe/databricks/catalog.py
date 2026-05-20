@@ -47,7 +47,7 @@ class DatabricksCatalog(
     ListTablesFromInfoSchemaMixin["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
     _BaseCatalog["DatabricksSession", "DatabricksDataFrame", "DatabricksTable"],
 ):
-    CURRENT_CATALOG_EXPRESSION: exp.Expression = exp.func("current_catalog")
+    CURRENT_CATALOG_EXPRESSION: exp.Expr = exp.func("current_catalog")
     UPPERCASE_INFO_SCHEMA = True
 
     def setCurrentCatalog(self, catalogName: str) -> None:

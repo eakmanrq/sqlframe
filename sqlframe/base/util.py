@@ -463,7 +463,7 @@ def safe_parse_identifier(raw_name: str, dialect: DialectType = None) -> exp.Ide
 
 
 def normalize_string(
-    value: t.Union[str, exp.Expression],
+    value: t.Union[str, exp.Expr],
     from_dialect: DialectType = None,
     to_dialect: DialectType = None,
     is_pattern: bool = False,
@@ -503,7 +503,7 @@ def normalize_string(
         else:
             star_positions = []
             value_without_star = value
-        value_expression: exp.Expression
+        value_expression: exp.Expr
         if is_schema:
             value_expression = to_schema(value_without_star, dialect=from_dialect)
         elif is_table:

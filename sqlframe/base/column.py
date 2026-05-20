@@ -23,7 +23,7 @@ if t.TYPE_CHECKING:
 
 
 class Column:
-    def __init__(self, expression: t.Optional[t.Union[ColumnOrLiteral, exp.Expression]]):
+    def __init__(self, expression: t.Optional[t.Union[ColumnOrLiteral, exp.Expr]]):
         from sqlframe.base.session import _BaseSession
 
         if isinstance(expression, Column):
@@ -37,7 +37,7 @@ class Column:
         if expression is None:
             raise ValueError(f"Could not parse {expression}")
 
-        self.expression: exp.Expression = expression
+        self.expression: exp.Expr = expression
 
     def __repr__(self):
         return repr(self.expression)
@@ -177,13 +177,13 @@ class Column:
         return self.getField(name)
 
     @classmethod
-    def ensure_col(cls, value: t.Optional[t.Union[ColumnOrName, exp.Expression]]) -> Column:
+    def ensure_col(cls, value: t.Optional[t.Union[ColumnOrName, exp.Expr]]) -> Column:
         col = get_func_from_session("col")
 
         return col(value)
 
     @classmethod
-    def ensure_cols(cls, args: t.List[t.Union[ColumnOrName, exp.Expression]]) -> t.List[Column]:
+    def ensure_cols(cls, args: t.List[t.Union[ColumnOrName, exp.Expr]]) -> t.List[Column]:
         return [cls.ensure_col(x) if not isinstance(x, Column) else x for x in args]
 
     @classmethod
@@ -293,7 +293,7 @@ class Column:
         return isinstance(self.expression, exp.Column)
 
     @property
-    def column_expression(self) -> t.Union[exp.Column, exp.Literal]:
+    def column_expression(self) -> exp.Expr:
         return self.expression.unalias()
 
     @property
@@ -332,7 +332,8 @@ class Column:
     def sql(self, **kwargs) -> str:
         from sqlframe.base.session import _BaseSession
 
-        return self.expression.sql(**{"dialect": _BaseSession().input_dialect, **kwargs})
+        sql_kwargs: t.Dict[str, t.Any] = {"dialect": _BaseSession().input_dialect, **kwargs}
+        return self.expression.sql(**sql_kwargs)
 
     def alias(self, name: str) -> Column:
         from sqlframe.base.session import _BaseSession
@@ -340,7 +341,7 @@ class Column:
         dialect = _BaseSession().input_dialect
         parsed = exp.parse_identifier(name, dialect=dialect)
         if isinstance(parsed, exp.Identifier):
-            alias_expr: exp.Expression = normalize_identifiers(parsed, dialect=dialect)
+            alias_expr: exp.Expr = normalize_identifiers(parsed, dialect=dialect)
         elif isinstance(parsed, exp.Column):
             alias_expr = normalize_identifiers(parsed, dialect=dialect).this
         else:
