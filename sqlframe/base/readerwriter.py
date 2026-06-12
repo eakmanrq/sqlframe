@@ -485,11 +485,13 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         mode: t.Optional[str] = None,
         by_name: bool = False,
         state_format_to_write: t.Optional[str] = None,
+        state_options: t.Optional[t.Dict[str, OptionalPrimitiveType]] = None,
     ):
         self._df = df
         self._mode = mode
         self._by_name = by_name
         self._state_format_to_write = state_format_to_write
+        self.state_options = dict(state_options or {})
 
     @property
     def _session(self) -> SESSION:
@@ -512,6 +514,14 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
     @property
     def byName(self) -> Self:
         return self.copy(by_name=True)
+
+    def options(self, **options: OptionalPrimitiveType) -> Self:
+        self.state_options = {**self.state_options, **options}
+        return self
+
+    def option(self, key: str, value: OptionalPrimitiveType) -> Self:
+        self.state_options[key] = value
+        return self
 
     def insertInto(self, tableName: str, overwrite: t.Optional[bool] = None) -> Self:
         from sqlframe.base.session import _BaseSession
@@ -579,6 +589,20 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
 
     def _write(self, path: str, mode: t.Optional[str], format: str, **options) -> None:
         raise NotImplementedError
+
+    def save(
+        self,
+        path: t.Optional[str] = None,
+        format: t.Optional[str] = None,
+        mode: t.Optional[str] = None,
+        partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
+        **options: OptionalPrimitiveType,
+    ) -> None:
+        assert path is not None, "path is required"
+        format = format or self._state_format_to_write or "parquet"
+        mode = mode or self._mode
+        all_options = {**self.state_options, **{k: v for k, v in options.items() if v is not None}}
+        self._write(path=path, mode=mode, format=format, partitionBy=partitionBy, **all_options)
 
     def format(self, source: str) -> "Self":
         """Specifies the input data source format.
@@ -679,16 +703,23 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         |100|Hyukjin Kwon|
         +---+------------+
         """
+        method_options = {
+            "compression": compression,
+            "dateFormat": dateFormat,
+            "timestampFormat": timestampFormat,
+            "lineSep": lineSep,
+            "encoding": encoding,
+            "ignoreNullFields": ignoreNullFields,
+        }
+        all_options = {
+            **self.state_options,
+            **{k: v for k, v in method_options.items() if v is not None},
+        }
         self._write(
             path=path,
-            mode=mode,
+            mode=mode or self._mode,
             format="json",
-            compression=compression,
-            dateFormat=dateFormat,
-            timestampFormat=timestampFormat,
-            lineSep=lineSep,
-            encoding=encoding,
-            ignoreNullFields=ignoreNullFields,
+            **all_options,
         )
 
     def parquet(
@@ -748,9 +779,15 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         |100|Hyukjin Kwon|
         +---+------------+
         """
-        self._write(
-            path=path, mode=mode, format="parquet", compression=compression, partitionBy=partitionBy
-        )
+        method_options = {
+            "compression": compression,
+            "partitionBy": partitionBy,
+        }
+        all_options = {
+            **self.state_options,
+            **{k: v for k, v in method_options.items() if v is not None},
+        }
+        self._write(path=path, mode=mode or self._mode, format="parquet", **all_options)
 
     def csv(
         self,
@@ -821,26 +858,33 @@ class _BaseDataFrameWriter(t.Generic[SESSION, DF]):
         |100|NULL|
         +---+----+
         """
+        method_options = {
+            "compression": compression,
+            "sep": sep,
+            "quote": quote,
+            "escape": escape,
+            "header": header,
+            "nullValue": nullValue,
+            "escapeQuotes": escapeQuotes,
+            "quoteAll": quoteAll,
+            "dateFormat": dateFormat,
+            "timestampFormat": timestampFormat,
+            "ignoreLeadingWhiteSpace": ignoreLeadingWhiteSpace,
+            "ignoreTrailingWhiteSpace": ignoreTrailingWhiteSpace,
+            "charToEscapeQuoteEscaping": charToEscapeQuoteEscaping,
+            "encoding": encoding,
+            "emptyValue": emptyValue,
+            "lineSep": lineSep,
+        }
+        all_options = {
+            **self.state_options,
+            **{k: v for k, v in method_options.items() if v is not None},
+        }
         self._write(
             path=path,
-            mode=mode,
+            mode=mode or self._mode,
             format="csv",
-            compression=compression,
-            sep=sep,
-            quote=quote,
-            escape=escape,
-            header=header,
-            nullValue=nullValue,
-            escapeQuotes=escapeQuotes,
-            quoteAll=quoteAll,
-            dateFormat=dateFormat,
-            timestampFormat=timestampFormat,
-            ignoreLeadingWhiteSpace=ignoreLeadingWhiteSpace,
-            ignoreTrailingWhiteSpace=ignoreTrailingWhiteSpace,
-            charToEscapeQuoteEscaping=charToEscapeQuoteEscaping,
-            encoding=encoding,
-            emptyValue=emptyValue,
-            lineSep=lineSep,
+            **all_options,
         )
 
 
