@@ -134,17 +134,6 @@ class SparkDataFrameReader(
 class SparkDataFrameWriter(
     _BaseDataFrameWriter["SparkSession", "SparkDataFrame"],
 ):
-    def save(
-        self,
-        path: str,
-        mode: t.Optional[str] = None,
-        format: t.Optional[str] = None,
-        partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
-        **options,
-    ):
-        format = str(format or self._state_format_to_write)
-        self._write(path, mode, format, partitionBy=partitionBy, **options)
-
     def _write(self, path: str, mode: t.Optional[str], format: str, **options):
         spark_df = None
         expressions = self._df._get_expressions()
@@ -161,8 +150,7 @@ class SparkDataFrameWriter(
             partition_columns = options.pop("partitionBy", None)
             compression = options.pop("compression", None)
             if partition_columns:
-                partition_columns = options.pop("partitionBy")
-                spark_writer = spark_writer.partitionBy(*partition_columns)
+                spark_writer = spark_writer.partitionBy(*ensure_list(partition_columns))
             if compression:
                 spark_writer = spark_writer.option("compression", compression)
             spark_writer.save(path=path, **options)

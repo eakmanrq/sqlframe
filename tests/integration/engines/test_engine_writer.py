@@ -99,6 +99,26 @@ def test_write_parquet(
     assert sorted(df2.collect()) == sorted(df_employee.collect())
 
 
+def test_write_save_with_format_argument(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
+    df_employee = get_engine_df("employee")
+    temp_parquet = f"{tmp_root_path}{str(tmp_path / 'employee_save.parquet')}"
+    df_employee.write.save(path=temp_parquet, format="parquet")
+    df2 = df_employee.session.read.parquet(temp_parquet)
+    assert sorted(df2.collect()) == sorted(df_employee.collect())
+
+
+def test_write_save_with_format_method(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
+    df_employee = get_engine_df("employee")
+    temp_parquet = f"{tmp_root_path}{str(tmp_path / 'employee_save_format.parquet')}"
+    df_employee.write.format("parquet").save(temp_parquet)
+    df2 = df_employee.session.read.parquet(temp_parquet)
+    assert sorted(df2.collect()) == sorted(df_employee.collect())
+
+
 def test_write_parquet_ignore(
     get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
 ):
@@ -152,6 +172,18 @@ def test_write_csv(
     df_employee = get_engine_df("employee")
     temp_csv = f"{tmp_root_path}{str(tmp_path / 'employee.csv')}"
     df_employee.write.csv(temp_csv, header=True)
+    df2 = df_employee.session.read.csv(temp_csv, header=True, inferSchema=True)
+    assert sorted([sorted(row.asDict()) for row in df2.collect()]) == sorted(
+        [sorted(row.asDict()) for row in df_employee.collect()]
+    )
+
+
+def test_write_save_uses_options(
+    get_engine_df: t.Callable[[str], BaseDataFrame], tmp_root_path: str, tmp_path: pathlib.Path
+):
+    df_employee = get_engine_df("employee")
+    temp_csv = f"{tmp_root_path}{str(tmp_path / 'employee_save.csv')}"
+    df_employee.write.option("header", True).format("csv").save(temp_csv)
     df2 = df_employee.session.read.csv(temp_csv, header=True, inferSchema=True)
     assert sorted([sorted(row.asDict()) for row in df2.collect()]) == sorted(
         [sorted(row.asDict()) for row in df_employee.collect()]

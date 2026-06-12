@@ -148,17 +148,6 @@ class DatabricksDataFrameWriter(
     PandasWriterMixin["DatabricksSession", "DatabricksDataFrame"],
     _BaseDataFrameWriter["DatabricksSession", "DatabricksDataFrame"],
 ):
-    def save(
-        self,
-        path: str,
-        mode: t.Optional[str] = None,
-        format: t.Optional[str] = None,
-        partitionBy: t.Optional[t.Union[str, t.List[str]]] = None,
-        **options,
-    ):
-        format = str(format or self._state_format_to_write)
-        self._write(path, mode, format, partitionBy=partitionBy, **options)
-
     def _write(self, path: str, mode: t.Optional[str], format: str, **options):
         fs_prefix, filepath = split_filepath(path)
         if fs_prefix == "":
