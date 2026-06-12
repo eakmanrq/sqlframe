@@ -38,7 +38,9 @@ jobs:
       run: uv sync --all-extras
     - name: Run Style
       run: uv run make style
-    - name: Setup Postgres
-      uses: ikalnytskyi/action-setup-postgres@v7
+    - name: Configure Postgres
+      run: |
+        echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+        /usr/lib/postgresql/16/bin/postgres --version
     - name: Run tests
       run: uv run make local-test
