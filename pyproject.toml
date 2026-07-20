@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "prettytable<4",
-    "sqlglot>=28.0.0,<30.13",
+    "sqlglot>=28.0.0,<30.14",
     "typing_extensions",
     "more-itertools",
 ]
