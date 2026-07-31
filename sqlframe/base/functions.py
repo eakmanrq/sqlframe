@@ -2937,9 +2937,10 @@ def try_avg(col: ColumnOrName) -> Column:
 
 @meta()
 def try_divide(left: ColumnOrName, right: ColumnOrName) -> Column:
-    generator = _get_session().execution_dialect.generator_class
+    session = _get_session()
+    generator = session.execution_dialect.generator_class
     if (
-        generator.__module__.rsplit(".", 1)[-1] in {"spark", "databricks"}
+        session.execution_dialect_name in {"spark", "databricks"}
         and expression.SafeDivide not in generator.TRANSFORMS
     ):
         return Column.invoke_anonymous_function(left, "TRY_DIVIDE", right)

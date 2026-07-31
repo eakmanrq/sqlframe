@@ -3082,14 +3082,19 @@ def test_try_divide(expression, expected):
 
 
 @pytest.mark.parametrize("dialect", ["spark", "databricks"])
-def test_try_divide_spark_family_without_native_safe_divide(dialect):
+def test_try_divide_spark_family_without_native_safe_divide(dialect, monkeypatch):
     from sqlframe.standalone.session import StandaloneSession
 
     session = StandaloneSession.builder.config("sqlframe.execution.dialect", dialect).getOrCreate()
+    generator = session.execution_dialect.generator_class
+    monkeypatch.setattr(generator, "__module__", "sqlglot.generators")
+    monkeypatch.delitem(generator.TRANSFORMS, exp.SafeDivide, raising=False)
 
+    result = SF.try_divide("cola", "colb")
+
+    assert isinstance(result.column_expression, exp.Anonymous)
     assert (
-        SF.try_divide("cola", "colb").column_expression.sql(dialect=session.execution_dialect)
-        == "TRY_DIVIDE(cola, colb)"
+        result.column_expression.sql(dialect=session.execution_dialect) == "TRY_DIVIDE(cola, colb)"
     )
 
 
