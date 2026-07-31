@@ -1,6 +1,7 @@
 import datetime
 import inspect
 import operator
+from importlib.metadata import requires
 
 import pytest
 from sqlglot import expressions as exp
@@ -35,6 +36,7 @@ def test_invoke_anonymous(name, func):
         "time_diff",  # Anonymous needed: exp.TimeDiff generates TIMEDIFF not Spark's TIME_DIFF(unit, start, end)
         "array_position",  # wrapped in coalesce to return 0 instead of NULL when not found
         "named_struct",  # SQLGlot parses named_struct as Struct, which emits STRUCT instead
+        "try_divide",  # Uses native SafeDivide when the active generator supports it
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
@@ -1802,6 +1804,19 @@ def test_concat_ws(expression, expected):
     assert expression.column_expression.sql(dialect="spark") == expected
 
 
+def test_concat_ws_preserves_redshift_translation():
+    from sqlframe.standalone.session import StandaloneSession
+
+    session = StandaloneSession.builder.config(
+        "sqlframe.execution.dialect", "redshift"
+    ).getOrCreate()
+
+    assert (
+        SF.concat_ws("-", "cola", "colb").column_expression.sql(dialect=session.execution_dialect)
+        == "cola || '-' || colb"
+    )
+
+
 @pytest.mark.parametrize(
     "expression, expected",
     [
@@ -3064,6 +3079,48 @@ def test_try_avg(expression, expected):
 )
 def test_try_divide(expression, expected):
     assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize("dialect", ["spark", "databricks"])
+def test_try_divide_spark_family_without_native_safe_divide(dialect, monkeypatch):
+    from sqlframe.standalone.session import StandaloneSession
+
+    session = StandaloneSession.builder.config("sqlframe.execution.dialect", dialect).getOrCreate()
+    generator = session.execution_dialect.generator_class
+    monkeypatch.setattr(generator, "__module__", "sqlglot.generators")
+    monkeypatch.delitem(generator.TRANSFORMS, exp.SafeDivide, raising=False)
+
+    result = SF.try_divide("cola", "colb")
+
+    assert isinstance(result.column_expression, exp.Anonymous)
+    assert (
+        result.column_expression.sql(dialect=session.execution_dialect) == "TRY_DIVIDE(cola, colb)"
+    )
+
+
+def test_try_divide_non_spark_retains_safe_divide():
+    from sqlframe.standalone.session import StandaloneSession
+
+    session = StandaloneSession.builder.config(
+        "sqlframe.execution.dialect", "snowflake"
+    ).getOrCreate()
+
+    assert (
+        SF.try_divide("cola", "colb").column_expression.sql(dialect=session.execution_dialect)
+        == "IFF(colb <> 0, cola / colb, NULL)"
+    )
+
+
+def test_sqlglot_requirement_is_singular_in_distribution_metadata():
+    sqlglot_requirements = [
+        requirement.split(";", 1)[0].strip()
+        for requirement in requires("sqlframe") or []
+        if requirement.split(";", 1)[0].strip().lower().startswith("sqlglot")
+    ]
+
+    assert len(sqlglot_requirements) == 1
+    assert ">=30.0.0" in sqlglot_requirements[0]
+    assert "<30.13" in sqlglot_requirements[0]
 
 
 @pytest.mark.parametrize(
