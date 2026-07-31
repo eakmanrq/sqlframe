@@ -44,3 +44,52 @@ jobs:
         /usr/lib/postgresql/16/bin/postgres --version
     - name: Run tests
       run: uv run make local-test
+  minimum-sqlglot:
+    runs-on: ubuntu-latest
+    env:
+      PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: '3.12'
+        enable-cache: true
+    - name: Resolve SQLGlot minimum from project metadata
+      id: resolve_sqlglot
+      shell: bash
+      run: |
+        set -euo pipefail
+        requirements_file="$(mktemp)"
+        uv pip compile pyproject.toml --resolution lowest-direct --no-deps --quiet --output-file "$requirements_file"
+
+        sqlglot_pin_count=0
+        sqlglot_pin=""
+        while IFS= read -r pin; do
+          sqlglot_pin_count=$((sqlglot_pin_count + 1))
+          sqlglot_pin="$pin"
+        done < <(grep -iE '^sqlglot==[^[:space:]]+$' "$requirements_file" || true)
+        if [[ "$sqlglot_pin_count" -ne 1 ]]; then
+          echo "Expected exactly one SQLGlot pin, found $sqlglot_pin_count" >&2
+          cat "$requirements_file" >&2
+          exit 1
+        fi
+
+        echo "Resolved SQLGlot minimum from pyproject.toml: $sqlglot_pin"
+        echo "sqlglot_pin=$sqlglot_pin" >> "$GITHUB_OUTPUT"
+        {
+          echo "### SQLGlot minimum compatibility"
+          echo
+          echo "Resolved from pyproject.toml: $sqlglot_pin."
+        } >> "$GITHUB_STEP_SUMMARY"
+    - name: Install normal dependencies
+      run: uv sync --all-extras --locked
+    - name: Layer resolved SQLGlot minimum
+      env:
+        SQLGLOT_PIN: ${{ steps.resolve_sqlglot.outputs.sqlglot_pin }}
+      run: |
+        uv pip install --python .venv/bin/python "$SQLGLOT_PIN"
+        .venv/bin/python -c 'import sqlglot; print(f"Testing SQLGlot {sqlglot.__version__}")'
+    - name: Run unit tests at resolved SQLGlot minimum
+      run: uv run --no-sync pytest -n 0 tests/unit

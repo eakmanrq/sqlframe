@@ -1731,7 +1731,7 @@ def concat_ws(sep: str, *cols: ColumnOrName) -> Column:
         expression.ConcatWs(
             expressions=[lit(sep).column_expression]
             + [Column.ensure_col(col).column_expression for col in cols],
-            coalesce=True,
+            coalesce=getattr(session.execution_dialect, "CONCAT_WS_COALESCE", False),
         )
     )
 
@@ -2937,6 +2937,13 @@ def try_avg(col: ColumnOrName) -> Column:
 
 @meta()
 def try_divide(left: ColumnOrName, right: ColumnOrName) -> Column:
+    generator = _get_session().execution_dialect.generator_class
+    if (
+        generator.__module__.rsplit(".", 1)[-1] in {"spark", "databricks"}
+        and expression.SafeDivide not in generator.TRANSFORMS
+    ):
+        return Column.invoke_anonymous_function(left, "TRY_DIVIDE", right)
+
     return Column.invoke_expression_over_column(
         left, expression.SafeDivide, expression=Column.ensure_col(right).column_expression
     )
