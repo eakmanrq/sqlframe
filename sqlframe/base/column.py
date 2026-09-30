@@ -215,6 +215,8 @@ class Column:
             )
         elif value is not None and isinstance(value, float) and math.isnan(value):
             return cls(exp.cast(exp.Literal.string("NaN"), exp.DataType.build("float")))
+        elif isinstance(value, float) and math.isinf(value):
+            return cls(exp.cast(exp.Literal.string(str(value)), exp.DataType.Type.FLOAT))
         elif isinstance(value, datetime.datetime):
             if value.tzinfo is None:
                 value = value.isoformat(sep=" ")

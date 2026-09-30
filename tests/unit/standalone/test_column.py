@@ -1,11 +1,18 @@
 import datetime
 
+import pytest
+
 from sqlframe.standalone import functions as F
 from sqlframe.standalone.window import Window
 
 
 def test_simple():
     assert (F.col("cola") == 1).sql() == "cola = 1"
+
+
+@pytest.mark.parametrize("value", [float("inf"), float("-inf")])
+def test_compare_infinity(value):
+    assert (F.col("cola") == value).sql() == f"cola = CAST('{value}' AS FLOAT)"
 
 
 def test_neq():
@@ -127,6 +134,11 @@ def test_substring():
 def test_isin():
     assert (F.col("cola").isin([1, 2, 3])).sql() == "cola IN (1, 2, 3)"
     assert (F.col("cola").isin(1, 2, 3)).sql() == "cola IN (1, 2, 3)"
+
+
+@pytest.mark.parametrize("value", [float("inf"), float("-inf")])
+def test_isin_infinity(value):
+    assert F.col("cola").isin([value, 2.0]).sql() == f"cola IN (CAST('{value}' AS FLOAT), 2.0)"
 
 
 def test_asc():
