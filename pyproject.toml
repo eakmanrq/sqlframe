@@ -51,7 +51,7 @@ dev = [
     "pyspark>=4,<4.2",
     "pytest>=8.2.0,<9.1",
     "pytest-forked",
-    "pytest-postgresql>=6,<9",
+    "pytest-postgresql>=6,<10",
     "pytest-rerunfailures",
     "pytest-xdist>=3.6,<3.9",
     "pre-commit>=3.7,<5",
