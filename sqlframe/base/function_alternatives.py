@@ -1307,7 +1307,9 @@ def endswith_using_like(str: ColumnOrName, suffix: ColumnOrName) -> Column:
 def try_to_timestamp_strptime(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
-    return Column.invoke_anonymous_function(col, "TRY_STRPTIME", _BaseSession().format_strftime(format))  # type: ignore
+    return Column.invoke_anonymous_function(
+        col, "TRY_STRPTIME", Column(_BaseSession().format_strftime(format))
+    )
 
 
 def try_to_timestamp_safe(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
