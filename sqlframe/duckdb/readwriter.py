@@ -84,7 +84,12 @@ class DuckDBDataFrameReader(
             select_column_mapping = column_mapping.copy()
             if merged_options.get("filename"):
                 select_column_mapping["filename"] = "VARCHAR"
-            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
+            select_columns = [
+                x.expression
+                for x in self._to_casted_columns(
+                    select_column_mapping, table=self._LOAD_SOURCE_ALIAS
+                )
+            ]
             if format == "csv":
                 merged_options["columns"] = column_mapping
         else:
@@ -97,7 +102,10 @@ class DuckDBDataFrameReader(
             from_clause = f"read_{format}([{paths}], {to_csv(merged_options)})"
         else:
             from_clause = f"'{path}'"
-        df = self.session.sql(exp.select(*select_columns).from_(from_clause), qualify=False)
+        df = self.session.sql(
+            exp.select(*select_columns).from_(f"{from_clause} AS {self._LOAD_SOURCE_ALIAS}"),
+            qualify=False,
+        )
         if select_columns == [exp.Star()]:
             return self.load(path=path, format=format, schema=df.schema, **merged_options)
         self.session._last_loaded_file = path  # type: ignore

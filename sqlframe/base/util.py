@@ -575,3 +575,10 @@ def partition_to(
     result2: t.Type[R2],
 ) -> tuple[R1, R2]:
     return (lambda x, y: (result1(x), result2(y)))(*partition(pred, iterable))
+
+
+def build_drop(table: exp.Table, kind: str, exists: bool = False) -> exp.Drop:
+    # SQLGlot 30.18 replaced Drop's `this` with a `tables` list to support dropping multiple tables
+    if "tables" in exp.Drop.arg_types:
+        return exp.Drop(tables=[table], kind=kind, exists=exists)
+    return exp.Drop(this=table, kind=kind, exists=exists)

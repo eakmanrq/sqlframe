@@ -1307,14 +1307,16 @@ def endswith_using_like(str: ColumnOrName, suffix: ColumnOrName) -> Column:
 def try_to_timestamp_strptime(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
-    return Column.invoke_anonymous_function(col, "TRY_STRPTIME", _BaseSession().format_time(format))  # type: ignore
+    return Column.invoke_anonymous_function(
+        col, "TRY_STRPTIME", Column(_BaseSession().format_strftime(format))
+    )
 
 
 def try_to_timestamp_safe(col: ColumnOrName, format: t.Optional[ColumnOrName] = None) -> Column:
     from sqlframe.base.session import _BaseSession
 
     return Column.invoke_anonymous_function(
-        Column(_BaseSession().format_time(format)),
+        Column(_BaseSession().format_strftime(format)),
         "SAFE.PARSE_TIMESTAMP",
         col,
     )
@@ -1459,7 +1461,7 @@ def from_unixtime_bigutil(col: ColumnOrName, format: t.Optional[str] = None) -> 
         expression.Anonymous(
             this="FORMAT_TIMESTAMP",
             expressions=[
-                session.format_time(format),
+                session.format_strftime(format),
                 Column(
                     expression.Anonymous(this="TIMESTAMP_SECONDS", expressions=expressions)
                 ).column_expression,
@@ -1481,7 +1483,7 @@ def unix_timestamp_bgutil(
                 expression.Anonymous(
                     this="PARSE_TIMESTAMP",
                     expressions=[
-                        _BaseSession().format_time(format),
+                        _BaseSession().format_strftime(format),
                         Column.ensure_col(timestamp).column_expression,
                         lit("UTC").column_expression,
                     ],

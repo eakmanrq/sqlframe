@@ -22,6 +22,7 @@ from sqlframe.base.readerwriter import (
     _infer_format,
 )
 from sqlframe.base.util import (
+    build_drop,
     ensure_column_mapping,
     generate_random_identifier,
     normalize_string,
@@ -107,7 +108,12 @@ class DatabricksDataFrameReader(
         if schema:
             column_mapping = ensure_column_mapping(schema)
             select_column_mapping = column_mapping.copy()
-            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
+            select_columns = [
+                x.expression
+                for x in self._to_casted_columns(
+                    select_column_mapping, table=self._LOAD_SOURCE_ALIAS
+                )
+            ]
 
             if hasattr(schema, "simpleString"):
                 schema = t.cast(t.Any, schema).simpleString()
@@ -135,7 +141,9 @@ class DatabricksDataFrameReader(
             from_clause = f"'{path}'"
 
         df = self.session.sql(
-            exp.select(*select_columns).from_(from_clause, dialect=self.session.input_dialect),
+            exp.select(*select_columns).from_(
+                f"{from_clause} AS {self._LOAD_SOURCE_ALIAS}", dialect=self.session.input_dialect
+            ),
             qualify=False,
         )
         if select_columns == [exp.Star()] and df.schema:
@@ -158,8 +166,8 @@ class DatabricksDataFrameWriter(
             mode = str(mode or self._mode or "error")
             partition_by = options.pop("partitionBy", None)
             tmp_table = f"_{generate_random_identifier()}_tmp"
-            drop_expr = exp.Drop(
-                this=exp.to_table(tmp_table, dialect=self._session.input_dialect),
+            drop_expr = build_drop(
+                exp.to_table(tmp_table, dialect=self._session.input_dialect),
                 kind="TABLE",
                 exists=True,
             )
@@ -331,8 +339,8 @@ class DatabricksDataFrameWriter(
             properties.append(exp.LocationProperty(this=exp.convert(path)))
             if replace and format != "delta":
                 replace = None
-                drop_expression = exp.Drop(
-                    this=exp.to_table(name, dialect=self._session.input_dialect),
+                drop_expression = build_drop(
+                    exp.to_table(name, dialect=self._session.input_dialect),
                     kind="TABLE",
                     exists=True,
                 )

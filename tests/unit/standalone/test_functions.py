@@ -37,6 +37,15 @@ def test_invoke_anonymous(name, func):
         "array_position",  # wrapped in coalesce to return 0 instead of NULL when not found
         "named_struct",  # SQLGlot parses named_struct as Struct, which emits STRUCT instead
         "try_divide",  # Uses native SafeDivide when the active generator supports it
+        # Typed expressions added after SQLGlot 30.0 (the minimum supported version), and they
+        # currently generate the same SQL in every dialect, so these stay anonymous for now
+        "from_json",
+        "nanvl",
+        "negative",
+        "regexp_substr",
+        "rint",
+        "shuffle",
+        "stack",
     }
     if "invoke_anonymous_function" in inspect.getsource(func) and name not in ignore_funcs:
         func = parse_one(f"{name}()", read="spark", error_level=ErrorLevel.IGNORE)
@@ -3125,7 +3134,7 @@ def test_sqlglot_requirement_is_singular_in_distribution_metadata():
 
     assert len(sqlglot_requirements) == 1
     assert ">=30.0.0" in sqlglot_requirements[0]
-    assert "<30.13" in sqlglot_requirements[0]
+    assert "<30.23" in sqlglot_requirements[0]
 
 
 @pytest.mark.parametrize(

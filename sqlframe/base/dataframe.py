@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import enum
 import functools
+import inspect
 import itertools
 import json
 import logging
@@ -28,6 +29,7 @@ from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.operations import Operation, operation
 from sqlframe.base.transforms import replace_id_value
 from sqlframe.base.util import (
+    build_drop,
     get_func_from_session,
     get_tables_from_expression_with_join,
     normalize_string,
@@ -719,7 +721,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     dialect=self.session.input_dialect,
                     schema=self.session.catalog._schema,
                 )
-                pushdown_projections(select_expression, schema=self.session.catalog._schema)
+                # SQLGlot <30.21 needs the schema; newer versions rely on the prior qualify
+                pushdown_kwargs: t.Dict[str, t.Any] = {}
+                if "schema" in inspect.signature(pushdown_projections).parameters:
+                    pushdown_kwargs["schema"] = self.session.catalog._schema
+                pushdown_projections(select_expression, **pushdown_kwargs)
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
 
@@ -754,7 +760,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 )
 
                 # We will drop the "view" if it exists before running the cache table
-                output_expressions.append(exp.Drop(this=cache_table, exists=True, kind="VIEW"))
+                output_expressions.append(build_drop(cache_table, kind="VIEW", exists=True))
             elif expression_type == exp.Create:
                 expression = df.output_expression_container.copy()
                 expression.set("expression", select_expression)
