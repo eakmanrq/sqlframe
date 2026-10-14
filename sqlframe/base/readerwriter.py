@@ -58,12 +58,20 @@ class _BaseDataFrameReader(t.Generic[SESSION, DF, TABLE]):
             .select(*columns, dialect=self.session.input_dialect)
         )
 
-    def _to_casted_columns(self, column_mapping: t.Dict) -> t.List[Column]:
+    # Sources read from files have no schema, so SQLGlot (30.22+) can only resolve the casted
+    # columns when they are qualified with the source's alias
+    _LOAD_SOURCE_ALIAS = "_sqlframe_source"
+
+    def _to_casted_columns(
+        self, column_mapping: t.Dict, table: t.Optional[str] = None
+    ) -> t.List[Column]:
         from sqlframe.base.column import Column
 
         results = []
         for k, v in column_mapping.items():
             column = exp.to_column(k, dialect=self.session.input_dialect)
+            if table and isinstance(column, exp.Column) and not column.table:
+                column.set("table", exp.to_identifier(table))
             results.append(
                 Column(
                     exp.cast(

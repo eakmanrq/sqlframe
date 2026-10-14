@@ -108,7 +108,12 @@ class DatabricksDataFrameReader(
         if schema:
             column_mapping = ensure_column_mapping(schema)
             select_column_mapping = column_mapping.copy()
-            select_columns = [x.expression for x in self._to_casted_columns(select_column_mapping)]
+            select_columns = [
+                x.expression
+                for x in self._to_casted_columns(
+                    select_column_mapping, table=self._LOAD_SOURCE_ALIAS
+                )
+            ]
 
             if hasattr(schema, "simpleString"):
                 schema = t.cast(t.Any, schema).simpleString()
@@ -136,7 +141,9 @@ class DatabricksDataFrameReader(
             from_clause = f"'{path}'"
 
         df = self.session.sql(
-            exp.select(*select_columns).from_(from_clause, dialect=self.session.input_dialect),
+            exp.select(*select_columns).from_(
+                f"{from_clause} AS {self._LOAD_SOURCE_ALIAS}", dialect=self.session.input_dialect
+            ),
             qualify=False,
         )
         if select_columns == [exp.Star()] and df.schema:
