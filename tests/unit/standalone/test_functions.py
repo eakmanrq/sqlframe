@@ -64,6 +64,11 @@ def test_invoke_anonymous(name, func):
         (SF.lit(Row(cola=1, colb="test")), "STRUCT(1 AS cola, 'test' AS colb)"),
         (SF.lit(float("inf")), "CAST('inf' AS FLOAT)"),
         (SF.lit(float("-inf")), "CAST('-inf' AS FLOAT)"),
+        (SF.lit(float("nan")), "CAST('NaN' AS FLOAT)"),
+        (
+            SF.lit([[float("inf"), float("-inf")], [1.0, None]]),
+            "ARRAY(ARRAY(CAST('inf' AS FLOAT), CAST('-inf' AS FLOAT)), ARRAY(1.0, NULL))",
+        ),
     ],
 )
 def test_lit(expression, expected):
