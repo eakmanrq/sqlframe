@@ -2170,7 +2170,7 @@ wheels = [
 
 [[package]]
 name = "pytest-postgresql"
-version = "8.0.0"
+version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mirakuru" },
@@ -2179,9 +2179,9 @@ dependencies = [
     { name = "psycopg" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bf/c8/b9607675904b3e4004c76109741aac6479daecfe6fb38ad89f330c6c5adc/pytest_postgresql-8.0.0.tar.gz", hash = "sha256:26cbd44a0adef76cf4a82a3a2263f0e029bc54b5863556a9bd86ca3edfa91cce", size = 49737, upload-time = "2026-01-23T21:14:34.554Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/59/550d50df3af0091c5e662d46b9f52b7ef992a8017dd40fc1994158f7a510/pytest_postgresql-9.1.1.tar.gz", hash = "sha256:9a4673870bde284ed200a7efb496ad7a90024348231f0d5be0d72946423a220f", size = 46917, upload-time = "2026-10-04T13:26:17.66Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/cf/2c962ce63904e2b051b644a0036bdeeae8ae05d91e11e829b220c3db9935/pytest_postgresql-8.0.0-py3-none-any.whl", hash = "sha256:125b63b16d630c2dea19807062ed4c96e6123f06058ce65b82b4b14174d6c4b8", size = 40228, upload-time = "2026-01-23T21:14:33.08Z" },
+    { url = "https://files.pythonhosted.org/packages/80/d5/2b306245e662d014a805133d2188c7802c0f43cb08a1f9c246e83c924b4a/pytest_postgresql-9.1.1-py3-none-any.whl", hash = "sha256:fcd6e100d9d5550c3192c8386afa6632c2963ca808b0617d47ed16dd037a224c", size = 41999, upload-time = "2026-10-04T13:26:16.214Z" },
 ]
 
 [[package]]
@@ -2754,7 +2754,7 @@ requires-dist = [
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.1" },
     { name = "pytest-forked", marker = "extra == 'dev'" },
-    { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<9" },
+    { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6,<3.9" },
     { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.2.0" },
