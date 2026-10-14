@@ -20,6 +20,7 @@ from sqlframe.base.mixins.catalog_mixins import (
 )
 from sqlframe.base.types import StructType
 from sqlframe.base.util import (
+    build_drop,
     get_column_mapping_from_schema_input,
     normalize_string,
     schema_,
@@ -427,8 +428,8 @@ class DatabricksCatalog(
             properties.append(exp.LocationProperty(this=exp.convert(path)))
             if replace and source != "delta":
                 replace = None
-                drop_expression = exp.Drop(
-                    this=exp.to_table(name, dialect=self.session.input_dialect),
+                drop_expression = build_drop(
+                    exp.to_table(name, dialect=self.session.input_dialect),
                     kind="TABLE",
                     exists=True,
                 )

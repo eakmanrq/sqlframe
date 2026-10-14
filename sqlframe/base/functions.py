@@ -2172,11 +2172,14 @@ def array_insert(
     value = value if isinstance(value, Column) else lit(value)
     if isinstance(pos, int):
         pos = lit(pos)
-    return Column.invoke_expression_over_column(
-        col,
-        expression.ArrayInsert,
-        expression=value.column_expression,
-        position=Column.ensure_col(pos).column_expression,
+    return Column(
+        expression.ArrayInsert(
+            this=Column.ensure_col(col).column_expression,
+            position=Column.ensure_col(pos).column_expression,
+            expression=value.column_expression,
+            # Spark positions are 1-based, matching how SQLGlot parses Spark's ARRAY_INSERT
+            offset=1,
+        )
     )
 
 

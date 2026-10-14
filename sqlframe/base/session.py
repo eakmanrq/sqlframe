@@ -148,6 +148,21 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             value = value.expression.this
         return self.input_dialect.format_time(f"'{value}'")  # type: ignore
 
+    def format_strftime(self, value: t.Optional[t.Union[Column, str]] = None) -> exp.Expression:
+        """Like `format_time`, but always a plain strftime string for engine functions that take one.
+
+        SQLGlot 30.13+ maps zero-padded Spark tokens (e.g. MM) to internal markers like `%mstrict`,
+        which only its generators know how to render.
+        """
+        time_format = self.format_time(value)
+        strict_formats = getattr(sqlglot.dialects.dialect, "STRICT_TIME_FORMATS", {})
+        if strict_formats and isinstance(time_format, exp.Literal) and time_format.is_string:
+            format_str = time_format.this
+            for strict_format, lax_format in strict_formats.items():
+                format_str = format_str.replace(strict_format, lax_format)
+            return exp.Literal.string(format_str)
+        return time_format
+
     def format_execution_time(
         self, value: t.Optional[t.Union[Column, str]] = None
     ) -> exp.Expression:

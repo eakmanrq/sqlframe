@@ -22,6 +22,7 @@ from sqlframe.base.readerwriter import (
     _infer_format,
 )
 from sqlframe.base.util import (
+    build_drop,
     ensure_column_mapping,
     generate_random_identifier,
     normalize_string,
@@ -158,8 +159,8 @@ class DatabricksDataFrameWriter(
             mode = str(mode or self._mode or "error")
             partition_by = options.pop("partitionBy", None)
             tmp_table = f"_{generate_random_identifier()}_tmp"
-            drop_expr = exp.Drop(
-                this=exp.to_table(tmp_table, dialect=self._session.input_dialect),
+            drop_expr = build_drop(
+                exp.to_table(tmp_table, dialect=self._session.input_dialect),
                 kind="TABLE",
                 exists=True,
             )
@@ -331,8 +332,8 @@ class DatabricksDataFrameWriter(
             properties.append(exp.LocationProperty(this=exp.convert(path)))
             if replace and format != "delta":
                 replace = None
-                drop_expression = exp.Drop(
-                    this=exp.to_table(name, dialect=self._session.input_dialect),
+                drop_expression = build_drop(
+                    exp.to_table(name, dialect=self._session.input_dialect),
                     kind="TABLE",
                     exists=True,
                 )
