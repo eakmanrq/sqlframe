@@ -20,7 +20,8 @@ on:
     - 'uv.lock'
 jobs:
   run-tests:
-    runs-on: ubuntu-latest
+    # Keep PostgreSQL 16 available for the Configure Postgres step.
+    runs-on: ubuntu-24.04
     env:
       PYTEST_XDIST_AUTO_NUM_WORKERS: 4
     strategy:
