@@ -2760,7 +2760,7 @@ requires-dist = [
     { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.4,<0.16" },
     { name = "snowflake-connector-python", extras = ["secure-local-storage"], marker = "extra == 'snowflake'", specifier = ">=3.10.0,<4.5" },
-    { name = "sqlglot", specifier = ">=30.0.0,<30.23" },
+    { name = "sqlglot", specifier = ">=30.0.0,<30.24" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.18" },
     { name = "types-psycopg2", marker = "extra == 'dev'", specifier = ">=2.9,<3" },
     { name = "typing-extensions" },
@@ -2769,11 +2769,11 @@ provides-extras = ["bigquery", "databricks", "dev", "docs", "duckdb", "openai", 
 
 [[package]]
 name = "sqlglot"
-version = "30.22.0"
+version = "30.23.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/e0/db58fbf2527426758dc1e862ce538736978e100e4e78fc9657e9661826ee/sqlglot-30.22.0.tar.gz", hash = "sha256:ec4b83ca8236ea8867f574a382dc15ce35b071c977fecfcc66482d9a3f500661", size = 6088770, upload-time = "2026-10-09T16:09:01.04Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/40/4afe7d21cdf3dbb5a7529ea33a0e07055081fb3d37bc0550e7c2278d6ec0/sqlglot-30.23.0.tar.gz", hash = "sha256:34b5b62fa4cbf042ee6b9e829236577b2f8db4538dd20007de2aa5383c92e845", size = 6108071, upload-time = "2026-10-14T21:48:38.209Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/4c/b8474b02b572d9c7a2903e364335d566d52b6128b834b92a7cdfe5597823/sqlglot-30.22.0-py3-none-any.whl", hash = "sha256:90aa461490fcd95d14ec3842a97506ae20f6d3e9313307ad31be793d479cca65", size = 777816, upload-time = "2026-10-09T16:08:59.07Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/73/9e749f3e57ca471bf663eb6d51fbe79b9921c5b7376706cd1cac999c8e2e/sqlglot-30.23.0-py3-none-any.whl", hash = "sha256:b5a645722cb4c6b649e9131b94830d9df9a557e87be63713179d848320f2baa1", size = 783709, upload-time = "2026-10-14T21:48:36.327Z" },
 ]
 
 [[package]]
