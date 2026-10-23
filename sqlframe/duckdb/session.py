@@ -49,7 +49,7 @@ class DuckDBSession(
 
     def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
         import duckdb
-        from duckdb import InvalidInputException
+        from duckdb import CatalogException, InvalidInputException
 
         try:  # Available from duckdb 1.4.1
             from duckdb.sqltypes import VARCHAR
@@ -61,7 +61,7 @@ class DuckDBSession(
             try:
                 self._udf_conn = conn.cursor()
                 self._udf_conn.create_function("SOUNDEX", lambda x: soundex(x), return_type=VARCHAR)
-            except (ImportError, InvalidInputException):
+            except (ImportError, InvalidInputException, CatalogException):
                 pass
 
             super().__init__(conn, *args, **kwargs)
@@ -70,6 +70,10 @@ class DuckDBSession(
     @cached_property
     def _cur(self) -> DuckDBPyConnection:
         return self._conn
+
+    def _new_session_kwargs(self) -> t.Dict[str, t.Any]:
+        # Do not share a DuckDB connection between threads. A cursor is a new connection to the same database.
+        return {"conn": self._conn.cursor()}
 
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import datetime
 import logging
 import sys
@@ -74,6 +75,18 @@ TABLE = t.TypeVar("TABLE", bound=_BaseTable)
 UDF_REGISTRATION = t.TypeVar("UDF_REGISTRATION", bound=_BaseUDFRegistration)
 
 _MISSING = "MISSING"
+
+# When set, the next __new__ makes a new session. newSession() and Builder.create() set it.
+_NEW_SESSION: contextvars.ContextVar[bool] = contextvars.ContextVar("_NEW_SESSION", default=False)
+
+
+@contextlib.contextmanager
+def _new_session() -> t.Generator[None, None, None]:
+    token = _NEW_SESSION.set(True)
+    try:
+        yield
+    finally:
+        _NEW_SESSION.reset(token)
 
 
 class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGISTRATION]):
@@ -196,7 +209,10 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         return self._table(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
-        if _BaseSession._instance is None or not isinstance(_BaseSession._instance, cls):
+        if _NEW_SESSION.get():
+            _NEW_SESSION.set(False)  # only the first session is new
+            _BaseSession._instance = super().__new__(cls)
+        elif _BaseSession._instance is None or not isinstance(_BaseSession._instance, cls):
             _BaseSession._instance = super().__new__(cls)
         return _BaseSession._instance
 
@@ -216,6 +232,19 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def getActiveSession(self) -> Self:
         return self
+
+    def newSession(self) -> Self:
+        """Return a new session that uses the same connection, dialects and schema."""
+        with _new_session():
+            session = type(self)(**self._new_session_kwargs())
+        session.input_dialect = self.input_dialect
+        session.output_dialect = self.output_dialect
+        session.execution_dialect = self.execution_dialect
+        session._schema = self._schema
+        return session
+
+    def _new_session_kwargs(self) -> t.Dict[str, t.Any]:
+        return {"conn": self._connection}
 
     def stop(self) -> None:
         if connection := getattr(self, "_connection", None):
@@ -770,6 +799,12 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                 self._set_config(k, v)
             self._set_session_properties()
             return self.session
+
+        def create(self) -> _BaseSession:
+            """Like getOrCreate(), but always return a new session."""
+            self.__dict__.pop("session", None)  # engine builders cache the session
+            with _new_session():
+                return self.getOrCreate()
 
         def _set_config(
             self,
