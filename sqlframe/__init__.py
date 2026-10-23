@@ -38,6 +38,7 @@ NAME_TO_FILE_OVERRIDE = {
 
 ACTIVATE_CONFIG = {}
 _SAVED_PYSPARK_MODULES: t.Dict[str, t.Any] = {}
+_PYSPARK_MODULE_SWAP_ACTIVE = False
 _SPARK_IMPORT_MODULES: t.Dict[str, t.Any] = {}
 # Imported modules can retain our hooks after deactivation, so their delegates
 # must outlive any individual activation.
@@ -71,7 +72,10 @@ def activate(
     conn: t.Optional[t.Any] = None,
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ) -> None:
-    global _SPARK_IMPORT_ACTIVE
+    global _SPARK_IMPORT_ACTIVE, _PYSPARK_MODULE_SWAP_ACTIVE
+
+    if _SPARK_IMPORT_ACTIVE or _PYSPARK_MODULE_SWAP_ACTIVE:
+        deactivate()
 
     import sqlframe
     from sqlframe import testing
@@ -89,6 +93,7 @@ def activate(
             if k.startswith("pyspark"):
                 _SAVED_PYSPARK_MODULES[k] = v
 
+        _PYSPARK_MODULE_SWAP_ACTIVE = True
         pyspark_mock = MagicMock()
         pyspark_mock.__file__ = "pyspark"
         sys.modules["pyspark"] = pyspark_mock
@@ -150,15 +155,19 @@ def activate(
 
 
 def deactivate() -> None:
-    global _SPARK_IMPORT_ACTIVE
+    global _SPARK_IMPORT_ACTIVE, _PYSPARK_MODULE_SWAP_ACTIVE
 
     if _SPARK_IMPORT_ACTIVE:
         _SPARK_IMPORT_ACTIVE = False
         setattr(builtins, "__import__", _SPARK_ORIGINAL_IMPORT)
         setattr(importlib, "import_module", _SPARK_ORIGINAL_IMPORT_MODULE)
         _SPARK_IMPORT_MODULES.clear()
+
+    if not _PYSPARK_MODULE_SWAP_ACTIVE:
         ACTIVATE_CONFIG.clear()
         return
+
+    _PYSPARK_MODULE_SWAP_ACTIVE = False
 
     pyspark_imports = [k for k in sys.modules if k.startswith("pyspark")]
 
