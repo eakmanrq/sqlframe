@@ -2417,6 +2417,43 @@ def test_pos_explode(get_session_and_func, get_func):
         ]
 
 
+@pytest.mark.duckdb
+def test_duckdb_pos_explode_with_aliases_and_surrounding_columns(duckdb_session):
+    from sqlframe.duckdb import functions as F
+
+    df = duckdb_session.createDataFrame(
+        [(1, "A", [10, None, 30]), (2, "B", []), (3, "C", None)],
+        ("id", "label", "line_array"),
+    )
+
+    result = df.select("*", F.posexplode("line_array").alias("Line_Pos", "Line_Val"))
+
+    assert result.columns == ["id", "label", "line_array", "Line_Pos", "Line_Val"]
+    assert result.collect() == [
+        Row(id=1, label="A", line_array=[10, None, 30], Line_Pos=0, Line_Val=10),
+        Row(id=1, label="A", line_array=[10, None, 30], Line_Pos=1, Line_Val=None),
+        Row(id=1, label="A", line_array=[10, None, 30], Line_Pos=2, Line_Val=30),
+    ]
+    assert result.drop("line_array").withColumn(
+        "line_id", F.concat(F.col("label"), F.lit("_"), F.col("Line_Val"))
+    ).collect() == [
+        Row(id=1, label="A", Line_Pos=0, Line_Val=10, line_id="A_10"),
+        Row(id=1, label="A", Line_Pos=1, Line_Val=None, line_id=None),
+        Row(id=1, label="A", Line_Pos=2, Line_Val=30, line_id="A_30"),
+    ]
+
+
+@pytest.mark.duckdb
+def test_duckdb_pos_explode_default_columns_can_be_selected(duckdb_session):
+    from sqlframe.duckdb import functions as F
+
+    df = duckdb_session.createDataFrame([(1, [10, 20])], ("id", "line_array"))
+    result = df.select(F.posexplode("line_array"))
+
+    assert result.columns == ["pos", "col"]
+    assert result.select("pos", "col").collect() == [Row(pos=0, col=10), Row(pos=1, col=20)]
+
+
 def test_explode_outer(get_session_and_func, get_func):
     session, explode_outer = get_session_and_func("explode_outer")
     lit = get_func("lit", session)

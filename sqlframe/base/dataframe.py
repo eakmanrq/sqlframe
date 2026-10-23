@@ -608,7 +608,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
         outer_select = item.find(exp.Select)
         if outer_select:
-            return [col(quote_preserving_alias_or_name(x)) for x in outer_select.expressions]
+            return [
+                col(quote_preserving_alias_or_name(alias))
+                for expression in outer_select.expressions
+                for alias in (
+                    expression.aliases if isinstance(expression, exp.Aliases) else [expression]
+                )
+            ]
         return []
 
     def _create_hash_from_expression(self, expression: exp.Expression) -> str:
@@ -679,9 +685,23 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             if v is not None
         }
         self.display_name_mapping.update(zipped)
+        for column in normalized_columns:
+            if isinstance(column.expression, exp.Aliases):
+                display_names = column.expression.meta.get("display_names", [])
+                self.display_name_mapping.update(
+                    (alias.name, display_name)
+                    for alias, display_name in zip(column.expression.aliases, display_names)
+                )
 
     def _set_display_names(self, select_expression: exp.Select) -> None:
         for index, column in enumerate(select_expression.expressions):
+            if isinstance(column, exp.Aliases):
+                for alias in column.aliases:
+                    if alias.name in self.display_name_mapping:
+                        alias.set("this", self.display_name_mapping[alias.name])
+                        alias.set("quoted", True)
+                        alias._meta = {"case_sensitive": True, **(alias._meta or {})}
+                continue
             column_name = quote_preserving_alias_or_name(column)
             if column_name in self.display_name_mapping:
                 display_name_identifier = exp.to_identifier(
@@ -923,11 +943,20 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @operation(Operation.SELECT)
     def select(self, *cols, **kwargs) -> Self:
+        from sqlframe.base.column import Column
+
         if not cols:
             return self
 
         if isinstance(cols[0], list):
             cols = cols[0]
+        if self.session._is_duckdb:
+            cols = [
+                col.alias("pos", "col")
+                if isinstance(col, Column) and isinstance(col.expression, exp.Posexplode)
+                else col
+                for col in cols
+            ]
         columns = self._ensure_and_normalize_cols(cols)
         if "skip_update_display_name_mapping" not in kwargs:
             unexpanded_columns = self._ensure_and_normalize_cols(cols, skip_star_expansion=True)

@@ -337,7 +337,7 @@ class Column:
         sql_kwargs: t.Dict[str, t.Any] = {"dialect": _BaseSession().input_dialect, **kwargs}
         return self.expression.sql(**sql_kwargs)
 
-    def alias(self, name: str) -> Column:
+    def alias(self, name: str, *names: str) -> Column:
         from sqlframe.base.session import _BaseSession
 
         dialect = _BaseSession().input_dialect
@@ -349,11 +349,15 @@ class Column:
         else:
             # Reserved word parsed as a non-Identifier (e.g. 'end' → EndStatement in sqlglot v29)
             alias_expr = exp.to_identifier(name, quoted=True)
-        new_expression = exp.Alias(
-            this=self.column_expression,
-            alias=alias_expr,
-        )
-        new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
+        if names:
+            new_expression = exp.Aliases(
+                this=self.column_expression,
+                expressions=[alias_expr, *[exp.to_identifier(n, quoted=True) for n in names]],
+            )
+            new_expression._meta = {"display_names": [name, *names]}
+        else:
+            new_expression = exp.Alias(this=self.column_expression, alias=alias_expr)
+            new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
         return Column(new_expression)
 
     def asc(self) -> Column:
