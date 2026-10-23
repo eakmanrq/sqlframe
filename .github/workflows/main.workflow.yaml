@@ -21,7 +21,7 @@ on:
 jobs:
   run-tests:
     # Keep PostgreSQL 16 available for the Configure Postgres step.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       PYTEST_XDIST_AUTO_NUM_WORKERS: 4
     strategy:
@@ -99,7 +99,7 @@ jobs:
         uv run --no-sync pytest -n 0 tests/integration/engines/duck/test_duckdb_dataframe.py -k lambda_functions_with_collection_and_pandas
         uv run --no-sync pytest -n 0 -m local tests/integration/engines/test_int_functions.py -k 'array_join or array_remove or array_except or arrays_zip or array_compact'
   minimum-duckdb:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - name: Checkout
       uses: actions/checkout@v6
