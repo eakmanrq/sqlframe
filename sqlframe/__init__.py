@@ -90,6 +90,7 @@ def activate(
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ) -> None:
     global _SPARK_IMPORT_ACTIVE, _PYSPARK_MODULE_SWAP_ACTIVE
+    global _SPARK_ORIGINAL_IMPORT, _SPARK_ORIGINAL_IMPORT_MODULE
 
     if _SPARK_IMPORT_ACTIVE or _PYSPARK_MODULE_SWAP_ACTIVE:
         deactivate()
@@ -164,6 +165,12 @@ def activate(
             setattr(engine_file, name_without_prefix, obj)
 
     if engine == "spark":
+        # Preserve hooks installed since SQLFrame was imported, without ever
+        # making our own hooks delegate to themselves.
+        if builtins.__import__ is not _spark_import:
+            _SPARK_ORIGINAL_IMPORT = builtins.__import__
+        if importlib.import_module is not _spark_import_module:
+            _SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
         _SPARK_IMPORT_MODULES.clear()
         _SPARK_IMPORT_MODULES.update(spark_modules)
         _SPARK_IMPORT_ACTIVE = True
