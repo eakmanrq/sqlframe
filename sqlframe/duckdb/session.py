@@ -21,7 +21,7 @@ else:
     DuckDBPyConnection = t.Any
 
 
-class _ModernDuckDB(DuckDB):
+class _DuckDBV2(DuckDB):
     class Generator(DuckDB.Generator):
         def lambda_sql(self, expression: exp.Lambda, *args, **kwargs) -> str:
             expression = expression.copy()
@@ -89,15 +89,15 @@ class DuckDBSession(
     def _to_sql(self, sql: t.Union[str, exp.Expr], **kwargs) -> str:
         import duckdb
 
-        modern_lambdas = tuple(map(int, duckdb.__version__.split(".")[:2])) >= (1, 3)
-        if modern_lambdas:
-            kwargs.setdefault("dialect", _ModernDuckDB())
+        duckdb_v2 = tuple(map(int, duckdb.__version__.split(".")[:2])) >= (2, 0)
+        if duckdb_v2:
+            kwargs.setdefault("dialect", _DuckDBV2())
         generated_sql = super()._to_sql(sql, **kwargs)
-        if modern_lambdas and " -> " in generated_sql:
+        if duckdb_v2 and " -> " in generated_sql:
             # Older SQLGlot generators insert some lambdas after lambda_sql has run.
             parsed = parse_one(generated_sql, dialect="duckdb")
             if parsed.find(exp.Lambda):
-                return parsed.sql(dialect=_ModernDuckDB())
+                return parsed.sql(dialect=_DuckDBV2())
         return generated_sql
 
     @property

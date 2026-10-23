@@ -45,6 +45,8 @@ jobs:
         /usr/lib/postgresql/16/bin/postgres --version
     - name: Run tests
       run: uv run make local-test
+    - name: Run DuckDB integration tests
+      run: uv run pytest -n 0 tests/integration/engines/duck/test_duckdb_*.py
   minimum-sqlglot:
     runs-on: ubuntu-latest
     env:
@@ -95,7 +97,9 @@ jobs:
     - name: Run unit tests at resolved SQLGlot minimum
       run: uv run --no-sync pytest -n 0 tests/unit
     - name: Run DuckDB lambda tests at resolved SQLGlot minimum
-      run: uv run --no-sync pytest -n 0 -m local tests/integration/engines/duck/test_duckdb_dataframe.py tests/integration/engines/test_int_functions.py -k 'lambda_functions_with_collection_and_pandas or array_join or array_remove or array_except or arrays_zip or array_compact'
+      run: |
+        uv run --no-sync pytest -n 0 tests/integration/engines/duck/test_duckdb_dataframe.py -k lambda_functions_with_collection_and_pandas
+        uv run --no-sync pytest -n 0 -m local tests/integration/engines/test_int_functions.py -k 'array_join or array_remove or array_except or arrays_zip or array_compact'
   minimum-duckdb:
     runs-on: ubuntu-24.04
     steps:
