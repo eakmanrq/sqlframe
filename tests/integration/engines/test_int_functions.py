@@ -2444,6 +2444,25 @@ def test_duckdb_pos_explode_with_aliases_and_surrounding_columns(duckdb_session)
 
 
 @pytest.mark.duckdb
+def test_duckdb_pos_explode_alias_casing_survives_cte_wrap(duckdb_session):
+    from sqlframe.duckdb import functions as F
+
+    df = duckdb_session.createDataFrame([(1, [10, 20])], ("Order_ID", "line_array"))
+    result = (
+        df.select("*", F.posexplode("line_array").alias("Line_Pos", "Line_Val"))
+        .drop("line_array")
+        .withColumn("Order_Line_ID", F.col("Order_ID") + F.col("Line_Val"))
+    )
+
+    expected_columns = ["Order_ID", "Line_Pos", "Line_Val", "Order_Line_ID"]
+    assert result.columns == expected_columns
+    rows = result.collect()
+    assert [list(row.asDict()) for row in rows] == [expected_columns, expected_columns]
+    assert [row.Line_Val for row in rows] == [10, 20]
+    assert [row["Line_Val"] for row in rows] == [10, 20]
+
+
+@pytest.mark.duckdb
 def test_duckdb_pos_explode_default_columns_can_be_selected(duckdb_session):
     from sqlframe.duckdb import functions as F
 
