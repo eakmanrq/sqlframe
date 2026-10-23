@@ -91,6 +91,45 @@ def test_repeated_spark_activation_preserves_imports(check_after_deactivate):
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("hook", ["import_module", "__import__"])
+def test_captured_spark_import_hook_survives_deactivation(hook):
+    script = dedent(
+        f"""
+        import builtins
+        import importlib
+
+        from sqlframe import activate, deactivate
+        from sqlframe.spark import SparkSession as SQLFrameSession
+
+        original_import = builtins.__import__
+        original_import_module = importlib.import_module
+        activate("spark")
+        from {('importlib' if hook == 'import_module' else 'builtins')} import {hook} as captured
+
+        def load(name):
+            if {hook!r} == "__import__":
+                return captured(name, fromlist=("SparkSession",))
+            return captured(name)
+
+        assert load("pyspark.sql").SparkSession is SQLFrameSession
+        for _ in range(2):
+            deactivate()
+            assert builtins.__import__ is original_import
+            assert importlib.import_module is original_import_module
+            assert load("math").sqrt(4) == 2
+            assert load("pyspark.sql") is original_import_module("pyspark.sql")
+            assert load("pyspark.sql").SparkSession is not SQLFrameSession
+            activate("spark")
+            assert load("pyspark.sql").SparkSession is SQLFrameSession
+        deactivate()
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.local
 def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
     from pyspark.sql import SparkSession as PySparkSession
