@@ -2418,6 +2418,7 @@ def test_pos_explode(get_session_and_func, get_func):
 
 
 @pytest.mark.duckdb
+@pytest.mark.local
 def test_duckdb_pos_explode_with_aliases_and_surrounding_columns(duckdb_session):
     from sqlframe.duckdb import functions as F
 
@@ -2434,9 +2435,14 @@ def test_duckdb_pos_explode_with_aliases_and_surrounding_columns(duckdb_session)
         Row(id=1, label="A", line_array=[10, None, 30], Line_Pos=1, Line_Val=None),
         Row(id=1, label="A", line_array=[10, None, 30], Line_Pos=2, Line_Val=30),
     ]
-    assert result.drop("line_array").withColumn(
+    downstream = result.drop("line_array").withColumn(
         "line_id", F.concat(F.col("label"), F.lit("_"), F.col("Line_Val"))
-    ).collect() == [
+    )
+    expected_columns = ["id", "label", "Line_Pos", "Line_Val", "line_id"]
+    assert downstream.columns == expected_columns
+    rows = downstream.collect()
+    assert [list(row.asDict()) for row in rows] == [expected_columns] * 3
+    assert rows == [
         Row(id=1, label="A", Line_Pos=0, Line_Val=10, line_id="A_10"),
         Row(id=1, label="A", Line_Pos=1, Line_Val=None, line_id=None),
         Row(id=1, label="A", Line_Pos=2, Line_Val=30, line_id="A_30"),
@@ -2444,6 +2450,7 @@ def test_duckdb_pos_explode_with_aliases_and_surrounding_columns(duckdb_session)
 
 
 @pytest.mark.duckdb
+@pytest.mark.local
 def test_duckdb_pos_explode_alias_casing_survives_cte_wrap(duckdb_session):
     from sqlframe.duckdb import functions as F
 
@@ -2463,6 +2470,7 @@ def test_duckdb_pos_explode_alias_casing_survives_cte_wrap(duckdb_session):
 
 
 @pytest.mark.duckdb
+@pytest.mark.local
 def test_duckdb_pos_explode_default_columns_can_be_selected(duckdb_session):
     from sqlframe.duckdb import functions as F
 
@@ -2470,7 +2478,11 @@ def test_duckdb_pos_explode_default_columns_can_be_selected(duckdb_session):
     result = df.select(F.posexplode("line_array"))
 
     assert result.columns == ["pos", "col"]
-    assert result.select("pos", "col").collect() == [Row(pos=0, col=10), Row(pos=1, col=20)]
+    downstream = result.select("pos", "col")
+    assert downstream.columns == ["pos", "col"]
+    rows = downstream.collect()
+    assert [list(row.asDict()) for row in rows] == [["pos", "col"], ["pos", "col"]]
+    assert rows == [Row(pos=0, col=10), Row(pos=1, col=20)]
 
 
 def test_explode_outer(get_session_and_func, get_func):
