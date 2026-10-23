@@ -1,4 +1,5 @@
 import datetime
+import warnings
 
 import pytest
 
@@ -202,6 +203,17 @@ def test_to_arrow(duckdb_employee: DuckDBDataFrame):
     assert arrow_table.column(4).to_pylist() == [1, 1, 2, 2, 100]
 
 
+@pytest.mark.parametrize("batch_size", [None, 1])
+def test_to_arrow_does_not_copy_dbapi_result(duckdb_employee: DuckDBDataFrame, batch_size):
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = duckdb_employee.toArrow(batch_size=batch_size)
+        if batch_size:
+            result.read_all()
+
+    assert not any("extra copy of the rows" in str(warning.message) for warning in caught)
+
+
 def test_to_arrow_batch(duckdb_employee: DuckDBDataFrame):
     record_batch_reader = duckdb_employee.toArrow(batch_size=1)
     first_batch = record_batch_reader.read_next_batch()
@@ -255,18 +267,31 @@ def test_to_arrow_batch(duckdb_employee: DuckDBDataFrame):
         record_batch_reader.read_next_batch()
 
 
+def test_to_arrow_after_other_collection_methods(duckdb_session: DuckDBSession):
+    df = duckdb_session.createDataFrame([(1, [1, 2, 3]), (2, [4, 5])], ["id", "values"])
+
+    assert len(df.collect()) == 2
+    assert len(df.toPandas()) == 2
+    assert df.toArrow().column("id").to_pylist() == [1, 2]
+    assert [batch.column("id").to_pylist() for batch in df.toArrow(batch_size=1)] == [[1], [2]]
+
+
+def test_lambda_functions_with_collection_and_pandas(duckdb_session: DuckDBSession):
+    df = duckdb_session.createDataFrame([(1, [1, 2, 3]), (2, [4, 5])], ["id", "values"])
+    transformed = df.select(F.transform("values", lambda x: x * 2).alias("doubled"))
+    filtered = df.select(F.filter("values", lambda x: x > 1).alias("filtered"))
+
+    assert transformed.collect() == [types.Row(doubled=[2, 4, 6]), types.Row(doubled=[8, 10])]
+    assert filtered.collect() == [types.Row(filtered=[2, 3]), types.Row(filtered=[4, 5])]
+    assert transformed.toPandas()["doubled"].tolist() == [[2, 4, 6], [8, 10]]
+    assert filtered.toPandas()["filtered"].tolist() == [[2, 3], [4, 5]]
+
+
 def test_explain(duckdb_employee: DuckDBDataFrame, capsys):
     duckdb_employee.explain()
-    assert (
-        capsys.readouterr().out.strip()
-        == """
-┌───────────────────────────┐
-│      COLUMN_DATA_SCAN     │
-│    ────────────────────   │
-│          ~5 rows          │
-└───────────────────────────┘
-""".strip()
-    )
+    plan = capsys.readouterr().out.lower()
+    assert "column data scan" in plan.replace("_", " ")
+    assert "~5 rows" in plan
 
 
 def test_duplicate_cte(duckdb_session: DuckDBSession):

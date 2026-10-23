@@ -37,6 +37,19 @@ def test_session_from_config():
     assert session.execution_dialect_name == "duckdb"
 
 
+def test_session_with_unfinished_connection_result():
+    import duckdb
+
+    conn = duckdb.connect()
+    conn.execute("SELECT 1 UNION ALL SELECT 2")
+    assert conn.fetchone() == (1,)
+
+    session = DuckDBSession(conn)
+
+    assert conn.fetchone() == (2,)
+    assert session.sql("SELECT SOUNDEX('Robert') AS result").collect() == [Row(result="R163")]
+
+
 def test_session_stop(duckdb_session: DuckDBSession):
     assert duckdb_session.range(1, 2).collect() == [Row(id=1)]
     duckdb_session.stop()
