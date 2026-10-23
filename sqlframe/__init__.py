@@ -205,5 +205,7 @@ def activate_context(
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ):
     activate(engine, conn, config)
-    yield
-    deactivate()
+    try:
+        yield
+    finally:
+        deactivate()
