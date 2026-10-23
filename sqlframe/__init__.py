@@ -59,6 +59,17 @@ def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
                 # Load unrouted modules normally, but keep application imports
                 # from rebinding their top-level alias to the real package.
                 original_import(name, globals, locals, fromlist, level)
+                parent = _SPARK_IMPORT_MODULES["pyspark"]
+                parts = name.split(".")
+                for index in range(1, len(parts)):
+                    module_name = ".".join(parts[: index + 1])
+                    child = _SPARK_IMPORT_MODULES.get(module_name)
+                    if child is None:
+                        child = sys.modules[module_name]
+                        # Aliased dotted imports traverse the returned package.
+                        # Expose real children without replacing routed modules.
+                        setattr(parent, parts[index], child)
+                    parent = child
                 return _SPARK_IMPORT_MODULES["pyspark"]
     return original_import(name, globals, locals, fromlist, level)
 
