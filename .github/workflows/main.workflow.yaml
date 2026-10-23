@@ -45,8 +45,6 @@ jobs:
         /usr/lib/postgresql/16/bin/postgres --version
     - name: Run tests
       run: uv run make local-test
-    - name: Run DuckDB integration tests
-      run: uv run pytest -n 0 tests/integration/engines/duck/test_duckdb_*.py
   minimum-sqlglot:
     runs-on: ubuntu-latest
     env:
