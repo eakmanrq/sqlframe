@@ -2643,8 +2643,8 @@ def sort_array(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
         return Column.invoke_anonymous_function(col, "list_sort", lit(order), lit(nulls_order))
 
     if asc is not None:
-        return Column.invoke_expression_over_column(col, expression.SortArray, asc=lit(asc))
-    return Column.invoke_expression_over_column(col, expression.SortArray)
+        return Column.invoke_anonymous_function(col, "SORT_ARRAY", lit(asc))
+    return Column.invoke_anonymous_function(col, "SORT_ARRAY")
 
 
 @meta(unsupported_engines="postgres")
