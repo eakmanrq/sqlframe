@@ -169,6 +169,54 @@ def test_captured_spark_import_hook_survives_deactivation(hook):
     assert result.returncode == 0, result.stderr
 
 
+def test_unrouted_dotted_import_preserves_spark_application_alias():
+    script = dedent(
+        """
+        import importlib
+        import sys
+
+        from sqlframe import activate, deactivate
+        from sqlframe.spark import SparkSession as SQLFrameSession
+        from sqlframe.spark import functions as SQLFrameFunctions
+
+        real_pyspark = importlib.import_module("pyspark")
+        real_sql = importlib.import_module("pyspark.sql")
+        activate("spark")
+        try:
+            import pyspark.sql
+            routed_pyspark = pyspark
+            import pyspark.sql.utils
+            assert pyspark is routed_pyspark, "unrouted dotted import rebound pyspark"
+            assert pyspark.sql.SparkSession is SQLFrameSession
+            assert pyspark.sql.functions is SQLFrameFunctions
+            assert "pyspark.sql.utils" in sys.modules
+            from pyspark.sql.utils import is_remote
+            assert is_remote is sys.modules["pyspark.sql.utils"].is_remote
+
+            for caller in ("pyspark.sql.internal", "sqlframe.spark.internal"):
+                namespace = {"__name__": caller}
+                exec("import pyspark.sql.utils", namespace)
+                assert namespace["pyspark"] is real_pyspark
+                assert namespace["pyspark"].sql is real_sql
+
+            try:
+                import pyspark.sql.nonexistent_sqlframe_test_module
+            except ModuleNotFoundError:
+                pass
+            else:
+                raise AssertionError("unrouted import must still load the real module")
+        finally:
+            deactivate()
+        import pyspark.sql.utils
+        assert pyspark is real_pyspark
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.local
 def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
     from pyspark.sql import SparkSession as PySparkSession
