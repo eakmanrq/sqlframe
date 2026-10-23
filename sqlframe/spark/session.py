@@ -19,6 +19,7 @@ from sqlframe.spark.udf import SparkUDFRegistration
 
 if t.TYPE_CHECKING:
     import pandas as pd
+    from pyspark.sql import DataFrame
     from pyspark.sql.session import SparkConf
     from pyspark.sql.session import SparkSession as PySparkSession
 
@@ -46,12 +47,15 @@ class SparkSession(
     _udf_registration = SparkUDFRegistration
 
     def __init__(self, conn: t.Optional[PySparkSession] = None, *args, **kwargs):
-        from pyspark.sql.session import DataFrame, SparkSession
-
         self._last_df: t.Optional[DataFrame] = None
         if not hasattr(self, "spark_session"):
             super().__init__(conn)
-            self.spark_session = conn or SparkSession.builder.getOrCreate()
+            if conn is not None:
+                self.spark_session = conn
+            else:
+                from pyspark.sql.session import SparkSession as PySparkSession
+
+                self.spark_session = PySparkSession.builder.getOrCreate()
 
     @property
     def _conn(self) -> t.Any:
@@ -121,10 +125,16 @@ class SparkSession(
 
     class Builder(_BaseSession.Builder):
         def __init__(self):
-            from pyspark.sql.session import SparkSession
+            from sqlframe import ACTIVATE_CONFIG
 
             super().__init__()
-            self.builder = SparkSession.builder
+            conn = ACTIVATE_CONFIG.get(self.SQLFRAME_CONN_KEY)
+            if conn is not None:
+                self.builder = type(conn).builder
+            else:
+                from pyspark.sql.session import SparkSession as PySparkSession
+
+                self.builder = PySparkSession.builder
 
         def config(
             self,
