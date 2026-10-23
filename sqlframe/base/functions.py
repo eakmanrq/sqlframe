@@ -2449,7 +2449,7 @@ def explode(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Explode)
 
 
-@meta(unsupported_engines=["duckdb", "postgres"])
+@meta(unsupported_engines="postgres")
 def posexplode(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.Posexplode)
 
