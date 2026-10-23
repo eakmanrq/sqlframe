@@ -143,8 +143,9 @@ def activate(
     if engine == "spark":
         _SPARK_IMPORT_MODULES.clear()
         _SPARK_IMPORT_MODULES.update(spark_modules)
-        _SPARK_ORIGINAL_IMPORT = builtins.__import__
-        _SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
+        if _SPARK_ORIGINAL_IMPORT is None:
+            _SPARK_ORIGINAL_IMPORT = builtins.__import__
+            _SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
         setattr(builtins, "__import__", _spark_import)
         setattr(importlib, "import_module", _spark_import_module)
 
