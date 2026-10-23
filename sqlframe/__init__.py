@@ -52,8 +52,14 @@ def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
     if _SPARK_IMPORT_ACTIVE and level == 0:
         replacement = _SPARK_IMPORT_MODULES.get(name)
         caller = (globals or {}).get("__name__", "")
-        if replacement is not None and caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
-            return replacement if fromlist else _SPARK_IMPORT_MODULES["pyspark"]
+        if caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
+            if replacement is not None:
+                return replacement if fromlist else _SPARK_IMPORT_MODULES["pyspark"]
+            if not fromlist and name.startswith("pyspark."):
+                # Load unrouted modules normally, but keep application imports
+                # from rebinding their top-level alias to the real package.
+                original_import(name, globals, locals, fromlist, level)
+                return _SPARK_IMPORT_MODULES["pyspark"]
     return original_import(name, globals, locals, fromlist, level)
 
 
