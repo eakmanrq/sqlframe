@@ -47,6 +47,50 @@ def test_replace_pyspark_spark(check_pyspark_imports):
     )
 
 
+@pytest.mark.parametrize("check_after_deactivate", [False, True])
+def test_repeated_spark_activation_preserves_imports(check_after_deactivate):
+    script = dedent(
+        f"""
+        import builtins
+        import importlib
+
+        from sqlframe import ACTIVATE_CONFIG, activate, deactivate
+        from sqlframe.spark import SparkSession as SQLFrameSession
+
+        original_import = builtins.__import__
+        original_import_module = importlib.import_module
+        conn = object()
+
+        for _ in range(2):
+            activate("spark", config={{"test.option": "first"}})
+            activate("spark", conn=conn, config={{"test.option": "second"}})
+            assert ACTIVATE_CONFIG["sqlframe.conn"] is conn
+            assert ACTIVATE_CONFIG["test.option"] == "second"
+
+            if {check_after_deactivate!r}:
+                deactivate()
+
+            import math
+            assert math.sqrt(4) == 2
+            assert importlib.import_module("math") is math
+
+            if not {check_after_deactivate!r}:
+                from pyspark.sql import SparkSession
+                assert SparkSession is SQLFrameSession
+                assert importlib.import_module("pyspark.sql").SparkSession is SQLFrameSession
+                deactivate()
+
+            assert builtins.__import__ is original_import
+            assert importlib.import_module is original_import_module
+            assert not ACTIVATE_CONFIG
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.local
 def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
     from pyspark.sql import SparkSession as PySparkSession
