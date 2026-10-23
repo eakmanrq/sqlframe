@@ -40,6 +40,7 @@ ACTIVATE_CONFIG = {}
 _SAVED_PYSPARK_MODULES: t.Dict[str, t.Any] = {}
 _PYSPARK_MODULE_SWAP_ACTIVE = False
 _SPARK_IMPORT_MODULES: t.Dict[str, t.Any] = {}
+_SPARK_ATTACHED_CHILDREN: t.List[t.Tuple[t.Any, str, t.Any]] = []
 # Imported modules can retain our hooks after deactivation, so their delegates
 # must outlive any individual activation.
 _SPARK_ORIGINAL_IMPORT = builtins.__import__
@@ -68,7 +69,9 @@ def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
                         child = sys.modules[module_name]
                         # Aliased dotted imports traverse the returned package.
                         # Expose real children without replacing routed modules.
-                        setattr(parent, parts[index], child)
+                        if parts[index] not in vars(parent):
+                            setattr(parent, parts[index], child)
+                            _SPARK_ATTACHED_CHILDREN.append((parent, parts[index], child))
                     parent = child
                 return _SPARK_IMPORT_MODULES["pyspark"]
     return original_import(name, globals, locals, fromlist, level)
@@ -138,6 +141,7 @@ def activate(
     spark_modules = {
         "pyspark": pyspark_mock,
         "pyspark.testing": testing,
+        "pyspark.testing.utils": testing.utils,
         "pyspark.sql": engine_module,
     }
     types = engine_module.__dict__.copy()
@@ -185,6 +189,10 @@ def deactivate() -> None:
         _SPARK_IMPORT_ACTIVE = False
         setattr(builtins, "__import__", _SPARK_ORIGINAL_IMPORT)
         setattr(importlib, "import_module", _SPARK_ORIGINAL_IMPORT_MODULE)
+        for parent, name, child in reversed(_SPARK_ATTACHED_CHILDREN):
+            if vars(parent).get(name) is child:
+                delattr(parent, name)
+        _SPARK_ATTACHED_CHILDREN.clear()
         _SPARK_IMPORT_MODULES.clear()
 
     if not _PYSPARK_MODULE_SWAP_ACTIVE:
