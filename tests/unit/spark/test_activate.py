@@ -415,3 +415,72 @@ def test_activate_spark_without_existing_session_runs_sql():
         timeout=90,
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("form", ["alias", "plain", "from"])
+def test_testing_utils_import_preserves_sqlframe_helper(form):
+    script = dedent(
+        f"""
+        import importlib
+        import sqlframe.testing as testing
+        import sqlframe.testing.utils as expected
+        from sqlframe import activate, deactivate
+
+        for _ in range(2):
+            activate("spark")
+            try:
+                if {form!r} == "alias":
+                    import pyspark.testing.utils as imported
+                    helper = imported.assertDataFrameEqual
+                    assert imported is expected
+                elif {form!r} == "plain":
+                    import pyspark.testing.utils
+                    helper = pyspark.testing.utils.assertDataFrameEqual
+                    assert pyspark.testing.utils is expected
+                else:
+                    from pyspark.testing.utils import assertDataFrameEqual as helper
+                assert helper is expected.assertDataFrameEqual
+                assert importlib.import_module("pyspark.testing.utils") is expected
+                assert testing.utils is expected
+            finally:
+                deactivate()
+            import sqlframe.testing.utils as restored
+            assert restored is expected
+            assert testing.utils is expected
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_unrouted_import_preserves_parent_attributes(existing):
+    script = dedent(
+        f"""
+        import sqlframe.spark as parent
+        from sqlframe import activate, deactivate
+
+        assert "utils" not in vars(parent)
+        sentinel = object()
+        if {existing!r}:
+            parent.utils = sentinel
+        for _ in range(2):
+            activate("spark")
+            try:
+                import pyspark.sql.utils
+                if {existing!r}:
+                    assert parent.utils is sentinel
+            finally:
+                deactivate()
+            if {existing!r}:
+                assert parent.utils is sentinel
+            else:
+                assert "utils" not in vars(parent)
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
