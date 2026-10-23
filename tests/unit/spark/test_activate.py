@@ -1,3 +1,8 @@
+import os
+import subprocess
+import sys
+from textwrap import dedent
+
 import pytest
 
 from sqlframe import activate, deactivate
@@ -60,6 +65,7 @@ def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
 
         sqlframe_session = ActivatedSession.builder.getOrCreate()
         assert sqlframe_session.spark_session is spark
+        assert sqlframe_session.sql("SELECT 1 AS value").collect()[0].value == 1
     finally:
         deactivate()
         try:
@@ -67,3 +73,47 @@ def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
             assert spark.sql("SELECT 1 AS value").collect()[0].value == 1
         finally:
             spark.stop()
+
+
+@pytest.mark.local
+def test_activate_spark_without_existing_session_runs_sql():
+    script = dedent(
+        """
+        import importlib
+
+        from sqlframe import activate, deactivate
+
+        activate(engine="spark")
+        spark = None
+        try:
+            from pyspark.sql import SparkSession, functions as F
+            from pyspark.sql.session import SparkSession as SessionFromSubmodule
+            import pyspark.sql.functions as FunctionsFromSubmodule
+
+            assert SparkSession is SessionFromSubmodule
+            assert F is FunctionsFromSubmodule
+            assert importlib.import_module("pyspark.sql").SparkSession is SparkSession
+            assert importlib.import_module("pyspark.sql.functions") is F
+            session = SparkSession.builder.master("local[1]").appName("sqlframe-activation").getOrCreate()
+            spark = session.spark_session
+            assert session.sql("SELECT 1 AS value").collect()[0].value == 1
+            assert [row.id for row in session.range(3).select(F.col("id")).collect()] == [0, 1, 2]
+        finally:
+            deactivate()
+            if spark is not None:
+                spark.stop()
+
+        from pyspark.sql import SparkSession as RestoredSparkSession
+
+        assert RestoredSparkSession is not SparkSession
+        assert importlib.import_module("pyspark.sql").SparkSession is RestoredSparkSession
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "SPARK_LOCAL_IP": "127.0.0.1"},
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stderr

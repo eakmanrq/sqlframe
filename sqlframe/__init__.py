@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import importlib
 import sys
 import typing as t
@@ -37,6 +38,31 @@ NAME_TO_FILE_OVERRIDE = {
 
 ACTIVATE_CONFIG = {}
 _SAVED_PYSPARK_MODULES: t.Dict[str, t.Any] = {}
+_SPARK_IMPORT_MODULES: t.Dict[str, t.Any] = {}
+_SPARK_ORIGINAL_IMPORT: t.Optional[t.Callable[..., t.Any]] = None
+_SPARK_ORIGINAL_IMPORT_MODULE: t.Optional[t.Callable[..., t.Any]] = None
+
+
+def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
+    original_import = _SPARK_ORIGINAL_IMPORT
+    assert original_import is not None
+    if level == 0:
+        replacement = _SPARK_IMPORT_MODULES.get(name)
+        caller = (globals or {}).get("__name__", "")
+        if replacement is not None and caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
+            return replacement if fromlist else _SPARK_IMPORT_MODULES["pyspark"]
+    return original_import(name, globals, locals, fromlist, level)
+
+
+def _spark_import_module(name, package=None):
+    original_import_module = _SPARK_ORIGINAL_IMPORT_MODULE
+    assert original_import_module is not None
+    replacement = _SPARK_IMPORT_MODULES.get(name)
+    if replacement is not None:
+        caller = sys._getframe(1).f_globals.get("__name__", "")
+        if caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
+            return replacement
+    return original_import_module(name, package)
 
 
 def activate(
@@ -44,26 +70,29 @@ def activate(
     conn: t.Optional[t.Any] = None,
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ) -> None:
+    global _SPARK_ORIGINAL_IMPORT, _SPARK_ORIGINAL_IMPORT_MODULE
+
     import sqlframe
     from sqlframe import testing
 
-    # Save original pyspark modules so deactivate() can restore them
-    # without re-importing (which would lose class-level state like
-    # SparkContext._active_spark_context).
-    _SAVED_PYSPARK_MODULES.clear()
-    for k, v in sys.modules.items():
-        if k.startswith("pyspark"):
-            _SAVED_PYSPARK_MODULES[k] = v
-
-    pyspark_mock = MagicMock()
-    pyspark_mock.__file__ = "pyspark"
-    sys.modules["pyspark"] = pyspark_mock
-    pyspark_mock.testing = testing
-    sys.modules["pyspark.testing"] = testing
     if conn:
         ACTIVATE_CONFIG["sqlframe.conn"] = conn
     for key, value in (config or {}).items():
         ACTIVATE_CONFIG[key] = value
+
+    if not engine or engine.lower() != "spark":
+        # Other engines replace pyspark modules outright. Spark must keep its
+        # real modules available to the live PySpark connection.
+        _SAVED_PYSPARK_MODULES.clear()
+        for k, v in sys.modules.items():
+            if k.startswith("pyspark"):
+                _SAVED_PYSPARK_MODULES[k] = v
+
+        pyspark_mock = MagicMock()
+        pyspark_mock.__file__ = "pyspark"
+        sys.modules["pyspark"] = pyspark_mock
+        pyspark_mock.testing = testing
+        sys.modules["pyspark.testing"] = testing
     if not engine:
         return
     engine = engine.lower()
@@ -73,9 +102,20 @@ def activate(
         )
     prefix = ENGINE_TO_PREFIX[engine]
     engine_module = importlib.import_module(f"sqlframe.{engine}")
+    if engine == "spark":
+        setattr(engine_module, "functions", importlib.import_module("sqlframe.spark.functions"))
+        pyspark_mock = MagicMock()
+        pyspark_mock.__file__ = "pyspark"
+        pyspark_mock.testing = testing
 
-    sys.modules["pyspark.sql"] = engine_module
+    if engine != "spark":
+        sys.modules["pyspark.sql"] = engine_module
     pyspark_mock.sql = engine_module
+    spark_modules = {
+        "pyspark": pyspark_mock,
+        "pyspark.testing": testing,
+        "pyspark.sql": engine_module,
+    }
     types = engine_module.__dict__.copy()
     resolved_files = set()
     for name, obj in types.items():
@@ -93,12 +133,34 @@ def activate(
             file = NAME_TO_FILE_OVERRIDE.get(name_without_prefix, name_without_prefix).lower()
             engine_file = importlib.import_module(f"sqlframe.{engine}.{file}")
             if engine_file not in resolved_files:
-                sys.modules[f"pyspark.sql.{file}"] = engine_file
+                if engine == "spark":
+                    spark_modules[f"pyspark.sql.{file}"] = engine_file
+                else:
+                    sys.modules[f"pyspark.sql.{file}"] = engine_file
                 resolved_files.add(engine_file)
             setattr(engine_file, name_without_prefix, obj)
 
+    if engine == "spark":
+        _SPARK_IMPORT_MODULES.clear()
+        _SPARK_IMPORT_MODULES.update(spark_modules)
+        _SPARK_ORIGINAL_IMPORT = builtins.__import__
+        _SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
+        setattr(builtins, "__import__", _spark_import)
+        setattr(importlib, "import_module", _spark_import_module)
+
 
 def deactivate() -> None:
+    global _SPARK_ORIGINAL_IMPORT, _SPARK_ORIGINAL_IMPORT_MODULE
+
+    if _SPARK_ORIGINAL_IMPORT is not None:
+        setattr(builtins, "__import__", _SPARK_ORIGINAL_IMPORT)
+        setattr(importlib, "import_module", _SPARK_ORIGINAL_IMPORT_MODULE)
+        _SPARK_ORIGINAL_IMPORT = None
+        _SPARK_ORIGINAL_IMPORT_MODULE = None
+        _SPARK_IMPORT_MODULES.clear()
+        ACTIVATE_CONFIG.clear()
+        return
+
     pyspark_imports = [k for k in sys.modules if k.startswith("pyspark")]
 
     for k in pyspark_imports:
