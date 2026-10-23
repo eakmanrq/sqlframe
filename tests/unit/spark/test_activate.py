@@ -217,6 +217,50 @@ def test_unrouted_dotted_import_preserves_spark_application_alias():
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("module", ["ml.feature", "sql.utils"])
+def test_unrouted_import_as_alias_returns_real_module(module):
+    script = dedent(
+        f"""
+        import sys
+        from types import ModuleType
+
+        from sqlframe import activate, deactivate
+        from sqlframe.spark import SparkSession as SQLFrameSession
+        from sqlframe.spark import functions as SQLFrameFunctions
+
+        activate("spark")
+        try:
+            import pyspark.sql
+            routed_pyspark = pyspark
+            import pyspark.{module} as imported
+            assert isinstance(imported, ModuleType), type(imported)
+            assert imported is sys.modules["pyspark.{module}"]
+            if {module!r} == "ml.feature":
+                from pyspark.ml.feature import VectorAssembler
+                assert imported.VectorAssembler is VectorAssembler
+                import pyspark.ml
+                assert pyspark.ml is sys.modules["pyspark.ml"]
+            else:
+                from pyspark.sql.utils import is_remote
+                assert imported.is_remote is is_remote
+            import pyspark.{module}
+            assert pyspark is routed_pyspark
+            assert pyspark.sql.SparkSession is SQLFrameSession
+            assert pyspark.sql.functions is SQLFrameFunctions
+            import pyspark.sql.functions as functions
+            assert functions is SQLFrameFunctions
+        finally:
+            deactivate()
+        import pyspark.{module} as restored
+        assert restored is imported
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.local
 def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
     from pyspark.sql import SparkSession as PySparkSession
