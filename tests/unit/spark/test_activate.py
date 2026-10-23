@@ -179,6 +179,40 @@ def test_switch_engines_restores_imports(engines):
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("engine", ["spark", "duckdb"])
+def test_deactivate_twice_preserves_real_pyspark_modules(engine):
+    script = dedent(
+        f"""
+        import builtins
+        import importlib
+        import sys
+
+        from pyspark.sql import SparkSession as RealSession
+        from sqlframe import activate, deactivate
+
+        real_pyspark = sys.modules["pyspark"]
+        real_sql = sys.modules["pyspark.sql"]
+        original_import = builtins.__import__
+        original_import_module = importlib.import_module
+
+        activate({engine!r})
+        deactivate()
+        deactivate()
+
+        assert sys.modules["pyspark"] is real_pyspark
+        assert sys.modules["pyspark.sql"] is real_sql
+        assert builtins.__import__ is original_import
+        assert importlib.import_module is original_import_module
+        from pyspark.sql import SparkSession
+        assert SparkSession is RealSession
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("hook", ["import_module", "__import__"])
 def test_captured_spark_import_hook_survives_deactivation(hook):
     script = dedent(
@@ -192,7 +226,7 @@ def test_captured_spark_import_hook_survives_deactivation(hook):
         original_import = builtins.__import__
         original_import_module = importlib.import_module
         activate("spark")
-        from {('importlib' if hook == 'import_module' else 'builtins')} import {hook} as captured
+        from {("importlib" if hook == "import_module" else "builtins")} import {hook} as captured
 
         def load(name):
             if {hook!r} == "__import__":
@@ -327,6 +361,7 @@ def test_activate_with_existing_pyspark_session_reuses_connection(monkeypatch):
         from pyspark.sql import SparkSession as ActivatedSession
 
         sqlframe_session = ActivatedSession.builder.getOrCreate()
+        assert isinstance(sqlframe_session, SparkSession)
         assert sqlframe_session.spark_session is spark
         assert sqlframe_session.sql("SELECT 1 AS value").collect()[0].value == 1
     finally:
