@@ -91,6 +91,45 @@ def test_repeated_spark_activation_preserves_imports(check_after_deactivate):
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("engines", [("spark", "duckdb"), ("duckdb", "spark")])
+def test_switch_engines_restores_imports(engines):
+    script = dedent(
+        f"""
+        import builtins
+        import importlib
+        import sys
+
+        from sqlframe import ACTIVATE_CONFIG, activate, deactivate
+
+        original_import = builtins.__import__
+        original_import_module = importlib.import_module
+        real_sql = importlib.import_module("pyspark.sql")
+        real_pyspark = sys.modules["pyspark"]
+
+        for engine in {engines!r}:
+            activate(engine, config={{"test.engine": engine}})
+            from pyspark.sql import SparkSession
+            expected = importlib.import_module("sqlframe." + engine).SparkSession
+            assert SparkSession is expected, (engine, SparkSession, expected)
+            assert importlib.import_module("pyspark.sql").SparkSession is expected
+            assert ACTIVATE_CONFIG["test.engine"] == engine
+
+        deactivate()
+        assert builtins.__import__ is original_import
+        assert importlib.import_module is original_import_module
+        assert sys.modules["pyspark"] is real_pyspark
+        assert importlib.import_module("pyspark.sql") is real_sql
+        from pyspark.sql import SparkSession
+        assert SparkSession is real_sql.SparkSession
+        assert not ACTIVATE_CONFIG
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("hook", ["import_module", "__import__"])
 def test_captured_spark_import_hook_survives_deactivation(hook):
     script = dedent(
