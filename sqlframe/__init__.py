@@ -39,14 +39,16 @@ NAME_TO_FILE_OVERRIDE = {
 ACTIVATE_CONFIG = {}
 _SAVED_PYSPARK_MODULES: t.Dict[str, t.Any] = {}
 _SPARK_IMPORT_MODULES: t.Dict[str, t.Any] = {}
-_SPARK_ORIGINAL_IMPORT: t.Optional[t.Callable[..., t.Any]] = None
-_SPARK_ORIGINAL_IMPORT_MODULE: t.Optional[t.Callable[..., t.Any]] = None
+# Imported modules can retain our hooks after deactivation, so their delegates
+# must outlive any individual activation.
+_SPARK_ORIGINAL_IMPORT = builtins.__import__
+_SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
+_SPARK_IMPORT_ACTIVE = False
 
 
 def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
     original_import = _SPARK_ORIGINAL_IMPORT
-    assert original_import is not None
-    if level == 0:
+    if _SPARK_IMPORT_ACTIVE and level == 0:
         replacement = _SPARK_IMPORT_MODULES.get(name)
         caller = (globals or {}).get("__name__", "")
         if replacement is not None and caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
@@ -56,8 +58,7 @@ def _spark_import(name, globals=None, locals=None, fromlist=(), level=0):
 
 def _spark_import_module(name, package=None):
     original_import_module = _SPARK_ORIGINAL_IMPORT_MODULE
-    assert original_import_module is not None
-    replacement = _SPARK_IMPORT_MODULES.get(name)
+    replacement = _SPARK_IMPORT_MODULES.get(name) if _SPARK_IMPORT_ACTIVE else None
     if replacement is not None:
         caller = sys._getframe(1).f_globals.get("__name__", "")
         if caller.split(".", 1)[0] not in {"pyspark", "sqlframe"}:
@@ -70,7 +71,7 @@ def activate(
     conn: t.Optional[t.Any] = None,
     config: t.Optional[t.Dict[str, t.Any]] = None,
 ) -> None:
-    global _SPARK_ORIGINAL_IMPORT, _SPARK_ORIGINAL_IMPORT_MODULE
+    global _SPARK_IMPORT_ACTIVE
 
     import sqlframe
     from sqlframe import testing
@@ -143,21 +144,18 @@ def activate(
     if engine == "spark":
         _SPARK_IMPORT_MODULES.clear()
         _SPARK_IMPORT_MODULES.update(spark_modules)
-        if _SPARK_ORIGINAL_IMPORT is None:
-            _SPARK_ORIGINAL_IMPORT = builtins.__import__
-            _SPARK_ORIGINAL_IMPORT_MODULE = importlib.import_module
+        _SPARK_IMPORT_ACTIVE = True
         setattr(builtins, "__import__", _spark_import)
         setattr(importlib, "import_module", _spark_import_module)
 
 
 def deactivate() -> None:
-    global _SPARK_ORIGINAL_IMPORT, _SPARK_ORIGINAL_IMPORT_MODULE
+    global _SPARK_IMPORT_ACTIVE
 
-    if _SPARK_ORIGINAL_IMPORT is not None:
+    if _SPARK_IMPORT_ACTIVE:
+        _SPARK_IMPORT_ACTIVE = False
         setattr(builtins, "__import__", _SPARK_ORIGINAL_IMPORT)
         setattr(importlib, "import_module", _SPARK_ORIGINAL_IMPORT_MODULE)
-        _SPARK_ORIGINAL_IMPORT = None
-        _SPARK_ORIGINAL_IMPORT_MODULE = None
         _SPARK_IMPORT_MODULES.clear()
         ACTIVATE_CONFIG.clear()
         return
