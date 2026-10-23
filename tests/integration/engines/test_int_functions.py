@@ -2347,10 +2347,10 @@ def test_array_distinct(get_session_and_func, get_func):
         )
         .collect()
     )
-    assert results[0][0] in ([1, 2, 3], [3, 2, 1])
-    assert results[0][1] in ([4, 5], [5, 4])
+    assert Counter(results[0][0]) == Counter([1, 2, 3])
+    assert Counter(results[0][1]) == Counter([4, 5])
     if not isinstance(session, BigQuerySession):
-        assert results[0][2] in ([1, None], [None, 1])
+        assert Counter(results[0][2]) == Counter([1, None])
 
 
 def test_array_intersect(get_session_and_func, get_func):

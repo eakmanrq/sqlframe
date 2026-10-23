@@ -3,6 +3,9 @@ from __future__ import annotations
 import typing as t
 from functools import cached_property
 
+from sqlglot import exp, parse_one
+from sqlglot.dialects import DuckDB
+
 from sqlframe.base.session import _BaseSession
 from sqlframe.base.util import soundex
 from sqlframe.duckdb.catalog import DuckDBCatalog
@@ -16,6 +19,14 @@ if t.TYPE_CHECKING:
 
 else:
     DuckDBPyConnection = t.Any
+
+
+class _ModernDuckDB(DuckDB):
+    class Generator(DuckDB.Generator):
+        def lambda_sql(self, expression: exp.Lambda, *args, **kwargs) -> str:
+            expression = expression.copy()
+            expression.set("colon", True)
+            return super().lambda_sql(expression, *args, **kwargs)
 
 
 class DuckDBSession(
@@ -48,7 +59,8 @@ class DuckDBSession(
         if not hasattr(self, "_conn"):
             conn = conn or duckdb.connect()
             try:
-                conn.create_function("SOUNDEX", lambda x: soundex(x), return_type=VARCHAR)
+                self._udf_conn = conn.cursor()
+                self._udf_conn.create_function("SOUNDEX", lambda x: soundex(x), return_type=VARCHAR)
             except (ImportError, InvalidInputException):
                 pass
 
@@ -73,6 +85,20 @@ class DuckDBSession(
 
     def _execute(self, sql: str) -> None:
         self._last_result = self._cur.execute(sql)
+
+    def _to_sql(self, sql: t.Union[str, exp.Expr], **kwargs) -> str:
+        import duckdb
+
+        modern_lambdas = tuple(map(int, duckdb.__version__.split(".")[:2])) >= (1, 3)
+        if modern_lambdas:
+            kwargs.setdefault("dialect", _ModernDuckDB())
+        generated_sql = super()._to_sql(sql, **kwargs)
+        if modern_lambdas and " -> " in generated_sql:
+            # Older SQLGlot generators insert some lambdas after lambda_sql has run.
+            parsed = parse_one(generated_sql, dialect="duckdb")
+            if parsed.find(exp.Lambda):
+                return parsed.sql(dialect=_ModernDuckDB())
+        return generated_sql
 
     @property
     def _is_duckdb(self) -> bool:
