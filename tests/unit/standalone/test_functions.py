@@ -2666,6 +2666,7 @@ def test_array_max(expression, expected):
 @pytest.mark.parametrize(
     "expression, expected",
     [
+        (SF.sort_array("cola", True), "SORT_ARRAY(cola, TRUE)"),
         (SF.sort_array("cola", False), "SORT_ARRAY(cola, FALSE)"),
         (SF.sort_array(SF.col("cola"), False), "SORT_ARRAY(cola, FALSE)"),
         (SF.sort_array("cola"), "SORT_ARRAY(cola)"),
@@ -3134,7 +3135,7 @@ def test_sqlglot_requirement_is_singular_in_distribution_metadata():
 
     assert len(sqlglot_requirements) == 1
     assert ">=30.0.0" in sqlglot_requirements[0]
-    assert "<30.23" in sqlglot_requirements[0]
+    assert "<30.25" in sqlglot_requirements[0]
 
 
 @pytest.mark.parametrize(
