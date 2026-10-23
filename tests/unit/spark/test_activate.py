@@ -91,6 +91,55 @@ def test_repeated_spark_activation_preserves_imports(check_after_deactivate):
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.parametrize("hook", ["__import__", "import_module"])
+@pytest.mark.parametrize("check_after_deactivate", [False, True])
+def test_spark_activation_preserves_third_party_import_hook(hook, check_after_deactivate):
+    script = dedent(
+        f"""
+        import builtins
+        import importlib
+
+        from sqlframe import activate, deactivate
+        from sqlframe.spark import SparkSession as SQLFrameSession
+
+        owner = builtins if {hook!r} == "__import__" else importlib
+        original = getattr(owner, {hook!r})
+        calls = []
+
+        def wrapper(*args, **kwargs):
+            calls.append(args[0])
+            return original(*args, **kwargs)
+
+        setattr(owner, {hook!r}, wrapper)
+        for _ in range(2):
+            activate("spark")
+            activate("spark")
+            captured = getattr(owner, {hook!r})
+            from pyspark.sql import SparkSession
+            assert SparkSession is SQLFrameSession
+            assert importlib.import_module("pyspark.sql").SparkSession is SQLFrameSession
+
+            if {check_after_deactivate!r}:
+                deactivate()
+                deactivate()
+                assert getattr(owner, {hook!r}) is wrapper
+
+            calls.clear()
+            assert captured("math").sqrt(4) == 2
+            assert "math" in calls, "third-party import hook was bypassed"
+            calls.clear()
+            assert getattr(owner, {hook!r})("math").sqrt(4) == 2
+            assert "math" in calls
+            deactivate()
+            assert getattr(owner, {hook!r}) is wrapper
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("engines", [("spark", "duckdb"), ("duckdb", "spark")])
 def test_switch_engines_restores_imports(engines):
     script = dedent(
