@@ -33,8 +33,15 @@ class StandaloneDataFrameReader(
         format = (format or self.state_format_to_read or "parquet").lower()
         if format != "parquet":
             raise UnsupportedOperationError(f"Unsupported format: {format}")
-        import pyarrow as pa
-        import pyarrow.parquet as pq
+        try:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+        except ModuleNotFoundError as e:
+            if not e.name or (e.name != "pyarrow" and not e.name.startswith("pyarrow.")):
+                raise
+            raise ImportError(
+                'Standalone Parquet reading requires pyarrow. Install "sqlframe[standalone]".'
+            ) from e
 
         kwargs = {k: v for k, v in {**self.state_options, **options}.items() if v is not None}
         # These Spark options have no Arrow equivalent. Reject them rather than
