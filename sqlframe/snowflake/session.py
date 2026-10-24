@@ -6,10 +6,13 @@ import warnings
 
 from sqlframe.snowflake.udf import SnowflakeUDFRegistration
 
-try:
-    from snowflake.connector.converter import SnowflakeConverter
-except ImportError:
-    SnowflakeConverter = object  # type: ignore
+if t.TYPE_CHECKING:
+    SnowflakeConverter = t.Any
+else:
+    try:
+        from snowflake.connector.converter import SnowflakeConverter
+    except ImportError:
+        SnowflakeConverter = object
 
 from sqlframe.base.session import _BaseSession
 from sqlframe.snowflake.catalog import SnowflakeCatalog
@@ -26,6 +29,11 @@ else:
     SnowflakeConnection = t.Any
 
 
+def _json_loads(value: str) -> t.Any:
+    # Snowflake uses undefined for null values inside some arrays.
+    return json.loads(value.replace("undefined", "null").replace("'null'", "undefined"))
+
+
 class JsonLoadsSnowflakeConverter(SnowflakeConverter):
     # This might not be needed once proper arrow types are supported.
     # Checkout this PR: https://github.com/snowflakedb/snowflake-connector-python/pull/1853/files
@@ -33,16 +41,10 @@ class JsonLoadsSnowflakeConverter(SnowflakeConverter):
     # `alter session set force_enable_structured_types_native_arrow_format=true` are supported then it might work.
     # At the time of writing these were not supported parameters on my version on Snowflake.
     def _json_loads(self, ctx: dict[str, t.Any]) -> t.Callable:
-        def conv(value: str) -> t.List:
-            # Snowflake returns "undefined" for null values when inside an array
-            # We check if we replaced "'undefined'" string and if so we switch it back
-            # this is a lazy approach compared to writing a proper regex replace
-            return json.loads(value.replace("undefined", "null").replace("'null'", "undefined"))
-
-        return conv
+        return _json_loads
 
     _OBJECT_to_python = _json_loads
-    _VARIANT_to_python = _json_loads  # type: ignore[invalid-method-override]
+    _VARIANT_to_python = _json_loads
     _ARRAY_to_python = _json_loads
 
 
@@ -67,19 +69,42 @@ class SnowflakeSession(
     def __init__(self, conn: t.Optional[SnowflakeConnection] = None):
         import snowflake.connector
 
-        snowflake.connector.cursor.CAN_USE_ARROW_RESULT_FORMAT = False
+        if hasattr(snowflake.connector.cursor, "CAN_USE_ARROW_RESULT_FORMAT"):
+            setattr(snowflake.connector.cursor, "CAN_USE_ARROW_RESULT_FORMAT", False)
 
         if not hasattr(self, "_conn"):
             super().__init__(conn)
-            if self._conn.converter and not isinstance(
-                self._conn.converter, JsonLoadsSnowflakeConverter
-            ):
-                self._conn.converter = JsonLoadsSnowflakeConverter(
-                    use_numpy=self._conn._numpy,
-                    support_negative_year=self._conn._support_negative_year,
-                )
-            else:
-                self._conn._converter_class = JsonLoadsSnowflakeConverter
+            if hasattr(self._conn, "converter"):
+                if self._conn.converter and not isinstance(
+                    self._conn.converter, JsonLoadsSnowflakeConverter
+                ):
+                    self._conn.converter = JsonLoadsSnowflakeConverter(
+                        use_numpy=self._conn._numpy,
+                        support_negative_year=self._conn._support_negative_year,
+                    )
+                else:
+                    self._conn._converter_class = JsonLoadsSnowflakeConverter
+
+    def _prepare_result_rows(
+        self, rows: t.Sequence[t.Sequence[t.Any]], description: t.Sequence
+    ) -> t.Sequence[t.Sequence[t.Any]]:
+        if hasattr(self._conn, "converter"):
+            return rows
+        # Snowflake type codes for VARIANT, OBJECT, and ARRAY.
+        semi_structured_columns = {
+            index for index, column in enumerate(description) if column[1] in (5, 9, 10)
+        }
+        if not semi_structured_columns:
+            return rows
+        return [
+            tuple(
+                _json_loads(value)
+                if index in semi_structured_columns and isinstance(value, str)
+                else value
+                for index, value in enumerate(row)
+            )
+            for row in rows
+        ]
 
     @property
     def _is_snowflake(self) -> bool:

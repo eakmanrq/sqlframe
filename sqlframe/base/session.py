@@ -573,6 +573,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         result = self._cur.fetchall()
         if not self._cur.description:
             return []
+        result = self._prepare_result_rows(result, self._cur.description)
         case_sensitive_cols = []
         for col in self._cur.description:
             col_id = safe_parse_identifier(col[0], dialect=self.execution_dialect)
@@ -585,6 +586,11 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             for x in case_sensitive_cols
         ]
         return [self._to_row(columns, row) for row in result]
+
+    def _prepare_result_rows(
+        self, rows: t.Sequence[t.Sequence[t.Any]], description: t.Sequence
+    ) -> t.Sequence[t.Sequence[t.Any]]:
+        return rows
 
     def _fetchdf(
         self,
