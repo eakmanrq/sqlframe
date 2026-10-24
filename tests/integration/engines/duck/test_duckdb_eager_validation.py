@@ -66,6 +66,10 @@ def test_validation_sees_temporary_tables(session):
     assert planned.collect() == []
 
 
+@pytest.mark.skipif(
+    not hasattr(duckdb, "ResourceInUseException"),
+    reason="this DuckDB release discards an unfinished result on any new statement",
+)
 def test_validation_preserves_unfinished_connection_result(session):
     session._conn.execute("CREATE TABLE source (id INTEGER)")
     session._conn.execute("SELECT 1 UNION ALL SELECT 2")
@@ -74,3 +78,15 @@ def test_validation_preserves_unfinished_connection_result(session):
     session.sql("SELECT id FROM source", qualify=False).select("id")
 
     assert session._conn.fetchone() == (2,)
+
+
+def test_validation_works_without_resource_in_use_exception(session, monkeypatch):
+    # DuckDB 1.2.x, the oldest supported release, has no ResourceInUseException.
+    monkeypatch.delattr(duckdb, "ResourceInUseException", raising=False)
+    session._conn.execute("CREATE TEMP TABLE source (id INTEGER)")
+
+    planned = session.sql("SELECT id FROM source", qualify=False).select("id")
+    with pytest.raises(duckdb.BinderException):
+        planned.select("missing")
+
+    assert planned.collect() == []
