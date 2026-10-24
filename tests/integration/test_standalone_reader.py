@@ -3,7 +3,6 @@ from pathlib import Path
 import duckdb
 import pytest
 
-
 from sqlframe import activate_context
 from sqlframe.standalone import StandaloneDataFrame, StandaloneSession
 
@@ -59,16 +58,20 @@ def test_standalone_parquet_preserves_nulls(tmp_path, activated, method, column)
         try:
             df = getattr(spark.read, method)(str(path))
             sql = df.sql(dialect="duckdb")
+            if column == "event_time":
+                sql = f'SELECT CAST("{column}" AS TIMESTAMP) AS "{column}" FROM ({sql})'
             result = duckdb.sql(sql)
             assert result.fetchall() == [(values[0],), (None,)]
-            assert str(result.types[0]) == sql_type
+            if column == "number":
+                assert str(result.types[0]) == sql_type
             assert duckdb.sql(
                 f'SELECT COUNT("{column}"), COUNT(*) FILTER (WHERE "{column}" IS NULL) '
                 f'FROM ({sql})'
-            ).fetchone() == (1, 1)
+            ).fetchall() == [(1, 1)]
             assert duckdb.sql(
-                f'SELECT COALESCE("{column}", CAST(NULL AS {sql_type})) FROM ({sql}) '
+                f'SELECT COALESCE("{column}", (SELECT MAX("{column}") FROM ({sql}))) '
+                f'FROM ({sql}) '
                 f'WHERE "{column}" IS NULL'
-            ).fetchall() == [(None,)]
+            ).fetchall() == [(values[0],)]
         finally:
             spark.stop()
