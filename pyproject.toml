@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
     "prettytable<4",
-    "sqlglot>=30.0.0,<30.23",
+    "sqlglot>=30.0.0,<30.25",
     "typing_extensions",
     "more-itertools",
 ]
@@ -38,24 +38,24 @@ databricks = [
     "databricks-sql-connector[pyarrow]>=3.6,<5",
 ]
 dev = [
-    "duckdb>=1.2,<1.6",
+    "duckdb>=1.2,<2.1",
     "findspark>=2,<3",
     # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
     "mirakuru<3.0.5",
     "ty>=0.0.18",
-    "openai>=1.30,<3",
+    "openai>=1.30,<4",
     "pandas>=2,<4",
     "pandas-stubs>=2,<4",
     "psycopg>=3.1,<4",
     "pyarrow>=10,<24",
     "pyspark>=4,<4.2",
-    "pytest>=8.2.0,<9.1",
+    "pytest>=8.2.0,<9.2",
     "pytest-forked",
-    "pytest-postgresql>=6,<9",
+    "pytest-postgresql>=6,<10",
     "pytest-rerunfailures",
     "pytest-xdist>=3.6,<3.9",
     "pre-commit>=3.7,<5",
-    "ruff>=0.4.4,<0.16",
+    "ruff>=0.4.4,<0.18",
     "types-psycopg2>=2.9,<3",
 ]
 docs = [
@@ -66,11 +66,11 @@ docs = [
     "pymdown-extensions",
 ]
 duckdb = [
-    "duckdb>=1.2,<1.6",
+    "duckdb>=1.2,<2.1",
     "pandas>=2,<4",
 ]
 openai = [
-    "openai>=1.30,<3",
+    "openai>=1.30,<4",
 ]
 pandas = [
     "pandas>=2,<4",
@@ -82,7 +82,7 @@ redshift = [
     "redshift_connector>=2.1.1,<2.2.0",
 ]
 snowflake = [
-    "snowflake-connector-python[secure-local-storage]>=3.10.0,<4.5",
+    "snowflake-connector-python[secure-local-storage]>=4.7.3,<5",
 ]
 spark = [
     "pyspark>=4,<4.2",

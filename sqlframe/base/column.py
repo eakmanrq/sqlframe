@@ -337,23 +337,30 @@ class Column:
         sql_kwargs: t.Dict[str, t.Any] = {"dialect": _BaseSession().input_dialect, **kwargs}
         return self.expression.sql(**sql_kwargs)
 
-    def alias(self, name: str) -> Column:
+    def alias(self, name: str, *names: str) -> Column:
         from sqlframe.base.session import _BaseSession
 
         dialect = _BaseSession().input_dialect
-        parsed = exp.parse_identifier(name, dialect=dialect)
-        if isinstance(parsed, exp.Identifier):
-            alias_expr: exp.Expr = normalize_identifiers(parsed, dialect=dialect)
-        elif isinstance(parsed, exp.Column):
-            alias_expr = normalize_identifiers(parsed, dialect=dialect).this
+
+        def alias_identifier(alias_name: str) -> exp.Expr:
+            parsed = exp.parse_identifier(alias_name, dialect=dialect)
+            if isinstance(parsed, exp.Identifier):
+                return normalize_identifiers(parsed, dialect=dialect)
+            if isinstance(parsed, exp.Column):
+                return normalize_identifiers(parsed, dialect=dialect).this
+            # Reserved words can parse as non-Identifiers (e.g. 'end' as EndStatement).
+            return exp.to_identifier(alias_name, quoted=True)
+
+        alias_expr = alias_identifier(name)
+        if names:
+            new_expression = exp.Aliases(
+                this=self.column_expression,
+                expressions=[alias_expr, *[alias_identifier(n) for n in names]],
+            )
+            new_expression._meta = {"display_names": [name, *names]}
         else:
-            # Reserved word parsed as a non-Identifier (e.g. 'end' → EndStatement in sqlglot v29)
-            alias_expr = exp.to_identifier(name, quoted=True)
-        new_expression = exp.Alias(
-            this=self.column_expression,
-            alias=alias_expr,
-        )
-        new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
+            new_expression = exp.Alias(this=self.column_expression, alias=alias_expr)
+            new_expression._meta = {"display_name": name, **(new_expression._meta or {})}
         return Column(new_expression)
 
     def asc(self) -> Column:

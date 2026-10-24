@@ -95,6 +95,25 @@ By default, SQLFrame will create a connection to an in-memory database.
     session = SparkSession.builder.getOrCreate()
     ```
 
+### Session time zone
+
+`DuckDBSession.conf` supports `spark.sql.session.timeZone` for reading and setting the
+DuckDB connection's time zone. The initial value comes from DuckDB, including any
+setting on a supplied connection.
+
+```python
+session = (
+    DuckDBSession.builder
+    .config("spark.sql.session.timeZone", "Europe/Amsterdam")
+    .getOrCreate()
+)
+
+time_zone = session.conf.get("spark.sql.session.timeZone")
+session.conf.set("spark.sql.session.timeZone", "UTC")
+```
+
+Other Spark session configuration keys are not mapped to DuckDB by `conf`.
+
 ## Using DuckDB Unique Functions
 
 DuckDB may have a function that isn't represented within the PySpark API. 

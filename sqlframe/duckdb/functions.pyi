@@ -178,6 +178,7 @@ from sqlframe.base.functions import percent_rank as percent_rank
 from sqlframe.base.functions import percentile as percentile
 from sqlframe.base.functions import percentile_approx as percentile_approx
 from sqlframe.base.functions import pi as pi
+from sqlframe.base.functions import posexplode as posexplode
 from sqlframe.base.functions import position as position
 from sqlframe.base.functions import pow as pow
 from sqlframe.base.functions import power as power

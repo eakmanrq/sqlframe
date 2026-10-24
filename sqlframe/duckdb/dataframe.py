@@ -59,8 +59,17 @@ class DuckDBDataFrame(
     def toArrow(self, batch_size: int) -> RecordBatchReader: ...
 
     def toArrow(self, batch_size: t.Optional[int] = None) -> t.Union[ArrowTable, RecordBatchReader]:
-        self._collect(skip_rows=True)
-        assert self.session._last_result is not None
+        if hasattr(self.session._cur, "fetch_arrow_table"):
+            self._collect(skip_rows=True)
+            assert self.session._last_result is not None
+            if not batch_size:
+                return getattr(self.session._last_result, "fetch_arrow_table")()
+            return getattr(self.session._last_result, "fetch_record_batch")(batch_size)
+
+        expressions = self._get_expressions(optimize=False)
+        for expression in expressions[:-1]:
+            self.session._execute(self.session._to_sql(expression))
+        relation = self.session._cur.sql(self.session._to_sql(expressions[-1]))
         if not batch_size:
-            return self.session._last_result.fetch_arrow_table()
-        return self.session._last_result.fetch_record_batch(batch_size)
+            return relation.to_arrow_table()
+        return relation.to_arrow_reader(batch_size)
