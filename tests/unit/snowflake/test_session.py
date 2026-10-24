@@ -1,3 +1,4 @@
+import json
 import typing as t
 
 from snowflake.connector import SnowflakeConnection
@@ -17,8 +18,9 @@ class FakeCursor:
         self.sql = sql
 
     def fetchall(self):
+        array_json = json.dumps([1, None])
         return [
-            ('[1, null]', '{"a": 2}', '"value"', '[1, null]'),
+            (array_json, json.dumps({"a": 2}), json.dumps("value"), array_json),
             ([3], {"b": 4}, None, "ordinary text"),
         ]
 
