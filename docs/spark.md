@@ -24,6 +24,23 @@ from sqlframe.spark import functions as F
 from sqlframe.spark import SparkDataFrame
 ```
 
+### Activate
+
+To keep using `pyspark.sql` imports, call `activate` before importing the SQLFrame classes you want to use:
+
+```python
+from sqlframe import activate, deactivate
+
+activate("spark")
+from pyspark.sql import SparkSession
+
+session = SparkSession.builder.getOrCreate()
+deactivate()
+```
+
+You can also pass an existing PySpark session with `activate("spark", conn=existing_session)`.
+The activated SQLFrame session uses that same connection. `deactivate()` restores normal PySpark imports.
+
 ## Creating a Session
 
 SQLFrame's SparkSession is created the same way you would normally create a SparkSession.

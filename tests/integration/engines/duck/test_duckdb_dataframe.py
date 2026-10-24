@@ -179,6 +179,37 @@ def test_reserved_word(duckdb_session: DuckDBSession):
     ]
 
 
+@pytest.mark.parametrize(
+    ("name", "remaining"),
+    [
+        ("UPPER_NAME", "MixedCase"),
+        ("upper_name", "MixedCase"),
+        ("UpPeR_nAmE", "MixedCase"),
+        ("MixedCase", "UPPER_NAME"),
+        ("mixedcase", "UPPER_NAME"),
+    ],
+)
+def test_drop_mixed_case_column_by_name(duckdb_session: DuckDBSession, name: str, remaining: str):
+    df = duckdb_session.createDataFrame([(1, 2)], ["UPPER_NAME", "MixedCase"])
+
+    assert df.columns == ["UPPER_NAME", "MixedCase"]
+    dropped = df.drop(name)
+    assert dropped.columns == [remaining]
+    assert dropped.collect()[0].asDict() == {remaining: 2 if remaining == "MixedCase" else 1}
+
+
+def test_drop_mixed_case_column_after_posexplode(duckdb_session: DuckDBSession):
+    df = duckdb_session.createDataFrame([(2, [10, 20])], ["Num_Lines", "lines"])
+    exploded = df.select("*", F.posexplode("lines").alias("Line_Pos", "Line_Val"))
+
+    dropped = exploded.drop("Num_Lines")
+    assert dropped.columns == ["lines", "Line_Pos", "Line_Val"]
+    assert dropped.collect() == [
+        types.Row(lines=[10, 20], Line_Pos=0, Line_Val=10),
+        types.Row(lines=[10, 20], Line_Pos=1, Line_Val=20),
+    ]
+
+
 def test_to_arrow(duckdb_employee: DuckDBDataFrame):
     arrow_table = duckdb_employee.toArrow()
     assert arrow_table.num_rows == 5
@@ -341,7 +372,7 @@ def test_special_characters_in_column_names(duckdb_session: DuckDBSession):
     schema = df.schema
     assert len(schema.fields) == 3
     field_names = [f.name for f in schema.fields]
-    assert field_names == ["`'abc'`", "`map_cd1_%`", "\u2018abc\u2019"]
+    assert field_names == ["`'ABC'`", "`Map_CD1_%`", "\u2018ABC\u2019"]
 
     # Verify collect works - Row keys preserve original case from cursor description
     result = df.collect()
