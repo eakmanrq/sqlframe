@@ -1,6 +1,7 @@
 import duckdb
 import pytest
 
+from sqlframe import activate, deactivate
 from sqlframe.duckdb import DuckDBSession
 from sqlframe.duckdb import functions as F
 from sqlframe.duckdb.dataframe import DuckDBDataFrame
@@ -52,6 +53,71 @@ def test_validation_can_be_enabled_through_builder():
 
         with pytest.raises(duckdb.BinderException):
             df.select("missing")
+
+
+def test_validation_can_be_enabled_through_builder_key_value():
+    with duckdb.connect() as conn:
+        session = (
+            DuckDBSession.builder.config("sqlframe.eager_validation", True)
+            .config("sqlframe.conn", conn)
+            .getOrCreate()
+        )
+        assert session.eager_validation is True
+        df = session.createDataFrame([(1,)], ["id"])
+
+        with pytest.raises(duckdb.BinderException):
+            df.select("missing")
+
+
+def test_validation_can_be_enabled_through_activate():
+    with duckdb.connect() as conn:
+        activate("duckdb", conn=conn, config={"sqlframe.eager_validation": True})
+        try:
+            from pyspark.sql import SparkSession
+
+            session = SparkSession.builder.getOrCreate()
+            assert isinstance(session, DuckDBSession)
+            assert session.eager_validation is True
+            df = session.createDataFrame([(1,)], ["id"])
+
+            with pytest.raises(duckdb.BinderException):
+                df.select("missing")
+        finally:
+            deactivate()
+
+
+@pytest.mark.parametrize(
+    "enable",
+    [
+        lambda conn, value: DuckDBSession(conn, eager_validation=value),
+        lambda conn, value: DuckDBSession.builder.config("sqlframe.eager_validation", value),
+        lambda conn, value: DuckDBSession.builder.config(map={"sqlframe.eager_validation": value}),
+    ],
+    ids=["constructor", "builder_key_value", "builder_map"],
+)
+@pytest.mark.parametrize("value", ["true", 1], ids=["str", "int"])
+def test_validation_rejects_non_bool(enable, value):
+    with duckdb.connect() as conn:
+        with pytest.raises(ValueError, match="sqlframe.eager_validation must be a boolean"):
+            enable(conn, value)
+
+
+def test_singleton_reinit_keeps_validation_setting():
+    with duckdb.connect() as conn:
+        enabled = DuckDBSession(conn, eager_validation=True)
+
+        reinit = DuckDBSession()
+        assert reinit is enabled
+        assert reinit.eager_validation is True
+        with pytest.raises(duckdb.BinderException):
+            reinit.createDataFrame([(1,)], ["id"]).select("missing")
+
+        disabled = DuckDBSession(eager_validation=False)
+        assert disabled is enabled
+        assert disabled.eager_validation is False
+        invalid = disabled.createDataFrame([(1,)], ["id"]).select("missing")
+        with pytest.raises(duckdb.BinderException):
+            invalid.collect()
 
 
 @pytest.mark.parametrize(
