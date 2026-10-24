@@ -31,6 +31,12 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v6
+    - name: Use Java 21
+      run: |
+        : "${JAVA_HOME_21_X64:?Java 21 is unavailable}"
+        echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+        echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+        "$JAVA_HOME_21_X64/bin/java" -version
     - name: Install uv
       uses: astral-sh/setup-uv@v7
       with:
