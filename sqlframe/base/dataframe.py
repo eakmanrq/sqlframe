@@ -263,6 +263,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def __copy__(self):
         return self.copy()
 
+    def _validate_plan(self) -> None:
+        """Let engines validate a newly constructed DataFrame without executing it."""
+
     def _display_(self) -> str:
         return self.__repr__()
 
@@ -1797,6 +1800,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         # Separate string column names from Column objects for different handling
         column_objs, column_names = partition_to(lambda x: isinstance(x, str), cols, list, set)
 
+        def normalize_name(name: str) -> str:
+            return self.session.input_dialect.normalize_identifier(exp.to_identifier(name)).this
+
+        column_names = {normalize_name(name) for name in column_names}
+
         # Normalize only the Column objects (strings will be handled as unqualified)
         drop_cols = self._ensure_and_normalize_cols(column_objs) if column_objs else []
 
@@ -1812,13 +1820,18 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 return True
 
             if isinstance(expr, exp.Column) and (alias_or_name := expr.alias_or_name):
+                normalized_alias_or_name = self.session.input_dialect.normalize_identifier(
+                    expr.this.copy()
+                ).this
                 # Check direct match first
-                if alias_or_name in column_names:
+                if normalized_alias_or_name in column_names:
                     return True
 
                 # Handle string column references that contain aliases
                 for col_name in column_names:
-                    if ("." in col_name) and alias_or_name == (col_name.split(".", maxsplit=1)[-1]):
+                    if ("." in col_name) and normalized_alias_or_name == (
+                        col_name.split(".", maxsplit=1)[-1]
+                    ):
                         # Extract the column name part after the last dot
                         return True
 

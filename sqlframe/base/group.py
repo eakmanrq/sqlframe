@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import typing as t
 
-from sqlframe.base.operations import Operation, group_operation, operation
+from sqlframe.base.operations import Operation, group_operation, nested_operation, operation
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -40,11 +40,30 @@ class _BaseGroupedData(t.Generic[DF]):
     def _get_function_applied_columns(
         self, func_name: str, cols: t.Tuple[str, ...]
     ) -> t.List[Column]:
+        from sqlglot import exp
+
         from sqlframe.base import functions as F
+        from sqlframe.base import types
 
         func_name = func_name.lower()
+        inferred = not cols
+        if inferred:
+            numeric_types = (
+                types.ByteType,
+                types.ShortType,
+                types.IntegerType,
+                types.LongType,
+                types.FloatType,
+                types.DoubleType,
+                types.DecimalType,
+            )
+            cols = tuple(
+                field.name
+                for field in self._df.schema.fields
+                if isinstance(field.dataType, numeric_types)
+            )
         return [
-            getattr(F, func_name)(name).alias(
+            getattr(F, func_name)(F.col(exp.column(name, quoted=True)) if inferred else name).alias(
                 self.session._sanitize_column_name(f"{func_name}({name})")
             )
             for name in cols
@@ -266,7 +285,8 @@ class _BaseGroupedData(t.Generic[DF]):
             # Eagerly compute distinct values
             from sqlframe.base.column import Column
 
-            distinct_df = self._df.select(pivot_col).distinct()
+            with nested_operation():
+                distinct_df = self._df.select(pivot_col).distinct()
             distinct_rows = distinct_df.collect()
             # Sort to make the results deterministic
             self.pivot_values = sorted([row[0] for row in distinct_rows])

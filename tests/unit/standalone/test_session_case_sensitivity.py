@@ -108,3 +108,14 @@ def test_alias(
     # Need to run `F.col` after the Snowflake SQLFrame session has been set since it will be default dialect otherwise
     col = col_func(F.col('"Name"'))
     compare_sql(col, expected, dialect=sqlf_sf.input_dialect)
+
+
+def test_drop_unquoted_name_keeps_distinct_quoted_column(sqlf_sf: StandaloneSession):
+    sqlf_sf.catalog.add_table("test", {"NAME": "INT", '"Name"': "INT"})
+    df = sqlf_sf.table("test").select(F.col("NAME"), F.col('"Name"'))
+
+    dropped = df.drop("NAME")
+
+    assert len(dropped.expression.expressions) == 1
+    assert dropped.expression.expressions[0].this.this == "Name"
+    assert dropped.expression.expressions[0].this.args["quoted"] is True
