@@ -3,12 +3,13 @@ import pytest
 
 from sqlframe.duckdb import DuckDBSession
 from sqlframe.duckdb import functions as F
+from sqlframe.duckdb.dataframe import DuckDBDataFrame
 
 
 @pytest.fixture
 def session():
     with duckdb.connect() as conn:
-        yield DuckDBSession(conn)
+        yield DuckDBSession(conn, eager_validation=True)
 
 
 @pytest.mark.parametrize(
@@ -29,17 +30,58 @@ def test_invalid_operation_fails_when_added(session, operation):
         operation(df)
 
 
-def test_validation_can_be_disabled_through_builder():
+def test_validation_is_opt_in_by_default():
     with duckdb.connect() as conn:
-        session = (
-            DuckDBSession.builder.config(map={"sqlframe.eager_validation": False})
-            .config("sqlframe.conn", conn)
-            .getOrCreate()
-        )
+        session = DuckDBSession.builder.config("sqlframe.conn", conn).getOrCreate()
+        assert session.eager_validation is False
         invalid = session.createDataFrame([(1,)], ["id"]).select("missing")
 
         with pytest.raises(duckdb.BinderException):
             invalid.collect()
+
+
+def test_validation_can_be_enabled_through_builder():
+    with duckdb.connect() as conn:
+        session = (
+            DuckDBSession.builder.config(map={"sqlframe.eager_validation": True})
+            .config("sqlframe.conn", conn)
+            .getOrCreate()
+        )
+        assert session.eager_validation is True
+        df = session.createDataFrame([(1,)], ["id"])
+
+        with pytest.raises(duckdb.BinderException):
+            df.select("missing")
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda df, other: df.withColumn("added", F.col("id") + 1),
+        lambda df, other: df.dropna(),
+        lambda df, other: df.unionByName(other, allowMissingColumns=True),
+        lambda df, other: df.groupBy("id").pivot("key").agg(F.count("value")),
+        lambda df, other: df.fillna("z"),
+        lambda df, other: df.replace("a", "b"),
+    ],
+    ids=["withColumn", "dropna", "unionByName", "pivot_agg", "fillna", "replace"],
+)
+def test_one_validation_per_user_operation(session, monkeypatch, operation):
+    validated = []
+    original = DuckDBDataFrame._validate_plan
+
+    def counting(self):
+        validated.append(self)
+        return original(self)
+
+    monkeypatch.setattr(DuckDBDataFrame, "_validate_plan", counting)
+    df = session.createDataFrame([(1, "a", None), (2, "b", "x")], ["id", "key", "value"])
+    other = df.select("id", "key")
+    validated.clear()
+
+    result = operation(df, other)
+
+    assert validated == [result]
 
 
 def test_validation_does_not_execute_rows(session):
