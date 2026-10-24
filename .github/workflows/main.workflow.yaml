@@ -13,6 +13,7 @@ on:
     - synchronize
     - opened
     paths:
+    - '.github/workflows/**'
     - 'sqlframe/**'
     - 'tests/**'
     - 'Makefile'
@@ -20,7 +21,7 @@ on:
     - 'uv.lock'
 jobs:
   run-tests:
-    # Keep PostgreSQL 16 available for the Configure Postgres step.
+    # Keep PostgreSQL 18 available for the Configure Postgres step.
     runs-on: ubuntu-26.04
     env:
       PYTEST_XDIST_AUTO_NUM_WORKERS: 4
@@ -41,8 +42,8 @@ jobs:
       run: uv run make style
     - name: Configure Postgres
       run: |
-        echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
-        /usr/lib/postgresql/16/bin/postgres --version
+        echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+        /usr/lib/postgresql/18/bin/postgres --version
     - name: Run tests
       run: uv run make local-test
   minimum-sqlglot:
