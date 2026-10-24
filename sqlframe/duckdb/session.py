@@ -29,6 +29,26 @@ class _DuckDBV2(DuckDB):
             return super().lambda_sql(expression, *args, **kwargs)
 
 
+_SPARK_TIMEZONE_KEY = "spark.sql.session.timeZone"
+
+
+class _DuckDBRuntimeConfig:
+    """The Spark session timezone backed by DuckDB's connection setting."""
+
+    def __init__(self, session: DuckDBSession):
+        self._session = session
+
+    def get(self, key: str) -> str:
+        if key != _SPARK_TIMEZONE_KEY:
+            raise NotImplementedError(f"Unsupported Spark session config: {key}")
+        return self._session._conn.execute("SELECT current_setting('TimeZone')").fetchone()[0]
+
+    def set(self, key: str, value: str) -> None:
+        if key != _SPARK_TIMEZONE_KEY:
+            raise NotImplementedError(f"Unsupported Spark session config: {key}")
+        self._session._conn.execute("SET SESSION TimeZone = ?", [value])
+
+
 class DuckDBSession(
     _BaseSession[
         DuckDBCatalog,
@@ -71,6 +91,10 @@ class DuckDBSession(
     def _cur(self) -> DuckDBPyConnection:
         return self._conn
 
+    @cached_property
+    def conf(self) -> _DuckDBRuntimeConfig:
+        return _DuckDBRuntimeConfig(self)
+
     @classmethod
     def _try_get_map(cls, value: t.Any) -> t.Optional[t.Dict[str, t.Any]]:
         if value and isinstance(value, dict):
@@ -107,11 +131,33 @@ class DuckDBSession(
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "duckdb"
 
+        def __init__(self):
+            super().__init__()
+            self._time_zone: t.Optional[str] = None
+
+        def _set_config(
+            self,
+            key: t.Optional[str] = None,
+            value: t.Optional[t.Any] = None,
+            *,
+            map: t.Optional[t.Dict[str, t.Any]] = None,
+        ) -> None:
+            if key == _SPARK_TIMEZONE_KEY:
+                if value is not None:
+                    self._time_zone = value
+                key = value = None
+            if map and _SPARK_TIMEZONE_KEY in map:
+                self._time_zone = map[_SPARK_TIMEZONE_KEY]
+            super()._set_config(key, value, map=map)
+
         @cached_property
         def session(self) -> DuckDBSession:
             return DuckDBSession(**self._session_kwargs)
 
         def getOrCreate(self) -> DuckDBSession:
-            return super().getOrCreate()  # type: ignore
+            session = t.cast(DuckDBSession, super().getOrCreate())
+            if self._time_zone is not None:
+                session.conf.set(_SPARK_TIMEZONE_KEY, self._time_zone)
+            return session
 
     builder = Builder()
