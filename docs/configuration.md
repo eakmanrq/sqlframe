@@ -24,6 +24,20 @@ In this configuration, you can use BigQuery syntax for elements such as date for
 
 SQLFrame supports multiple dialects, all of which can be specific as the `input_dialect` and `output_dialect`.
 
+## DuckDB eager plan validation
+
+DuckDB sessions validate each new DataFrame query plan by default. If DuckDB cannot resolve a column or an expression's types, the DataFrame operation raises at that call instead of waiting for `collect()` or another action. Validation runs `EXPLAIN` on the generated query; it plans the query without reading its rows. Errors that depend on row values can still occur during an action.
+
+Each DataFrame operation adds a planning round trip to the local DuckDB connection, and later operations replan the accumulated query. To keep the previous lazy planning behavior, disable validation when creating the session:
+
+```python
+from sqlframe.duckdb import DuckDBSession
+
+session = DuckDBSession.builder.config("sqlframe.eager_validation", False).getOrCreate()
+```
+
+The setting also works in the `map` argument to `builder.config` and in the `config` argument to `activate("duckdb", ...)`. It accepts only a Python boolean and applies only to DuckDB; other engines retain their existing lazy behavior. Grouped queries are validated when an aggregation adds the final DataFrame plan.
+
 ## Activating SQLFrame
 
 SQLFrame can be activated in order to replace `pyspark` imports with `sqlframe` imports for the given engine. 

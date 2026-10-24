@@ -59,6 +59,8 @@ def operation(
     ) -> t.Callable[Concatenate[DF, P], T]:
         @functools.wraps(func)
         def wrapper(self: DF, *args, **kwargs) -> T:
+            from sqlframe.base.dataframe import BaseDataFrame
+
             if self.last_op == Operation.INIT:
                 self = self._convert_leaf_to_cte()
                 self.last_op = Operation.NO_OP
@@ -68,6 +70,8 @@ def operation(
                 self = self._convert_leaf_to_cte()
             df = func(self, *args, **kwargs)
             df.last_op = new_op
+            if isinstance(df, BaseDataFrame):
+                df._validate_plan()
             return df
 
         wrapper.__wrapped__ = func
@@ -107,6 +111,7 @@ def group_operation(
                 self._df = self._df._convert_leaf_to_cte()
             df = func(self, *args, **kwargs)
             df.last_op = new_op
+            df._validate_plan()
             return df
 
         wrapper.__wrapped__ = func

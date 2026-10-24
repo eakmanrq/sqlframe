@@ -263,6 +263,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     def __copy__(self):
         return self.copy()
 
+    def _validate_plan(self) -> None:
+        """Let engines validate a newly constructed DataFrame without executing it."""
+
     def _display_(self) -> str:
         return self.__repr__()
 

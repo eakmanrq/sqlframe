@@ -46,6 +46,27 @@ class DuckDBDataFrame(
     _stat = DuckDBDataFrameStatFunctions
     _group_data = DuckDBGroupedData
 
+    def _validate_plan(self) -> None:
+        if not self.session.eager_validation:
+            return
+
+        from duckdb import ResourceInUseException
+        from sqlglot import exp
+
+        expressions = self._get_expressions(optimize=False)
+        if len(expressions) != 1 or not isinstance(expressions[0], exp.Select):
+            return
+        sql = "EXPLAIN " + self.session._to_sql(expressions[0])
+        try:
+            self.session._conn.sql(sql)
+        except ResourceInUseException:
+            # A separate DuckDB cursor keeps the caller's unfinished result intact.
+            cursor = self.session._conn.cursor()
+            try:
+                cursor.sql(sql)
+            finally:
+                cursor.close()
+
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
     ) -> None:
