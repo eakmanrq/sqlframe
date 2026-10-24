@@ -69,6 +69,21 @@ def test_validation_can_be_enabled_through_builder_key_value():
             df.select("missing")
 
 
+def test_validation_and_timezone_config_work_together():
+    with duckdb.connect() as conn:
+        session = DuckDBSession.builder.config(
+            map={
+                "sqlframe.eager_validation": True,
+                "spark.sql.session.timeZone": "UTC",
+                "sqlframe.conn": conn,
+            }
+        ).getOrCreate()
+
+        assert session.conf.get("spark.sql.session.timeZone") == "UTC"
+        with pytest.raises(duckdb.BinderException):
+            session.createDataFrame([(1,)], ["id"]).select("missing")
+
+
 def test_validation_can_be_enabled_through_activate():
     with duckdb.connect() as conn:
         activate("duckdb", conn=conn, config={"sqlframe.eager_validation": True})

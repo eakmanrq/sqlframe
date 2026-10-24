@@ -143,21 +143,6 @@ class DuckDBSession(
         DEFAULT_EXECUTION_DIALECT = "duckdb"
         EAGER_VALIDATION_KEY = "sqlframe.eager_validation"
 
-        def _set_config(
-            self,
-            key: t.Optional[str] = None,
-            value: t.Optional[t.Any] = None,
-            *,
-            map: t.Optional[t.Dict[str, t.Any]] = None,
-        ) -> None:
-            if key == self.EAGER_VALIDATION_KEY:
-                self._set_eager_validation(value)
-                key, value = None, None
-            if map and self.EAGER_VALIDATION_KEY in map:
-                self._set_eager_validation(map[self.EAGER_VALIDATION_KEY])
-                map = {k: v for k, v in map.items() if k != self.EAGER_VALIDATION_KEY}
-            super()._set_config(key, value, map=map)
-
         def _set_eager_validation(self, value: t.Any) -> None:
             if not isinstance(value, bool):
                 raise ValueError("sqlframe.eager_validation must be a boolean")
@@ -176,6 +161,12 @@ class DuckDBSession(
             *,
             map: t.Optional[t.Dict[str, t.Any]] = None,
         ) -> None:
+            if key == self.EAGER_VALIDATION_KEY:
+                self._set_eager_validation(value)
+                key, value = None, None
+            if map and self.EAGER_VALIDATION_KEY in map:
+                self._set_eager_validation(map[self.EAGER_VALIDATION_KEY])
+                map = {k: v for k, v in map.items() if k != self.EAGER_VALIDATION_KEY}
             if key == _SPARK_TIMEZONE_KEY:
                 if value is not None:
                     self._time_zone = value
