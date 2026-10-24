@@ -88,6 +88,8 @@ class SnowflakeSession(
     def _prepare_result_rows(
         self, rows: t.Sequence[t.Sequence[t.Any]], description: t.Sequence
     ) -> t.Sequence[t.Sequence[t.Any]]:
+        if hasattr(self._conn, "converter"):
+            return rows
         # Snowflake type codes for VARIANT, OBJECT, and ARRAY.
         semi_structured_columns = {
             index for index, column in enumerate(description) if column[1] in (5, 9, 10)
