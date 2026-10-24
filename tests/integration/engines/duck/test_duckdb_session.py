@@ -37,6 +37,74 @@ def test_session_from_config():
     assert session.execution_dialect_name == "duckdb"
 
 
+def test_conf_get_reads_live_connection_timezone():
+    import duckdb
+
+    conn = duckdb.connect()
+    conn.execute("SET SESSION TimeZone = 'UTC'")
+    session = DuckDBSession(conn)
+    df = session.createDataFrame([(1,)], schema=["value"])
+
+    assert df.sparkSession.conf.get("spark.sql.session.timeZone") == "UTC"
+    conn.execute("SET SESSION TimeZone = 'Europe/Amsterdam'")
+    assert session.conf.get("spark.sql.session.timeZone") == "Europe/Amsterdam"
+
+
+def test_conf_get_uses_duckdb_connection_default():
+    import duckdb
+
+    conn = duckdb.connect()
+    session = DuckDBSession(conn)
+
+    result = conn.execute("SELECT current_setting('TimeZone')").fetchone()
+    assert result is not None
+    assert session.conf.get("spark.sql.session.timeZone") == result[0]
+
+
+def test_conf_set_changes_duckdb_session_timezone():
+    import duckdb
+
+    conn = duckdb.connect()
+    session = DuckDBSession(conn)
+
+    session.conf.set("spark.sql.session.timeZone", "Asia/Tokyo")
+
+    assert conn.execute("SELECT current_setting('TimeZone')").fetchone() == ("Asia/Tokyo",)
+    assert session.conf.get("spark.sql.session.timeZone") == "Asia/Tokyo"
+
+
+def test_builder_timezone_config_applies_to_session():
+    session = (
+        DuckDBSession.Builder()
+        .config("spark.sql.session.timeZone", "Europe/Amsterdam")
+        .getOrCreate()
+    )
+
+    assert session.conf.get("spark.sql.session.timeZone") == "Europe/Amsterdam"
+    row = session.sql("SELECT current_setting('TimeZone') AS timezone").first()
+    assert row is not None
+    assert row.timezone == "Europe/Amsterdam"
+
+
+def test_builder_timezone_config_map_applies_to_session():
+    session = (
+        DuckDBSession.Builder()
+        .config(map={"spark.sql.session.timeZone": "Asia/Tokyo"})
+        .getOrCreate()
+    )
+
+    assert session.conf.get("spark.sql.session.timeZone") == "Asia/Tokyo"
+
+
+def test_conf_rejects_unsupported_spark_options():
+    session = DuckDBSession()
+
+    with pytest.raises(NotImplementedError, match="spark.sql.shuffle.partitions"):
+        session.conf.get("spark.sql.shuffle.partitions")
+    with pytest.raises(NotImplementedError, match="spark.sql.shuffle.partitions"):
+        session.conf.set("spark.sql.shuffle.partitions", "2")
+
+
 def test_session_with_unfinished_connection_result():
     import duckdb
 
