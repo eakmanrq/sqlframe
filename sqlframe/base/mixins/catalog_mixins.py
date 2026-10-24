@@ -17,6 +17,7 @@ from sqlframe.base.types import StructType
 from sqlframe.base.util import (
     get_column_mapping_from_schema_input,
     normalize_string,
+    safe_parse_identifier,
     schema_,
     to_schema,
 )
@@ -651,11 +652,17 @@ class ListColumnsFromInfoSchemaMixin(_BaseInfoSchemaMixin, t.Generic[SESSION, DF
                 catalog_filter = exp.Or(this=catalog_filter, expression=self.TEMP_CATALOG_FILTER)
             select = select.where(catalog_filter)
         results = self.session._collect(select, skip_normalization=True)
+
+        def column_name(raw_name: str) -> str:
+            if self.session._is_duckdb:
+                identifier = safe_parse_identifier(raw_name, dialect=self.session.execution_dialect)
+                identifier._meta = {"case_sensitive": True}
+                return normalize_string(identifier, from_dialect="execution", to_dialect="output")
+            return normalize_string(raw_name, from_dialect="execution", to_dialect="output")
+
         return [
             Column(
-                name=normalize_string(
-                    x["column_name"], from_dialect="execution", to_dialect="output"
-                ),
+                name=column_name(x["column_name"]),
                 description=None,
                 dataType=normalize_string(
                     x["data_type"], from_dialect="execution", to_dialect="output", is_datatype=True

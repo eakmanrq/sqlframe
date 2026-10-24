@@ -108,6 +108,7 @@ class DuckDBDataFrameReader(
         )
         if select_columns == [exp.Star()]:
             return self.load(path=path, format=format, schema=df.schema, **merged_options)
+        df.display_name_mapping.update(zip(df._columns, column_mapping))
         self.session._last_loaded_file = path  # type: ignore
         return df
 
