@@ -80,7 +80,7 @@ class DuckDBSession(
         if eager_validation is not None and not isinstance(eager_validation, bool):
             raise ValueError("sqlframe.eager_validation must be a boolean")
         if eager_validation is not None or not hasattr(self, "eager_validation"):
-            self.eager_validation = True if eager_validation is None else eager_validation
+            self.eager_validation = bool(eager_validation)
 
         try:  # Available from duckdb 1.4.1
             from duckdb.sqltypes import VARCHAR

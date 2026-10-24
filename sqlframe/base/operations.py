@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import functools
 import typing as t
 from enum import IntEnum
@@ -18,6 +20,32 @@ else:
     DF = t.TypeVar("DF")
     T = t.TypeVar("T")
 P = ParamSpec("P")  # represents arbitrary args + kwargs
+
+# Depth of decorated operations on the current call stack. Decorated methods call
+# other decorated methods internally; only the outermost, user-level call validates
+# the resulting plan so each operation costs one validation.
+_operation_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
+    "sqlframe_operation_depth", default=0
+)
+
+
+@contextlib.contextmanager
+def nested_operation() -> t.Iterator[None]:
+    """Treat decorated operations run inside the block as internal steps of one operation."""
+    token = _operation_depth.set(_operation_depth.get() + 1)
+    try:
+        yield
+    finally:
+        _operation_depth.reset(token)
+
+
+def _run_operation(func: t.Callable[[], T], validate: t.Callable[[T], None]) -> T:
+    outermost = _operation_depth.get() == 0
+    with nested_operation():
+        df = func()
+    if outermost:
+        validate(df)
+    return df
 
 
 class Operation(IntEnum):
@@ -68,11 +96,17 @@ def operation(
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self = self._convert_leaf_to_cte()
-            df = func(self, *args, **kwargs)
-            df.last_op = new_op
-            if isinstance(df, BaseDataFrame):
-                df._validate_plan()
-            return df
+
+            def run() -> T:
+                df = func(self, *args, **kwargs)
+                df.last_op = new_op
+                return df
+
+            def validate(df: T) -> None:
+                if isinstance(df, BaseDataFrame):
+                    df._validate_plan()
+
+            return _run_operation(run, validate)
 
         wrapper.__wrapped__ = func
         return wrapper
@@ -109,10 +143,13 @@ def group_operation(
             new_op = op if op != Operation.NO_OP else last_op
             if new_op < last_op or (last_op == new_op == Operation.SELECT):
                 self._df = self._df._convert_leaf_to_cte()
-            df = func(self, *args, **kwargs)
-            df.last_op = new_op
-            df._validate_plan()
-            return df
+
+            def run() -> DF:
+                df = func(self, *args, **kwargs)
+                df.last_op = new_op
+                return df
+
+            return _run_operation(run, lambda df: df._validate_plan())
 
         wrapper.__wrapped__ = func
         return wrapper

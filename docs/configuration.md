@@ -26,17 +26,21 @@ SQLFrame supports multiple dialects, all of which can be specific as the `input_
 
 ## DuckDB eager plan validation
 
-DuckDB sessions validate each new DataFrame query plan by default. If DuckDB cannot resolve a column or an expression's types, the DataFrame operation raises at that call instead of waiting for `collect()` or another action. Validation runs `EXPLAIN` on the generated query; it plans the query without reading its rows. Errors that depend on row values can still occur during an action.
+DuckDB sessions can validate each new DataFrame query plan as it is built. If DuckDB cannot resolve a column or an expression's types, the DataFrame operation raises at that call instead of waiting for `collect()` or another action. Validation runs `EXPLAIN` on the generated query; it plans the query without reading its rows. Errors that depend on row values can still occur during an action.
 
-Each DataFrame operation adds a planning round trip to the local DuckDB connection, and later operations replan the accumulated query. To keep the previous lazy planning behavior, disable validation when creating the session:
+Validation is off by default because it is expensive. Each validated operation renders the whole accumulated query to SQL in Python and then plans it in DuckDB. The Python rendering dominates and grows with the length of the chain, so a script that chains many operations on one DataFrame can take several times longer to build its plans with validation on. For example, chaining 40 `withColumn` calls took about 5.5 seconds with validation and under 1 second without it. Enable it when creating the session:
 
 ```python
 from sqlframe.duckdb import DuckDBSession
 
-session = DuckDBSession.builder.config("sqlframe.eager_validation", False).getOrCreate()
+session = DuckDBSession.builder.config("sqlframe.eager_validation", True).getOrCreate()
 ```
 
-The setting also works in the `map` argument to `builder.config` and in the `config` argument to `activate("duckdb", ...)`. It accepts only a Python boolean and applies only to DuckDB; other engines retain their existing lazy behavior. Grouped queries are validated when an aggregation adds the final DataFrame plan.
+The setting also works in the `map` argument to `builder.config` and in the `config` argument to `activate("duckdb", ...)`. It accepts only a Python boolean and applies only to DuckDB; other engines retain their existing lazy behavior.
+
+When enabled, validation covers DataFrame methods that build a new query plan: `select`, `filter`/`where`, `withColumn`/`withColumns`, `drop`, `join`/`crossJoin`, `union`/`unionByName`/`intersect`/`exceptAll`, `distinct`/`dropDuplicates`, `dropna`/`fillna`/`replace` and their `na.*` forms, `orderBy`/`sort`, `limit`, `unpivot`, and grouped aggregations such as `groupBy(...).agg(...)`, `count()`, or `pivot(...).sum(...)`. Grouped queries are validated when the aggregation produces the DataFrame, and each user-level call validates once even when it is built from several internal steps.
+
+Validation does not cover `session.sql`, `session.table`, `createDataFrame`, DataFrameReader methods such as `read.table`, `read.csv`, or `read.parquet`, or DataFrame methods that only relabel an existing plan such as `withColumnRenamed`, `toDF`, and `transform`. Errors in those plans surface at the next validated operation or at an action.
 
 ## Activating SQLFrame
 
