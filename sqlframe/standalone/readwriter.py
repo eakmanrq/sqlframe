@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import typing as t
 
+from sqlframe.base import types
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter, _infer_format
-from sqlframe.base.util import pandas_to_spark_schema, verify_pandas_installed
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import OptionalPrimitiveType, PathOrPaths
@@ -33,20 +33,73 @@ class StandaloneDataFrameReader(
         format = format or self.state_format_to_read or _infer_format(path)
         if format != "parquet":
             raise UnsupportedOperationError(f"Unsupported format: {format}")
-        verify_pandas_installed()
-        import pandas as pd
         import pyarrow as pa
         import pyarrow.parquet as pq
 
         kwargs = {k: v for k, v in {**self.state_options, **options}.items() if v is not None}
         table = pq.read_table(path, **kwargs)
+        rows = table.to_pylist()
         if schema is None:
-            # Nullable integers must not become floats during schema inference.
-            integer_dtypes = {pa.int64(): pd.Int64Dtype(), pa.int32(): pd.Int32Dtype()}
-            schema = pandas_to_spark_schema(table.to_pandas(types_mapper=integer_dtypes.get))
+
+            def spark_type(dtype: pa.DataType) -> types.DataType:
+                primitive_types = {
+                    pa.bool_(): types.BooleanType(),
+                    pa.int8(): types.ByteType(),
+                    pa.int16(): types.ShortType(),
+                    pa.int32(): types.IntegerType(),
+                    pa.int64(): types.LongType(),
+                    pa.float32(): types.FloatType(),
+                    pa.float64(): types.DoubleType(),
+                    pa.string(): types.StringType(),
+                    pa.large_string(): types.StringType(),
+                    pa.binary(): types.BinaryType(),
+                    pa.large_binary(): types.BinaryType(),
+                    pa.date32(): types.DateType(),
+                    pa.date64(): types.DateType(),
+                }
+                if dtype in primitive_types:
+                    return primitive_types[dtype]
+                if pa.types.is_timestamp(dtype):
+                    return types.TimestampType() if dtype.tz else types.TimestampNTZType()
+                if pa.types.is_decimal(dtype):
+                    return types.DecimalType(dtype.precision, dtype.scale)
+                if (
+                    pa.types.is_list(dtype)
+                    or pa.types.is_large_list(dtype)
+                    or pa.types.is_fixed_size_list(dtype)
+                ):
+                    return types.ArrayType(spark_type(dtype.value_type), dtype.value_field.nullable)
+                if pa.types.is_struct(dtype):
+                    return types.StructType(
+                        [
+                            types.StructField(field.name, spark_type(field.type), field.nullable)
+                            for field in dtype
+                        ]
+                    )
+                raise UnsupportedOperationError(f"Unsupported Parquet type: {dtype}")
+
+            # Use the loaded table schema so projected columns match the Python rows.
+            schema = types.StructType(
+                [
+                    types.StructField(field.name, spark_type(field.type), field.nullable)
+                    for field in table.schema
+                ]
+            )
+
+            def struct_rows(value: t.Any) -> t.Any:
+                if isinstance(value, dict):
+                    # Positional construction avoids Row's decimal-to-float coercion.
+                    row = types.Row(*(struct_rows(v) for v in value.values()))
+                    row.__fields__ = list(value)
+                    return row
+                if isinstance(value, list):
+                    return [struct_rows(item) for item in value]
+                return value
+
+            rows = [{name: struct_rows(value) for name, value in row.items()} for row in rows]
         self.session._last_loaded_file = path
         # Arrow retains the distinction between a Parquet NULL and a floating NaN.
-        return self._session.createDataFrame(table.to_pylist(), schema)
+        return self._session.createDataFrame(rows, schema)
 
 
 class StandaloneDataFrameWriter(_BaseDataFrameWriter["StandaloneSession", "StandaloneDataFrame"]):

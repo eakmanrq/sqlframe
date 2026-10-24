@@ -77,7 +77,9 @@ def test_standalone_parquet_preserves_nulls(tmp_path, activated, method, column)
 
 
 @pytest.mark.parametrize("method", ["parquet", "load"])
-@pytest.mark.parametrize("column", ["flag", "day", "amount", "event_time", "items", "record"])
+@pytest.mark.parametrize(
+    "column", ["flag", "day", "amount", "event_time", "items", "record", "nested"]
+)
 def test_activated_parquet_preserves_arrow_types(tmp_path, method, column):
     from datetime import date, datetime
     from decimal import Decimal
@@ -96,6 +98,14 @@ def test_activated_parquet_preserves_arrow_types(tmp_path, method, column):
             "EXTRACT(microsecond FROM event_time) = 5123456",
         ),
         "items": ([1, None, 2], pa.list_(pa.int64()), "BIGINT[]", "items[1] + items[3] = 3"),
+        "nested": (
+            [{"amount": Decimal("9007199254740993.50"), "flags": [True, None]}, None],
+            pa.list_(
+                pa.struct([("amount", pa.decimal128(20, 2)), ("flags", pa.list_(pa.bool_()))])
+            ),
+            "STRUCT(amount DECIMAL(20,2), flags BOOLEAN[])[]",
+            "nested[1].amount + 1 = 9007199254740994.50 AND nested[1].flags[1]",
+        ),
         "record": (
             {"x": 1},
             pa.struct([("x", pa.int64())]),
@@ -121,3 +131,26 @@ def test_activated_parquet_preserves_arrow_types(tmp_path, method, column):
             ).fetchall() == [(True,)]
         finally:
             spark.stop()
+
+
+@pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
+@pytest.mark.parametrize("timezone", [None, "UTC"])
+def test_parquet_timestamp_units(tmp_path, unit, timezone):
+    from datetime import datetime
+    from datetime import timezone as dt_timezone
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    value = datetime(2024, 1, 2, 3, 4, 5, tzinfo=dt_timezone.utc if timezone else None)
+    path = tmp_path / "timestamps.parquet"
+    pq.write_table(
+        pa.table({"ts": pa.array([value, None], type=pa.timestamp(unit, tz=timezone))}), path
+    )
+    spark = StandaloneSession.builder.getOrCreate()
+    try:
+        result = duckdb.sql(spark.read.parquet(str(path)).sql(dialect="duckdb"))
+        assert str(result.types[0]) == ("TIMESTAMP WITH TIME ZONE" if timezone else "TIMESTAMP")
+        assert result.fetchall() == [(value,), (None,)]
+    finally:
+        spark.stop()
