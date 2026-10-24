@@ -2920,6 +2920,9 @@ snowflake = [
 spark = [
     { name = "pyspark" },
 ]
+standalone = [
+    { name = "pyarrow" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -2946,6 +2949,7 @@ requires-dist = [
     { name = "psycopg", marker = "extra == 'dev'", specifier = ">=3.1,<4" },
     { name = "psycopg2", marker = "extra == 'postgres'", specifier = ">=2.8,<3" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=10,<24" },
+    { name = "pyarrow", marker = "extra == 'standalone'", specifier = ">=10,<24" },
     { name = "pymdown-extensions", marker = "extra == 'docs'" },
     { name = "pyspark", marker = "extra == 'dev'", specifier = ">=4,<4.2" },
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.2" },
@@ -2962,7 +2966,7 @@ requires-dist = [
     { name = "types-psycopg2", marker = "extra == 'dev'", specifier = ">=2.9,<3" },
     { name = "typing-extensions" },
 ]
-provides-extras = ["bigquery", "databricks", "dev", "docs", "duckdb", "openai", "pandas", "postgres", "redshift", "snowflake", "spark"]
+provides-extras = ["bigquery", "databricks", "dev", "docs", "duckdb", "openai", "pandas", "postgres", "redshift", "snowflake", "spark", "standalone"]
 
 [[package]]
 name = "sqlglot"
