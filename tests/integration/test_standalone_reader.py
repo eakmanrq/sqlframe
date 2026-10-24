@@ -154,3 +154,58 @@ def test_parquet_timestamp_units(tmp_path, unit, timezone):
         assert result.fetchall() == [(value,), (None,)]
     finally:
         spark.stop()
+
+
+@pytest.mark.parametrize("method", ["parquet", "load"])
+@pytest.mark.parametrize("option_source", ["option", "options", "keyword"])
+@pytest.mark.parametrize(
+    "option,value",
+    [
+        ("mergeSchema", "true"),
+        ("datetimeRebaseMode", "LEGACY"),
+        ("int96RebaseMode", "CORRECTED"),
+        ("pathGlobFilter", "*.parquet"),
+        ("recursiveFileLookup", "true"),
+        ("MERGESCHEMA", False),
+    ],
+)
+def test_activated_parquet_rejects_spark_options(method, option_source, option, value):
+    from sqlframe.base.exceptions import UnsupportedOperationError
+
+    with activate_context("standalone"):
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession.builder.getOrCreate()
+        try:
+            reader = spark.read
+            kwargs = {}
+            if option_source == "option":
+                reader = reader.option(option, value)
+            elif option_source == "options":
+                reader = reader.options(**{option: value})
+            else:
+                kwargs = {option: value}
+            with pytest.raises(
+                UnsupportedOperationError,
+                match=f"{option}.*Remove this option or use the Spark engine",
+            ):
+                getattr(reader, method)(str(PARQUET_FILE), **kwargs)
+        finally:
+            spark.stop()
+
+
+@pytest.mark.parametrize("method", ["parquet", "load"])
+def test_activated_parquet_preserves_arrow_options(method):
+    with activate_context("standalone"):
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession.builder.getOrCreate()
+        try:
+            reader = spark.read.options(use_threads=False, mergeSchema=None)
+            df = getattr(reader, method)(
+                str(PARQUET_FILE), columns=["fname"], filters=[("employee_id", "=", 1)]
+            )
+            assert df.columns == ["fname"]
+            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [("Jack",)]
+        finally:
+            spark.stop()
