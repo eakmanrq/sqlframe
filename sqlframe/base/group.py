@@ -41,8 +41,24 @@ class _BaseGroupedData(t.Generic[DF]):
         self, func_name: str, cols: t.Tuple[str, ...]
     ) -> t.List[Column]:
         from sqlframe.base import functions as F
+        from sqlframe.base import types
 
         func_name = func_name.lower()
+        if not cols:
+            numeric_types = (
+                types.ByteType,
+                types.ShortType,
+                types.IntegerType,
+                types.LongType,
+                types.FloatType,
+                types.DoubleType,
+                types.DecimalType,
+            )
+            cols = tuple(
+                field.name
+                for field in self._df.schema.fields
+                if isinstance(field.dataType, numeric_types)
+            )
         return [
             getattr(F, func_name)(name).alias(
                 self.session._sanitize_column_name(f"{func_name}({name})")
