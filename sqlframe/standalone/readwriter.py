@@ -30,7 +30,7 @@ class StandaloneDataFrameReader(
             raise ValueError("path is required")
         if not isinstance(path, str):
             raise TypeError("path must be a string")
-        format = format or self.state_format_to_read or _infer_format(path)
+        format = (format or self.state_format_to_read or _infer_format(path)).lower()
         if format != "parquet":
             raise UnsupportedOperationError(f"Unsupported format: {format}")
         import pyarrow as pa
