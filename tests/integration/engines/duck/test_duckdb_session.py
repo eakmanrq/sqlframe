@@ -56,10 +56,9 @@ def test_conf_get_uses_duckdb_connection_default():
     conn = duckdb.connect()
     session = DuckDBSession(conn)
 
-    assert (
-        session.conf.get("spark.sql.session.timeZone")
-        == conn.execute("SELECT current_setting('TimeZone')").fetchone()[0]
-    )
+    result = conn.execute("SELECT current_setting('TimeZone')").fetchone()
+    assert result is not None
+    assert session.conf.get("spark.sql.session.timeZone") == result[0]
 
 
 def test_conf_set_changes_duckdb_session_timezone():
@@ -82,9 +81,9 @@ def test_builder_timezone_config_applies_to_session():
     )
 
     assert session.conf.get("spark.sql.session.timeZone") == "Europe/Amsterdam"
-    assert session.sql("SELECT current_setting('TimeZone') AS timezone").first().timezone == (
-        "Europe/Amsterdam"
-    )
+    row = session.sql("SELECT current_setting('TimeZone') AS timezone").first()
+    assert row is not None
+    assert row.timezone == "Europe/Amsterdam"
 
 
 def test_builder_timezone_config_map_applies_to_session():
