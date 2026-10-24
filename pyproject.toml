@@ -87,6 +87,10 @@ snowflake = [
 spark = [
     "pyspark>=4,<4.3",
 ]
+standalone = [
+    "pandas>=2,<4",
+    "pyarrow>=10,<27",
+]
 
 [tool.setuptools.packages.find]
 include = ["sqlframe", "sqlframe.*"]
