@@ -2954,7 +2954,7 @@ requires-dist = [
     { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6,<3.9" },
-    { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.3.0" },
+    { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.14,<2.3.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.4,<0.18" },
     { name = "snowflake-connector-python", extras = ["secure-local-storage"], marker = "extra == 'snowflake'", specifier = ">=4.7.3,<5" },
     { name = "sqlglot", specifier = ">=30.0.0,<30.25" },
