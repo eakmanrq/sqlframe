@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import typing as t
 
-from sqlframe.base.operations import Operation, group_operation, operation
+from sqlframe.base.operations import Operation, group_operation, nested_operation, operation
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -285,7 +285,8 @@ class _BaseGroupedData(t.Generic[DF]):
             # Eagerly compute distinct values
             from sqlframe.base.column import Column
 
-            distinct_df = self._df.select(pivot_col).distinct()
+            with nested_operation():
+                distinct_df = self._df.select(pivot_col).distinct()
             distinct_rows = distinct_df.collect()
             # Sort to make the results deterministic
             self.pivot_values = sorted([row[0] for row in distinct_rows])

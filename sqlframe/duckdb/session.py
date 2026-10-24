@@ -67,9 +67,20 @@ class DuckDBSession(
     _table = DuckDBTable
     _udf_registration = DuckDBUDFRegistration
 
-    def __init__(self, conn: t.Optional[DuckDBPyConnection] = None, *args, **kwargs):
+    def __init__(
+        self,
+        conn: t.Optional[DuckDBPyConnection] = None,
+        *args,
+        eager_validation: t.Optional[bool] = None,
+        **kwargs,
+    ):
         import duckdb
         from duckdb import InvalidInputException
+
+        if eager_validation is not None and not isinstance(eager_validation, bool):
+            raise ValueError("sqlframe.eager_validation must be a boolean")
+        if eager_validation is not None or not hasattr(self, "eager_validation"):
+            self.eager_validation = bool(eager_validation)
 
         try:  # Available from duckdb 1.4.1
             from duckdb.sqltypes import VARCHAR
@@ -130,6 +141,14 @@ class DuckDBSession(
 
     class Builder(_BaseSession.Builder):
         DEFAULT_EXECUTION_DIALECT = "duckdb"
+        EAGER_VALIDATION_KEY = "sqlframe.eager_validation"
+
+        def _set_eager_validation(self, value: t.Any) -> None:
+            if not isinstance(value, bool):
+                raise ValueError("sqlframe.eager_validation must be a boolean")
+            self._session_kwargs["eager_validation"] = value
+            if "session" in self.__dict__:
+                self.session.eager_validation = value
 
         def __init__(self):
             super().__init__()
@@ -142,6 +161,12 @@ class DuckDBSession(
             *,
             map: t.Optional[t.Dict[str, t.Any]] = None,
         ) -> None:
+            if key == self.EAGER_VALIDATION_KEY:
+                self._set_eager_validation(value)
+                key, value = None, None
+            if map and self.EAGER_VALIDATION_KEY in map:
+                self._set_eager_validation(map[self.EAGER_VALIDATION_KEY])
+                map = {k: v for k, v in map.items() if k != self.EAGER_VALIDATION_KEY}
             if key == _SPARK_TIMEZONE_KEY:
                 if value is not None:
                     self._time_zone = value

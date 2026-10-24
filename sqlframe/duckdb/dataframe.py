@@ -46,6 +46,37 @@ class DuckDBDataFrame(
     _stat = DuckDBDataFrameStatFunctions
     _group_data = DuckDBGroupedData
 
+    def _validate_plan(self) -> None:
+        if not self.session.eager_validation:
+            return
+
+        import duckdb
+        from sqlglot import exp
+
+        expressions = self._get_expressions(optimize=False)
+        if len(expressions) != 1 or not isinstance(expressions[0], exp.Select):
+            return
+        sql = "EXPLAIN " + self.session._to_sql(expressions[0])
+        # Older DuckDB releases discard unfinished results on a new statement.
+        # Use a separate cursor there; newer releases report a busy connection.
+        resource_in_use = getattr(duckdb, "ResourceInUseException", None)
+        if resource_in_use:
+            try:
+                self.session._conn.sql(sql)
+                return
+            except resource_in_use:
+                pass
+
+        cursor = self.session._conn.cursor()
+        try:
+            cursor.sql(sql)
+        except duckdb.CatalogException:
+            # Cursors cannot see connection-local temporary tables. Defer the
+            # catalog check until the query can run on the original connection.
+            pass
+        finally:
+            cursor.close()
+
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None
     ) -> None:
