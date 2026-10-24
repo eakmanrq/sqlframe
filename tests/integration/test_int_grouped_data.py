@@ -150,6 +150,26 @@ def test_avg_without_columns(
     compare_frames(expected, actual)
 
 
+def test_avg_without_columns_with_dotted_numeric_name(
+    pyspark_session: SparkSession,
+    get_session: t.Callable,
+    compare_frames: t.Callable,
+):
+    rows = [(2, "Alice"), (5, "Bob")]
+    spark_df = pyspark_session.createDataFrame(rows, ["value", "name"]).withColumnRenamed(
+        "value", "a.b"
+    )
+    session = get_session()
+    sqlframe_df = session.createDataFrame(rows, ["value", "name"]).withColumnRenamed("value", "a.b")
+
+    expected = spark_df.groupBy().agg(F.avg(F.col("`a.b`")).alias("avg(a.b)"))
+    actual = sqlframe_df.groupBy().avg()
+
+    assert actual.columns == [session._sanitize_column_name("avg(a.b)")]
+    assert actual.collect()[0][0] == 3.5
+    compare_frames(expected, actual)
+
+
 def test_max_without_columns_after_grouping_by_column(
     pyspark_session: SparkSession,
     get_session: t.Callable,
