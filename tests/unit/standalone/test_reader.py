@@ -1,0 +1,48 @@
+from pathlib import Path
+
+import pytest
+
+from sqlframe.base.exceptions import UnsupportedOperationError
+from sqlframe.standalone.session import StandaloneSession
+
+pytest_plugins = ["tests.common_fixtures"]
+
+PARQUET_FILE = Path(__file__).resolve().parents[2] / "fixtures" / "employee.parquet"
+
+
+def test_parquet_loads_file_into_standalone_dataframe(standalone_session: StandaloneSession):
+    df = standalone_session.read.parquet(str(PARQUET_FILE))
+
+    assert df.columns == ["employee_id", "fname", "lname", "age", "store_id"]
+    assert "Jack" in df.sql()
+    assert "Shephard" in df.sql()
+
+
+def test_load_infers_parquet_format(standalone_session: StandaloneSession):
+    df = standalone_session.read.load(str(PARQUET_FILE))
+
+    assert df.columns == ["employee_id", "fname", "lname", "age", "store_id"]
+
+
+def test_load_uses_reader_format_and_explicit_schema(standalone_session: StandaloneSession):
+    df = standalone_session.read.format("parquet").load(
+        str(PARQUET_FILE),
+        schema="employee_id STRING, fname STRING, lname STRING, age INT, store_id INT",
+    )
+
+    assert "CAST(`a1`.`employee_id` AS STRING) AS `employee_id`" in df.sql(pretty=False)
+
+
+def test_load_rejects_unsupported_format(standalone_session: StandaloneSession):
+    with pytest.raises(UnsupportedOperationError, match="Unsupported format: csv"):
+        standalone_session.read.load(str(PARQUET_FILE), format="csv")
+
+
+def test_parquet_reports_missing_file(standalone_session: StandaloneSession, tmp_path: Path):
+    with pytest.raises(FileNotFoundError):
+        standalone_session.read.parquet(str(tmp_path / "missing.parquet"))
+
+
+def test_load_requires_a_path(standalone_session: StandaloneSession):
+    with pytest.raises(ValueError, match="path is required"):
+        standalone_session.read.load(format="parquet")
