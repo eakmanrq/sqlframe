@@ -1817,7 +1817,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 return True
 
             if isinstance(expr, exp.Column) and (alias_or_name := expr.alias_or_name):
-                normalized_alias_or_name = normalize_name(alias_or_name)
+                normalized_alias_or_name = self.session.input_dialect.normalize_identifier(
+                    expr.this.copy()
+                ).this
                 # Check direct match first
                 if normalized_alias_or_name in column_names:
                     return True
