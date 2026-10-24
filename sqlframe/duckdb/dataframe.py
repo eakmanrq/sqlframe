@@ -57,19 +57,25 @@ class DuckDBDataFrame(
         if len(expressions) != 1 or not isinstance(expressions[0], exp.Select):
             return
         sql = "EXPLAIN " + self.session._to_sql(expressions[0])
-        # DuckDB releases without ResourceInUseException, such as 1.2.x, run a new
-        # statement while a result is unfinished instead of refusing it.
+        # Older DuckDB releases discard unfinished results on a new statement.
+        # Use a separate cursor there; newer releases report a busy connection.
         resource_in_use = getattr(duckdb, "ResourceInUseException", None)
-        in_use_errors = (resource_in_use,) if resource_in_use else ()
-        try:
-            self.session._conn.sql(sql)
-        except in_use_errors:
-            # A separate DuckDB cursor keeps the caller's unfinished result intact.
-            cursor = self.session._conn.cursor()
+        if resource_in_use:
             try:
-                cursor.sql(sql)
-            finally:
-                cursor.close()
+                self.session._conn.sql(sql)
+                return
+            except resource_in_use:
+                pass
+
+        cursor = self.session._conn.cursor()
+        try:
+            cursor.sql(sql)
+        except duckdb.CatalogException:
+            # Cursors cannot see connection-local temporary tables. Defer the
+            # catalog check until the query can run on the original connection.
+            pass
+        finally:
+            cursor.close()
 
     def explain(
         self, extended: t.Optional[t.Union[bool, str]] = None, mode: t.Optional[str] = None

@@ -70,8 +70,8 @@ class DuckDBSession(
     def __init__(
         self,
         conn: t.Optional[DuckDBPyConnection] = None,
-        eager_validation: t.Optional[bool] = None,
         *args,
+        eager_validation: t.Optional[bool] = None,
         **kwargs,
     ):
         import duckdb

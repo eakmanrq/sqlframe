@@ -42,6 +42,8 @@ When enabled, validation covers DataFrame methods that build a new query plan: `
 
 Validation does not cover `session.sql`, `session.table`, `createDataFrame`, DataFrameReader methods such as `read.table`, `read.csv`, or `read.parquet`, or DataFrame methods that only relabel an existing plan such as `withColumnRenamed`, `toDF`, and `transform`. Errors in those plans surface at the next validated operation or at an action.
 
+Validation preserves a result that is still being fetched from the session's DuckDB connection. If the connection is busy, validation uses a separate cursor, which cannot see connection-local temporary tables. In that case, a catalog error is deferred until the query runs on the original connection. On DuckDB releases before 2.0, validation always uses a separate cursor because a new statement on the original connection can discard an unfinished result.
+
 ## Activating SQLFrame
 
 SQLFrame can be activated in order to replace `pyspark` imports with `sqlframe` imports for the given engine. 
