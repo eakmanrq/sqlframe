@@ -9,6 +9,34 @@ from sqlframe.standalone import StandaloneDataFrame, StandaloneSession
 PARQUET_FILE = Path(__file__).resolve().parents[1] / "fixtures" / "employee.parquet"
 
 
+@pytest.mark.parametrize("format_name", ["PARQUET", "PaRqUeT"])
+@pytest.mark.parametrize("format_source", ["reader", "keyword"])
+def test_activated_parquet_format_is_case_insensitive(format_name, format_source):
+    with activate_context("standalone"):
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession.builder.getOrCreate()
+        try:
+            reader = spark.read
+            kwargs = {}
+            if format_source == "reader":
+                reader = reader.format(format_name)
+            else:
+                kwargs = {"format": format_name}
+            df = reader.load(str(PARQUET_FILE), **kwargs)
+
+            assert isinstance(df, StandaloneDataFrame)
+            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [
+                (1, "Jack", "Shephard", 37, 1),
+                (2, "John", "Locke", 65, 1),
+                (3, "Kate", "Austen", 37, 2),
+                (4, "Claire", "Littleton", 27, 2),
+                (5, "Hugo", "Reyes", 29, 100),
+            ]
+        finally:
+            spark.stop()
+
+
 def test_activated_standalone_session_reads_parquet():
     with activate_context("standalone"):
         from pyspark.sql import SparkSession
