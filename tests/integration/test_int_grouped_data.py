@@ -1,7 +1,7 @@
 import typing as t
 
 import pytest
-from pyspark.sql import DataFrame, Row
+from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql import functions as F
 
 pytest_plugins = ["tests.integration.fixtures"]
@@ -130,6 +130,80 @@ def test_avg(
     df = pyspark_employee.groupBy("age").avg("store_id")
     dfs = employee.groupBy("age").avg("store_id")
     compare_frames(df, dfs)
+
+
+def test_avg_without_columns(
+    pyspark_session: SparkSession,
+    get_session: t.Callable,
+    compare_frames: t.Callable,
+):
+    rows = [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")]
+    spark_df = pyspark_session.createDataFrame(rows, ["age", "name"])
+    session = get_session()
+    sqlframe_df = session.createDataFrame(rows, ["age", "name"])
+
+    expected = spark_df.groupBy().avg()
+    actual = sqlframe_df.groupBy().avg()
+
+    assert actual.columns == [session._sanitize_column_name("avg(age)")]
+    assert actual.collect()[0][0] == 2.75
+    compare_frames(expected, actual)
+
+
+def test_avg_without_columns_with_dotted_numeric_name(
+    pyspark_session: SparkSession,
+    get_session: t.Callable,
+    compare_frames: t.Callable,
+):
+    rows = [(2, "Alice"), (5, "Bob")]
+    spark_df = pyspark_session.createDataFrame(rows, ["value", "name"]).withColumnRenamed(
+        "value", "a.b"
+    )
+    session = get_session()
+    sqlframe_df = session.createDataFrame(rows, ["value", "name"]).withColumnRenamed("value", "a.b")
+
+    expected = spark_df.groupBy().agg(F.avg(F.col("`a.b`")).alias("avg(a.b)"))
+    actual = sqlframe_df.groupBy().avg()
+
+    assert actual.columns == [session._sanitize_column_name("avg(a.b)")]
+    assert actual.collect()[0][0] == 3.5
+    compare_frames(expected, actual)
+
+
+def test_max_without_columns_after_grouping_by_column(
+    pyspark_session: SparkSession,
+    get_session: t.Callable,
+    compare_frames: t.Callable,
+):
+    rows = [(2, "Alice"), (2, "Bob"), (2, "Bob"), (5, "Bob")]
+    spark_df = pyspark_session.createDataFrame(rows, ["age", "name"])
+    session = get_session()
+    sqlframe_df = session.createDataFrame(rows, ["age", "name"])
+
+    expected = spark_df.groupBy(spark_df.name).max().sort("name")
+    actual = sqlframe_df.groupBy(sqlframe_df.name).max().sort("name")
+
+    assert actual.columns == ["name", session._sanitize_column_name("max(age)")]
+    assert [tuple(row) for row in actual.collect()] == [("Alice", 2), ("Bob", 5)]
+    compare_frames(expected, actual)
+
+
+def test_max_without_columns_includes_numeric_grouping_column(
+    pyspark_session: SparkSession,
+    get_session: t.Callable,
+    compare_frames: t.Callable,
+):
+    rows = [(2, "Alice"), (2, "Bob"), (5, "Bob")]
+    spark_df = pyspark_session.createDataFrame(rows, ["age", "name"])
+    session = get_session()
+    sqlframe_df = session.createDataFrame(rows, ["age", "name"])
+
+    expected = spark_df.groupBy("age").max().sort("age")
+    actual = sqlframe_df.groupBy("age").max().sort("age")
+
+    assert actual.columns == ["age", session._sanitize_column_name("max(age)")]
+    assert [tuple(row) for row in actual.collect()] == [(2, 2), (5, 5)]
+    compare_frames(expected, actual)
 
 
 def test_max(
