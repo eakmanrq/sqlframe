@@ -50,16 +50,20 @@ class DuckDBDataFrame(
         if not self.session.eager_validation:
             return
 
-        from duckdb import ResourceInUseException
+        import duckdb
         from sqlglot import exp
 
         expressions = self._get_expressions(optimize=False)
         if len(expressions) != 1 or not isinstance(expressions[0], exp.Select):
             return
         sql = "EXPLAIN " + self.session._to_sql(expressions[0])
+        # DuckDB releases without ResourceInUseException, such as 1.2.x, run a new
+        # statement while a result is unfinished instead of refusing it.
+        resource_in_use = getattr(duckdb, "ResourceInUseException", None)
+        in_use_errors = (resource_in_use,) if resource_in_use else ()
         try:
             self.session._conn.sql(sql)
-        except ResourceInUseException:
+        except in_use_errors:
             # A separate DuckDB cursor keeps the caller's unfinished result intact.
             cursor = self.session._conn.cursor()
             try:
