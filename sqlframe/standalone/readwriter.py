@@ -6,7 +6,7 @@ import typing as t
 
 from sqlframe.base import types
 from sqlframe.base.exceptions import UnsupportedOperationError
-from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter, _infer_format
+from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 
 if t.TYPE_CHECKING:
     from sqlframe.base._typing import OptionalPrimitiveType, PathOrPaths
@@ -30,7 +30,7 @@ class StandaloneDataFrameReader(
             raise ValueError("path is required")
         if not isinstance(path, str):
             raise TypeError("path must be a string")
-        format = (format or self.state_format_to_read or _infer_format(path)).lower()
+        format = (format or self.state_format_to_read or "parquet").lower()
         if format != "parquet":
             raise UnsupportedOperationError(f"Unsupported format: {format}")
         import pyarrow as pa
