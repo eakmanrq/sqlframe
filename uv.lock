@@ -2503,7 +2503,7 @@ wheels = [
 
 [[package]]
 name = "redshift-connector"
-version = "2.1.17"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -2517,7 +2517,7 @@ dependencies = [
     { name = "setuptools" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/c8/5c8e6c396c460304e63273cf22f64da8cacaf7ee0be3639d31087688b348/redshift_connector-2.1.17-py3-none-any.whl", hash = "sha256:cf3430419c23bab1c37487f47f8dff19a1e24f9d8ad8120d00bc1e583ef3cb35", size = 164935, upload-time = "2026-09-21T20:31:49.341Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/ed/c88bf5cfd8f752b12b2f64097523196a6f1e67df54b14315d9e381254be1/redshift_connector-2.2.0-py3-none-any.whl", hash = "sha256:1f53bf5ff738dba712571fc9a63ec65d27a93c85948f9d14242b31e5e1153883", size = 167478, upload-time = "2026-10-08T17:37:58.883Z" },
 ]
 
 [[package]]
@@ -2954,7 +2954,7 @@ requires-dist = [
     { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6,<3.9" },
-    { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.2.0" },
+    { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.1,<2.3.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.4,<0.18" },
     { name = "snowflake-connector-python", extras = ["secure-local-storage"], marker = "extra == 'snowflake'", specifier = ">=4.7.3,<5" },
     { name = "sqlglot", specifier = ">=30.0.0,<30.25" },
