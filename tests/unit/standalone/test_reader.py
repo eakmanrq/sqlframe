@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -56,3 +57,9 @@ def test_parquet_reports_missing_file(standalone_session: StandaloneSession, tmp
 def test_load_requires_a_path(standalone_session: StandaloneSession):
     with pytest.raises(ValueError, match="path is required"):
         standalone_session.read.load(format="parquet")
+
+
+def test_parquet_missing_dependency_names_install_extra(standalone_session: StandaloneSession):
+    with patch.dict("sys.modules", {"pyarrow": None}):
+        with pytest.raises(ImportError, match=r"sqlframe\[standalone\]"):
+            standalone_session.read.parquet(str(PARQUET_FILE))

@@ -2841,7 +2841,6 @@ spark = [
     { name = "pyspark" },
 ]
 standalone = [
-    { name = "pandas" },
     { name = "pyarrow" },
 ]
 
@@ -2864,7 +2863,6 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'dev'", specifier = ">=2,<4" },
     { name = "pandas", marker = "extra == 'duckdb'", specifier = ">=2,<4" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2,<4" },
-    { name = "pandas", marker = "extra == 'standalone'", specifier = ">=2,<4" },
     { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2,<4" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7,<5" },
     { name = "prettytable", specifier = "<4" },

@@ -10,13 +10,13 @@ Also any operation that requires an actual connection to the database (like exec
 pip install sqlframe
 ```
 
-To read local Parquet files, install the optional file-reading dependencies:
+To read local Parquet files, install the optional Parquet dependency:
 
 ```bash
 pip install "sqlframe[standalone]"
 ```
 
-`session.read.parquet(path)` and `session.read.load(path, format="parquet")` load the
+`session.read.parquet(path)` and `session.read.load(path)` load the
 file into memory and include its rows in the generated SQL. Standalone mode does not
 execute the SQL; use an engine-specific session for large files or query execution.
 
