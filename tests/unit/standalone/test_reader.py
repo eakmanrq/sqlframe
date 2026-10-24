@@ -33,9 +33,19 @@ def test_load_uses_reader_format_and_explicit_schema(standalone_session: Standal
     assert "CAST(`a1`.`employee_id` AS STRING) AS `employee_id`" in df.sql(pretty=False)
 
 
-def test_load_rejects_unsupported_format(standalone_session: StandaloneSession):
-    with pytest.raises(UnsupportedOperationError, match="Unsupported format: csv"):
-        standalone_session.read.load(str(PARQUET_FILE), format="csv")
+@pytest.mark.parametrize("format_name", ["csv", "json"])
+@pytest.mark.parametrize("format_source", ["reader", "keyword"])
+def test_load_rejects_unsupported_format(
+    standalone_session: StandaloneSession, format_name, format_source
+):
+    reader = standalone_session.read
+    kwargs = {}
+    if format_source == "reader":
+        reader = reader.format(format_name)
+    else:
+        kwargs = {"format": format_name}
+    with pytest.raises(UnsupportedOperationError, match=f"Unsupported format: {format_name}"):
+        reader.load(str(PARQUET_FILE), **kwargs)
 
 
 def test_parquet_reports_missing_file(standalone_session: StandaloneSession, tmp_path: Path):

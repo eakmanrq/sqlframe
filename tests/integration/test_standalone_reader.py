@@ -9,6 +9,31 @@ from sqlframe.standalone import StandaloneDataFrame, StandaloneSession
 PARQUET_FILE = Path(__file__).resolve().parents[1] / "fixtures" / "employee.parquet"
 
 
+@pytest.mark.parametrize("activated", [False, True])
+def test_load_defaults_to_parquet_for_extensionless_directory(tmp_path, activated):
+    from contextlib import nullcontext
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path = tmp_path / "events"
+    path.mkdir()
+    pq.write_table(pa.table({"id": [1, 2]}), path / "part-00000.parquet")
+
+    with activate_context("standalone") if activated else nullcontext():
+        if activated:
+            from pyspark.sql import SparkSession
+        else:
+            SparkSession = StandaloneSession
+        spark = SparkSession.builder.getOrCreate()
+        try:
+            df = spark.read.load(str(path))
+            assert isinstance(df, StandaloneDataFrame)
+            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [(1,), (2,)]
+        finally:
+            spark.stop()
+
+
 @pytest.mark.parametrize("format_name", ["PARQUET", "PaRqUeT"])
 @pytest.mark.parametrize("format_source", ["reader", "keyword"])
 def test_activated_parquet_format_is_case_insensitive(format_name, format_source):
