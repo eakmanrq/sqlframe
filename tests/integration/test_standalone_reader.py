@@ -65,13 +65,59 @@ def test_standalone_parquet_preserves_nulls(tmp_path, activated, method, column)
             if column == "number":
                 assert str(result.types[0]) == sql_type
             assert duckdb.sql(
-                f'SELECT COUNT("{column}"), COUNT(*) FILTER (WHERE "{column}" IS NULL) '
-                f'FROM ({sql})'
+                f'SELECT COUNT("{column}"), COUNT(*) FILTER (WHERE "{column}" IS NULL) FROM ({sql})'
             ).fetchall() == [(1, 1)]
             assert duckdb.sql(
                 f'SELECT COALESCE("{column}", (SELECT MAX("{column}") FROM ({sql}))) '
-                f'FROM ({sql}) '
+                f"FROM ({sql}) "
                 f'WHERE "{column}" IS NULL'
             ).fetchall() == [(values[0],)]
+        finally:
+            spark.stop()
+
+
+@pytest.mark.parametrize("method", ["parquet", "load"])
+@pytest.mark.parametrize("column", ["flag", "day", "amount", "event_time", "items", "record"])
+def test_activated_parquet_preserves_arrow_types(tmp_path, method, column):
+    from datetime import date, datetime
+    from decimal import Decimal
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    value, arrow_type, sql_type, predicate = {
+        "flag": (True, pa.bool_(), "BOOLEAN", "flag = TRUE"),
+        "day": (date(2024, 1, 2), pa.date32(), "DATE", "day + INTERVAL 1 DAY = DATE '2024-01-03'"),
+        "amount": (Decimal("1.50"), pa.decimal128(10, 2), "DECIMAL(10,2)", "amount + 1 = 2.50"),
+        "event_time": (
+            datetime(2024, 1, 2, 3, 4, 5, 123456),
+            pa.timestamp("us"),
+            "TIMESTAMP",
+            "EXTRACT(microsecond FROM event_time) = 5123456",
+        ),
+        "items": ([1, None, 2], pa.list_(pa.int64()), "BIGINT[]", "items[1] + items[3] = 3"),
+        "record": (
+            {"x": 1},
+            pa.struct([("x", pa.int64())]),
+            "STRUCT(x BIGINT)",
+            "record.x + 1 = 2",
+        ),
+    }[column]
+    path = tmp_path / "typed.parquet"
+    pq.write_table(pa.table({column: pa.array([value, None], type=arrow_type)}), path)
+
+    with activate_context("standalone"):
+        from pyspark.sql import SparkSession
+
+        spark = SparkSession.builder.getOrCreate()
+        try:
+            df = getattr(spark.read, method)(str(path))
+            sql = df.sql(dialect="duckdb")
+            result = duckdb.sql(sql)
+            assert str(result.types[0]) == sql_type
+            assert result.fetchall() == [(value,), (None,)]
+            assert duckdb.sql(
+                f'SELECT {predicate} FROM ({sql}) WHERE "{column}" IS NOT NULL'
+            ).fetchall() == [(True,)]
         finally:
             spark.stop()
