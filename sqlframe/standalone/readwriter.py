@@ -37,6 +37,21 @@ class StandaloneDataFrameReader(
         import pyarrow.parquet as pq
 
         kwargs = {k: v for k, v in {**self.state_options, **options}.items() if v is not None}
+        # These Spark options have no Arrow equivalent. Reject them rather than
+        # silently changing schema merging, timestamp rebasing, or file selection.
+        spark_options = {
+            "mergeschema",
+            "datetimerebasemode",
+            "int96rebasemode",
+            "pathglobfilter",
+            "recursivefilelookup",
+        }
+        for option in kwargs:
+            if option.lower() in spark_options:
+                raise UnsupportedOperationError(
+                    f"Unsupported standalone Parquet reader option: {option}. "
+                    "Remove this option or use the Spark engine to honor its semantics."
+                )
         table = pq.read_table(path, **kwargs)
         rows = table.to_pylist()
         if schema is None:
