@@ -1,5 +1,7 @@
 # General Configuration
 
+Configure SQLFrame for your workflow: choose dialects, activate existing PySpark imports, and control generated SQL.
+
 ## Input and Output Dialect
 
 By default, SQLFrame processes all string inputs using the Spark dialect (e.g., date format strings, SQL) and generates outputs in the Spark dialect (e.g., column names, data types). 
@@ -60,7 +62,7 @@ activate("duckdb")
 
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.getOrCreate()
-# "spark" is not a SQLFrame DuckDBSession and will run directly on DuckDB
+# "spark" is now a SQLFrame DuckDBSession and will run directly on DuckDB
 ```
 
 ### Activate with Connection
