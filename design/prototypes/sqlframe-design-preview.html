@@ -1,0 +1,314 @@
+<div id="sqlframe-design-preview" data-direction="precision">
+  <div class="sf-review-controls" aria-label="Prototype controls">
+    <div class="sf-direction-picker" role="group" aria-label="Visual direction">
+      <button type="button" data-direction-pick="precision" aria-pressed="true">01 · Precision <span>Recommended</span></button>
+      <button type="button" data-direction-pick="editorial" aria-pressed="false">02 · Fieldnotes</button>
+      <button type="button" data-direction-pick="terminal" aria-pressed="false">03 · Blueprint</button>
+    </div>
+    <div class="sf-surface-picker" role="group" aria-label="Preview page">
+      <button type="button" data-page-pick="home" aria-pressed="true">Homepage</button>
+      <button type="button" data-page-pick="guide" aria-pressed="false">Engine guide</button>
+      <button type="button" data-page-pick="readme" aria-pressed="false">README</button>
+      <button type="button" class="sf-theme" aria-label="Toggle preview color theme">◐ <span>Theme</span></button>
+    </div>
+  </div>
+  <div class="sf-direction-label" aria-live="polite">Precision · Clear typography, blue accents, a compact code demonstration.</div>
+  <div class="sf-product" aria-label="SQLFrame design prototype"></div>
+</div>
+<style>
+  #sqlframe-design-preview {
+    color-scheme: light dark;
+    --sf-paper: light-dark(#ffffff, #10151f);
+    --sf-soft: light-dark(#f5f7fb, #171e2b);
+    --sf-ink: light-dark(#18263d, #edf2fc);
+    --sf-muted: light-dark(#5b687c, #a8b4c9);
+    --sf-line: light-dark(#e1e7f0, #2b3546);
+    --sf-brand: light-dark(#2659d9, #8caeff);
+    --sf-tint: light-dark(#edf3ff, #202f4b);
+    --sf-on-brand: light-dark(#ffffff, #101b32);
+    --sf-green: light-dark(#186b55, #83d5b7);
+    --sf-purple: light-dark(#7c3faa, #ccacf4);
+    --sf-title-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--sf-ink);
+    font: 14px/1.65 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    width: 100%;
+    text-align: left;
+  }
+  #sqlframe-design-preview[data-direction="editorial"] {
+    --sf-paper: light-dark(#fbf9f3, #18201d);
+    --sf-soft: light-dark(#f1efe5, #202b26);
+    --sf-ink: light-dark(#233d34, #e8f0e8);
+    --sf-muted: light-dark(#5e6c60, #abbdb1);
+    --sf-line: light-dark(#dcded1, #364b3e);
+    --sf-brand: light-dark(#23664c, #a6d8b3);
+    --sf-tint: light-dark(#e8eee1, #2c4134);
+    --sf-on-brand: light-dark(#ffffff, #172e20);
+    --sf-title-font: Georgia, "Times New Roman", serif;
+  }
+  #sqlframe-design-preview[data-direction="terminal"] {
+    --sf-paper: light-dark(#f8fbfc, #0d1720);
+    --sf-soft: light-dark(#edf4f6, #13232e);
+    --sf-ink: light-dark(#132e40, #e3f3fa);
+    --sf-muted: light-dark(#536d7d, #9cb7c8);
+    --sf-line: light-dark(#d6e4ea, #2a424f);
+    --sf-brand: light-dark(#006d86, #80dfed);
+    --sf-tint: light-dark(#dff3f6, #153840);
+    --sf-on-brand: light-dark(#ffffff, #0a222b);
+    --sf-title-font: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  #sqlframe-design-preview *, #sqlframe-design-preview *::before, #sqlframe-design-preview *::after { box-sizing: border-box; }
+  #sqlframe-design-preview button, #sqlframe-design-preview select { font: inherit; }
+  #sqlframe-design-preview button, #sqlframe-design-preview a { -webkit-tap-highlight-color: transparent; }
+  #sqlframe-design-preview button { cursor: pointer; }
+  #sqlframe-design-preview button:focus-visible, #sqlframe-design-preview a:focus-visible { outline: 2px solid var(--sf-brand); outline-offset: 4px; }
+  #sqlframe-design-preview button { color: inherit; }
+  #sqlframe-design-preview a { color: var(--sf-brand); text-decoration: none; }
+  #sqlframe-design-preview a:hover { text-decoration: underline; }
+  #sqlframe-design-preview .sf-review-controls { color-scheme: light dark; color: var(--sf-ink); display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; padding: 0 0 12px; }
+  #sqlframe-design-preview .sf-direction-picker, #sqlframe-design-preview .sf-surface-picker { display: flex; flex-wrap: wrap; gap: 5px; }
+  #sqlframe-design-preview .sf-review-controls button { border: 1px solid var(--sf-line); border-radius: 7px; background: var(--sf-paper); padding: 7px 10px; font-size: 12px; }
+  #sqlframe-design-preview .sf-review-controls button[aria-pressed="true"] { background: var(--sf-ink); border-color: var(--sf-ink); color: var(--sf-paper); }
+  #sqlframe-design-preview .sf-review-controls button span { font-size: 10px; margin-left: 4px; opacity: .85; }
+  #sqlframe-design-preview .sf-direction-label { color-scheme: light dark; color: var(--sf-muted); font-size: 12px; padding-bottom: 15px; }
+  #sqlframe-design-preview .sf-product { color: var(--sf-ink); background: var(--sf-paper); border: 1px solid var(--sf-line); border-radius: 12px; overflow: clip; }
+  #sqlframe-design-preview .sf-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px; border-bottom: 1px solid var(--sf-line); }
+  #sqlframe-design-preview .sf-wordmark { display: inline-flex; align-items: center; gap: 9px; font-size: 20px; font-weight: 650; letter-spacing: -.8px; color: var(--sf-ink); border: 0; background: transparent; padding: 0; }
+  #sqlframe-design-preview .sf-mark { display: inline-flex; width: 27px; height: 27px; align-items: center; justify-content: center; color: var(--sf-brand); }
+  #sqlframe-design-preview .sf-mark svg { width: 100%; height: 100%; }
+  #sqlframe-design-preview .sf-header-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; font-size: 12px; }
+  #sqlframe-design-preview .sf-nav-button { background: transparent; border: 0; padding: 0; color: var(--sf-muted); }
+  #sqlframe-design-preview .sf-header-nav a { color: var(--sf-muted); }
+  #sqlframe-design-preview .sf-eyebrow { display: block; color: var(--sf-brand); font: 11px/1.5 "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: 1.8px; margin-bottom: 15px; }
+  #sqlframe-design-preview h1, #sqlframe-design-preview h2, #sqlframe-design-preview h3, #sqlframe-design-preview p { margin: 0; }
+  #sqlframe-design-preview h1 { font-family: var(--sf-title-font); font-size: clamp(34px, 5.1vw, 52px); font-weight: 550; letter-spacing: -2px; line-height: 1.1; }
+  #sqlframe-design-preview h1 em { color: var(--sf-brand); font-style: normal; }
+  #sqlframe-design-preview h2 { font-family: var(--sf-title-font); font-size: 25px; font-weight: 550; letter-spacing: -.7px; line-height: 1.3; }
+  #sqlframe-design-preview h3 { font-size: 15px; font-weight: 600; line-height: 1.5; }
+  #sqlframe-design-preview .sf-hero { padding: 50px 34px 35px; display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 30px; }
+  #sqlframe-design-preview .sf-hero-description { margin-top: 19px; color: var(--sf-muted); max-width: 37em; font-size: 14px; }
+  #sqlframe-design-preview .sf-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+  #sqlframe-design-preview .sf-primary, #sqlframe-design-preview .sf-secondary { display: inline-block; border: 1px solid var(--sf-brand); border-radius: 6px; padding: 9px 15px; font-size: 12px; font-weight: 550; background: var(--sf-brand); color: var(--sf-on-brand); }
+  #sqlframe-design-preview .sf-secondary { border-color: var(--sf-line); color: var(--sf-ink); background: var(--sf-paper); }
+  #sqlframe-design-preview .sf-actions a:hover { text-decoration: none; }
+  #sqlframe-design-preview .sf-code { border: 1px solid var(--sf-line); border-radius: 8px; overflow: clip; background: var(--sf-soft); min-width: 0; }
+  #sqlframe-design-preview .sf-code-head { display: flex; justify-content: space-between; align-items: center; padding: 9px 13px; border-bottom: 1px solid var(--sf-line); color: var(--sf-muted); font: 11px/1.5 "SFMono-Regular", Consolas, monospace; gap: 8px; }
+  #sqlframe-design-preview .sf-code pre { margin: 0; padding: 16px; color: var(--sf-ink); background: transparent; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.8 "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+  #sqlframe-design-preview .sf-code code { font: inherit; background: transparent; padding: 0; color: inherit; }
+  #sqlframe-design-preview .sf-keyword { color: var(--sf-purple); }
+  #sqlframe-design-preview .sf-string { color: var(--sf-green); }
+  #sqlframe-design-preview .sf-comment { color: var(--sf-muted); }
+  #sqlframe-design-preview .sf-code-separator { padding: 7px 16px; border-top: 1px solid var(--sf-line); border-bottom: 1px solid var(--sf-line); color: var(--sf-brand); font: 10px/1.5 "SFMono-Regular", Consolas, monospace; letter-spacing: 1px; }
+  #sqlframe-design-preview .sf-copy { border: 0; padding: 2px 0; background: transparent; color: var(--sf-muted); font-size: 11px; }
+  #sqlframe-design-preview .sf-engine-strip { display: flex; flex-wrap: wrap; gap: 10px 21px; justify-content: center; padding: 20px 26px; border-block: 1px solid var(--sf-line); color: var(--sf-muted); font-size: 12px; }
+  #sqlframe-design-preview .sf-engine-strip strong { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--sf-muted); font-weight: 500; align-self: center; }
+  #sqlframe-design-preview .sf-engine-strip a { color: var(--sf-ink); }
+  #sqlframe-design-preview .sf-benefits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; padding: 30px 34px; }
+  #sqlframe-design-preview .sf-benefit-index { display: inline-block; font: 11px/1.5 Consolas, monospace; color: var(--sf-brand); margin-bottom: 10px; }
+  #sqlframe-design-preview .sf-benefits p { color: var(--sf-muted); font-size: 12px; margin-top: 7px; }
+  #sqlframe-design-preview .sf-quickstart { padding: 30px 34px 35px; border-top: 1px solid var(--sf-line); }
+  #sqlframe-design-preview .sf-section-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+  #sqlframe-design-preview .sf-section-top a { font-size: 12px; }
+  #sqlframe-design-preview .sf-install { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; background: var(--sf-soft); border: 1px solid var(--sf-line); border-radius: 7px; margin-bottom: 14px; }
+  #sqlframe-design-preview .sf-install code { font: 12px/1.6 "SFMono-Regular", Consolas, monospace; color: var(--sf-ink); background: transparent; white-space: pre-wrap; overflow-wrap: anywhere; }
+  #sqlframe-design-preview .sf-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  #sqlframe-design-preview .sf-small-note { font-size: 12px; color: var(--sf-muted); margin-top: 12px; }
+  #sqlframe-design-preview .sf-paths { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 34px 30px; }
+  #sqlframe-design-preview .sf-path { border: 1px solid var(--sf-line); background: var(--sf-paper); border-radius: 7px; padding: 18px; color: var(--sf-ink); }
+  #sqlframe-design-preview .sf-path span { display: block; color: var(--sf-muted); font-size: 12px; margin-top: 5px; }
+  #sqlframe-design-preview .sf-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 15px 28px; color: var(--sf-muted); border-top: 1px solid var(--sf-line); font-size: 11px; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-hero { grid-template-columns: 1fr; padding-top: 38px; gap: 27px; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-hero-intro { max-width: 570px; }
+  #sqlframe-design-preview[data-direction="editorial"] h1 { font-size: clamp(38px, 6.5vw, 62px); font-weight: 400; letter-spacing: -2px; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-hero-description { max-width: 450px; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-demo { display: grid; grid-template-columns: 1fr 1fr; border-radius: 2px; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-demo .sf-code-head { grid-column: 1 / -1; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-demo .sf-code-separator { display: none; }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-demo pre:last-child { border-left: 1px solid var(--sf-line); }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-benefits { border-bottom: 1px solid var(--sf-line); }
+  #sqlframe-design-preview[data-direction="editorial"] .sf-primary, #sqlframe-design-preview[data-direction="editorial"] .sf-secondary, #sqlframe-design-preview[data-direction="editorial"] .sf-code, #sqlframe-design-preview[data-direction="editorial"] .sf-path { border-radius: 2px; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-hero { grid-template-columns: 1fr; padding: 36px 34px 28px; gap: 25px; background-image: linear-gradient(var(--sf-line) 1px, transparent 1px), linear-gradient(90deg, var(--sf-line) 1px, transparent 1px); background-size: 36px 36px; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-hero-intro { background: var(--sf-paper); padding: 14px; margin: -14px; }
+  #sqlframe-design-preview[data-direction="terminal"] h1 { font-size: clamp(31px, 5.4vw, 48px); letter-spacing: -2px; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-hero-description { max-width: 490px; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-demo { display: grid; grid-template-columns: 1.15fr 1fr; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-demo .sf-code-head { grid-column: 1 / -1; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-demo .sf-code-separator { display: none; }
+  #sqlframe-design-preview[data-direction="terminal"] .sf-demo pre:last-child { border-left: 1px solid var(--sf-line); }
+  #sqlframe-design-preview .sf-guide-layout { display: grid; grid-template-columns: 145px minmax(0,1fr); }
+  #sqlframe-design-preview .sf-sidebar { border-right: 1px solid var(--sf-line); padding: 26px 15px; font-size: 11px; }
+  #sqlframe-design-preview .sf-sidebar-label { color: var(--sf-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 21px 8px 8px; }
+  #sqlframe-design-preview .sf-sidebar-label:first-child { margin-top: 0; }
+  #sqlframe-design-preview .sf-sidebar a, #sqlframe-design-preview .sf-sidebar button { display: block; border: 0; background: transparent; width: 100%; text-align: left; color: var(--sf-muted); padding: 6px 8px; border-radius: 5px; }
+  #sqlframe-design-preview .sf-sidebar .sf-sidebar-active { background: var(--sf-tint); color: var(--sf-brand); font-weight: 550; }
+  #sqlframe-design-preview .sf-guide-body { min-width: 0; padding: 30px 28px; }
+  #sqlframe-design-preview .sf-breadcrumb { color: var(--sf-muted); font-size: 11px; margin-bottom: 18px; }
+  #sqlframe-design-preview .sf-guide-body h1 { font-size: 35px; letter-spacing: -1px; }
+  #sqlframe-design-preview .sf-guide-lead { color: var(--sf-muted); margin: 12px 0 20px; font-size: 13px; }
+  #sqlframe-design-preview .sf-guide-toc { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px 0; border-block: 1px solid var(--sf-line); font-size: 11px; }
+  #sqlframe-design-preview .sf-guide-section { margin-top: 25px; }
+  #sqlframe-design-preview .sf-guide-section h2 { font-size: 20px; margin-bottom: 12px; }
+  #sqlframe-design-preview .sf-guide-section p { font-size: 12px; color: var(--sf-muted); margin-bottom: 12px; }
+  #sqlframe-design-preview .sf-number { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 1px solid var(--sf-line); border-radius: 50%; font: 11px/1 Consolas, monospace; margin-right: 9px; color: var(--sf-brand); vertical-align: middle; }
+  #sqlframe-design-preview .sf-code-tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--sf-line); padding: 0 10px; }
+  #sqlframe-design-preview .sf-code-tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 9px; color: var(--sf-muted); font-size: 11px; }
+  #sqlframe-design-preview .sf-code-tabs button[aria-pressed="true"] { color: var(--sf-brand); border-bottom-color: var(--sf-brand); }
+  #sqlframe-design-preview .sf-callout { display: flex; gap: 10px; padding: 13px; margin-top: 14px; background: var(--sf-tint); border-left: 2px solid var(--sf-brand); color: var(--sf-ink); font-size: 12px; }
+  #sqlframe-design-preview .sf-callout p { margin: 0; color: var(--sf-ink); }
+  #sqlframe-design-preview .sf-output { width: 100%; border-collapse: collapse; font: 11px/1.8 "SFMono-Regular", Consolas, monospace; text-align: left; }
+  #sqlframe-design-preview .sf-output th, #sqlframe-design-preview .sf-output td { border-bottom: 1px solid var(--sf-line); padding: 8px 12px; }
+  #sqlframe-design-preview .sf-output th { font-weight: 500; color: var(--sf-muted); }
+  #sqlframe-design-preview .sf-readme { font: 14px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --sf-title-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  #sqlframe-design-preview .sf-github-bar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--sf-line); padding: 12px 24px; font-size: 12px; background: var(--sf-soft); }
+  #sqlframe-design-preview .sf-readme-content { padding: 30px; max-width: 820px; margin: auto; }
+  #sqlframe-design-preview .sf-readme-banner { text-align: center; padding: 15px 14px 28px; }
+  #sqlframe-design-preview .sf-readme-banner .sf-wordmark { justify-content: center; font-size: 35px; letter-spacing: -1px; }
+  #sqlframe-design-preview .sf-readme-banner .sf-mark { width: 38px; height: 38px; }
+  #sqlframe-design-preview .sf-readme-banner h1 { font: 600 21px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -.5px; margin: 15px 0 9px; }
+  #sqlframe-design-preview .sf-readme-banner p { font-size: 13px; color: var(--sf-muted); max-width: 460px; margin: auto; }
+  #sqlframe-design-preview .sf-readme-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px 18px; font-size: 12px; margin-top: 18px; }
+  #sqlframe-design-preview .sf-readme-banner .sf-license { display: inline-flex; border: 1px solid var(--sf-line); border-radius: 4px; font-size: 10px; margin-top: 16px; color: var(--sf-muted); }
+  #sqlframe-design-preview .sf-license span { padding: 2px 7px; }
+  #sqlframe-design-preview .sf-license span:last-child { background: var(--sf-soft); border-left: 1px solid var(--sf-line); }
+  #sqlframe-design-preview .sf-readme-section { margin-top: 24px; }
+  #sqlframe-design-preview .sf-readme-section h2 { font: 600 20px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; border-bottom: 1px solid var(--sf-line); padding-bottom: 8px; margin-bottom: 13px; letter-spacing: -.3px; }
+  #sqlframe-design-preview .sf-readme-section p, #sqlframe-design-preview .sf-readme-section ul { margin: 10px 0; font-size: 13px; }
+  #sqlframe-design-preview .sf-readme-section ul { padding-left: 20px; }
+  #sqlframe-design-preview .sf-readme-section > .sf-code + .sf-code { margin-top: 12px; }
+  #sqlframe-design-preview .sf-readme-section li { margin: 5px 0; }
+  #sqlframe-design-preview .sf-readme-engines { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #sqlframe-design-preview .sf-readme-engines td, #sqlframe-design-preview .sf-readme-engines th { text-align: left; padding: 8px 10px; border: 1px solid var(--sf-line); overflow-wrap: anywhere; }
+  #sqlframe-design-preview .sf-readme-engines tr:nth-child(even) { background: var(--sf-soft); }
+  #sqlframe-design-preview .sf-readme-section code:not(pre code) { font-size: 11px; padding: 2px 4px; background: var(--sf-soft); border-radius: 3px; }
+  #sqlframe-design-preview .sf-readme-kicker { font: 11px/1.5 Consolas, monospace; color: var(--sf-brand); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px; }
+  @media (max-width: 620px) {
+    #sqlframe-design-preview .sf-header { padding: 15px 18px; gap: 12px; flex-wrap: wrap; }
+    #sqlframe-design-preview .sf-header-nav { gap: 14px; }
+    #sqlframe-design-preview .sf-hero { grid-template-columns: 1fr; padding: 32px 21px 25px; gap: 25px; }
+    #sqlframe-design-preview .sf-benefits { padding: 24px 21px; grid-template-columns: 1fr; gap: 22px; }
+    #sqlframe-design-preview .sf-benefit-index { margin-bottom: 4px; }
+    #sqlframe-design-preview .sf-quickstart { padding: 26px 21px; }
+    #sqlframe-design-preview .sf-steps, #sqlframe-design-preview .sf-paths { grid-template-columns: 1fr; }
+    #sqlframe-design-preview .sf-paths { padding: 0 21px 25px; }
+    #sqlframe-design-preview .sf-sidebar { display: none; }
+    #sqlframe-design-preview .sf-guide-layout { grid-template-columns: 1fr; }
+    #sqlframe-design-preview .sf-guide-body { padding: 26px 21px; }
+    #sqlframe-design-preview .sf-readme-content { padding: 24px 18px; }
+    #sqlframe-design-preview[data-direction="terminal"] .sf-hero { padding: 30px 21px 25px; }
+    #sqlframe-design-preview[data-direction="terminal"] .sf-demo, #sqlframe-design-preview[data-direction="editorial"] .sf-demo { display: block; }
+    #sqlframe-design-preview[data-direction="terminal"] .sf-demo .sf-code-separator, #sqlframe-design-preview[data-direction="editorial"] .sf-demo .sf-code-separator { display: block; }
+    #sqlframe-design-preview[data-direction="terminal"] .sf-demo pre:last-child, #sqlframe-design-preview[data-direction="editorial"] .sf-demo pre:last-child { border-left: 0; }
+  }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('sqlframe-design-preview');
+  const product = root.querySelector('.sf-product');
+  const state = { direction: 'precision', page: 'home', connection: 'simple', theme: null };
+  const directions = {
+    precision: { label: 'Precision · Clear typography, blue accents, a compact code demonstration.', eyebrow: 'The universal DataFrame API', headline: 'Your PySpark code.<br><em>Your database.</em>', description: 'Run familiar DataFrame transformations directly on your database. No Spark cluster required.', readme: 'Your PySpark code. Your database.' },
+    editorial: { label: 'Fieldnotes · Warm neutrals, editorial headings, a spacious side-by-side example.', eyebrow: 'Familiar expressions. New possibilities.', headline: 'A familiar way to<br><em>work with your data.</em>', description: 'Bring the PySpark DataFrame API to the database you already use. Write Python, inspect the SQL, and keep your data where it belongs.', readme: 'A familiar way to work with your data.' },
+    terminal: { label: 'Blueprint · Technical typography, a subtle grid, and an expanded code workspace.', eyebrow: 'Python → SQL → Your engine', headline: 'Write DataFrames.<br><em>Run on your terms.</em>', description: 'The PySpark DataFrame API, translated into SQL and executed directly on your database engine.', readme: 'Write DataFrames. Run on your terms.' }
+  };
+  const urls = { docs: 'https://sqlframe.readthedocs.io/en/stable/', github: 'https://github.com/eakmanrq/sqlframe' };
+  const engines = ['DuckDB', 'BigQuery', 'Snowflake', 'Postgres', 'Databricks', 'Spark'];
+  const mark = '<span class="sf-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M10 4H4v24h6M22 4h6v24h-6" stroke="currentColor" stroke-width="2.5"/><path d="M11 11h10M11 16h10M11 21h6" stroke="currentColor" stroke-width="2"/></svg></span>';
+  const wordmark = `${mark}<span>SQLFrame</span>`;
+  const source = 'from sqlframe.duckdb import DuckDBSession\n\nsession = DuckDBSession()\n\ndf = (session.table("orders")\n    .groupBy("country")\n    .sum("revenue"))';
+  const sql = 'SELECT\n  country,\n  SUM(revenue) AS "sum(revenue)"\nFROM orders\nGROUP BY country';
+  const quickstart = 'from sqlframe.duckdb import DuckDBSession\n\nsession = DuckDBSession()\ndf = session.createDataFrame(\n    [("US", 120), ("UK", 80), ("US", 30)],\n    ["country", "revenue"],\n)\ndf.groupBy("country").sum("revenue").show()';
+  const connectionCode = {
+    simple: 'from sqlframe.duckdb import DuckDBSession\n\n# Start with an in-memory database\nsession = DuckDBSession()',
+    existing: 'import duckdb\nfrom sqlframe.duckdb import DuckDBSession\n\nconnection = duckdb.connect("analytics.duckdb")\nsession = DuckDBSession(conn=connection)',
+    activate: 'from sqlframe import activate\n\nactivate("duckdb")\n\nfrom pyspark.sql import SparkSession\nsession = SparkSession.builder.getOrCreate()'
+  };
+  function escape(text) { return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function highlight(code) {
+    return code.split(/(#[^\n]*|"[^"\n]*"|'[^'\n]*'|\b(?:from|import|SELECT|SUM|AS|FROM|GROUP|BY)\b)/g).map(token => {
+      const cls = token.startsWith('#') ? 'sf-comment' : /^["']/.test(token) ? 'sf-string' : /^(from|import|SELECT|SUM|AS|FROM|GROUP|BY)$/.test(token) ? 'sf-keyword' : '';
+      return cls ? `<span class="${cls}">${escape(token)}</span>` : escape(token);
+    }).join('');
+  }
+  function copyButton() { return '<button type="button" class="sf-copy" data-copy>Copy</button>'; }
+  function codeBlock(code, label) { return `<div class="sf-code"><div class="sf-code-head"><span>${label}</span>${copyButton()}</div><pre><code>${highlight(code)}</code></pre></div>`; }
+  function engineLink(engine) {
+    return engine === 'DuckDB' ? '<button type="button" class="sf-nav-button" data-go="guide">DuckDB</button>' : `<a href="${urls.docs}${engine.toLowerCase()}/" target="_blank" rel="noopener noreferrer">${engine}</a>`;
+  }
+  function header() {
+    return `<header class="sf-header"><button type="button" class="sf-wordmark" data-go="home" aria-label="SQLFrame home">${wordmark}</button><nav class="sf-header-nav" aria-label="SQLFrame navigation"><button type="button" class="sf-nav-button" data-go="guide">Get started</button><a href="${urls.docs}configuration/" target="_blank" rel="noopener noreferrer">Guides ↗</a><button type="button" class="sf-nav-button" data-go="engines">Engines</button><a href="${urls.github}" target="_blank" rel="noopener noreferrer">GitHub ↗</a></nav></header>`;
+  }
+  function footer() { return `<footer class="sf-footer"><span>SQLFrame · The universal DataFrame API</span><span>Open source · MIT license</span></footer>`; }
+  function demo() {
+    return `<div class="sf-code sf-demo"><div class="sf-code-head"><span>Python → SQL preview</span><span>DuckDB</span></div><pre><code>${highlight(source)}</code></pre><div class="sf-code-separator">↓ GENERATED SQL · ILLUSTRATIVE</div><pre><code>${highlight(sql)}</code></pre></div>`;
+  }
+  function home() {
+    const d = directions[state.direction];
+    return `${header()}<main><section class="sf-hero"><div class="sf-hero-intro"><span class="sf-eyebrow">${d.eyebrow}</span><h1>${d.headline}</h1><p class="sf-hero-description">${d.description}</p><div class="sf-actions"><button type="button" class="sf-primary" data-go="guide">Get started →</button><button type="button" class="sf-secondary" data-go="engines">Choose your engine</button></div></div>${demo()}</section><div class="sf-engine-strip" id="sf-engine-list"><strong>Runs on</strong>${engines.map(engineLink).join('')}</div><section class="sf-benefits" aria-label="Why SQLFrame"><div><span class="sf-benefit-index">01 / FAMILIAR</span><h3>Keep your DataFrame API</h3><p>Use familiar PySpark transformations, joins, and window functions.</p></div><div><span class="sf-benefit-index">02 / DIRECT</span><h3>Use your database</h3><p>Execute transformations where your data already lives.</p></div><div><span class="sf-benefit-index">03 / TRANSPARENT</span><h3>See the SQL</h3><p>Inspect and share the SQL behind your DataFrame code.</p></div></section><section class="sf-quickstart"><div class="sf-section-top"><h2>Start small. Run locally.</h2><button type="button" class="sf-nav-button" data-go="guide">DuckDB quickstart →</button></div><div class="sf-install"><code>pip install "sqlframe[duckdb]"</code>${copyButton()}</div><div class="sf-steps">${codeBlock(quickstart, 'Python · no cloud account needed')}<div class="sf-code"><div class="sf-code-head">Result</div>${output()}<p class="sf-small-note" style="padding:0 15px 15px">Three rows of data. One familiar API. Executed by DuckDB.</p></div></div></section><section class="sf-paths" aria-label="More ways to use SQLFrame"><a class="sf-path" href="${urls.docs}configuration/#activating-sqlframe" target="_blank" rel="noopener noreferrer"><h3>Bring an existing PySpark pipeline ↗</h3><span>Keep your imports using SQLFrame activation.</span></a><a class="sf-path" href="${urls.docs}standalone/" target="_blank" rel="noopener noreferrer"><h3>Just need the SQL? ↗</h3><span>Generate queries with a standalone session.</span></a></section></main>${footer()}`;
+  }
+  function output() { return '<table class="sf-output"><thead><tr><th>country</th><th>sum(revenue)</th></tr></thead><tbody><tr><td>UK</td><td>80</td></tr><tr><td>US</td><td>150</td></tr></tbody></table>'; }
+  function sidebar() {
+    return `<aside class="sf-sidebar" aria-label="Documentation navigation"><div class="sf-sidebar-label">Get started</div><button type="button" data-go="home">Introduction</button><a href="#sf-guide-install">Installation</a><div class="sf-sidebar-label">Engines</div><a href="#sf-guide-install" class="sf-sidebar-active" aria-current="page">DuckDB</a>${engines.filter(x => x !== 'DuckDB').map(x => `<a href="${urls.docs}${x.toLowerCase()}/" target="_blank" rel="noopener noreferrer">${x} ↗</a>`).join('')}<a href="${urls.docs}standalone/" target="_blank" rel="noopener noreferrer">Standalone ↗</a><div class="sf-sidebar-label">Go deeper</div><a href="${urls.docs}configuration/" target="_blank" rel="noopener noreferrer">Configuration ↗</a><a href="${urls.docs}duckdb/#supported-pyspark-api-methods" target="_blank" rel="noopener noreferrer">API compatibility ↗</a></aside>`;
+  }
+  function connectionPanel() {
+    return `<div class="sf-code"><div class="sf-code-tabs" role="group" aria-label="Connection example"><button type="button" data-connection="simple" aria-pressed="${state.connection === 'simple'}">In memory</button><button type="button" data-connection="existing" aria-pressed="${state.connection === 'existing'}">Existing connection</button><button type="button" data-connection="activate" aria-pressed="${state.connection === 'activate'}">PySpark imports</button></div><div class="sf-code-head"><span>Python</span>${copyButton()}</div><pre><code>${highlight(connectionCode[state.connection])}</code></pre></div>`;
+  }
+  function guide() {
+    return `${header()}<div class="sf-guide-layout">${sidebar()}<main class="sf-guide-body"><div class="sf-breadcrumb">Engines / DuckDB</div><span class="sf-eyebrow">Local development · No credentials needed</span><h1>Get started with DuckDB</h1><p class="sf-guide-lead">Run PySpark-style transformations locally with an in-memory database or your existing DuckDB connection.</p><nav class="sf-guide-toc" aria-label="On this page"><a href="#sf-guide-install">Install</a><a href="#sf-guide-session">Create a session</a><a href="#sf-guide-query">Run a query</a></nav><section class="sf-guide-section" id="sf-guide-install"><h2><span class="sf-number">1</span>Install SQLFrame</h2><div class="sf-install"><code>pip install "sqlframe[duckdb]"</code>${copyButton()}</div></section><section class="sf-guide-section" id="sf-guide-session"><h2><span class="sf-number">2</span>Create a session</h2><p>Start in memory, connect to a database file, or keep your existing PySpark imports.</p><div class="sf-connection-panel">${connectionPanel()}</div><aside class="sf-callout"><span aria-hidden="true">↳</span><p>The default session uses an in-memory database. Pass a connection to keep data in a DuckDB file.</p></aside></section><section class="sf-guide-section" id="sf-guide-query"><h2><span class="sf-number">3</span>Run your first transformation</h2><p>Create a small DataFrame, group by country, and calculate total revenue.</p>${codeBlock('df = session.createDataFrame(\n    [("US", 120), ("UK", 80), ("US", 30)],\n    ["country", "revenue"],\n)\ndf.groupBy("country").sum("revenue").show()', 'Python')}<div style="margin-top:12px">${output()}</div><p class="sf-small-note">Result row order may vary.</p></section><section class="sf-guide-section"><h2>Keep exploring</h2><p><a href="${urls.docs}duckdb/#supported-pyspark-api-methods" target="_blank" rel="noopener noreferrer">Browse supported APIs ↗</a> · <a href="${urls.docs}configuration/#generated-sql" target="_blank" rel="noopener noreferrer">Inspect generated SQL ↗</a></p></section></main></div>${footer()}`;
+  }
+  function readme() {
+    const d = directions[state.direction];
+    return `<div class="sf-readme"><div class="sf-github-bar"><span>▤ &nbsp; README.md</span><span>eakmanrq / sqlframe</span></div><main class="sf-readme-content"><div class="sf-readme-banner">${state.direction === 'editorial' ? '<div class="sf-readme-kicker">Python in. Possibilities out.</div>' : ''}<div class="sf-wordmark">${wordmark}</div><h1>${d.readme}</h1><p>Run the PySpark DataFrame API directly on your database.<br>No Spark cluster required.</p><div class="sf-license"><span>license</span><span>MIT</span></div><nav class="sf-readme-links" aria-label="Project links"><button type="button" class="sf-nav-button" data-go="guide">Quickstart →</button><button type="button" class="sf-nav-button" data-go="home">Documentation →</button><a href="${urls.github}/issues" target="_blank" rel="noopener noreferrer">Report an issue ↗</a></nav></div><section class="sf-readme-section"><h2>Why SQLFrame?</h2><ul><li><strong>Familiar API.</strong> Write transformations with the PySpark DataFrame API.</li><li><strong>Direct execution.</strong> Run your transformations on your database engine.</li><li><strong>Visible SQL.</strong> Inspect, debug, and share generated queries.</li></ul></section><section class="sf-readme-section"><h2>Try it locally</h2><p>Install SQLFrame with DuckDB. No cloud account or Spark installation needed.</p><div class="sf-install"><code>pip install "sqlframe[duckdb]"</code>${copyButton()}</div>${codeBlock(quickstart, 'Python')}${codeBlock('+---------+------------+\n| country |sum(revenue)|\n+---------+------------+\n| UK      |          80|\n| US      |         150|\n+---------+------------+', 'Example output · row order may vary')}</section><section class="sf-readme-section"><h2>Choose your engine</h2><table class="sf-readme-engines"><thead><tr><th>Engine</th><th>Install</th></tr></thead><tbody>${engines.map(x => `<tr><td>${engineLink(x)}</td><td><code>sqlframe[${x.toLowerCase()}]</code></td></tr>`).join('')}<tr><td><a href="${urls.docs}standalone/" target="_blank" rel="noopener noreferrer">Standalone</a></td><td><code>sqlframe</code></td></tr></tbody></table><p>Community integrations: <a href="https://github.com/gizmodata/sqlframe-gizmosql" target="_blank" rel="noopener noreferrer">GizmoSQL ↗</a> · <a href="${urls.docs}redshift/" target="_blank" rel="noopener noreferrer">Redshift ↗</a></p></section><section class="sf-readme-section"><h2>Already using PySpark?</h2><p>Activate SQLFrame before importing PySpark to run supported transformations on another engine.</p>${codeBlock('from sqlframe import activate\nactivate("duckdb")\n\nfrom pyspark.sql import SparkSession\nsession = SparkSession.builder.getOrCreate()', 'Python')}<p><a href="${urls.docs}configuration/#activating-sqlframe" target="_blank" rel="noopener noreferrer">Read the activation guide ↗</a> · <a href="${urls.docs}standalone/" target="_blank" rel="noopener noreferrer">Generate SQL without a database ↗</a></p></section></main></div>`;
+  }
+  function render() {
+    root.dataset.direction = state.direction;
+    root.querySelector('.sf-direction-label').textContent = directions[state.direction].label;
+    root.querySelectorAll('[data-direction-pick]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.directionPick === state.direction)));
+    root.querySelectorAll('[data-page-pick]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.pagePick === state.page)));
+    product.innerHTML = state.page === 'guide' ? guide() : state.page === 'readme' ? readme() : home();
+  }
+  root.addEventListener('click', async event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    if (button.dataset.directionPick) {
+      state.direction = button.dataset.directionPick;
+      if (state.theme === null) root.style.colorScheme = state.direction === 'terminal' ? 'dark' : 'light dark';
+      render();
+    } else if (button.dataset.pagePick) {
+      state.page = button.dataset.pagePick;
+      render();
+    } else if (button.classList.contains('sf-theme')) {
+      const dark = root.style.colorScheme === 'dark' || (root.style.colorScheme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+      state.theme = dark ? 'light' : 'dark';
+      root.style.colorScheme = state.theme;
+      button.setAttribute('aria-label', `Switch preview to ${dark ? 'dark' : 'light'} theme`);
+    } else if (button.dataset.go) {
+      if (button.dataset.go === 'engines') {
+        state.page = 'home';
+        render();
+        root.querySelector('#sf-engine-list').scrollIntoView({ block: 'nearest' });
+      } else {
+        state.page = button.dataset.go;
+        render();
+      }
+    } else if (button.dataset.connection) {
+      state.connection = button.dataset.connection;
+      root.querySelector('.sf-connection-panel').innerHTML = connectionPanel();
+    } else if (button.hasAttribute('data-copy')) {
+      const container = button.closest('.sf-install, .sf-code');
+      const code = container.querySelector('code').textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+        button.textContent = 'Copied';
+      } catch {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(container.querySelector('code'));
+        selection.removeAllRanges();
+        selection.addRange(range);
+        button.textContent = 'Selected';
+      }
+      setTimeout(() => { button.textContent = 'Copy'; }, 1800);
+    }
+  });
+  render();
+})();
+</script>
