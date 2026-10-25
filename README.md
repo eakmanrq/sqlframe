@@ -91,4 +91,4 @@ You can also import SQLFrame directly, as shown in the quickstart. See the [acti
 - [Input and output dialects](https://sqlframe.readthedocs.io/en/stable/configuration/#input-and-output-dialect): configure SQLFrame for your engine's conventions.
 - [Standalone SQL generation](https://sqlframe.readthedocs.io/en/stable/standalone/): generate queries without connecting to an engine.
 
-SQLFrame is open source under the [MIT license](LICENSE).
+SQLFrame is open source under the [MIT license](https://github.com/eakmanrq/sqlframe/blob/main/LICENSE).
