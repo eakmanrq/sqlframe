@@ -59,6 +59,7 @@
 .md-logo svg path { fill: none; }
 .md-header__button.md-logo svg { height: 1.5rem; width: 1.5rem; }
 .md-header__title { font-weight: 650; letter-spacing: -.03em; }
+.md-header .md-header__title { margin-inline-start: 0; }
 .md-tabs { border-bottom: 1px solid var(--sf-line); }
 .md-tabs__link { font-weight: 500; opacity: 1; color: var(--sf-muted); }
 .md-tabs__link--active, .md-tabs__link:hover { color: var(--sf-brand); }

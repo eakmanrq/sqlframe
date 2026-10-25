@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
   <title>SQLFrame</title>
-  <path d="M10 4H4v24h6M22 4h6v24h-6" stroke="#2659d9" stroke-width="2.5"/>
-  <path d="M11 11h10M11 16h10M11 21h6" stroke="#2659d9" stroke-width="2"/>
+  <rect x="2" y="2" width="36" height="36" rx="8" fill="#2659d9"/>
+  <path d="M18 12h-5a4 4 0 0 0 0 8h1a4 4 0 0 1 0 8H9M24 28V12h8M24 20h6" stroke="#ffffff" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="round"/>
 </svg>
