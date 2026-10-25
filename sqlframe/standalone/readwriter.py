@@ -108,17 +108,17 @@ class StandaloneDataFrameReader(
                 ]
             )
 
-            def struct_rows(value: t.Any) -> t.Any:
-                if isinstance(value, dict):
-                    # Positional construction avoids Row's decimal-to-float coercion.
-                    row = types.Row(*(struct_rows(v) for v in value.values()))
-                    row.__fields__ = list(value)
-                    return row
-                if isinstance(value, list):
-                    return [struct_rows(item) for item in value]
-                return value
+        def struct_rows(value: t.Any) -> t.Any:
+            if isinstance(value, dict):
+                # Positional construction avoids Row's decimal-to-float coercion.
+                row = types.Row(*(struct_rows(v) for v in value.values()))
+                row.__fields__ = list(value)
+                return row
+            if isinstance(value, list):
+                return [struct_rows(item) for item in value]
+            return value
 
-            rows = [{name: struct_rows(value) for name, value in row.items()} for row in rows]
+        rows = [{name: struct_rows(value) for name, value in row.items()} for row in rows]
         self.session._last_loaded_file = path
         # Arrow retains the distinction between a Parquet NULL and a floating NaN.
         return self._session.createDataFrame(rows, schema)

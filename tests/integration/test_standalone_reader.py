@@ -4,9 +4,16 @@ import duckdb
 import pytest
 
 from sqlframe import activate_context
+from sqlframe.base import types
 from sqlframe.standalone import StandaloneDataFrame, StandaloneSession
 
 PARQUET_FILE = Path(__file__).resolve().parents[1] / "fixtures" / "employee.parquet"
+
+
+def query(sql: str) -> duckdb.DuckDBPyRelation:
+    result = duckdb.sql(sql)
+    assert result is not None
+    return result
 
 
 @pytest.mark.parametrize("activated", [False, True])
@@ -29,7 +36,7 @@ def test_load_defaults_to_parquet_for_extensionless_directory(tmp_path, activate
         try:
             df = spark.read.load(str(path))
             assert isinstance(df, StandaloneDataFrame)
-            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [(1,), (2,)]
+            assert query(df.sql(dialect="duckdb")).fetchall() == [(1,), (2,)]
         finally:
             spark.stop()
 
@@ -51,7 +58,7 @@ def test_activated_parquet_format_is_case_insensitive(format_name, format_source
             df = reader.load(str(PARQUET_FILE), **kwargs)
 
             assert isinstance(df, StandaloneDataFrame)
-            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [
+            assert query(df.sql(dialect="duckdb")).fetchall() == [
                 (1, "Jack", "Shephard", 37, 1),
                 (2, "John", "Locke", 65, 1),
                 (3, "Kate", "Austen", 37, 2),
@@ -72,7 +79,7 @@ def test_activated_standalone_session_reads_parquet():
             df = spark.read.parquet(str(PARQUET_FILE))
             assert isinstance(df, StandaloneDataFrame)
 
-            rows = duckdb.sql(df.sql(dialect="duckdb")).fetchall()
+            rows = query(df.sql(dialect="duckdb")).fetchall()
             assert rows == [
                 (1, "Jack", "Shephard", 37, 1),
                 (2, "John", "Locke", 65, 1),
@@ -113,14 +120,14 @@ def test_standalone_parquet_preserves_nulls(tmp_path, activated, method, column)
             sql = df.sql(dialect="duckdb")
             if column == "event_time":
                 sql = f'SELECT CAST("{column}" AS TIMESTAMP) AS "{column}" FROM ({sql})'
-            result = duckdb.sql(sql)
+            result = query(sql)
             assert result.fetchall() == [(values[0],), (None,)]
             if column == "number":
                 assert str(result.types[0]) == sql_type
-            assert duckdb.sql(
+            assert query(
                 f'SELECT COUNT("{column}"), COUNT(*) FILTER (WHERE "{column}" IS NULL) FROM ({sql})'
             ).fetchall() == [(1, 1)]
-            assert duckdb.sql(
+            assert query(
                 f'SELECT COALESCE("{column}", (SELECT MAX("{column}") FROM ({sql}))) '
                 f"FROM ({sql}) "
                 f'WHERE "{column}" IS NULL'
@@ -176,14 +183,45 @@ def test_activated_parquet_preserves_arrow_types(tmp_path, method, column):
         try:
             df = getattr(spark.read, method)(str(path))
             sql = df.sql(dialect="duckdb")
-            result = duckdb.sql(sql)
+            result = query(sql)
             assert str(result.types[0]) == sql_type
             assert result.fetchall() == [(value,), (None,)]
-            assert duckdb.sql(
+            assert query(
                 f'SELECT {predicate} FROM ({sql}) WHERE "{column}" IS NOT NULL'
             ).fetchall() == [(True,)]
         finally:
             spark.stop()
+
+
+@pytest.mark.parametrize("column", ["record", "nested"])
+def test_explicit_schema_preserves_parquet_structs(tmp_path, column):
+    from decimal import Decimal
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    value = {"amount": Decimal("9007199254740993.50"), "flags": [True, None]}
+    arrow_struct = pa.struct([("amount", pa.decimal128(20, 2)), ("flags", pa.list_(pa.bool_()))])
+    spark_struct = types.StructType(
+        [
+            types.StructField("amount", types.DecimalType(20, 2)),
+            types.StructField("flags", types.ArrayType(types.BooleanType())),
+        ]
+    )
+    arrow_type = arrow_struct if column == "record" else pa.list_(arrow_struct)
+    spark_type = spark_struct if column == "record" else types.ArrayType(spark_struct)
+    expected = value if column == "record" else [value, None]
+    path = tmp_path / "struct.parquet"
+    pq.write_table(pa.table({column: pa.array([expected], type=arrow_type)}), path)
+
+    spark = StandaloneSession.builder.getOrCreate()
+    try:
+        df = spark.read.load(
+            str(path), schema=types.StructType([types.StructField(column, spark_type)])
+        )
+        assert query(df.sql(dialect="duckdb")).fetchall() == [(expected,)]
+    finally:
+        spark.stop()
 
 
 @pytest.mark.parametrize("unit", ["s", "ms", "us", "ns"])
@@ -202,7 +240,7 @@ def test_parquet_timestamp_units(tmp_path, unit, timezone):
     )
     spark = StandaloneSession.builder.getOrCreate()
     try:
-        result = duckdb.sql(spark.read.parquet(str(path)).sql(dialect="duckdb"))
+        result = query(spark.read.parquet(str(path)).sql(dialect="duckdb"))
         assert str(result.types[0]) == ("TIMESTAMP WITH TIME ZONE" if timezone else "TIMESTAMP")
         assert result.fetchall() == [(value,), (None,)]
     finally:
@@ -259,6 +297,6 @@ def test_activated_parquet_preserves_arrow_options(method):
                 str(PARQUET_FILE), columns=["fname"], filters=[("employee_id", "=", 1)]
             )
             assert df.columns == ["fname"]
-            assert duckdb.sql(df.sql(dialect="duckdb")).fetchall() == [("Jack",)]
+            assert query(df.sql(dialect="duckdb")).fetchall() == [("Jack",)]
         finally:
             spark.stop()
