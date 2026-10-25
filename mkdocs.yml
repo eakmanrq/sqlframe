@@ -1,5 +1,5 @@
 site_name: SQLFrame
-site_url: https://sqlframe.readthedocs.io/en/stable/
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, null]
 site_description: Run the PySpark DataFrame API directly on your database. No Spark cluster required.
 repo_url: https://github.com/eakmanrq/sqlframe
 repo_name: eakmanrq/sqlframe
