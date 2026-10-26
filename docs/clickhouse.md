@@ -82,10 +82,9 @@ normalizes the column to `userid`, which ClickHouse does not find. Quoting the
 column alone does not work either, because the Spark input dialect reads
 `"userId"` as a string literal.
 
-Within one session, refer to each table consistently: either always by its
-qualified name, such as `default.events`, or always by its unqualified name,
-such as `events`. Mixing the two forms for the same table in one session is
-unsupported.
+Within one session, use one style for all table references: either qualified
+names such as `default.events` or unqualified names such as `events`. Mixing
+the two styles, even for different tables, is unsupported.
 
 This integration supports queries and DataFrame transformations. It does not
 implement `DataFrame.write.saveAsTable()` or `insertInto()` because ClickHouse
@@ -95,7 +94,8 @@ catalog listing APIs, UDF registration, and table mutation or merge APIs are
 also unsupported. `cache()` and `persist()` are unsupported for this engine.
 ClickHouse `LowCardinality` columns use their underlying value type in the
 Spark schema. Unsigned integers up to `UInt64` are widened to a Spark type
-that holds their full range; `UInt128` and `UInt256` are unsupported.
+that holds their full range; `Int128`, `Int256`, `UInt128`, and `UInt256` are
+unsupported.
 Query behavior depends on the ClickHouse SQL version and SQLGlot's dialect
 coverage; test advanced transformations against your server before relying on
 them in production.
