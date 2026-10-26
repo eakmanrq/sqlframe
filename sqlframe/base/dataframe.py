@@ -365,6 +365,19 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self.session
 
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
+        def hash_cte(cte: exp.CTE) -> str:
+            columns = cte.args["alias"].args.get("columns") or []
+            if columns:
+                return self._create_hash_from_expression(
+                    exp.Tuple(
+                        expressions=[
+                            cte.this.copy(),
+                            exp.Tuple(expressions=[c.copy() for c in columns]),
+                        ]
+                    )
+                )
+            return self._create_hash_from_expression(cte.this)
+
         def rename(
             node: exp.Expression,
             visible_ctes: t.Dict[str, exp.Identifier],
@@ -378,8 +391,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     unique_ctes = []
                     for cte in with_expression.expressions:
                         old_name = cte.alias_or_name
-                        rename(cte.this, visible_ctes, {})
-                        cte_hash = self._create_hash_from_expression(cte.this)
+                        if not with_expression.args.get("recursive"):
+                            rename(cte.this, visible_ctes, qualifiers)
+                        cte_hash = hash_cte(cte)
                         hashed_name = seen_hashes.get(cte_hash)
                         if hashed_name is None:
                             old_identifier = cte.args["alias"].this
@@ -390,6 +404,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                             cte.args["alias"].set("this", hashed_name.copy())
                             unique_ctes.append(cte)
                         visible_ctes[old_name] = hashed_name
+                        if with_expression.args.get("recursive"):
+                            rename(cte.this, visible_ctes, qualifiers)
                     with_expression.set("expressions", unique_ctes)
 
                 if isinstance(node, exp.Select):
@@ -510,6 +526,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         new_expression = df._add_ctes_to_expression(
             exp.Select(), expression.ctes + [cte_expression]
         )
+        if expression.args.get("with_") and expression.args["with_"].args.get("recursive"):
+            new_expression.args["with_"].set("recursive", True)
         sel_columns = df._get_outer_select_columns(cte_expression)
         new_expression = new_expression.from_(cte_name).select(*[x.expression for x in sel_columns])
         # Propagate alias mappings: alias names that pointed to inner FROM-clause CTEs
@@ -672,12 +690,16 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         select_expressions: t.List[
             t.Tuple[t.Union[t.Type[exp.Cache], OutputExpressionContainer], exp.Select]
         ] = []
+        with_expression = self.expression.args.get("with_")
+        recursive = bool(with_expression and with_expression.args.get("recursive"))
         main_select_ctes: t.List[exp.CTE] = []
         for cte in self.expression.ctes:
             cache_storage_level = cte.args.get("cache_storage_level")
             if cache_storage_level:
                 select_expression = cte.this.copy()
-                select_expression.set("with_", exp.With(expressions=copy(main_select_ctes)))
+                select_expression.set(
+                    "with_", exp.With(expressions=copy(main_select_ctes), recursive=recursive)
+                )
                 select_expression.set("cte_alias_name", cte.alias_or_name)
                 select_expression.set("cache_storage_level", cache_storage_level)
                 select_expressions.append((exp.Cache, select_expression))
@@ -685,7 +707,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 main_select_ctes.append(cte)
         main_select = self.expression.copy()
         if main_select_ctes:
-            main_select.set("with_", exp.With(expressions=main_select_ctes))
+            main_select.set("with_", exp.With(expressions=main_select_ctes, recursive=recursive))
         expression_select_pair = (type(self.output_expression_container), main_select)
         select_expressions.append(expression_select_pair)  # type: ignore
         return select_expressions

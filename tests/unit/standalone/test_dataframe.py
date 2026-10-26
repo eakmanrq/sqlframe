@@ -72,6 +72,59 @@ def test_cte_hashing_respects_nested_shadowing_and_table_aliases(
     assert inner_select.args["where"].this.left.table == inner_cte.alias_or_name
 
 
+def test_cte_hashing_renames_nested_recursive_self_reference(
+    standalone_session: StandaloneSession,
+):
+    df = standalone_session.sql("SELECT 1")
+    expression = sqlglot.parse_one(
+        "SELECT q.n FROM (WITH RECURSIVE nums(n) AS ("
+        "SELECT 1 UNION ALL SELECT n + 1 FROM nums WHERE n < 3"
+        ") SELECT n FROM nums) AS q"
+    ).assert_is(exp.Select)
+
+    result = df._replace_cte_names_with_hashes(expression)
+    nested = result.args["from_"].this.this
+    recursive_cte = nested.ctes[0]
+
+    assert recursive_cte.this.right.args["from_"].this.name == recursive_cte.alias_or_name
+    assert nested.args["from_"].this.name == recursive_cte.alias_or_name
+
+
+def test_cte_hashing_preserves_correlated_qualifier_in_nested_cte(
+    standalone_session: StandaloneSession,
+):
+    df = standalone_session.sql("SELECT 1")
+    expression = sqlglot.parse_one(
+        "WITH orders AS (SELECT 1 AS id) "
+        "SELECT (WITH x AS (SELECT orders.id AS v) SELECT v FROM x) AS v FROM orders"
+    ).assert_is(exp.Select)
+
+    result = df._replace_cte_names_with_hashes(expression)
+    outer_cte = result.ctes[0]
+    inner_cte = result.expressions[0].this.this.ctes[0]
+
+    assert inner_cte.this.expressions[0].this.table == outer_cte.alias_or_name
+
+
+def test_cte_hashing_distinguishes_declared_column_names(
+    standalone_session: StandaloneSession,
+):
+    df = standalone_session.sql("SELECT 1")
+    expression = sqlglot.parse_one(
+        "SELECT q.y FROM (WITH a(x) AS (SELECT 1), b(y) AS (SELECT 1) SELECT b.y FROM b) AS q"
+    ).assert_is(exp.Select)
+
+    result = df._replace_cte_names_with_hashes(expression)
+    nested = result.args["from_"].this.this
+    first_cte, second_cte = nested.ctes
+
+    assert first_cte.alias_or_name != second_cte.alias_or_name
+    assert first_cte.args["alias"].columns[0].name == "x"
+    assert second_cte.args["alias"].columns[0].name == "y"
+    assert nested.args["from_"].this.name == second_cte.alias_or_name
+    assert nested.expressions[0].table == second_cte.alias_or_name
+
+
 def test_columns(standalone_employee: StandaloneDataFrame):
     assert standalone_employee.columns == ["employee_id", "fname", "lname", "age", "store_id"]
 
