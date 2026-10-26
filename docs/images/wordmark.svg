@@ -4,12 +4,12 @@
     <path d="M18 4H7a3 3 0 0 0-3 3v11" stroke="#2659d9" stroke-width="3.5" stroke-linecap="square"/>
     <path d="M22 36h11a3 3 0 0 0 3-3V22" stroke="#c46a39" stroke-width="3.5" stroke-linecap="square"/>
     <g fill="#2659d9">
-      <rect x="11" y="11" width="5" height="4" rx="1"/>
+      <rect x="11" y="11" width="5" height="4" rx="1" fill="#c46a39"/>
       <rect x="19" y="11" width="10" height="4" rx="1"/>
-      <rect x="11" y="18" width="5" height="4" rx="1"/>
+      <rect x="11" y="18" width="5" height="4" rx="1" fill="#c46a39"/>
       <rect x="19" y="18" width="10" height="4" rx="1"/>
-      <rect x="11" y="25" width="5" height="4" rx="1"/>
-      <rect x="19" y="25" width="10" height="4" rx="1" fill="#c46a39"/>
+      <rect x="11" y="25" width="5" height="4" rx="1" fill="#c46a39"/>
+      <rect x="19" y="25" width="10" height="4" rx="1"/>
     </g>
   </g>
   <text x="56" y="41" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="38" font-weight="650" letter-spacing="-1.5" fill="#18263d">SQLFrame</text>

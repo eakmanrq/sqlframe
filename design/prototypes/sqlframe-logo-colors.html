@@ -125,17 +125,17 @@
           <p>Write familiar PySpark code. Run it on the engine you choose.</p>
         </div>
       </div>
-      <p class="note">“Corner flow” groups three blue cells toward the upper-left corner and three orange cells toward the lower-right. The columns option also splits 3 + 3, but gives orange more visual weight because those cells are wider.</p>
+      <p class="note">The selected two-column version uses three orange cells on the left and three blue cells on the right, with the original blue and orange frame corners.</p>
     </section>
   </main>
   <script>
     const options = [
-      { id: 'current', title: 'Current', label: 'REFERENCE · 5 BLUE / 1 ORANGE', orange: [5], description: 'An orange destination cell. Most of the data still reads as blue.' },
-      { id: 'corners', title: 'Corner flow', label: 'RECOMMENDED · 3 BLUE / 3 ORANGE', orange: [3, 4, 5], description: 'The colors follow the opposing corners, with a diagonal handoff through the middle.' },
-      { id: 'columns', title: 'Two columns', label: 'ALTERNATIVE · 3 BLUE / 3 ORANGE', orange: [1, 3, 5], description: 'A direct left-to-right conversion: the small cells are blue and the wider cells are orange.' }
+      { id: 'current', title: 'Previous', label: 'REFERENCE · 5 BLUE / 1 ORANGE', orange: [5], description: 'An orange destination cell. Most of the data still reads as blue.' },
+      { id: 'corners', title: 'Corner flow', label: 'ALTERNATIVE · 3 BLUE / 3 ORANGE', orange: [3, 4, 5], description: 'The colors follow the opposing corners, with a diagonal handoff through the middle.' },
+      { id: 'columns', title: 'Two columns · Flipped', label: 'SELECTED · 3 ORANGE / 3 BLUE', orange: [0, 2, 4], description: 'A direct left-to-right conversion: the small cells are orange and the wider cells are blue.' }
     ];
     const cells = [[11, 11, 5], [19, 11, 10], [11, 18, 5], [19, 18, 10], [11, 25, 5], [19, 25, 10]];
-    let selected = 'corners';
+    let selected = 'columns';
     let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     function mark(option, size = 40, blue = 'var(--blue)', orange = 'var(--orange)') {
@@ -148,7 +148,7 @@
 
     document.querySelector('.options').innerHTML = options.map(option => `
       <article class="option" data-option="${option.id}">
-        <div class="option-label ${option.id === 'corners' ? 'recommended' : ''}">${option.label}</div>
+        <div class="option-label ${option.id === 'columns' ? 'recommended' : ''}">${option.label}</div>
         <div class="large-mark" role="img" aria-label="${option.title} logo">${mark(option)}</div>
         <h2>${option.title}</h2>
         <p class="description">${option.description}</p>
