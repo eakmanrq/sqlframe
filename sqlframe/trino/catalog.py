@@ -66,30 +66,38 @@ class TrinoCatalog(StandaloneCatalog):
             )
             for name in self.session.temp_views
         )
+        normalized_pattern = (
+            normalize_string(pattern, from_dialect="input", to_dialect="output", is_pattern=True)
+            if pattern is not None
+            else None
+        )
         return [
-            table for table in tables if pattern is None or fnmatch.fnmatch(table.name, pattern)
+            table
+            for table in tables
+            if normalized_pattern is None or fnmatch.fnmatch(table.name, normalized_pattern)
         ]
 
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
     ) -> t.List[Column]:
-        table_name = normalize_string(tableName, from_dialect="input", is_table=True)
-        if df := self.session.temp_views.get(table_name):
-            return [
-                Column(
-                    name=name,
-                    description=None,
-                    dataType="",
-                    nullable=True,
-                    isPartition=False,
-                    isBucket=False,
-                )
-                for name in df.columns
-            ]
+        table = exp.to_table(tableName, dialect=self.session.input_dialect)
+        if dbName is None and not table.db and not table.catalog:
+            table_name = normalize_string(tableName, from_dialect="input", is_table=True)
+            if df := self.session.temp_views.get(table_name):
+                return [
+                    Column(
+                        name=name,
+                        description=None,
+                        dataType="",
+                        nullable=True,
+                        isPartition=False,
+                        isBucket=False,
+                    )
+                    for name in df.columns
+                ]
         if not self.session._has_connection:
             raise NotImplementedError("Trino catalog lookup requires a DB-API connection")
 
-        table = exp.to_table(tableName, dialect=self.session.input_dialect)
         if dbName:
             schema = to_schema(dbName, dialect=self.session.input_dialect)
             if not table.db:

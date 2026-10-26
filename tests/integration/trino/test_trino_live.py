@@ -81,6 +81,7 @@ def test_catalog_lists_current_schema_and_tables(trino_session):
     assert [table.name for table in session.catalog.listTables(dbName=schema, pattern="ord*")] == [
         "orders"
     ]
+    assert [table.name for table in session.catalog.listTables(pattern="ORD*")] == ["orders"]
     assert [column.name for column in session.catalog.listColumns("orders")] == [
         "order_id",
         "total",
@@ -107,6 +108,18 @@ def test_catalog_includes_temporary_views(trino_session):
     assert [column.name for column in session.catalog.listColumns("local_view")] == [
         "id",
         "label",
+    ]
+
+
+def test_catalog_explicit_database_ignores_same_named_temporary_view(trino_session):
+    session, table = trino_session
+    schema = table.rsplit(".", 1)[0]
+    session.createDataFrame([(99,)], ["local_id"]).createOrReplaceTempView("orders")
+
+    assert [column.name for column in session.catalog.listColumns("orders")] == ["local_id"]
+    assert [column.name for column in session.catalog.listColumns("orders", dbName=schema)] == [
+        "order_id",
+        "total",
     ]
 
 
