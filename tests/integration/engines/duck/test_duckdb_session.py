@@ -133,3 +133,22 @@ def test_session_new_session(duckdb_session: DuckDBSession):
     assert new_session is not duckdb_session
     assert isinstance(new_session, DuckDBSession)
     assert new_session.range(1, 2).collect() == [Row(id=1)]
+
+
+def test_dataframe_operation_does_not_overwrite_another_session():
+    import duckdb
+
+    from sqlframe.base.session import _BaseSession
+
+    conn_a = duckdb.connect()
+    conn_a.execute("CREATE TABLE t AS SELECT 'a' AS src")
+    conn_b = duckdb.connect()
+    conn_b.execute("CREATE TABLE t AS SELECT 'b' AS src")
+    session_a = DuckDBSession(conn_a)
+    df_a = session_a.table("t")
+    _BaseSession._instance = None
+    session_b = DuckDBSession(conn_b)
+
+    df_a.filter(F.col("src") == "a")
+
+    assert session_b.table("t").collect() == [Row(src="b")]

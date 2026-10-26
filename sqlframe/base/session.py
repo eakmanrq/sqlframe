@@ -200,6 +200,12 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             _BaseSession._instance = super().__new__(cls)
         return _BaseSession._instance
 
+    def __copy__(self) -> Self:
+        # DataFrame.copy() copies its session. Going through __new__ would paste this session's state
+        # onto whichever session is the singleton, so keep the same session and make it the active one.
+        _BaseSession._instance = self
+        return self
+
     @property
     def _has_connection(self) -> bool:
         return hasattr(self, "_connection") and bool(self._connection)
