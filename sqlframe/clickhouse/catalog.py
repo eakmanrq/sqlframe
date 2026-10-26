@@ -31,7 +31,13 @@ class ClickHouseCatalog(
             data_type = exp.DataType.build(row["type"], dialect=self.session.execution_dialect)
         except ParseError as exc:
             raise UnsupportedOperationError(error) from exc
-        nullable = bool(data_type.args.get("nullable"))
+        # ClickHouse nests Nullable inside LowCardinality, never the reverse.
+        value_type = (
+            data_type.expressions[0]
+            if data_type.this == exp.DataType.Type.LOWCARDINALITY
+            else data_type
+        )
+        nullable = bool(value_type.args.get("nullable"))
 
         def spark_type(node):
             if not isinstance(node, exp.DataType):
