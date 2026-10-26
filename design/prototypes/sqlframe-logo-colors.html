@@ -125,7 +125,7 @@
           <p>Write familiar PySpark code. Run it on the engine you choose.</p>
         </div>
       </div>
-      <p class="note">The selected two-column version uses three orange cells on the left and three blue cells on the right, with the original blue and orange frame corners.</p>
+      <p class="note">The selected two-column version uses three orange cells on the left and three blue cells on the right, with an orange upper-left corner and a blue lower-right corner.</p>
     </section>
   </main>
   <script>
@@ -140,8 +140,8 @@
 
     function mark(option, size = 40, blue = 'var(--blue)', orange = 'var(--orange)') {
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="${size}" height="${size}" fill="none" aria-hidden="true">
-        <path d="M18 4H7a3 3 0 0 0-3 3v11" stroke="${blue}" stroke-width="3.5" stroke-linecap="square"/>
-        <path d="M22 36h11a3 3 0 0 0 3-3V22" stroke="${orange}" stroke-width="3.5" stroke-linecap="square"/>
+        <path d="M18 4H7a3 3 0 0 0-3 3v11" stroke="${option.id === 'columns' ? orange : blue}" stroke-width="3.5" stroke-linecap="square"/>
+        <path d="M22 36h11a3 3 0 0 0 3-3V22" stroke="${option.id === 'columns' ? blue : orange}" stroke-width="3.5" stroke-linecap="square"/>
         ${cells.map(([x, y, width], index) => `<rect x="${x}" y="${y}" width="${width}" height="4" rx="1" fill="${option.orange.includes(index) ? orange : blue}"/>`).join('')}
       </svg>`;
     }

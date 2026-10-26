@@ -9,8 +9,8 @@
     }
   </style>
   <g class="sf-primary">
-    <path d="M18 4H7a3 3 0 0 0-3 3v11" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
-    <path class="sf-accent" d="M22 36h11a3 3 0 0 0 3-3V22" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
+    <path class="sf-accent" d="M18 4H7a3 3 0 0 0-3 3v11" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
+    <path d="M22 36h11a3 3 0 0 0 3-3V22" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
     <rect class="sf-accent" x="11" y="11" width="5" height="4" rx="1" fill="currentColor"/>
     <rect x="19" y="11" width="10" height="4" rx="1" fill="currentColor"/>
     <rect class="sf-accent" x="11" y="18" width="5" height="4" rx="1" fill="currentColor"/>
