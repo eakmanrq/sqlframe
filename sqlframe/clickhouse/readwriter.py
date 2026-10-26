@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import typing as t
 
-from sqlglot import exp, parse_one
+from sqlglot import exp
 from sqlglot.errors import ParseError
 
 from sqlframe.base.exceptions import UnsupportedOperationError
@@ -46,12 +46,17 @@ class ClickHouseDataFrameWriter(_BaseDataFrameWriter["ClickHouseSession", "Click
     )
 
     def _table_sql(self, name: str) -> str:
+        if ";" in name:
+            raise UnsupportedOperationError("ClickHouse writes require a table or database.table")
         try:
-            table = parse_one(name, into=exp.Table, dialect=self._session.input_dialect)
+            tables = self._session.input_dialect.parse_into(exp.Table, name)
         except ParseError as error:
             raise UnsupportedOperationError(
                 "ClickHouse writes require a table or database.table"
             ) from error
+        if len(tables) != 1 or not isinstance(tables[0], exp.Table):
+            raise UnsupportedOperationError("ClickHouse writes require a table or database.table")
+        table = tables[0]
         if (
             table.catalog
             or not table.name

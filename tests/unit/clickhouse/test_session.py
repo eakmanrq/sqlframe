@@ -62,7 +62,17 @@ def test_unsupported_table_write_modes_fail_before_executing_sql(connection):
 
 
 @pytest.mark.parametrize(
-    "name", ["db.events x", "events as e", "events final", "events; drop table x", " ", ""]
+    "name",
+    [
+        "db.events x",
+        "events as e",
+        "events final",
+        "events; drop table x",
+        "events; archive",
+        "events;",
+        " ",
+        "",
+    ],
 )
 @pytest.mark.parametrize("method", ["saveAsTable", "insertInto"])
 def test_malformed_table_write_names_fail_before_cursor_call(connection, name, method):

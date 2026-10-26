@@ -131,10 +131,10 @@ def test_append_column_mapping(clickhouse_session):
         frame.write.saveAsTable(target, mode="append")
         frame.write.mode("append").saveAsTable(target)
         rows = [r.asDict() for r in session.table(target).collect()]
-        assert rows == [
+        assert sorted(rows, key=lambda row: (row["left_value"], row["right_value"])) == [
+            {"left_value": "left", "right_value": "right"},
+            {"left_value": "left", "right_value": "right"},
             {"left_value": "right", "right_value": "left"},
-            {"left_value": "left", "right_value": "right"},
-            {"left_value": "left", "right_value": "right"},
         ]
     finally:
         session._execute(f"DROP TABLE IF EXISTS {target}")
