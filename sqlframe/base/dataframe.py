@@ -365,31 +365,70 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self.session
 
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
-        replacement_mapping = {}
-        seen_hashes: t.Dict[str, exp.Identifier] = {}
-        cte_indices_to_remove = []
+        def rename(
+            node: exp.Expression,
+            visible_ctes: t.Dict[str, exp.Identifier],
+            qualifiers: t.Dict[str, t.Optional[exp.Identifier]],
+        ) -> None:
+            if isinstance(node, exp.Query):
+                visible_ctes = visible_ctes.copy()
+                with_expression = node.args.get("with_")
+                if with_expression:
+                    seen_hashes: t.Dict[str, exp.Identifier] = {}
+                    unique_ctes = []
+                    for cte in with_expression.expressions:
+                        old_name = cte.alias_or_name
+                        rename(cte.this, visible_ctes, {})
+                        cte_hash = self._create_hash_from_expression(cte.this)
+                        hashed_name = seen_hashes.get(cte_hash)
+                        if hashed_name is None:
+                            old_identifier = cte.args["alias"].this
+                            hashed_name = exp.to_identifier(
+                                cte_hash, quoted=old_identifier.args["quoted"]
+                            )
+                            seen_hashes[cte_hash] = hashed_name
+                            cte.args["alias"].set("this", hashed_name.copy())
+                            unique_ctes.append(cte)
+                        visible_ctes[old_name] = hashed_name
+                    with_expression.set("expressions", unique_ctes)
 
-        for i, cte in enumerate(expression.ctes):
-            old_name_id = cte.args["alias"].this
-            cte_hash = self._create_hash_from_expression(cte.this)
+                if isinstance(node, exp.Select):
+                    qualifiers = qualifiers.copy()
+                    sources = [node.args.get("from_"), *(node.args.get("joins") or [])]
+                    for source in sources:
+                        if source is None:
+                            continue
+                        table = source.this
+                        if isinstance(table, exp.Table):
+                            old_name = table.name
+                            alias = table.alias
+                            if not alias and not table.db and not table.catalog:
+                                qualifiers[old_name] = visible_ctes.get(old_name)
+                            else:
+                                qualifiers[alias or old_name] = None
+                        elif table.alias:
+                            qualifiers[table.alias] = None
 
-            if cte_hash in seen_hashes:
-                # Duplicate CTE found - map its old name to the existing hash
-                replacement_mapping[old_name_id] = seen_hashes[cte_hash]
-                cte_indices_to_remove.append(i)
-            else:
-                # New unique CTE - process normally
-                new_hashed_id = exp.to_identifier(cte_hash, quoted=old_name_id.args["quoted"])
-                seen_hashes[cte_hash] = new_hashed_id
-                replacement_mapping[old_name_id] = new_hashed_id
+                for key, child in node.args.items():
+                    if key != "with_":
+                        for item in child if isinstance(child, list) else [child]:
+                            if isinstance(item, exp.Expression):
+                                rename(item, visible_ctes, qualifiers)
+                return
 
-            expression = expression.transform(replace_id_value, replacement_mapping).assert_is(
-                exp.Select
-            )
+            if isinstance(node, exp.Table) and not node.db and not node.catalog:
+                hashed_name = visible_ctes.get(node.name)
+                if hashed_name is not None:
+                    node.set("this", hashed_name.copy())
+            elif isinstance(node, exp.Column) and node.table:
+                hashed_name = qualifiers.get(node.table)
+                if hashed_name is not None:
+                    node.set("table", hashed_name.copy())
 
-        # Remove duplicate CTEs by index in reverse order to avoid index shifting
-        for idx in reversed(cte_indices_to_remove):
-            del expression.args["with_"].expressions[idx]
+            for child in node.iter_expressions():
+                rename(child, visible_ctes, qualifiers)
+
+        rename(expression, {}, {})
 
         return expression
 

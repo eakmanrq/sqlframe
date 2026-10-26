@@ -26,6 +26,18 @@ def test_float_infinity_literals(value):
     ]
 
 
+def test_cte_name_matching_qualified_source_executes(duckdb_session: DuckDBSession):
+    duckdb_session._conn.execute('CREATE SCHEMA "memory"."test"')
+    duckdb_session._conn.execute('CREATE TABLE "memory"."test"."orders" AS SELECT 7 AS order_id')
+    duckdb_session.catalog.add_table("memory.test.orders", {"order_id": "int"})
+
+    df = duckdb_session.sql(
+        "WITH orders AS (SELECT order_id FROM memory.test.orders) SELECT order_id FROM orders"
+    )
+
+    assert df.collect() == [Row(order_id=7)]
+
+
 def test_session_from_config():
     import duckdb
 

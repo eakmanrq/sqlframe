@@ -17,6 +17,61 @@ def test_hash_select_expression(standalone_employee: StandaloneDataFrame):
     assert standalone_employee._create_hash_from_expression(expression) == "t17051938"
 
 
+def test_cte_hashing_preserves_qualified_source_and_its_alias(
+    standalone_session: StandaloneSession,
+):
+    standalone_session.catalog.add_table("memory.test.orders", {"order_id": "int"})
+    df = standalone_session.sql(
+        "WITH orders AS (SELECT order_id FROM memory.test.orders) SELECT order_id FROM orders"
+    )
+
+    statement = sqlglot.parse_one(df.sql(pretty=False, optimize=False), read="spark").assert_is(
+        exp.Select
+    )
+    source_cte, result_cte = statement.ctes
+    source = source_cte.this.args["from_"].this
+    reference = result_cte.this.args["from_"].this
+
+    assert source.name == "orders"
+    assert source.db == "test"
+    assert source.catalog == "memory"
+    assert source.alias == "orders"
+    assert source_cte.this.expressions[0].this.table == "orders"
+    assert reference.name == source_cte.alias_or_name
+    assert reference.alias == "orders"
+    assert result_cte.this.expressions[0].this.table == "orders"
+
+
+def test_cte_hashing_respects_nested_shadowing_and_table_aliases(
+    standalone_session: StandaloneSession,
+):
+    df = standalone_session.sql("SELECT 1 AS id")
+    expression = sqlglot.parse_one(
+        "WITH orders AS (SELECT 1 AS id), "
+        "later AS (SELECT orders.id FROM orders), "
+        "physical AS (SELECT orders.id FROM memory.test.shipments AS orders) "
+        "SELECT orders.id FROM orders WHERE EXISTS ("
+        "WITH orders AS (SELECT 2 AS id) SELECT 1 FROM orders WHERE orders.id = 2)"
+    ).assert_is(exp.Select)
+
+    result = df._replace_cte_names_with_hashes(expression)
+    outer_cte, later_cte, physical_cte = result.ctes
+    inner_select = result.args["where"].this.this
+    inner_cte = inner_select.ctes[0]
+
+    assert later_cte.this.args["from_"].this.name == outer_cte.alias_or_name
+    assert later_cte.this.expressions[0].table == outer_cte.alias_or_name
+    physical_source = physical_cte.this.args["from_"].this
+    assert physical_source.name == "shipments"
+    assert physical_source.alias == "orders"
+    assert physical_cte.this.expressions[0].table == "orders"
+    assert result.args["from_"].this.name == outer_cte.alias_or_name
+    assert result.expressions[0].table == outer_cte.alias_or_name
+    assert inner_cte.alias_or_name != outer_cte.alias_or_name
+    assert inner_select.args["from_"].this.name == inner_cte.alias_or_name
+    assert inner_select.args["where"].this.left.table == inner_cte.alias_or_name
+
+
 def test_columns(standalone_employee: StandaloneDataFrame):
     assert standalone_employee.columns == ["employee_id", "fname", "lname", "age", "store_id"]
 
