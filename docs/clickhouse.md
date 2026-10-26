@@ -111,8 +111,10 @@ Run the live connector tests with Docker Desktop or another Docker daemon:
 make clickhouse-test
 ```
 
-The command starts ClickHouse on `127.0.0.1:18123`, waits for it to become
-healthy, runs `tests/integration/clickhouse`, and removes the container afterward.
+The command starts ClickHouse in a run-unique Compose project on a free
+`127.0.0.1` port, waits for it to become healthy, runs
+`tests/integration/clickhouse` against that port, and removes the container
+afterward, so concurrent runs from separate checkouts do not collide.
 The same command runs in CI. For an existing server, set
 `SQLFRAME_CLICKHOUSE_HOST`, `SQLFRAME_CLICKHOUSE_PORT`,
 `SQLFRAME_CLICKHOUSE_USER`, and `SQLFRAME_CLICKHOUSE_PASSWORD` and run the test

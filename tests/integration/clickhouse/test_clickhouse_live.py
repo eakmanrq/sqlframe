@@ -1,4 +1,4 @@
-"""Live connector checks; set SQLFRAME_CLICKHOUSE_HOST after starting compose.yml."""
+"""Live connector checks; scripts/test-clickhouse.sh sets SQLFRAME_CLICKHOUSE_HOST/PORT."""
 
 import os
 import uuid
