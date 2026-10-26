@@ -41,6 +41,8 @@ databricks = [
     "databricks-sql-connector[pyarrow]>=3.6,<5",
 ]
 dev = [
+    # chdb-core publishes no Windows wheels
+    "chdb>=4.4,<5; sys_platform != 'win32'",
     "duckdb>=1.2,<2.1",
     "findspark>=2,<3",
     # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql

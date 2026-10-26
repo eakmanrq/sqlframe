@@ -391,6 +391,36 @@ wheels = [
 ]
 
 [[package]]
+name = "chdb"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "chdb-core", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
+    { name = "pandas", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
+    { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version >= '3.11' and sys_platform != 'win32')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/41/45159ab43d461ff3eff32611c5c9b8396ff5b89d71c5acfa7749b82f66aa/chdb-4.4.0-py3-none-any.whl", hash = "sha256:b9d1159b19a101a650e72e085631dcc3a0879c31faf7c098bff3ea51dbba2daf", size = 1689158, upload-time = "2026-09-11T09:48:18.87Z" },
+]
+
+[[package]]
+name = "chdb-core"
+version = "26.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pandas", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
+    { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version >= '3.11' and sys_platform != 'win32')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/1d/66071789c0b550ec32ba493f28ef43398ecb52931874d92c040d4ab70788/chdb_core-26.9.0-cp39-abi3-macosx_10_15_x86_64.whl", hash = "sha256:0d24d78969f7ab41d5303c148b7cf64880fa017507bbed9c9b8799b29c26723f", size = 133441224, upload-time = "2026-09-28T14:49:56.5Z" },
+    { url = "https://files.pythonhosted.org/packages/68/c4/b68a3c3dd2de33a7cbe64b718af5c1143e9ed127550dac180495b1174a20/chdb_core-26.9.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:bc2d2baedc038ba04be59d97d9ded4f87a3fbe05c3820f93d90e508b1e541ad0", size = 115400237, upload-time = "2026-09-29T06:25:14.87Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/43/3f1b4e3c0eb9e5960b2273ba35d1a8291ead5bb109af79523ac5b950c65b/chdb_core-26.9.0-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:46148d3fc1edd6d6f701922be0f18e2aa6e60349e418b430e69bbb87ab6b95a9", size = 161109244, upload-time = "2026-09-28T13:21:13.918Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/60/543811d41d856a8a42b665d0e966d6ee518bc0b3cb487345acf812131ff0/chdb_core-26.9.0-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:707e2ec3fe0f7953bac97942eaeb7a1ed1d66b1e56ecef3f0aa2130f61f6e735", size = 181534334, upload-time = "2026-09-28T12:24:50.563Z" },
+]
+
+[[package]]
 name = "click"
 version = "8.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3246,6 +3276,7 @@ databricks = [
     { name = "databricks-sql-connector", extra = ["pyarrow"] },
 ]
 dev = [
+    { name = "chdb", marker = "sys_platform != 'win32'" },
     { name = "duckdb", version = "1.5.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "duckdb", version = "2.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "findspark" },
@@ -3309,6 +3340,7 @@ trino = [
 
 [package.metadata]
 requires-dist = [
+    { name = "chdb", marker = "sys_platform != 'win32' and extra == 'dev'", specifier = ">=4.4,<5" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.13,<2" },
     { name = "databricks-sql-connector", extras = ["pyarrow"], marker = "extra == 'databricks'", specifier = ">=3.6,<5" },
     { name = "duckdb", marker = "extra == 'dev'", specifier = ">=1.2,<2.1" },
