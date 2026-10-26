@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from sqlglot import exp
+from sqlglot.errors import ParseError
 
 from sqlframe.base.catalog import Column, _BaseCatalog
 from sqlframe.base.exceptions import UnsupportedOperationError
@@ -17,7 +18,11 @@ class ClickHouseCatalog(
     _BaseCatalog["ClickHouseSession", "ClickHouseDataFrame", "ClickHouseTable"]
 ):
     def _column_from_describe(self, row) -> Column:
-        data_type = exp.DataType.build(row["type"], dialect=self.session.execution_dialect)
+        error = f"Unsupported ClickHouse type {row['type']} for column {row['name']!r}"
+        try:
+            data_type = exp.DataType.build(row["type"], dialect=self.session.execution_dialect)
+        except ParseError as exc:
+            raise UnsupportedOperationError(error) from exc
         nullable = bool(data_type.args.get("nullable"))
 
         def spark_type(node):
@@ -26,25 +31,41 @@ class ClickHouseCatalog(
             # LowCardinality changes storage, not the value's Spark type.
             if node.this == exp.DataType.Type.LOWCARDINALITY:
                 return node.expressions[0].copy()
-            # Spark lacks unsigned types. Widen them without losing values.
-            widening = {
+            # Map ClickHouse value types to types Spark can represent.
+            mapping = {
+                exp.DataType.Type.DATETIME64: "TIMESTAMP",
+                exp.DataType.Type.DATE32: "DATE",
+                exp.DataType.Type.ENUM8: "STRING",
+                exp.DataType.Type.ENUM16: "STRING",
+                exp.DataType.Type.FIXEDSTRING: "STRING",
+                exp.DataType.Type.IPV4: "STRING",
+                exp.DataType.Type.IPV6: "STRING",
+                exp.DataType.Type.UUID: "STRING",
                 exp.DataType.Type.USMALLINT: "INT",
                 exp.DataType.Type.UINT: "BIGINT",
                 exp.DataType.Type.UBIGINT: "DECIMAL(20, 0)",
             }
-            if node.this in widening:
-                return exp.DataType.build(widening[node.this], dialect=self.session.output_dialect)
-            if node.this in {exp.DataType.Type.UINT128, exp.DataType.Type.UINT256}:
-                raise UnsupportedOperationError(
-                    f"Unsupported ClickHouse column type: {row['type']}"
-                )
+            if node.this in mapping:
+                return exp.DataType.build(mapping[node.this], dialect=self.session.output_dialect)
+            if node.this in {
+                exp.DataType.Type.INT128,
+                exp.DataType.Type.INT256,
+                exp.DataType.Type.UINT128,
+                exp.DataType.Type.UINT256,
+            }:
+                raise UnsupportedOperationError(error)
             return node
 
         data_type = data_type.transform(spark_type)
+        spark_sql = data_type.sql(dialect=self.session.output_dialect)
+        try:
+            exp.DataType.build(spark_sql, dialect=self.session.output_dialect)
+        except ParseError as exc:
+            raise UnsupportedOperationError(error) from exc
         return Column(
             name=row["name"],
             description=None,
-            dataType=data_type.sql(dialect=self.session.output_dialect),
+            dataType=spark_sql,
             nullable=nullable,
             isPartition=False,
             isBucket=False,

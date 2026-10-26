@@ -111,7 +111,9 @@ def test_describe_maps_clickhouse_types(connection, clickhouse_type, spark_type)
     assert column.nullable == clickhouse_type.startswith("Nullable")
 
 
-@pytest.mark.parametrize("clickhouse_type", ["Int128", "Int256", "UInt128", "UInt256", "Point", "Object('json')"])
+@pytest.mark.parametrize(
+    "clickhouse_type", ["Int128", "Int256", "UInt128", "UInt256", "Point", "Object('json')"]
+)
 def test_describe_rejects_unsupported_types_with_column_name(connection, clickhouse_type):
     session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
 
