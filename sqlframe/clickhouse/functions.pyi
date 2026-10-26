@@ -97,7 +97,6 @@ from sqlframe.base.functions import current_time as current_time
 from sqlframe.base.functions import current_timestamp as current_timestamp
 from sqlframe.base.functions import current_user as current_user
 from sqlframe.base.functions import date_add as date_add
-from sqlframe.base.functions import date_diff as date_diff
 from sqlframe.base.functions import date_format as date_format
 from sqlframe.base.functions import date_from_unix_date as date_from_unix_date
 from sqlframe.base.functions import date_sub as date_sub
