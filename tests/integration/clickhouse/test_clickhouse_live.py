@@ -6,6 +6,7 @@ import uuid
 import pytest
 
 from sqlframe.base.exceptions import UnsupportedOperationError
+from sqlframe.base.session import _BaseSession
 from sqlframe.clickhouse import ClickHouseSession
 from sqlframe.clickhouse import functions as F
 
@@ -38,6 +39,7 @@ def clickhouse_session():
 
 def test_query_existing_table(clickhouse_session):
     session, table = clickhouse_session
+    assert _BaseSession._instance is session
 
     rows = session.table(table).filter(F.col("value") > 1).select("name", "value").collect()
 
@@ -46,6 +48,7 @@ def test_query_existing_table(clickhouse_session):
 
 def test_raw_sql_and_catalog_types(clickhouse_session):
     session, table = clickhouse_session
+    assert _BaseSession._instance is session
 
     rows = session.sql(f"SELECT name, u64 FROM {table} WHERE value = 2", qualify=False).collect()
     columns = session.catalog.listColumns(table)
@@ -62,6 +65,7 @@ def test_raw_sql_and_catalog_types(clickhouse_session):
 
 def test_values_and_aggregation(clickhouse_session):
     session, _ = clickhouse_session
+    assert _BaseSession._instance is session
 
     rows = (
         session.createDataFrame([(1, "a"), (2, "a"), (3, "b")], ["amount", "category"])
@@ -79,6 +83,7 @@ def test_values_and_aggregation(clickhouse_session):
 
 def test_unsupported_write_fails(clickhouse_session):
     session, table = clickhouse_session
+    assert _BaseSession._instance is session
 
     with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
         session.table(table).write.saveAsTable(f"{table}_copy")
