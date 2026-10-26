@@ -2,6 +2,7 @@ import pytest
 
 from sqlframe.base.exceptions import TableSchemaError
 from sqlframe.base.session import _BaseSession
+from sqlframe.standalone.session import StandaloneSession
 from sqlframe.trino import TrinoSession
 from sqlframe.trino import functions as F
 
@@ -68,3 +69,16 @@ def test_trino_session_requires_explicit_table_schema():
 
     with pytest.raises(TableSchemaError, match="does not have access to a catalog"):
         session.read.table("orders")
+
+
+def test_standalone_session_does_not_reconfigure_trino_session():
+    conn = Connection()
+    trino_session = TrinoSession(conn=conn)
+
+    standalone_session = StandaloneSession.builder.getOrCreate()
+
+    assert type(standalone_session) is StandaloneSession
+    assert standalone_session is not trino_session
+    assert _BaseSession() is standalone_session
+    assert trino_session.execution_dialect_name == "trino"
+    assert trino_session._conn is conn

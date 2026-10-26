@@ -196,7 +196,9 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
         return self._table(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
-        if _BaseSession._instance is None or not isinstance(_BaseSession._instance, cls):
+        if _BaseSession._instance is None or (
+            cls is not _BaseSession and type(_BaseSession._instance) is not cls
+        ):
             _BaseSession._instance = super().__new__(cls)
         return _BaseSession._instance
 
