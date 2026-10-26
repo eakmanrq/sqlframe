@@ -5,6 +5,7 @@ import typing as t
 import sqlglot
 from sqlglot import exp
 from sqlglot.dialects.dialect import DialectType
+from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.scope import traverse_scope
 
 from sqlframe.standalone.session import StandaloneSession
@@ -35,10 +36,15 @@ class TrinoSession(StandaloneSession):
                 else sqlQuery
             )
             if isinstance(expression, exp.Query):
-                for scope in traverse_scope(expression):
+                normalized = normalize_identifiers(
+                    expression.copy(), dialect=dialect or self.input_dialect
+                )
+                for scope in traverse_scope(normalized):
                     for _, source in scope.selected_sources.values():
                         if isinstance(source, exp.Table):
-                            self.catalog.add_table(source)
+                            source_table = source.copy()
+                            source_table.set("alias", None)
+                            self.catalog.add_table(source_table)
         return super().sql(sqlQuery, dialect=dialect, qualify=qualify)
 
     def _collect(self, *args, **kwargs):

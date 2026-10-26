@@ -237,3 +237,19 @@ def test_sql_cte(trino_session):
     )
 
     assert query.collect() == [Row(order_id=2)]
+
+
+def test_sql_discovers_aliased_source_table(trino_session):
+    session, table = trino_session
+
+    assert session.sql(f"SELECT o.order_id FROM {table} AS o WHERE o.order_id = 2").collect() == [
+        Row(order_id=2)
+    ]
+
+
+def test_sql_discovers_mixed_case_cte_reference(trino_session):
+    session, _ = trino_session
+
+    assert session.sql("WITH ITEMS AS (SELECT 1 AS id) SELECT id FROM items").collect() == [
+        Row(id=1)
+    ]
