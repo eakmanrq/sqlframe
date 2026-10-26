@@ -253,3 +253,39 @@ def test_sql_discovers_mixed_case_cte_reference(trino_session):
     assert session.sql("WITH ITEMS AS (SELECT 1 AS id) SELECT id FROM items").collect() == [
         Row(id=1)
     ]
+
+
+@pytest.mark.parametrize("server_first", [True, False])
+def test_sql_joins_server_table_and_temp_view_in_either_registration_order(
+    trino_session, server_first
+):
+    session, table = trino_session
+
+    def register_server():
+        session.read.table(table)
+
+    def register_view():
+        session.createDataFrame(
+            [(2, "medium"), (3, "large")],
+            [
+                "order_id",
+                "label",
+            ],
+        ).createOrReplaceTempView("labels")
+
+    if server_first:
+        register_server()
+        register_view()
+    else:
+        register_view()
+        register_server()
+
+    rows = session.sql(
+        f"SELECT o.*, l.label FROM {table} AS o "
+        "JOIN labels AS l ON o.order_id = l.order_id ORDER BY o.order_id"
+    ).collect()
+
+    assert rows == [
+        Row(order_id=2, total=25, label="medium"),
+        Row(order_id=3, total=40, label="large"),
+    ]

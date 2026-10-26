@@ -14,6 +14,16 @@ if t.TYPE_CHECKING:
 
 
 class TrinoCatalog(StandaloneCatalog):
+    def __init__(self, sparkSession, schema=None):
+        super().__init__(sparkSession, schema)
+        # SQLGlot infers schema depth from the first table. Trino sessions can
+        # register a one-part temp view before a three-part server table.
+        self._schema._depth = 3
+        self._schema._supported_table_args = exp.TABLE_PARTS[:3]
+        find_cache = getattr(self._schema, "_find_cache", None)
+        if find_cache is not None:
+            find_cache.clear()
+
     def add_table(
         self,
         table: exp.Table | str,
