@@ -29,6 +29,7 @@ docs-serve:
 	mkdocs serve
 
 stubs:
+	stubgen sqlframe/clickhouse/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/bigquery/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/duckdb/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/postgres/functions.py --output ./ --inspect-mode

@@ -38,6 +38,14 @@ before importing `pyspark.sql`, and call `deactivate()` when finished.
 
 ## Current limits
 
+The following functions are unsupported because their generated SQL is not
+compatible with ClickHouse: `translate`, `dayofweek`, `datediff`, `to_timestamp`,
+`unix_timestamp`, `from_unixtime`, `sort_array`, `hash`, `format_number`,
+`monotonically_increasing_id`, `struct`, `to_json`, and `sha2`. Accessing these
+functions through `sqlframe.clickhouse.functions` raises
+`UnsupportedOperationError` before a query is executed. Other functions remain
+subject to the SQLGlot dialect and server version limitations described below.
+
 `spark.table()` and `spark.read.table()` require table and database names whose
 case survives Spark identifier normalization (normally lowercase). Names such
 as `Events`, including backtick-quoted names, raise `UnsupportedOperationError`
