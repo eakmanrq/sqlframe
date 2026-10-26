@@ -55,26 +55,44 @@ class ClickHouseSession(
         **kwargs,
     ) -> str:
         target = Dialect.get_or_raise(dialect or self.execution_dialect)
-        if (
-            target.__class__ is self.execution_dialect.__class__
-            and isinstance(sql, exp.Query)
-            and any(
+        if target.__class__ is self.execution_dialect.__class__ and isinstance(sql, exp.Query):
+            sql = sql.copy()
+
+            # ClickHouse requires the camel-case function name; Spark SQL uses ARRAY_SORT.
+            def translate_array_sort(node: exp.Expr) -> exp.Expr:
+                if not isinstance(node, exp.ArraySort):
+                    return node
+                if node.args.get("expression") is not None:
+                    raise UnsupportedOperationError(
+                        "array_sort comparator is not supported by ClickHouse"
+                    )
+                if node.this is None:
+                    return node
+                return exp.Anonymous(
+                    this="arraySort",
+                    expressions=[node.this.transform(translate_array_sort, copy=False)],
+                )
+
+            sql = sql.transform(translate_array_sort, copy=False)
+            # Match Spark's null results for empty sum, avg, min, and max aggregates.
+            required_settings = ["aggregate_functions_null_for_empty"]
+            if any(
                 join.args.get("side") in {"LEFT", "RIGHT", "FULL"}
                 for join in sql.find_all(exp.Join)
-            )
-        ):
-            sql = sql.copy()
+            ):
+                required_settings.append("join_use_nulls")
             settings = [
                 setting.copy()
                 for setting in sql.args.get("settings") or []
                 if not (
                     isinstance(setting, exp.EQ)
                     and isinstance(setting.this, exp.Column)
-                    and setting.this.name.lower() == "join_use_nulls"
+                    and setting.this.name.lower() in required_settings
                 )
             ]
-            settings.append(
-                exp.EQ(this=exp.column("join_use_nulls"), expression=exp.Literal.number(1))
+            settings.extend(
+                exp.EQ(this=exp.column(name), expression=exp.Literal.number(1))
+                for name in required_settings
             )
             sql.set("settings", settings)
         return super()._to_sql(

@@ -69,6 +69,7 @@ class ClickHouseCatalog(
                 exp.DataType.Type.IPV4: "STRING",
                 exp.DataType.Type.IPV6: "STRING",
                 exp.DataType.Type.UUID: "STRING",
+                exp.DataType.Type.UTINYINT: "SMALLINT",
                 exp.DataType.Type.USMALLINT: "INT",
                 exp.DataType.Type.UINT: "BIGINT",
                 exp.DataType.Type.UBIGINT: "DECIMAL(20, 0)",

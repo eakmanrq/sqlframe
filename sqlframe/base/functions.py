@@ -2653,10 +2653,13 @@ def array_sort(
     comparator: t.Optional[t.Union[t.Callable[[Column, Column], Column]]] = None,
 ) -> Column:
     session = _get_session()
-    sort_array_func = get_func_from_session("sort_array")
 
     if session._is_bigquery:
-        return sort_array_func(col, comparator)
+        return get_func_from_session("sort_array")(col, comparator)
+
+    if session.execution_dialect_name == "clickhouse":
+        if comparator is not None:
+            raise UnsupportedOperationError("array_sort comparator is not supported by ClickHouse")
 
     if comparator is not None:
         f_expression = _get_lambda_from_func(comparator)

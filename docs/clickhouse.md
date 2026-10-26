@@ -95,8 +95,13 @@ write modes do not map directly to Spark.
 Use ClickHouse Connect for table creation and inserts. File readers and writers,
 catalog listing APIs, UDF registration, and table mutation or merge APIs are
 also unsupported. `cache()` and `persist()` are unsupported for this engine.
+`array_sort()` supports its default ascending order; a custom comparator is
+unsupported.
 For left, right, and full outer joins, SQLFrame adds `join_use_nulls=1` to the
 ClickHouse query so unmatched columns contain nulls as they do in Spark.
+SQLFrame also adds `aggregate_functions_null_for_empty=1` so aggregates over an
+empty input return null where Spark does; `count` and `approx_count_distinct`
+still return zero.
 ClickHouse `LowCardinality` columns use their underlying value type in the
 Spark schema. Unsigned integers up to `UInt64` are widened to a Spark type
 that holds their full range; `Int128`, `Int256`, `UInt128`, and `UInt256` are
@@ -107,7 +112,7 @@ them in production.
 
 ## Local ClickHouse tests
 
-The repository includes a pinned ClickHouse 25.8.33.6 Docker Compose service.
+The repository includes a pinned ClickHouse 26.10.3.7 Docker Compose service.
 Run the live connector tests with Docker Desktop or another Docker daemon:
 
 ```bash
