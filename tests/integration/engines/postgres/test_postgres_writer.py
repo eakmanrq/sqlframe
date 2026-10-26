@@ -83,6 +83,44 @@ def test_save_as_table_overwrite_autocommit_failure_preserves_existing_table(
     assert [tuple(row) for row in session.table("employee").collect()] == [(1,)]
 
 
+def test_save_as_table_overwrite_preserves_explicit_autocommit_transaction(
+    function_scoped_postgres,
+):
+    conn = function_scoped_postgres
+    conn.autocommit = True
+    session = PostgresSession(conn)
+    session.createDataFrame([(1,)], ["id"]).write.saveAsTable("employee")
+    session._execute("BEGIN")
+    session._execute("CREATE TABLE caller_work (id INT)")
+
+    session.createDataFrame([(2,)], ["id"]).write.mode("overwrite").saveAsTable("employee")
+    session._execute("ROLLBACK")
+
+    assert [tuple(row) for row in session.table("employee").collect()] == [(1,)]
+    session._execute("SELECT to_regclass('caller_work')")
+    assert session._cur.fetchone() == (None,)
+
+
+def test_save_as_table_failed_overwrite_preserves_explicit_autocommit_transaction(
+    function_scoped_postgres,
+):
+    conn = function_scoped_postgres
+    conn.autocommit = True
+    session = PostgresSession(conn)
+    session.createDataFrame([(1,)], ["id"]).write.saveAsTable("employee")
+    session._execute("BEGIN")
+    session._execute("CREATE TABLE caller_work (id INT)")
+    failing = session.createDataFrame([(2,)], ["id"]).select((F.col("id") / F.lit(0)).alias("id"))
+
+    with pytest.raises(DivisionByZero):
+        failing.write.mode("overwrite").saveAsTable("employee")
+
+    assert [tuple(row) for row in session.table("employee").collect()] == [(1,)]
+    session._execute("SELECT to_regclass('caller_work')")
+    assert session._cur.fetchone() == ("caller_work",)
+    session._execute("ROLLBACK")
+
+
 def test_save_as_table_other_modes_keep_their_behavior(postgres_session: PostgresSession):
     session = postgres_session
     session.createDataFrame([(1,)], ["id"]).write.saveAsTable("employee")

@@ -11,7 +11,7 @@ from sqlframe.base.readerwriter import (
     _BaseDataFrameReader,
     _BaseDataFrameWriter,
 )
-from sqlframe.base.util import normalize_string
+from sqlframe.base.util import build_drop, normalize_string
 
 if t.TYPE_CHECKING:
     from sqlframe.postgres.session import PostgresSession  # noqa
@@ -44,24 +44,29 @@ class PostgresDataFrameWriter(
         )
         df = self._df.copy(output_expression_container=exp.Create(this=table.copy(), kind="TABLE"))
         if self._session._has_connection:
+            from psycopg2.extensions import TRANSACTION_STATUS_IDLE
+
             conn = self._session._conn
-            if conn.autocommit:
+            owns_transaction = (
+                conn.autocommit and conn.get_transaction_status() == TRANSACTION_STATUS_IDLE
+            )
+            if owns_transaction:
                 self._session._execute("BEGIN")
             else:
                 self._session._execute("SAVEPOINT sqlframe_overwrite")
             try:
                 self._session._execute(
-                    self._session._to_sql(exp.Drop(tables=[table], kind="TABLE", exists=True))
+                    self._session._to_sql(build_drop(table, kind="TABLE", exists=True))
                 )
                 df.collect()
             except Exception:
-                if conn.autocommit:
+                if owns_transaction:
                     self._session._execute("ROLLBACK")
                 else:
                     self._session._execute("ROLLBACK TO SAVEPOINT sqlframe_overwrite")
                     self._session._execute("RELEASE SAVEPOINT sqlframe_overwrite")
                 raise
-            if conn.autocommit:
+            if owns_transaction:
                 self._session._execute("COMMIT")
             else:
                 self._session._execute("RELEASE SAVEPOINT sqlframe_overwrite")
