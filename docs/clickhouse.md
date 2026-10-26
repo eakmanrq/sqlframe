@@ -61,6 +61,8 @@ spark.sql(
 
 `qualify=False` alone does not disable Spark identifier normalization; the
 marker preserves the table's case.
+For these raw queries, call `.collect()` directly. Rendering them with
+`DataFrame.sql()` can raise a SQLGlot optimization error.
 
 `spark.table()` requires column names whose case survives Spark identifier
 normalization (normally lowercase). ClickHouse names such as `userId` or `USERID`
@@ -99,3 +101,19 @@ unsupported.
 Query behavior depends on the ClickHouse SQL version and SQLGlot's dialect
 coverage; test advanced transformations against your server before relying on
 them in production.
+
+## Local ClickHouse tests
+
+The repository includes a ClickHouse 25.8 Docker Compose service. Run the live
+connector tests with Docker Desktop or another Docker daemon:
+
+```bash
+make clickhouse-test
+```
+
+The command starts ClickHouse on `127.0.0.1:18123`, waits for it to become
+healthy, runs `tests/integration/clickhouse`, and removes the container afterward.
+The same command runs in CI. For an existing server, set
+`SQLFRAME_CLICKHOUSE_HOST`, `SQLFRAME_CLICKHOUSE_PORT`,
+`SQLFRAME_CLICKHOUSE_USER`, and `SQLFRAME_CLICKHOUSE_PASSWORD` and run the test
+file directly.

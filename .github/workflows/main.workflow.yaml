@@ -135,3 +135,15 @@ jobs:
       run: uv pip install --python .venv/bin/python 'duckdb==1.2.0'
     - name: Run DuckDB compatibility tests
       run: uv run --no-sync pytest -n 0 tests/integration/engines/duck/test_duckdb_*.py
+  clickhouse-integration:
+    runs-on: ubuntu-26.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.2
+      with:
+        python-version: '3.12'
+        enable-cache: true
+    - name: Run ClickHouse integration tests
+      run: make clickhouse-test

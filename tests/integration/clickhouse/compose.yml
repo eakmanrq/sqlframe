@@ -1,0 +1,13 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8
+    ports:
+      - "127.0.0.1:18123:8123"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_PASSWORD: sqlframe_test
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--password=sqlframe_test", "--query", "SELECT 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

@@ -113,6 +113,7 @@ local_scheme = "no-local-version"
 [tool.pytest.ini_options]
 markers = [
     "bigquery: test for BigQuery",
+    "clickhouse: test against a ClickHouse server",
     "duckdb: test for DuckDB",
     "local: tests that don't rely on external connections",
     "postgres: test for Postgres",
