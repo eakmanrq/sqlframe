@@ -6,6 +6,7 @@ on:
     paths:
       - 'sqlframe/**'
       - 'tests/**'
+      - 'scripts/**'
       - 'Makefile'
       - 'pyproject.toml'
       - 'scripts/test-trino.sh'
@@ -17,6 +18,7 @@ on:
     - '.github/workflows/**'
     - 'sqlframe/**'
     - 'tests/**'
+    - 'scripts/**'
     - 'Makefile'
     - 'pyproject.toml'
     - 'scripts/test-trino.sh'
