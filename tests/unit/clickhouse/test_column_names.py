@@ -19,3 +19,22 @@ def test_table_rejects_case_sensitive_columns_before_select(column_name):
         session.table("events").collect()
 
     cursor.execute.assert_called_once_with('DESCRIBE TABLE "events"')
+
+
+def test_mixed_case_column_raw_sql_workaround():
+    chdb = pytest.importorskip("chdb")
+    connection = chdb.dbapi.connect()
+    try:
+        cursor = connection.cursor()
+        cursor.execute("CREATE TABLE events (userId String, value Int64) ENGINE = Memory")
+        cursor.execute("INSERT INTO events VALUES ('a', 1)")
+        spark = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+
+        with pytest.raises(UnsupportedOperationError, match="sqlglot.meta case_sensitive"):
+            spark.table("events")
+        # The raw SQL workaround documented in docs/clickhouse.md, verbatim.
+        rows = spark.sql('SELECT "userId" FROM events', qualify=False).collect()
+
+        assert [row.asDict() for row in rows] == [{"userId": "a"}]
+    finally:
+        connection.close()
