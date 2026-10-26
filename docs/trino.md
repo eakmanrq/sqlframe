@@ -32,6 +32,11 @@ print(df.sql())  # Inspect the Trino SQL before running it.
 rows = df.collect()
 ```
 
+Trino's memory connector is covered by live tests for creating a table from a
+DataFrame and appending with `insertInto()`. `saveAsTable(mode="append")` uses the
+same insert path. Overwrite mode is rejected before sending SQL because Trino
+connectors vary in whether they can replace tables.
+
 For code that imports PySpark, call `activate("trino", conn=conn)` before the
 PySpark imports:
 
@@ -52,7 +57,7 @@ Calling `collect()` without a connection raises a clear error.
 
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
 - This is a bundled engine rather than a third-party plugin package. The current activation registry is fixed to bundled engines.
-- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads, schema discovery, catalog listing, and a `VALUES` aggregation. Writes, complex types, engine-specific functions, and broad PySpark API parity remain unverified.
+- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads, schema discovery, catalog listing, a `VALUES` aggregation, table creation, and append. Overwrite, complex types, engine-specific functions, and broad PySpark API parity remain unsupported or unverified.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
 that this session reuses; its method list is not a Trino compatibility guarantee.

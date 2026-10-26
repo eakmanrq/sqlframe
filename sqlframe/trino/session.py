@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlframe.standalone.session import StandaloneSession
 from sqlframe.trino.catalog import TrinoCatalog
+from sqlframe.trino.readwriter import TrinoDataFrameWriter
 
 
 class TrinoSession(StandaloneSession):
@@ -12,6 +13,7 @@ class TrinoSession(StandaloneSession):
     """
 
     _catalog = TrinoCatalog
+    _writer = TrinoDataFrameWriter
 
     def _collect(self, *args, **kwargs):
         if not self._has_connection:
