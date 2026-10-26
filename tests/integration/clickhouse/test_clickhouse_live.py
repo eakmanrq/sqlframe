@@ -129,13 +129,43 @@ def test_append_column_mapping(clickhouse_session):
     try:
         frame.write.insertInto(target)
         frame.write.saveAsTable(target, mode="append")
+        frame.write.mode("append").saveAsTable(target)
         rows = [r.asDict() for r in session.table(target).collect()]
         assert rows == [
             {"left_value": "right", "right_value": "left"},
             {"left_value": "left", "right_value": "right"},
+            {"left_value": "left", "right_value": "right"},
         ]
     finally:
         session._execute(f"DROP TABLE IF EXISTS {target}")
+
+
+@pytest.mark.parametrize(
+    "mode, use_writer_state",
+    [
+        (None, False),
+        ("error", False),
+        ("errorifexists", False),
+        ("error", True),
+        ("errorifexists", True),
+    ],
+)
+def test_existing_table_error_modes_leave_rows_unchanged(
+    clickhouse_session, mode, use_writer_state
+):
+    session, table = clickhouse_session
+    frame = session.table(table).filter(F.col("value") > 1)
+    before = [r.asDict() for r in session.table(table).orderBy("value").collect()]
+
+    with pytest.raises(FileExistsError, match="ClickHouse table already exists"):
+        if use_writer_state:
+            frame.write.mode(mode).saveAsTable(table)
+        elif mode is None:
+            frame.write.saveAsTable(table)
+        else:
+            frame.write.saveAsTable(table, mode=mode)
+
+    assert [r.asDict() for r in session.table(table).orderBy("value").collect()] == before
 
 
 def test_unsupported_writes_leave_table_unchanged(clickhouse_session):
