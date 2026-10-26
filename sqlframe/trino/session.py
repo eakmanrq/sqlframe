@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from sqlframe.standalone.session import StandaloneSession
+from sqlframe.trino.catalog import TrinoCatalog
 
 
 class TrinoSession(StandaloneSession):
     """Plan with SQLFrame and execute Trino SQL using a supplied DB-API connection.
 
-    Table schemas must be registered with ``catalog.add_table`` before reading them.
+    Connected sessions can discover table columns from Trino. Offline sessions
+    need schemas registered with ``catalog.add_table`` before reading tables.
     """
+
+    _catalog = TrinoCatalog
 
     def _collect(self, *args, **kwargs):
         if not self._has_connection:

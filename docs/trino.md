@@ -26,25 +26,21 @@ conn = trino.dbapi.connect(
 )
 session = TrinoSession(conn=conn)
 
-# Supply the schema before using read.table(). Trino catalog discovery is not
-# implemented in this first slice.
-session.catalog.add_table(
-    "hive.sales.orders",
-    column_mapping={"order_id": "bigint", "total": "double"},
-)
+# Connected sessions discover table columns from Trino when read.table() runs.
 df = session.read.table("hive.sales.orders").where(F.col("total") > 10)
 print(df.sql())  # Inspect the Trino SQL before running it.
 rows = df.collect()
 ```
 
 For SQL generation alone, construct `TrinoSession()` without a connection and
-use `df.sql()`. Calling `collect()` without a connection raises a clear error.
+register each table schema with `session.catalog.add_table()` before reading it.
+Calling `collect()` without a connection raises a clear error.
 
 ## Current limits
 
-- Register each table schema with `session.catalog.add_table()` before reading it. Automatic Trino catalog lookup is not implemented.
+- Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
 - Use direct `sqlframe.trino` imports. `activate("trino")` is not registered, and this is not a third-party plugin package. The current activation registry is fixed to bundled engines.
-- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads and a `VALUES` aggregation. Writes, schema discovery, complex types, engine-specific functions, and broad PySpark API parity remain unverified.
+- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads, schema discovery, catalog listing, and a `VALUES` aggregation. Writes, complex types, engine-specific functions, and broad PySpark API parity remain unverified.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
 that this session reuses; its method list is not a Trino compatibility guarantee.

@@ -30,6 +30,7 @@ def trino_session():
         f"CREATE TABLE memory.{schema}.orders AS "
         "SELECT * FROM (VALUES (1, 10), (2, 25), (3, 40)) AS t(order_id, total)"
     )
+    cursor.execute(f"USE memory.{schema}")
     session = TrinoSession(conn=conn)
     yield session, f"memory.{schema}.orders"
     cursor.execute(f"DROP SCHEMA memory.{schema} CASCADE")
@@ -38,7 +39,11 @@ def trino_session():
 
 def test_query_existing_table(trino_session):
     session, table = trino_session
-    session.catalog.add_table(table, {"order_id": "integer", "total": "integer"})
+    columns = session.catalog.listColumns(table)
+    assert [(column.name, column.dataType) for column in columns] == [
+        ("order_id", "integer"),
+        ("total", "integer"),
+    ]
 
     rows = (
         session.read.table(table)
@@ -63,3 +68,24 @@ def test_values_and_aggregation(trino_session):
     )
 
     assert rows == [Row(category="a", total=3), Row(category="b", total=3)]
+
+
+def test_catalog_lists_current_schema_and_tables(trino_session):
+    session, table = trino_session
+    schema = ".".join(table.split(".")[:2])
+
+    assert session.catalog.currentCatalog() == "memory"
+    assert session.catalog.currentDatabase().startswith("sqlframe_")
+    tables = session.catalog.listTables()
+    assert [(table.name, table.tableType) for table in tables] == [("orders", "TABLE")]
+    assert [table.name for table in session.catalog.listTables(dbName=schema, pattern="ord*")] == [
+        "orders"
+    ]
+    assert [column.name for column in session.catalog.listColumns("orders")] == [
+        "order_id",
+        "total",
+    ]
+    assert [column.name for column in session.catalog.listColumns("orders", dbName=schema)] == [
+        "order_id",
+        "total",
+    ]
