@@ -23,6 +23,7 @@ ENGINE_TO_PREFIX = {
     "spark": "Spark",
     "databricks": "Databricks",
     "standalone": "Standalone",
+    "trino": "Trino",
 }
 
 NAME_TO_FILE_OVERRIDE = {
