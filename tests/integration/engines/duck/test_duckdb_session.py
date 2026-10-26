@@ -37,6 +37,33 @@ def test_session_from_config():
     assert session.execution_dialect_name == "duckdb"
 
 
+def test_sql_rejects_delta_table_registration():
+    import duckdb
+
+    conn = duckdb.connect()
+    conn.execute("CREATE TABLE existing_table AS SELECT 1 AS id")
+    session = DuckDBSession(conn)
+
+    with pytest.raises(NotImplementedError, match="DuckDB.*Delta.*read.format"):
+        session.sql("CREATE OR REPLACE TABLE existing_table USING delta LOCATION '/tmp/delta'")
+
+    assert conn.execute("SELECT id FROM existing_table").fetchall() == [(1,)]
+
+
+def test_sql_rejects_delta_ctas():
+    import duckdb
+
+    conn = duckdb.connect()
+    session = DuckDBSession(conn)
+
+    with pytest.raises(NotImplementedError, match="DuckDB.*Delta"):
+        session.sql("CREATE TABLE delta_table USING delta AS SELECT 1 AS id")
+
+    assert conn.execute(
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'delta_table'"
+    ).fetchone() == (0,)
+
+
 def test_conf_get_reads_live_connection_timezone():
     import duckdb
 

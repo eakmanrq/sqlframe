@@ -114,6 +114,19 @@ session.conf.set("spark.sql.session.timeZone", "UTC")
 
 Other Spark session configuration keys are not mapped to DuckDB by `conf`.
 
+### Delta tables and SQL DDL
+
+`session.sql("CREATE OR REPLACE TABLE ... USING delta LOCATION ...")` is not supported
+by the DuckDB engine. DuckDB's Delta integration can read an existing table with
+`session.read.format("delta").load(path)` when the required DuckDB extension is
+available, but SQLFrame cannot register or write a Delta table through DuckDB.
+Run Delta DDL in an engine with Delta table support.
+
+`session.sql()` returns a lazy DataFrame for `SELECT` and query-backed
+`CREATE TABLE ... AS SELECT` or `INSERT ... SELECT`. DDL/DML that must execute
+immediately, including `CREATE TABLE` without `AS SELECT`, is not yet supported
+through this method. Use the native engine connection for supported DuckDB DDL.
+
 ## Using DuckDB Unique Functions
 
 DuckDB may have a function that isn't represented within the PySpark API. 

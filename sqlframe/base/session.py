@@ -456,6 +456,31 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             if isinstance(sqlQuery, str)
             else sqlQuery
         )
+        if (
+            isinstance(expression, exp.Create)
+            and expression.args.get("kind") == "TABLE"
+            and self.execution_dialect_name == "duckdb"
+            and any(
+                file_format.name.lower() == "delta"
+                for file_format in expression.find_all(exp.FileFormatProperty)
+            )
+        ):
+            raise NotImplementedError(
+                "DuckDB cannot CREATE or REPLACE Delta tables with USING delta. "
+                "Delta table writes and registration are unsupported; for reads use "
+                "session.read.format('delta').load(path), or run the DDL in a Delta-capable engine."
+            )
+        if isinstance(expression, exp.Create) and expression.expression is None:
+            kind = expression.args.get("kind") or "object"
+            raise NotImplementedError(
+                f"CREATE {kind} without AS SELECT is not supported by Session.sql(); "
+                "execute this DDL through the native engine connection."
+            )
+        if isinstance(expression, exp.Insert) and expression.expression is None:
+            raise NotImplementedError(
+                "INSERT without a query is not supported by Session.sql(); "
+                "execute this DML through the native engine connection."
+            )
         expression = sqlglot.parse_one(
             normalize_string(
                 expression.sql(dialect=dialect),

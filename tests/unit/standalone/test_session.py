@@ -172,6 +172,16 @@ def test_sql_create(standalone_session: StandaloneSession, compare_sql: t.Callab
     compare_sql(df, expected)
 
 
+def test_sql_create_without_query_has_actionable_error(standalone_session: StandaloneSession):
+    with pytest.raises(NotImplementedError, match="CREATE TABLE without AS SELECT"):
+        standalone_session.sql("CREATE TABLE new_table (id INT)")
+
+
+def test_sql_insert_without_query_has_actionable_error(standalone_session: StandaloneSession):
+    with pytest.raises(NotImplementedError, match="INSERT without a query"):
+        standalone_session.sql("INSERT INTO new_table DEFAULT VALUES")
+
+
 def test_sql_insert(standalone_session: StandaloneSession, compare_sql: t.Callable):
     query = (
         "WITH t1 AS (SELECT cola, colb FROM table) INSERT INTO new_table SELECT cola, colb FROM t1"
