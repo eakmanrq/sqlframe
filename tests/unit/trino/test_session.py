@@ -1,0 +1,70 @@
+import pytest
+
+from sqlframe.base.exceptions import TableSchemaError
+from sqlframe.base.session import _BaseSession
+from sqlframe.trino import TrinoSession
+from sqlframe.trino import functions as F
+
+
+class Cursor:
+    description = [("order_id",), ("total",)]
+
+    def __init__(self):
+        self.statements = []
+
+    def execute(self, statement):
+        self.statements.append(statement)
+
+    def fetchall(self):
+        return [(7, 42)]
+
+
+class Connection:
+    def __init__(self):
+        self._cursor = Cursor()
+
+    def cursor(self):
+        return self._cursor
+
+    def close(self):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def reset_session():
+    _BaseSession._instance = None
+    TrinoSession.builder = TrinoSession.Builder()
+    yield
+    _BaseSession._instance = None
+    TrinoSession.builder = TrinoSession.Builder()
+
+
+def test_trino_session_generates_sql_and_collects_with_explicit_schema():
+    conn = Connection()
+    session = TrinoSession.builder.config("sqlframe.conn", conn).getOrCreate()
+    assert session.execution_dialect_name == "trino"
+    session.catalog.add_table("sales.orders", {"order_id": "bigint", "total": "bigint"})
+
+    df = session.read.table("sales.orders").select(F.col("order_id"), "total").where("total > 10")
+    sql = df.sql(pretty=False)
+
+    assert '"sales"."orders"' in sql
+    assert '"order_id"' in sql
+    assert df.collect() == [(7, 42)]
+    assert conn._cursor.statements == [df.sql(pretty=False, optimize=False)]
+
+
+def test_trino_session_requires_a_connection_to_collect():
+    session = TrinoSession.builder.getOrCreate()
+    session.catalog.add_table("orders", {"order_id": "bigint"})
+
+    assert '"orders"' in session.read.table("orders").sql(pretty=False)
+    with pytest.raises(ValueError, match="Trino collection requires a DB-API connection"):
+        session.read.table("orders").collect()
+
+
+def test_trino_session_requires_explicit_table_schema():
+    session = TrinoSession.builder.getOrCreate()
+
+    with pytest.raises(TableSchemaError, match="does not have access to a catalog"):
+        session.read.table("orders")

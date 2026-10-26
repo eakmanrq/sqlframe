@@ -19,6 +19,7 @@ nav:
       - Spark: spark.md
       - Standalone: standalone.md
       - Redshift (community): redshift.md
+      - Trino (first slice): trino.md
   - API reference:
       - Compatibility overview: reference/index.md
       - DuckDB: reference/duckdb.md
