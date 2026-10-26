@@ -223,3 +223,25 @@ def test_cast_preserves_null_values(clickhouse_session):
         ]
     finally:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")
+
+
+def test_uint8_schema_and_array_sort(clickhouse_session):
+    session, _ = clickhouse_session
+    assert _BaseSession._instance is session
+    table = f"sqlframe_uint8_{uuid.uuid4().hex[:12]}"
+    cursor = session._conn.cursor()
+    cursor.execute(
+        f"CREATE TABLE {table} (value UInt8, items Array(UInt8), "
+        "optional Nullable(UInt8)) ENGINE = Memory"
+    )
+    try:
+        cursor.execute(f"INSERT INTO {table} VALUES (255, [3, 1, 2], NULL)")
+        frame = session.table(table)
+
+        assert frame.schema.simpleString() == (
+            "struct<value:smallint, items:array<smallint>, optional:smallint>"
+        )
+        rows = frame.select(F.array_sort("items").alias("sorted_items")).collect()
+        assert [row.asDict() for row in rows] == [{"sorted_items": [1, 2, 3]}]
+    finally:
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")

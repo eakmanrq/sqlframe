@@ -43,6 +43,13 @@ def test_supported_functions_remain_available():
     ClickHouseSession.builder.getOrCreate()
     assert F.upper is base_functions.upper
     assert F.upper("value").sql(dialect="clickhouse")
+    assert "arraySort" in F.array_sort("value").sql(dialect="clickhouse")
+
+
+def test_array_sort_comparator_is_unsupported():
+    ClickHouseSession.builder.getOrCreate()
+    with pytest.raises(UnsupportedOperationError, match="array_sort comparator"):
+        F.array_sort("value", lambda left, right: left - right)
 
 
 def test_unknown_function_is_an_attribute_error():
