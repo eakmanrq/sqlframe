@@ -4,13 +4,59 @@ import fnmatch
 import typing as t
 
 from sqlglot import exp
+from sqlglot.schema import MappingSchema, flatten_schema
 
 from sqlframe.base.catalog import Column, Table
 from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
 from sqlframe.standalone.catalog import StandaloneCatalog
 
+if t.TYPE_CHECKING:
+    from sqlglot.schema import ColumnMapping
+
+
+class _TrinoMappingSchema(MappingSchema):
+    def depth(self) -> int:
+        # A local view may be registered before a three-part server table.
+        return 3
+
 
 class TrinoCatalog(StandaloneCatalog):
+    def __init__(self, sparkSession, schema: t.Optional[MappingSchema] = None):
+        if schema is None:
+            schema = _TrinoMappingSchema()
+        elif not isinstance(schema, _TrinoMappingSchema):
+            supplied_schema = schema
+            schema = _TrinoMappingSchema(
+                visible=schema.visible,
+                dialect=schema.dialect,
+                normalize=schema.normalize,
+                udf_mapping=schema.udf_mapping,
+            )
+            for path in flatten_schema(supplied_schema.mapping, depth=supplied_schema.depth()):
+                table = exp.table_(
+                    path[-1],
+                    db=path[-2] if len(path) > 1 else None,
+                    catalog=path[-3] if len(path) > 2 else None,
+                    quoted=True,
+                )
+                schema.add_table(
+                    table,
+                    supplied_schema.find(table),
+                    normalize=False,
+                    match_depth=False,
+                )
+        super().__init__(sparkSession, schema)
+
+    def add_table(
+        self,
+        table: exp.Table | str,
+        column_mapping: t.Optional[ColumnMapping] = None,
+        **kwargs: t.Any,
+    ) -> None:
+        # Trino queries can mix fully-qualified server tables with local temp views.
+        kwargs.setdefault("match_depth", False)
+        return super().add_table(table, column_mapping=column_mapping, **kwargs)
+
     def currentCatalog(self) -> str:
         return self.session._collect("SELECT current_catalog")[0][0]
 

@@ -8,7 +8,7 @@ import pytest
 from sqlframe import activate_context
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.types import Row
-from sqlframe.trino import TrinoSession
+from sqlframe.trino import TrinoSession, Window
 from sqlframe.trino import functions as F
 
 pytestmark = pytest.mark.trino
@@ -192,3 +192,100 @@ def test_overwrite_is_rejected_without_changing_table(trino_session):
         replacement.write.insertInto(table, overwrite=True)
 
     assert session.read.table(table).collect() == [Row(id=1, label="a")]
+
+
+def test_sql_query_and_join(trino_session):
+    session, table = trino_session
+    query = session.sql(f"SELECT order_id, total FROM {table} WHERE total >= 25")
+    labels = session.createDataFrame([(2, "medium"), (3, "large")], ["order_id", "label"])
+
+    rows = (
+        query.join(labels, on="order_id")
+        .select("order_id", "total", "label")
+        .orderBy("order_id")
+        .collect()
+    )
+
+    assert rows == [
+        Row(order_id=2, total=25, label="medium"),
+        Row(order_id=3, total=40, label="large"),
+    ]
+
+
+def test_window_and_temporary_view(trino_session):
+    session, table = trino_session
+    ranked = session.read.table(table).select(
+        "order_id",
+        F.row_number().over(Window.orderBy("total")).alias("rank"),
+    )
+    ranked.createOrReplaceTempView("ranked_orders")
+
+    rows = session.read.table("ranked_orders").orderBy("order_id").collect()
+
+    assert rows == [
+        Row(order_id=1, rank=1),
+        Row(order_id=2, rank=2),
+        Row(order_id=3, rank=3),
+    ]
+
+
+def test_sql_cte(trino_session):
+    session, table = trino_session
+    query = session.sql(
+        f"WITH selected_orders AS (SELECT order_id FROM {table}) "
+        "SELECT order_id FROM selected_orders WHERE order_id = 2"
+    )
+
+    assert query.collect() == [Row(order_id=2)]
+
+
+def test_sql_discovers_aliased_source_table(trino_session):
+    session, table = trino_session
+
+    assert session.sql(f"SELECT o.order_id FROM {table} AS o WHERE o.order_id = 2").collect() == [
+        Row(order_id=2)
+    ]
+
+
+def test_sql_discovers_mixed_case_cte_reference(trino_session):
+    session, _ = trino_session
+
+    assert session.sql("WITH ITEMS AS (SELECT 1 AS id) SELECT id FROM items").collect() == [
+        Row(id=1)
+    ]
+
+
+@pytest.mark.parametrize("server_first", [True, False])
+def test_sql_joins_server_table_and_temp_view_in_either_registration_order(
+    trino_session, server_first
+):
+    session, table = trino_session
+
+    def register_server():
+        session.read.table(table)
+
+    def register_view():
+        session.createDataFrame(
+            [(2, "medium"), (3, "large")],
+            [
+                "order_id",
+                "label",
+            ],
+        ).createOrReplaceTempView("labels")
+
+    if server_first:
+        register_server()
+        register_view()
+    else:
+        register_view()
+        register_server()
+
+    rows = session.sql(
+        f"SELECT o.*, l.label FROM {table} AS o "
+        "JOIN labels AS l ON o.order_id = l.order_id ORDER BY o.order_id"
+    ).collect()
+
+    assert rows == [
+        Row(order_id=2, total=25, label="medium"),
+        Row(order_id=3, total=40, label="large"),
+    ]

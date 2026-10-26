@@ -1,4 +1,5 @@
 import pytest
+from sqlglot.schema import MappingSchema
 
 from sqlframe.base.exceptions import TableSchemaError
 from sqlframe.base.session import _BaseSession
@@ -82,3 +83,28 @@ def test_standalone_session_does_not_reconfigure_trino_session():
     assert _BaseSession() is standalone_session
     assert trino_session.execution_dialect_name == "trino"
     assert trino_session._conn is conn
+
+
+def test_trino_catalog_accepts_supplied_schema_with_mixed_table_depths():
+    session = TrinoSession(schema=MappingSchema())
+    session.catalog.add_table("labels", {"label": "string"})
+    session.catalog.add_table("memory.sales.orders", {"order_id": "int"})
+
+    assert list(session.catalog.get_columns_from_schema("labels")) == ["label"]
+    assert list(session.catalog.get_columns_from_schema("memory.sales.orders")) == ["order_id"]
+
+
+@pytest.mark.parametrize(
+    ("mapping", "table_name"),
+    [
+        ({"orders": {"order_id": "int"}}, "orders"),
+        ({"sales": {"orders": {"order_id": "int"}}}, "sales.orders"),
+        ({"memory": {"sales": {"orders": {"order_id": "int"}}}}, "memory.sales.orders"),
+    ],
+)
+def test_trino_catalog_reads_supplied_populated_schema_offline(mapping, table_name):
+    session = TrinoSession(schema=MappingSchema(mapping))
+
+    assert session.read.table(table_name).columns == ["order_id"]
+    session.catalog.add_table("memory.sales.shipments", {"shipment_id": "int"})
+    assert session.read.table("memory.sales.shipments").columns == ["shipment_id"]
