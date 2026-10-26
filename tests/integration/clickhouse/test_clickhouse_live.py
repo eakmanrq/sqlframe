@@ -13,7 +13,7 @@ from sqlframe.clickhouse import functions as F
 pytestmark = pytest.mark.clickhouse
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def clickhouse_session():
     if not (host := os.getenv("SQLFRAME_CLICKHOUSE_HOST")):
         pytest.skip("Set SQLFRAME_CLICKHOUSE_HOST to run against ClickHouse")
