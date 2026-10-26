@@ -38,6 +38,13 @@ before importing `pyspark.sql`, and call `deactivate()` when finished.
 
 ## Current limits
 
+`spark.table()` requires column names whose case survives Spark identifier
+normalization (normally lowercase). ClickHouse names such as `userId` or `USERID`
+raise `UnsupportedOperationError` during schema discovery, before a SELECT is
+executed. Quoting a column reference does not bypass this limitation. Use
+lowercase column names, or query the original names through raw SQL such as
+`spark.sql('SELECT "userId" FROM events', qualify=False).collect()`.
+
 This integration supports queries and DataFrame transformations. It does not
 implement `DataFrame.write.saveAsTable()` or `insertInto()` because ClickHouse
 table creation needs an engine and write modes do not map directly to Spark.

@@ -18,6 +18,14 @@ class ClickHouseCatalog(
     _BaseCatalog["ClickHouseSession", "ClickHouseDataFrame", "ClickHouseTable"]
 ):
     def _column_from_describe(self, row) -> Column:
+        name = row["name"]
+        normalized = self.session.input_dialect.normalize_identifier(exp.to_identifier(name))
+        if normalized.name != name:
+            raise UnsupportedOperationError(
+                f"ClickHouse column {name!r} loses case during Spark identifier normalization. "
+                "Case-sensitive column names are unsupported; use lowercase column names "
+                "or spark.sql(..., qualify=False)."
+            )
         error = f"Unsupported ClickHouse type {row['type']} for column {row['name']!r}"
         try:
             data_type = exp.DataType.build(row["type"], dialect=self.session.execution_dialect)
