@@ -83,3 +83,37 @@ def test_embedded_clickhouse_query_and_values():
         assert [row.asDict() for row in tags] == [{"name": "green", "value": 3}]
     finally:
         conn.close()
+
+
+@pytest.mark.parametrize(
+    "clickhouse_type,spark_type",
+    [
+        ("DateTime64(3)", "TIMESTAMP"),
+        ("Nullable(DateTime64(6, 'UTC'))", "TIMESTAMP"),
+        ("Date32", "DATE"),
+        ("Enum8('a' = 1, 'b' = 2)", "STRING"),
+        ("Enum16('a' = 1, 'b' = 2)", "STRING"),
+        ("FixedString(3)", "STRING"),
+        ("IPv4", "STRING"),
+        ("IPv6", "STRING"),
+        ("UUID", "STRING"),
+        ("Array(DateTime64(3))", "ARRAY<TIMESTAMP>"),
+    ],
+)
+def test_describe_maps_clickhouse_types(connection, clickhouse_type, spark_type):
+    from sqlglot import exp
+
+    session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+    column = session.catalog._column_from_describe({"name": "value", "type": clickhouse_type})
+
+    assert column.dataType == spark_type
+    assert exp.DataType.build(column.dataType, dialect=session.output_dialect)
+    assert column.nullable == clickhouse_type.startswith("Nullable")
+
+
+@pytest.mark.parametrize("clickhouse_type", ["Int128", "Int256", "UInt128", "UInt256", "Point", "Object('json')"])
+def test_describe_rejects_unsupported_types_with_column_name(connection, clickhouse_type):
+    session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+
+    with pytest.raises(UnsupportedOperationError, match="payload"):
+        session.catalog._column_from_describe({"name": "payload", "type": clickhouse_type})
