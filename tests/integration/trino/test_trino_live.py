@@ -89,3 +89,31 @@ def test_catalog_lists_current_schema_and_tables(trino_session):
         "order_id",
         "total",
     ]
+
+
+def test_catalog_normalizes_unquoted_schema_name(trino_session):
+    session, table = trino_session
+    schema = table.rsplit(".", 1)[0].upper()
+
+    assert [entry.name for entry in session.catalog.listTables(dbName=schema)] == ["orders"]
+
+
+def test_catalog_includes_temporary_views(trino_session):
+    session, _ = trino_session
+    session.createDataFrame([(1, "a")], ["id", "label"]).createOrReplaceTempView("local_view")
+
+    tables = session.catalog.listTables(pattern="local_*")
+    assert [(table.name, table.isTemporary) for table in tables] == [("local_view", True)]
+    assert [column.name for column in session.catalog.listColumns("local_view")] == [
+        "id",
+        "label",
+    ]
+
+
+def test_catalog_preserves_dotted_column_name(trino_session):
+    session, orders = trino_session
+    table = orders.rsplit(".", 1)[0] + ".dotted"
+    session._cur.execute(f'CREATE TABLE {table} AS SELECT 1 AS "a.b"')
+
+    assert [column.name for column in session.catalog.listColumns(table)] == ['"a.b"']
+    assert session.read.table(table).columns == ["a.b"]

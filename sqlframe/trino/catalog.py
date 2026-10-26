@@ -6,7 +6,7 @@ import typing as t
 from sqlglot import exp
 
 from sqlframe.base.catalog import Column, Table
-from sqlframe.base.util import to_schema
+from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
 from sqlframe.standalone.catalog import StandaloneCatalog
 
 
@@ -25,7 +25,16 @@ class TrinoCatalog(StandaloneCatalog):
     ) -> t.List[Table]:
         schema = to_schema(dbName, dialect=self.session.input_dialect) if dbName else None
         catalog_name = schema.catalog if schema and schema.catalog else self.currentCatalog()
-        schema_name = schema.db if schema else self.currentDatabase()
+        schema_name = (
+            normalize_string(
+                schema.db,
+                from_dialect="input",
+                to_dialect="execution",
+                to_string_literal=True,
+            )
+            if schema
+            else self.currentDatabase()
+        )
         catalog_sql = exp.to_identifier(catalog_name).sql(
             dialect=self.session.execution_dialect, identify=True
         )
@@ -35,7 +44,7 @@ class TrinoCatalog(StandaloneCatalog):
             f"SELECT table_name, table_type FROM {catalog_sql}.information_schema.tables "
             f"WHERE table_schema = {schema_sql}"
         )
-        return [
+        tables = [
             Table(
                 name=name,
                 catalog=catalog_name,
@@ -45,12 +54,38 @@ class TrinoCatalog(StandaloneCatalog):
                 isTemporary=False,
             )
             for name, table_type in cursor.fetchall()
-            if pattern is None or fnmatch.fnmatch(name, pattern)
+        ]
+        tables.extend(
+            Table(
+                name=name,
+                catalog=None,
+                namespace=[],
+                description=None,
+                tableType="VIEW",
+                isTemporary=True,
+            )
+            for name in self.session.temp_views
+        )
+        return [
+            table for table in tables if pattern is None or fnmatch.fnmatch(table.name, pattern)
         ]
 
     def listColumns(
         self, tableName: str, dbName: t.Optional[str] = None, include_temp: bool = False
     ) -> t.List[Column]:
+        table_name = normalize_string(tableName, from_dialect="input", is_table=True)
+        if df := self.session.temp_views.get(table_name):
+            return [
+                Column(
+                    name=name,
+                    description=None,
+                    dataType="",
+                    nullable=True,
+                    isPartition=False,
+                    isBucket=False,
+                )
+                for name in df.columns
+            ]
         if not self.session._has_connection:
             raise NotImplementedError("Trino catalog lookup requires a DB-API connection")
 
@@ -69,7 +104,9 @@ class TrinoCatalog(StandaloneCatalog):
         cursor.execute(sql)
         return [
             Column(
-                name=row[0],
+                name=safe_parse_identifier(row[0], dialect=self.session.execution_dialect).sql(
+                    dialect=self.session.output_dialect
+                ),
                 description=row[3] if len(row) > 3 else None,
                 dataType=row[1],
                 nullable=True,
