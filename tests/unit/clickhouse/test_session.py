@@ -72,35 +72,59 @@ def test_embedded_clickhouse_query_and_values():
             "CREATE TABLE tags (name LowCardinality(String), value UInt64) ENGINE = Memory"
         )
         cursor.execute("INSERT INTO tags VALUES ('green', 3)")
+        cursor.execute(
+            "CREATE TABLE limits (label LowCardinality(Nullable(String)), u16 UInt16, "
+            "u32 UInt32, u64 UInt64) ENGINE = Memory"
+        )
+        cursor.execute("INSERT INTO limits VALUES (NULL, 65535, 4294967295, 18446744073709551615)")
         session = ClickHouseSession.builder.config("sqlframe.conn", conn).getOrCreate()
 
         rows = session.table("events").filter("value > 1").select("name", "value").collect()
         values = session.createDataFrame([{"id": 1, "name": "Ada"}]).collect()
         tags = session.table("tags").collect()
+        limits = session.table("limits")
 
         assert [row.asDict() for row in rows] == [{"name": "alpha", "value": 2}]
         assert [row.asDict() for row in values] == [{"id": 1, "name": "Ada"}]
         assert [row.asDict() for row in tags] == [{"name": "green", "value": 3}]
+        assert [(f.name, f.dataType.simpleString(), f.nullable) for f in limits.schema] == [
+            ("label", "string", True),
+            ("u16", "int", False),
+            ("u32", "bigint", False),
+            ("u64", "decimal(20,0)", False),
+        ]
+        assert [row.asDict() for row in limits.collect()] == [
+            {"label": None, "u16": 65535, "u32": 4294967295, "u64": 18446744073709551615}
+        ]
     finally:
         conn.close()
 
 
 @pytest.mark.parametrize(
-    "clickhouse_type,spark_type",
+    "clickhouse_type,spark_type,nullable",
     [
-        ("DateTime64(3)", "TIMESTAMP"),
-        ("Nullable(DateTime64(6, 'UTC'))", "TIMESTAMP"),
-        ("Date32", "DATE"),
-        ("Enum8('a' = 1, 'b' = 2)", "STRING"),
-        ("Enum16('a' = 1, 'b' = 2)", "STRING"),
-        ("FixedString(3)", "STRING"),
-        ("IPv4", "STRING"),
-        ("IPv6", "STRING"),
-        ("UUID", "STRING"),
-        ("Array(DateTime64(3))", "ARRAY<TIMESTAMP>"),
+        ("DateTime64(3)", "TIMESTAMP", False),
+        ("Nullable(DateTime64(6, 'UTC'))", "TIMESTAMP", True),
+        ("Date32", "DATE", False),
+        ("Enum8('a' = 1, 'b' = 2)", "STRING", False),
+        ("Enum16('a' = 1, 'b' = 2)", "STRING", False),
+        ("FixedString(3)", "STRING", False),
+        ("IPv4", "STRING", False),
+        ("IPv6", "STRING", False),
+        ("UUID", "STRING", False),
+        ("Array(DateTime64(3))", "ARRAY<TIMESTAMP>", False),
+        ("Nullable(String)", "STRING", True),
+        ("LowCardinality(String)", "STRING", False),
+        ("LowCardinality(Nullable(String))", "STRING", True),
+        ("Array(LowCardinality(String))", "ARRAY<STRING>", False),
+        ("UInt16", "INT", False),
+        ("UInt32", "BIGINT", False),
+        ("UInt64", "DECIMAL(20, 0)", False),
+        ("Nullable(UInt64)", "DECIMAL(20, 0)", True),
+        ("Map(String, UInt32)", "MAP<STRING, BIGINT>", False),
     ],
 )
-def test_describe_maps_clickhouse_types(connection, clickhouse_type, spark_type):
+def test_describe_maps_clickhouse_types(connection, clickhouse_type, spark_type, nullable):
     from sqlglot import exp
 
     session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
@@ -108,7 +132,7 @@ def test_describe_maps_clickhouse_types(connection, clickhouse_type, spark_type)
 
     assert column.dataType == spark_type
     assert exp.DataType.build(column.dataType, dialect=session.output_dialect)
-    assert column.nullable == clickhouse_type.startswith("Nullable")
+    assert column.nullable == nullable
 
 
 @pytest.mark.parametrize(
