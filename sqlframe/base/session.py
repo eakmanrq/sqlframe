@@ -457,13 +457,16 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
     ) -> DF:
         dialect = Dialect.get_or_raise(dialect or self.input_dialect)
         expression = (
-            sqlglot.parse_one(
-                normalize_string(sqlQuery, from_dialect=dialect, is_query=True),
-                read=dialect,
-            )
-            if isinstance(sqlQuery, str)
-            else sqlQuery
+            sqlglot.parse_one(sqlQuery, read=dialect) if isinstance(sqlQuery, str) else sqlQuery
         )
+        preserve_nested_ctes = dialect == self.input_dialect and any(
+            with_expression.parent is not expression
+            for with_expression in expression.find_all(exp.With)
+        )
+        if isinstance(sqlQuery, str) and not preserve_nested_ctes:
+            expression = sqlglot.parse_one(
+                normalize_string(sqlQuery, from_dialect=dialect, is_query=True), read=dialect
+            )
         if (
             isinstance(expression, exp.Create)
             and expression.args.get("kind") == "TABLE"
@@ -489,15 +492,19 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
                 "INSERT without a query is not supported by Session.sql(); "
                 "execute this DML through the native engine connection."
             )
-        expression = sqlglot.parse_one(
-            normalize_string(
-                expression.sql(dialect=dialect),
-                from_dialect=dialect,
-                to_dialect=self.input_dialect,
-                is_query=True,
-            ),
-            dialect=self.input_dialect,
-        )
+        if preserve_nested_ctes:
+            # The SQLGlot generator hoists nested CTEs, which changes their scope.
+            expression = normalize_identifiers(expression.copy(), dialect=self.input_dialect)
+        else:
+            expression = sqlglot.parse_one(
+                normalize_string(
+                    expression.sql(dialect=dialect),
+                    from_dialect=dialect,
+                    to_dialect=self.input_dialect,
+                    is_query=True,
+                ),
+                dialect=self.input_dialect,
+            )
         if qualify:
             expression = qualify_func(
                 expression,

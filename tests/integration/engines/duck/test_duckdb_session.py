@@ -26,6 +26,48 @@ def test_float_infinity_literals(value):
     ]
 
 
+def test_cte_name_matching_qualified_source_executes(duckdb_session: DuckDBSession):
+    duckdb_session._conn.execute('CREATE SCHEMA "memory"."test"')
+    duckdb_session._conn.execute('CREATE TABLE "memory"."test"."orders" AS SELECT 7 AS order_id')
+    duckdb_session.catalog.add_table("memory.test.orders", {"order_id": "int"})
+
+    df = duckdb_session.sql(
+        "WITH orders AS (SELECT order_id FROM memory.test.orders) SELECT order_id FROM orders"
+    )
+
+    assert df.collect() == [Row(order_id=7)]
+
+
+def test_nested_recursive_cte_executes(duckdb_session: DuckDBSession):
+    df = duckdb_session.sql(
+        "SELECT q.n FROM (WITH RECURSIVE nums(n) AS ("
+        "SELECT 1 UNION ALL SELECT n + 1 FROM nums WHERE n < 3"
+        ") SELECT n FROM nums) AS q",
+        qualify=False,
+    )
+
+    assert df.collect() == [Row(n=1), Row(n=2), Row(n=3)]
+
+
+def test_ctes_with_distinct_declared_columns_execute(duckdb_session: DuckDBSession):
+    df = duckdb_session.sql(
+        "SELECT q.y FROM (WITH a(x) AS (SELECT 1), b(y) AS (SELECT 1) SELECT b.y FROM b) AS q",
+        qualify=False,
+    )
+
+    assert df.collect() == [Row(y=1)]
+
+
+def test_correlated_qualifier_in_nested_cte_executes(duckdb_session: DuckDBSession):
+    df = duckdb_session.sql(
+        "WITH orders AS (SELECT 1 AS id) "
+        "SELECT (WITH x AS (SELECT orders.id AS v) SELECT v FROM x) AS v FROM orders",
+        qualify=False,
+    )
+
+    assert df.collect() == [Row(v=1)]
+
+
 def test_session_from_config():
     import duckdb
 

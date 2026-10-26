@@ -365,31 +365,86 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return self.session
 
     def _replace_cte_names_with_hashes(self, expression: exp.Select):
-        replacement_mapping = {}
-        seen_hashes: t.Dict[str, exp.Identifier] = {}
-        cte_indices_to_remove = []
+        def hash_cte(cte: exp.CTE) -> str:
+            columns = cte.args["alias"].args.get("columns") or []
+            if columns:
+                return self._create_hash_from_expression(
+                    exp.Tuple(
+                        expressions=[
+                            cte.this.copy(),
+                            exp.Tuple(expressions=[c.copy() for c in columns]),
+                        ]
+                    )
+                )
+            return self._create_hash_from_expression(cte.this)
 
-        for i, cte in enumerate(expression.ctes):
-            old_name_id = cte.args["alias"].this
-            cte_hash = self._create_hash_from_expression(cte.this)
+        def rename(
+            node: exp.Expression,
+            visible_ctes: t.Dict[str, exp.Identifier],
+            qualifiers: t.Dict[str, t.Optional[exp.Identifier]],
+        ) -> None:
+            if isinstance(node, exp.Query):
+                visible_ctes = visible_ctes.copy()
+                with_expression = node.args.get("with_")
+                if with_expression:
+                    seen_hashes: t.Dict[str, exp.Identifier] = {}
+                    unique_ctes = []
+                    for cte in with_expression.expressions:
+                        old_name = cte.alias_or_name
+                        if not with_expression.args.get("recursive"):
+                            rename(cte.this, visible_ctes, qualifiers)
+                        cte_hash = hash_cte(cte)
+                        hashed_name = seen_hashes.get(cte_hash)
+                        if hashed_name is None:
+                            old_identifier = cte.args["alias"].this
+                            hashed_name = exp.to_identifier(
+                                cte_hash, quoted=old_identifier.args["quoted"]
+                            )
+                            seen_hashes[cte_hash] = hashed_name
+                            cte.args["alias"].set("this", hashed_name.copy())
+                            unique_ctes.append(cte)
+                        visible_ctes[old_name] = hashed_name
+                        if with_expression.args.get("recursive"):
+                            rename(cte.this, visible_ctes, qualifiers)
+                    with_expression.set("expressions", unique_ctes)
 
-            if cte_hash in seen_hashes:
-                # Duplicate CTE found - map its old name to the existing hash
-                replacement_mapping[old_name_id] = seen_hashes[cte_hash]
-                cte_indices_to_remove.append(i)
-            else:
-                # New unique CTE - process normally
-                new_hashed_id = exp.to_identifier(cte_hash, quoted=old_name_id.args["quoted"])
-                seen_hashes[cte_hash] = new_hashed_id
-                replacement_mapping[old_name_id] = new_hashed_id
+                if isinstance(node, exp.Select):
+                    qualifiers = qualifiers.copy()
+                    sources = [node.args.get("from_"), *(node.args.get("joins") or [])]
+                    for source in sources:
+                        if source is None:
+                            continue
+                        table = source.this
+                        if isinstance(table, exp.Table):
+                            old_name = table.name
+                            alias = table.alias
+                            if not alias and not table.db and not table.catalog:
+                                qualifiers[old_name] = visible_ctes.get(old_name)
+                            else:
+                                qualifiers[alias or old_name] = None
+                        elif table.alias:
+                            qualifiers[table.alias] = None
 
-            expression = expression.transform(replace_id_value, replacement_mapping).assert_is(
-                exp.Select
-            )
+                for key, child in node.args.items():
+                    if key != "with_":
+                        for item in child if isinstance(child, list) else [child]:
+                            if isinstance(item, exp.Expression):
+                                rename(item, visible_ctes, qualifiers)
+                return
 
-        # Remove duplicate CTEs by index in reverse order to avoid index shifting
-        for idx in reversed(cte_indices_to_remove):
-            del expression.args["with_"].expressions[idx]
+            if isinstance(node, exp.Table) and not node.db and not node.catalog:
+                hashed_name = visible_ctes.get(node.name)
+                if hashed_name is not None:
+                    node.set("this", hashed_name.copy())
+            elif isinstance(node, exp.Column) and node.table:
+                hashed_name = qualifiers.get(node.table)
+                if hashed_name is not None:
+                    node.set("table", hashed_name.copy())
+
+            for child in node.iter_expressions():
+                rename(child, visible_ctes, qualifiers)
+
+        rename(expression, {}, {})
 
         return expression
 
@@ -471,6 +526,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         new_expression = df._add_ctes_to_expression(
             exp.Select(), expression.ctes + [cte_expression]
         )
+        if expression.args.get("with_") and expression.args["with_"].args.get("recursive"):
+            new_expression.args["with_"].set("recursive", True)
         sel_columns = df._get_outer_select_columns(cte_expression)
         new_expression = new_expression.from_(cte_name).select(*[x.expression for x in sel_columns])
         # Propagate alias mappings: alias names that pointed to inner FROM-clause CTEs
@@ -633,12 +690,16 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         select_expressions: t.List[
             t.Tuple[t.Union[t.Type[exp.Cache], OutputExpressionContainer], exp.Select]
         ] = []
+        with_expression = self.expression.args.get("with_")
+        recursive = bool(with_expression and with_expression.args.get("recursive"))
         main_select_ctes: t.List[exp.CTE] = []
         for cte in self.expression.ctes:
             cache_storage_level = cte.args.get("cache_storage_level")
             if cache_storage_level:
                 select_expression = cte.this.copy()
-                select_expression.set("with_", exp.With(expressions=copy(main_select_ctes)))
+                select_expression.set(
+                    "with_", exp.With(expressions=copy(main_select_ctes), recursive=recursive)
+                )
                 select_expression.set("cte_alias_name", cte.alias_or_name)
                 select_expression.set("cache_storage_level", cache_storage_level)
                 select_expressions.append((exp.Cache, select_expression))
@@ -646,7 +707,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 main_select_ctes.append(cte)
         main_select = self.expression.copy()
         if main_select_ctes:
-            main_select.set("with_", exp.With(expressions=main_select_ctes))
+            main_select.set("with_", exp.With(expressions=main_select_ctes, recursive=recursive))
         expression_select_pair = (type(self.output_expression_container), main_select)
         select_expressions.append(expression_select_pair)  # type: ignore
         return select_expressions
