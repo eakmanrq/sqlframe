@@ -24,7 +24,10 @@ class ClickHouseDataFrameReader(
                 raise UnsupportedOperationError(
                     f"ClickHouse table {tableName!r} loses case during Spark identifier "
                     "normalization. Case-sensitive table names are unsupported; use "
-                    "lowercase table and database names or spark.sql(..., qualify=False)."
+                    "lowercase table and database names, or mark the table case-sensitive "
+                    "in raw SQL: spark.sql('SELECT * FROM `Events` "
+                    "/* sqlglot.meta case_sensitive */', qualify=False). "
+                    "See docs/clickhouse.md."
                 )
         return super().table(tableName)
 

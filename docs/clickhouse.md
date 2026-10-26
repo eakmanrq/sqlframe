@@ -66,8 +66,26 @@ marker preserves the table's case.
 normalization (normally lowercase). ClickHouse names such as `userId` or `USERID`
 raise `UnsupportedOperationError` during schema discovery, before a SELECT is
 executed. Quoting a column reference does not bypass this limitation. Use
-lowercase column names, or query the original names through raw SQL such as
-`spark.sql('SELECT "userId" FROM events', qualify=False).collect()`.
+lowercase column names, or query the original names through raw SQL. Mark each
+mixed-case column with SQLGlot's case-sensitive marker and alias it to a
+lowercase name:
+
+```python
+spark.sql(
+    "SELECT `userId` /* sqlglot.meta case_sensitive */ AS user_id, value FROM events",
+    qualify=False,
+).collect()
+```
+
+The alias is required: without it, the outer projection that SQLFrame generates
+normalizes the column to `userid`, which ClickHouse does not find. Quoting the
+column alone does not work either, because the Spark input dialect reads
+`"userId"` as a string literal.
+
+Within one session, refer to each table consistently: either always by its
+qualified name, such as `default.events`, or always by its unqualified name,
+such as `events`. Mixing the two forms for the same table in one session is
+unsupported.
 
 This integration supports queries and DataFrame transformations. It does not
 implement `DataFrame.write.saveAsTable()` or `insertInto()` because ClickHouse

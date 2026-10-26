@@ -33,8 +33,11 @@ def test_mixed_case_column_raw_sql_workaround():
         with pytest.raises(UnsupportedOperationError, match="sqlglot.meta case_sensitive"):
             spark.table("events")
         # The raw SQL workaround documented in docs/clickhouse.md, verbatim.
-        rows = spark.sql('SELECT "userId" FROM events', qualify=False).collect()
+        rows = spark.sql(
+            "SELECT `userId` /* sqlglot.meta case_sensitive */ AS user_id, value FROM events",
+            qualify=False,
+        ).collect()
 
-        assert [row.asDict() for row in rows] == [{"userId": "a"}]
+        assert [row.asDict() for row in rows] == [{"user_id": "a", "value": 1}]
     finally:
         connection.close()

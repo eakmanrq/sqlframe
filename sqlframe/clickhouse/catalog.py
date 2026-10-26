@@ -23,8 +23,10 @@ class ClickHouseCatalog(
         if normalized.name != name:
             raise UnsupportedOperationError(
                 f"ClickHouse column {name!r} loses case during Spark identifier normalization. "
-                "Case-sensitive column names are unsupported; use lowercase column names "
-                "or spark.sql(..., qualify=False)."
+                "Case-sensitive column names are unsupported; use lowercase column names, or "
+                "mark the column case-sensitive in raw SQL and alias it to a lowercase name: "
+                "spark.sql('SELECT `userId` /* sqlglot.meta case_sensitive */ AS user_id "
+                "FROM events', qualify=False). See docs/clickhouse.md."
             )
         error = f"Unsupported ClickHouse type {row['type']} for column {row['name']!r}"
         try:
