@@ -5,6 +5,7 @@ import uuid
 
 import pytest
 
+from sqlframe import activate_context
 from sqlframe.base.types import Row
 from sqlframe.trino import TrinoSession
 from sqlframe.trino import functions as F
@@ -130,3 +131,18 @@ def test_catalog_preserves_dotted_column_name(trino_session):
 
     assert [column.name for column in session.catalog.listColumns(table)] == ['"a.b"']
     assert session.read.table(table).columns == ["a.b"]
+
+
+def test_activate_trino_with_live_connection(trino_session):
+    session, table = trino_session
+
+    with activate_context("trino", conn=session._conn):
+        from pyspark.sql import SparkSession
+
+        activated = SparkSession.builder.getOrCreate()
+        assert isinstance(activated, TrinoSession)
+        assert activated.read.table(table).select("order_id").orderBy("order_id").collect() == [
+            Row(order_id=1),
+            Row(order_id=2),
+            Row(order_id=3),
+        ]

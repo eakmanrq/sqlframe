@@ -32,6 +32,18 @@ print(df.sql())  # Inspect the Trino SQL before running it.
 rows = df.collect()
 ```
 
+For code that imports PySpark, call `activate("trino", conn=conn)` before the
+PySpark imports:
+
+```python
+from sqlframe import activate
+
+activate("trino", conn=conn)
+from pyspark.sql import SparkSession
+
+session = SparkSession.builder.getOrCreate()
+```
+
 For SQL generation alone, construct `TrinoSession()` without a connection and
 register each table schema with `session.catalog.add_table()` before reading it.
 Calling `collect()` without a connection raises a clear error.
@@ -39,7 +51,7 @@ Calling `collect()` without a connection raises a clear error.
 ## Current limits
 
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
-- Use direct `sqlframe.trino` imports. `activate("trino")` is not registered, and this is not a third-party plugin package. The current activation registry is fixed to bundled engines.
+- This is a bundled engine rather than a third-party plugin package. The current activation registry is fixed to bundled engines.
 - Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads, schema discovery, catalog listing, and a `VALUES` aggregation. Writes, complex types, engine-specific functions, and broad PySpark API parity remain unverified.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
