@@ -132,6 +132,7 @@
 .sf-quickstart > .highlight { margin: 0 0 .8rem; }
 .sf-example-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1rem; align-items: start; }
 .sf-result { background: var(--sf-soft); border: 1px solid var(--sf-line); border-radius: .45rem; overflow: hidden; }
+.sf-result .md-typeset__scrollwrap { margin-inline: 0; }
 .sf-result .md-typeset__table { display: block; padding: 0; }
 .sf-result table:not([class]) { display: table; width: 100%; border: 0; margin: 0; border-radius: 0; font-family: var(--md-code-font); font-size: .65rem; }
 .sf-result table:not([class]) th, .sf-result table:not([class]) td { padding: .6rem .9rem; min-width: 0; }
