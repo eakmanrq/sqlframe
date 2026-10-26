@@ -97,6 +97,8 @@ catalog listing APIs, UDF registration, and table mutation or merge APIs are
 also unsupported. `cache()` and `persist()` are unsupported for this engine.
 For left, right, and full outer joins, SQLFrame adds `join_use_nulls=1` to the
 ClickHouse query so unmatched columns contain nulls as they do in Spark.
+SQLFrame also adds `aggregate_functions_null_for_empty=1` so aggregates over an
+empty input return null where Spark does; `count` still returns zero.
 ClickHouse `LowCardinality` columns use their underlying value type in the
 Spark schema. Unsigned integers up to `UInt64` are widened to a Spark type
 that holds their full range; `Int128`, `Int256`, `UInt128`, and `UInt256` are

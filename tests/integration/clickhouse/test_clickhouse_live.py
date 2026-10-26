@@ -126,12 +126,13 @@ def test_outer_joins_return_nulls_and_full_join_keys(clickhouse_session):
         cursor.execute(f"DROP TABLE IF EXISTS {right_table}")
 
 
-def test_dotted_column_name_is_read_as_one_identifier(clickhouse_session):
+@pytest.mark.parametrize("column_name", ["a.b", "a-b", "a b"])
+def test_special_column_name_is_read_as_one_identifier(clickhouse_session, column_name):
     session, _ = clickhouse_session
     assert _BaseSession._instance is session
-    table = f"sqlframe_dotted_{uuid.uuid4().hex[:12]}"
+    table = f"sqlframe_special_{uuid.uuid4().hex[:12]}"
     cursor = session._conn.cursor()
-    cursor.execute(f"CREATE TABLE {table} (`a.b` String, value Int64) ENGINE = Memory")
+    cursor.execute(f"CREATE TABLE {table} (`{column_name}` String, value Int64) ENGINE = Memory")
     try:
         cursor.execute(f"INSERT INTO {table} VALUES ('alpha', 2)")
 
@@ -140,9 +141,69 @@ def test_dotted_column_name_is_read_as_one_identifier(clickhouse_session):
         sql = frame.sql()
         rows = frame.collect()
 
-        assert [column.name for column in columns] == ["a.b", "value"]
-        assert "`a.b`" in sql
-        assert frame.schema.simpleString() == "struct<a.b:string, value:bigint>"
-        assert [row.asDict() for row in rows] == [{"a.b": "alpha", "value": 2}]
+        assert [column.name for column in columns] == [column_name, "value"]
+        assert f"`{column_name}`" in sql
+        assert frame.schema.simpleString() == f"struct<{column_name}:string, value:bigint>"
+        assert [row.asDict() for row in rows] == [{column_name: "alpha", "value": 2}]
+    finally:
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")
+
+
+def test_empty_aggregates_follow_spark_null_semantics(clickhouse_session):
+    session, table = clickhouse_session
+    assert _BaseSession._instance is session
+
+    rows = (
+        session.table(table)
+        .filter(F.col("value") > 100)
+        .groupBy()
+        .agg(
+            F.sum("value").alias("total"),
+            F.avg("value").alias("average"),
+            F.min("value").alias("minimum"),
+            F.max("value").alias("maximum"),
+            F.count("value").alias("number"),
+        )
+        .collect()
+    )
+
+    assert [row.asDict() for row in rows] == [
+        {"total": None, "average": None, "minimum": None, "maximum": None, "number": 0}
+    ]
+
+
+def test_cast_preserves_null_values(clickhouse_session):
+    session, _ = clickhouse_session
+    assert _BaseSession._instance is session
+
+    rows = session.createDataFrame([(1,), (None,)], ["value"]).collect()
+
+    assert sorted((row.asDict() for row in rows), key=lambda row: row["value"] is None) == [
+        {"value": 1},
+        {"value": None},
+    ]
+
+    table = f"sqlframe_nullable_{uuid.uuid4().hex[:12]}"
+    cursor = session._conn.cursor()
+    cursor.execute(f"CREATE TABLE {table} (value Nullable(Int64)) ENGINE = Memory")
+    try:
+        cursor.execute(f"INSERT INTO {table} VALUES (1), (NULL)")
+        cast_rows = (
+            session.table(table).select(F.col("value").cast("string").alias("text")).collect()
+        )
+        numeric_rows = (
+            session.table(table).select(F.col("value").cast("int").alias("number")).collect()
+        )
+
+        assert sorted((row.asDict() for row in cast_rows), key=lambda row: str(row["text"])) == [
+            {"text": "1"},
+            {"text": None},
+        ]
+        assert sorted(
+            (row.asDict() for row in numeric_rows), key=lambda row: row["number"] is None
+        ) == [
+            {"number": 1},
+            {"number": None},
+        ]
     finally:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")

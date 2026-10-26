@@ -55,26 +55,27 @@ class ClickHouseSession(
         **kwargs,
     ) -> str:
         target = Dialect.get_or_raise(dialect or self.execution_dialect)
-        if (
-            target.__class__ is self.execution_dialect.__class__
-            and isinstance(sql, exp.Query)
-            and any(
+        if target.__class__ is self.execution_dialect.__class__ and isinstance(sql, exp.Query):
+            sql = sql.copy()
+            # Spark aggregates return null on empty input, except count which returns zero.
+            required_settings = ["aggregate_functions_null_for_empty"]
+            if any(
                 join.args.get("side") in {"LEFT", "RIGHT", "FULL"}
                 for join in sql.find_all(exp.Join)
-            )
-        ):
-            sql = sql.copy()
+            ):
+                required_settings.append("join_use_nulls")
             settings = [
                 setting.copy()
                 for setting in sql.args.get("settings") or []
                 if not (
                     isinstance(setting, exp.EQ)
                     and isinstance(setting.this, exp.Column)
-                    and setting.this.name.lower() == "join_use_nulls"
+                    and setting.this.name.lower() in required_settings
                 )
             ]
-            settings.append(
-                exp.EQ(this=exp.column("join_use_nulls"), expression=exp.Literal.number(1))
+            settings.extend(
+                exp.EQ(this=exp.column(name), expression=exp.Literal.number(1))
+                for name in required_settings
             )
             sql.set("settings", settings)
         return super()._to_sql(
