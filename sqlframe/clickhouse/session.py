@@ -57,6 +57,15 @@ class ClickHouseSession(
         target = Dialect.get_or_raise(dialect or self.execution_dialect)
         if target.__class__ is self.execution_dialect.__class__ and isinstance(sql, exp.Query):
             sql = sql.copy()
+            # ClickHouse requires the camel-case function name; Spark SQL uses ARRAY_SORT.
+            sql = sql.transform(
+                lambda node: (
+                    exp.Anonymous(this="arraySort", expressions=[node.this.copy()])
+                    if isinstance(node, exp.ArraySort) and node.this is not None
+                    else node
+                ),
+                copy=False,
+            )
             # Match Spark's null results for empty sum, avg, min, and max aggregates.
             required_settings = ["aggregate_functions_null_for_empty"]
             if any(

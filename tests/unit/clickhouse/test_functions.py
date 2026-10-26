@@ -43,7 +43,7 @@ def test_supported_functions_remain_available():
     ClickHouseSession.builder.getOrCreate()
     assert F.upper is base_functions.upper
     assert F.upper("value").sql(dialect="clickhouse")
-    assert "arraySort" in F.array_sort("value").sql(dialect="clickhouse")
+    assert "ARRAY_SORT" in F.array_sort("value").sql(dialect="spark")
 
 
 def test_array_sort_comparator_is_unsupported():

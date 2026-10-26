@@ -2660,11 +2660,6 @@ def array_sort(
     if session.execution_dialect_name == "clickhouse":
         if comparator is not None:
             raise UnsupportedOperationError("array_sort comparator is not supported by ClickHouse")
-        return Column(
-            expression.Anonymous(
-                this="arraySort", expressions=[Column.ensure_col(col).column_expression]
-            )
-        )
 
     if comparator is not None:
         f_expression = _get_lambda_from_func(comparator)

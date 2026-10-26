@@ -241,7 +241,12 @@ def test_uint8_schema_and_array_sort(clickhouse_session):
         assert frame.schema.simpleString() == (
             "struct<value:smallint, items:array<smallint>, optional:smallint>"
         )
-        rows = frame.select("value", F.array_sort("items").alias("sorted_items")).collect()
+        sorted_frame = frame.select("value", F.array_sort("items").alias("sorted_items"))
+        assert "ARRAY_SORT" in sorted_frame.sql()
+        assert "arraySort" in sorted_frame.sql(dialect="clickhouse")
+        # ClickHouse rendering must not change the DataFrame's Spark expression.
+        assert "ARRAY_SORT" in sorted_frame.sql()
+        rows = sorted_frame.collect()
         assert [row.asDict() for row in rows] == [{"value": 255, "sorted_items": [1, 2, 3]}]
     finally:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")
