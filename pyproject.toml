@@ -34,10 +34,15 @@ bigquery = [
     "google-cloud-bigquery[pandas]>=3,<4",
     "google-cloud-bigquery-storage>=2,<3",
 ]
+clickhouse = [
+    "clickhouse-connect>=0.13,<2",
+]
 databricks = [
     "databricks-sql-connector[pyarrow]>=3.6,<5",
 ]
 dev = [
+    # chdb-core publishes no Windows wheels
+    "chdb>=4.4,<5; sys_platform != 'win32'",
     "duckdb>=1.2,<2.1",
     "findspark>=2,<3",
     # 3.0.0 dropped support for Python 3.9 and this is needed by pytest-postgresql
@@ -108,6 +113,7 @@ local_scheme = "no-local-version"
 [tool.pytest.ini_options]
 markers = [
     "bigquery: test for BigQuery",
+    "clickhouse: test against a ClickHouse server",
     "duckdb: test for DuckDB",
     "local: tests that don't rely on external connections",
     "postgres: test for Postgres",

@@ -735,7 +735,7 @@ def last(col: ColumnOrName, ignorenulls: t.Optional[bool] = None) -> Column:
     return this
 
 
-@meta(unsupported_engines=["duckdb", "postgres", "bigquery", "snowflake", "redshift"])
+@meta(unsupported_engines=["duckdb", "postgres", "bigquery", "snowflake", "redshift", "clickhouse"])
 def monotonically_increasing_id() -> Column:
     return Column.invoke_anonymous_function(None, "MONOTONICALLY_INCREASING_ID")
 
@@ -907,7 +907,7 @@ def expr(str: str) -> Column:
     return Column(str)
 
 
-@meta(unsupported_engines=["postgres"])
+@meta(unsupported_engines=["postgres", "clickhouse"])
 def struct(col: t.Union[ColumnOrName, t.Iterable[ColumnOrName]], *cols: ColumnOrName) -> Column:
     session = _get_session()
     col_func = get_func_from_session("col")
@@ -1034,7 +1034,7 @@ def month(col: ColumnOrName) -> Column:
     )
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def dayofweek(col: ColumnOrName) -> Column:
     from sqlframe.base.function_alternatives import (
         dayofweek_from_extract,
@@ -1249,7 +1249,7 @@ def date_sub(
     return result
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def date_diff(end: ColumnOrName, start: ColumnOrName) -> Column:
     from sqlframe.base.function_alternatives import date_diff_with_subtraction
 
@@ -1378,7 +1378,7 @@ def to_date(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     return Column.invoke_expression_over_column(col, expression.TsOrDsToDate)
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def to_timestamp(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.function_alternatives import (
         to_timestamp_tz,
@@ -1437,7 +1437,7 @@ def last_day(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.LastDay)
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     from sqlframe.base.function_alternatives import (
         from_unixtime_bigutil,
@@ -1459,7 +1459,7 @@ def from_unixtime(col: ColumnOrName, format: t.Optional[str] = None) -> Column:
     )
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def unix_timestamp(
     timestamp: t.Optional[ColumnOrName] = None, format: t.Optional[str] = None
 ) -> Column:
@@ -1594,7 +1594,7 @@ def sha1(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.SHA)
 
 
-@meta(unsupported_engines=["bigquery", "postgres"])
+@meta(unsupported_engines=["bigquery", "postgres", "clickhouse"])
 def sha2(col: ColumnOrName, numBits: int) -> Column:
     from sqlframe.base.function_alternatives import sha2_sha265
 
@@ -1609,7 +1609,7 @@ def sha2(col: ColumnOrName, numBits: int) -> Column:
     return Column.invoke_expression_over_column(col, expression.SHA2, length=lit(numBits))
 
 
-@meta(unsupported_engines=["postgres"])
+@meta(unsupported_engines=["postgres", "clickhouse"])
 def hash(*cols: ColumnOrName) -> Column:
     from sqlframe.base.function_alternatives import hash_from_farm_fingerprint
 
@@ -1764,7 +1764,7 @@ def encode(col: ColumnOrName, charset: str) -> Column:
     )
 
 
-@meta(unsupported_engines="duckdb")
+@meta(unsupported_engines=["duckdb", "clickhouse"])
 def format_number(col: ColumnOrName, d: int) -> Column:
     from sqlframe.base.function_alternatives import (
         format_number_bgutil,
@@ -2113,7 +2113,7 @@ def bit_length(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.BitLength)
 
 
-@meta()
+@meta(unsupported_engines="clickhouse")
 def translate(srcCol: ColumnOrName, matching: str, replace: str) -> Column:
     return Column.invoke_expression_over_column(
         srcCol,
@@ -2537,7 +2537,7 @@ def from_json(
     return Column.invoke_anonymous_function(col, "FROM_JSON", schema)
 
 
-@meta(unsupported_engines=["bigquery", "postgres", "snowflake"])
+@meta(unsupported_engines=["bigquery", "postgres", "snowflake", "clickhouse"])
 def to_json(col: ColumnOrName, options: t.Optional[t.Dict[str, str]] = None) -> Column:
     session = _get_session()
     if session._is_duckdb:
@@ -2621,7 +2621,7 @@ def array_max(col: ColumnOrName) -> Column:
     return Column.invoke_expression_over_column(col, expression.ArrayMax)
 
 
-@meta(unsupported_engines="postgres")
+@meta(unsupported_engines=["postgres", "clickhouse"])
 def sort_array(col: ColumnOrName, asc: t.Optional[bool] = None) -> Column:
     from sqlframe.base.function_alternatives import (
         sort_array_bgutil,

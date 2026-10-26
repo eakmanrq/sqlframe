@@ -15,6 +15,7 @@ nav:
       - BigQuery: bigquery.md
       - Snowflake: snowflake.md
       - Postgres: postgres.md
+      - ClickHouse: clickhouse.md
       - Databricks: databricks.md
       - Spark: spark.md
       - Standalone: standalone.md

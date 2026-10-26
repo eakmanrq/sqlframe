@@ -16,6 +16,9 @@ fast-test:
 local-test:
 	pytest -n auto -m "fast or local" --reruns 5
 
+clickhouse-test:
+	bash scripts/test-clickhouse.sh
+
 trino-test:
 	bash scripts/test-trino.sh
 
@@ -29,6 +32,7 @@ docs-serve:
 	mkdocs serve
 
 stubs:
+	stubgen sqlframe/clickhouse/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/bigquery/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/duckdb/functions.py --output ./ --inspect-mode
 	stubgen sqlframe/postgres/functions.py --output ./ --inspect-mode
