@@ -82,18 +82,19 @@ def test_embedded_clickhouse_query_and_values():
         rows = session.table("events").filter("value > 1").select("name", "value").collect()
         values = session.createDataFrame([{"id": 1, "name": "Ada"}]).collect()
         tags = session.table("tags").collect()
-        limits = session.table("limits")
+        limits = session.table("limits").collect()
+        columns = session.catalog.listColumns("limits")
 
         assert [row.asDict() for row in rows] == [{"name": "alpha", "value": 2}]
         assert [row.asDict() for row in values] == [{"id": 1, "name": "Ada"}]
         assert [row.asDict() for row in tags] == [{"name": "green", "value": 3}]
-        assert [(f.name, f.dataType.simpleString(), f.nullable) for f in limits.schema] == [
-            ("label", "string", True),
-            ("u16", "int", False),
-            ("u32", "bigint", False),
-            ("u64", "decimal(20,0)", False),
+        assert [(c.name, c.dataType, c.nullable) for c in columns] == [
+            ("label", "STRING", True),
+            ("u16", "INT", False),
+            ("u32", "BIGINT", False),
+            ("u64", "DECIMAL(20, 0)", False),
         ]
-        assert [row.asDict() for row in limits.collect()] == [
+        assert [row.asDict() for row in limits] == [
             {"label": None, "u16": 65535, "u32": 4294967295, "u64": 18446744073709551615}
         ]
     finally:
