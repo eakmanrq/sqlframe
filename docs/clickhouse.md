@@ -112,7 +112,7 @@ them in production.
 
 ## Local ClickHouse tests
 
-The repository includes a pinned ClickHouse 25.8.33.6 Docker Compose service.
+The repository includes a pinned ClickHouse 26.10.3.7 Docker Compose service.
 Run the live connector tests with Docker Desktop or another Docker daemon:
 
 ```bash
