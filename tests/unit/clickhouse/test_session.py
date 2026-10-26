@@ -62,6 +62,22 @@ def test_unsupported_table_write_modes_fail_before_executing_sql(connection):
 
 
 @pytest.mark.parametrize(
+    "name", ["db.events x", "events as e", "events final", "events; drop table x", " ", ""]
+)
+@pytest.mark.parametrize("method", ["saveAsTable", "insertInto"])
+def test_malformed_table_write_names_fail_before_cursor_call(connection, name, method):
+    session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+    writer = session.sql("SELECT 1 AS value").write
+    if method == "saveAsTable":
+        writer = writer.option("clickhouse.engine", "Memory")
+
+    with pytest.raises(UnsupportedOperationError, match="table or database.table"):
+        getattr(writer, method)(name)
+
+    connection.cursor.assert_not_called()
+
+
+@pytest.mark.parametrize(
     "sql",
     [
         "INSERT INTO events SELECT 1 AS value",
