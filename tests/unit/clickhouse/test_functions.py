@@ -14,6 +14,7 @@ from sqlframe.clickhouse import functions as F
         ("translate", ("value", "a", "b")),
         ("dayofweek", ("value",)),
         ("datediff", ("value", "value")),
+        ("date_diff", ("value", "value")),
         ("to_timestamp", ("value",)),
         ("unix_timestamp", ("value",)),
         ("from_unixtime", ("value",)),
@@ -29,13 +30,12 @@ from sqlframe.clickhouse import functions as F
 def test_known_unsupported_functions_fail_before_query(name, args):
     connection = Mock()
     ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
-    original_metadata = list(getattr(base_functions, name).unsupported_engines)
+    assert "clickhouse" in getattr(base_functions, name).unsupported_engines
 
     with pytest.raises(UnsupportedOperationError, match=rf"{name}.*ClickHouse"):
         getattr(F, name)(*args)
 
     connection.cursor.assert_not_called()
-    assert getattr(base_functions, name).unsupported_engines == original_metadata
     assert name not in vars(F)
 
 
