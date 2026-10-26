@@ -122,6 +122,11 @@ def test_embedded_clickhouse_query_and_values():
         ("UInt32", "BIGINT", False),
         ("UInt64", "DECIMAL(20, 0)", False),
         ("Nullable(UInt64)", "DECIMAL(20, 0)", True),
+        ("LowCardinality(UInt16)", "INT", False),
+        ("LowCardinality(UInt32)", "BIGINT", False),
+        ("LowCardinality(UInt64)", "DECIMAL(20, 0)", False),
+        ("LowCardinality(Nullable(UInt64))", "DECIMAL(20, 0)", True),
+        ("Array(LowCardinality(UInt64))", "ARRAY<DECIMAL(20, 0)>", False),
         ("Map(String, UInt32)", "MAP<STRING, BIGINT>", False),
     ],
 )
