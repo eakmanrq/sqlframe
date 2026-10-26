@@ -3135,7 +3135,7 @@ def test_sqlglot_requirement_is_singular_in_distribution_metadata():
 
     assert len(sqlglot_requirements) == 1
     assert ">=30.0.0" in sqlglot_requirements[0]
-    assert "<30.25" in sqlglot_requirements[0]
+    assert "<30.26" in sqlglot_requirements[0]
 
 
 @pytest.mark.parametrize(
