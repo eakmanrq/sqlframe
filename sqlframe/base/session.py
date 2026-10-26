@@ -110,7 +110,7 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             self.temp_views: t.Dict[str, DF] = {}
         if not self._has_connection or conn:
             self._connection = conn
-        if not getattr(self, "schema", None) or schema:
+        if not hasattr(self, "_schema") or schema is not None:
             self._schema = schema
 
     # https://github.com/eakmanrq/sqlframe/issues/262

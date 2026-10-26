@@ -4,7 +4,7 @@ import fnmatch
 import typing as t
 
 from sqlglot import exp
-from sqlglot.schema import MappingSchema
+from sqlglot.schema import MappingSchema, flatten_schema
 
 from sqlframe.base.catalog import Column, Table
 from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
@@ -25,13 +25,26 @@ class TrinoCatalog(StandaloneCatalog):
         if schema is None:
             schema = _TrinoMappingSchema()
         elif not isinstance(schema, _TrinoMappingSchema):
+            supplied_schema = schema
             schema = _TrinoMappingSchema(
-                schema=schema.mapping,
                 visible=schema.visible,
                 dialect=schema.dialect,
                 normalize=schema.normalize,
                 udf_mapping=schema.udf_mapping,
             )
+            for path in flatten_schema(supplied_schema.mapping, depth=supplied_schema.depth()):
+                table = exp.table_(
+                    path[-1],
+                    db=path[-2] if len(path) > 1 else None,
+                    catalog=path[-3] if len(path) > 2 else None,
+                    quoted=True,
+                )
+                schema.add_table(
+                    table,
+                    supplied_schema.find(table),
+                    normalize=False,
+                    match_depth=False,
+                )
         super().__init__(sparkSession, schema)
 
     def add_table(
