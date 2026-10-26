@@ -67,6 +67,14 @@ Community-maintained integration for Amazon Redshift.
 
 `pip install "sqlframe[redshift]"`
 </div>
+<div class="sf-engine-card" markdown="1">
+
+## [Trino (first slice) →](trino.md)
+
+Generate Trino SQL and collect queries through a supplied DB-API connection, with explicit table schemas.
+
+`pip install sqlframe trino`
+</div>
 </div>
 
 ## Community integrations
