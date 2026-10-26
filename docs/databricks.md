@@ -1,5 +1,7 @@
 # Databricks
 
+Connect your DataFrame pipelines to a Databricks SQL warehouse.
+
 ## Installation
 
 ```bash

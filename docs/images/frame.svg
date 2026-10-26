@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <title>SQLFrame</title>
+  <style>
+    .sf-primary { color: #2659d9; }
+    .sf-accent { color: #c46a39; }
+    @media (prefers-color-scheme: dark) {
+      .sf-primary { color: #8caeff; }
+      .sf-accent { color: #f0ac7b; }
+    }
+  </style>
+  <g class="sf-primary">
+    <path class="sf-accent" d="M18 4H7a3 3 0 0 0-3 3v11" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
+    <path d="M22 36h11a3 3 0 0 0 3-3V22" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"/>
+    <rect class="sf-accent" x="11" y="11" width="5" height="4" rx="1" fill="currentColor"/>
+    <rect x="19" y="11" width="10" height="4" rx="1" fill="currentColor"/>
+    <rect class="sf-accent" x="11" y="18" width="5" height="4" rx="1" fill="currentColor"/>
+    <rect x="19" y="18" width="10" height="4" rx="1" fill="currentColor"/>
+    <rect class="sf-accent" x="11" y="25" width="5" height="4" rx="1" fill="currentColor"/>
+    <rect x="19" y="25" width="10" height="4" rx="1" fill="currentColor"/>
+  </g>
+</svg>

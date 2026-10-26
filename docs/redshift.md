@@ -1,5 +1,7 @@
 # Redshift (Community Maintained)
 
+Connect to Amazon Redshift with the community-maintained SQLFrame integration.
+
 ## Installation
 
 ```bash

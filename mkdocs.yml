@@ -1,34 +1,52 @@
 site_name: SQLFrame
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, null]
+site_description: Run the PySpark DataFrame API directly on your database. No Spark cluster required.
 repo_url: https://github.com/eakmanrq/sqlframe
 repo_name: eakmanrq/sqlframe
 nav:
-  - "Overview": index.md
-  - "Configuration": configuration.md
-  - "BigQuery": bigquery.md
-  - "Databricks": databricks.md
-  - "DuckDB": duckdb.md
-  - "Postgres": postgres.md
-  - "Snowflake": snowflake.md
-  - "Spark": spark.md
-  - "Standalone": standalone.md
-  - "Redshift (Community Maintained)": redshift.md
+  - Home: index.md
+  - Get started: quickstart.md
+  - Guides:
+      - Configuration: configuration.md
+      - More examples: examples.md
+  - Engines:
+      - Choose your engine: engines.md
+      - DuckDB: duckdb.md
+      - BigQuery: bigquery.md
+      - Snowflake: snowflake.md
+      - Postgres: postgres.md
+      - Databricks: databricks.md
+      - Spark: spark.md
+      - Standalone: standalone.md
+      - Redshift (community): redshift.md
+  - API reference:
+      - Compatibility overview: reference/index.md
+      - DuckDB: reference/duckdb.md
+      - BigQuery: reference/bigquery.md
+      - Snowflake: reference/snowflake.md
+      - Postgres: reference/postgres.md
+      - Databricks: reference/databricks.md
+      - Spark: reference/spark.md
+      - Standalone: reference/standalone.md
+      - Redshift (community): reference/redshift.md
 theme:
   name: material
-  logo: images/SF.png
-  favicon: images/SF.png
+  custom_dir: docs/overrides
+  logo: images/frame.svg
+  favicon: images/frame.svg
+  font: false
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: #091c79
-      accent: #cce8fe
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
-    # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: #cce8fe
-      accent: #091c79
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Switch to light mode
@@ -37,13 +55,20 @@ theme:
     - navigation.tracking
     - navigation.tabs
     - navigation.sections
-    - toc.integrate
+    - navigation.indexes
+    - navigation.top
     - toc.follow
+    - content.code.copy
 plugins:
   - include-markdown
   - search
 markdown_extensions:
+  - attr_list
+  - md_in_html
   - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
