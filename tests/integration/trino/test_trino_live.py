@@ -6,6 +6,7 @@ import uuid
 import pytest
 
 from sqlframe import activate_context
+from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.types import Row
 from sqlframe.trino import TrinoSession
 from sqlframe.trino import functions as F
@@ -146,3 +147,48 @@ def test_activate_trino_with_live_connection(trino_session):
             Row(order_id=2),
             Row(order_id=3),
         ]
+
+
+def test_create_and_append_table(trino_session):
+    session, orders = trino_session
+    table = orders.rsplit(".", 1)[0] + ".written"
+
+    session.createDataFrame([(1, "a"), (2, "b")], ["id", "label"]).write.saveAsTable(table)
+    session.createDataFrame([(3, "c")], ["id", "label"]).write.insertInto(table)
+
+    assert session.read.table(table).orderBy("id").collect() == [
+        Row(id=1, label="a"),
+        Row(id=2, label="b"),
+        Row(id=3, label="c"),
+    ]
+
+
+def test_explicit_append_overrides_writer_mode(trino_session):
+    session, orders = trino_session
+    table = orders.rsplit(".", 1)[0] + ".written"
+    session.createDataFrame([(1, "a")], ["id", "label"]).write.saveAsTable(table)
+
+    session.createDataFrame([(2, "b")], ["id", "label"]).write.mode("overwrite").saveAsTable(
+        table, mode="append"
+    )
+
+    assert session.read.table(table).orderBy("id").collect() == [
+        Row(id=1, label="a"),
+        Row(id=2, label="b"),
+    ]
+
+
+def test_overwrite_is_rejected_without_changing_table(trino_session):
+    session, orders = trino_session
+    table = orders.rsplit(".", 1)[0] + ".written"
+    session.createDataFrame([(1, "a")], ["id", "label"]).write.saveAsTable(table)
+    replacement = session.createDataFrame([(2, "b")], ["id", "label"])
+
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        replacement.write.mode("overwrite").saveAsTable(table)
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        replacement.write.saveAsTable(table, mode="overwrite")
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        replacement.write.insertInto(table, overwrite=True)
+
+    assert session.read.table(table).collect() == [Row(id=1, label="a")]
