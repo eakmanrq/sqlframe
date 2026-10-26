@@ -69,9 +69,9 @@ Community-maintained integration for Amazon Redshift.
 </div>
 <div class="sf-engine-card" markdown="1">
 
-## [Trino (first slice) →](trino.md)
+## [Trino →](trino.md)
 
-Generate Trino SQL and collect queries through a supplied DB-API connection, with live column discovery.
+Generate Trino SQL and collect queries through a supplied DB-API connection, with live column discovery and Docker integration tests.
 
 `pip install "sqlframe[trino]"`
 </div>

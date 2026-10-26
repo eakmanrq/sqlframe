@@ -9,8 +9,21 @@ from sqlframe.base.catalog import Column, Table
 from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
 from sqlframe.standalone.catalog import StandaloneCatalog
 
+if t.TYPE_CHECKING:
+    from sqlglot.schema import ColumnMapping
+
 
 class TrinoCatalog(StandaloneCatalog):
+    def add_table(
+        self,
+        table: exp.Table | str,
+        column_mapping: t.Optional[ColumnMapping] = None,
+        **kwargs: t.Any,
+    ) -> None:
+        # Trino queries can mix fully-qualified server tables with local temp views.
+        kwargs.setdefault("match_depth", False)
+        return super().add_table(table, column_mapping=column_mapping, **kwargs)
+
     def currentCatalog(self) -> str:
         return self.session._collect("SELECT current_catalog")[0][0]
 

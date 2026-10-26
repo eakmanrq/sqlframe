@@ -8,7 +8,7 @@ import pytest
 from sqlframe import activate_context
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.types import Row
-from sqlframe.trino import TrinoSession
+from sqlframe.trino import TrinoSession, Window
 from sqlframe.trino import functions as F
 
 pytestmark = pytest.mark.trino
@@ -192,3 +192,48 @@ def test_overwrite_is_rejected_without_changing_table(trino_session):
         replacement.write.insertInto(table, overwrite=True)
 
     assert session.read.table(table).collect() == [Row(id=1, label="a")]
+
+
+def test_sql_query_and_join(trino_session):
+    session, table = trino_session
+    query = session.sql(f"SELECT order_id, total FROM {table} WHERE total >= 25")
+    labels = session.createDataFrame([(2, "medium"), (3, "large")], ["order_id", "label"])
+
+    rows = (
+        query.join(labels, on="order_id")
+        .select("order_id", "total", "label")
+        .orderBy("order_id")
+        .collect()
+    )
+
+    assert rows == [
+        Row(order_id=2, total=25, label="medium"),
+        Row(order_id=3, total=40, label="large"),
+    ]
+
+
+def test_window_and_temporary_view(trino_session):
+    session, table = trino_session
+    ranked = session.read.table(table).select(
+        "order_id",
+        F.row_number().over(Window.orderBy("total")).alias("rank"),
+    )
+    ranked.createOrReplaceTempView("ranked_orders")
+
+    rows = session.read.table("ranked_orders").orderBy("order_id").collect()
+
+    assert rows == [
+        Row(order_id=1, rank=1),
+        Row(order_id=2, rank=2),
+        Row(order_id=3, rank=3),
+    ]
+
+
+def test_sql_cte(trino_session):
+    session, table = trino_session
+    query = session.sql(
+        f"WITH selected_orders AS (SELECT order_id FROM {table}) "
+        "SELECT order_id FROM selected_orders WHERE order_id = 2"
+    )
+
+    assert query.collect() == [Row(order_id=2)]

@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import typing as t
+
+import sqlglot
+from sqlglot import exp
+from sqlglot.dialects.dialect import DialectType
+from sqlglot.optimizer.scope import traverse_scope
+
 from sqlframe.standalone.session import StandaloneSession
 from sqlframe.trino.catalog import TrinoCatalog
 from sqlframe.trino.readwriter import TrinoDataFrameWriter
@@ -14,6 +21,25 @@ class TrinoSession(StandaloneSession):
 
     _catalog = TrinoCatalog
     _writer = TrinoDataFrameWriter
+
+    def sql(
+        self,
+        sqlQuery: t.Union[str, exp.Expression],
+        dialect: DialectType = None,
+        qualify: bool = True,
+    ):
+        if qualify and self._has_connection:
+            expression = (
+                sqlglot.parse_one(sqlQuery, read=dialect or self.input_dialect)
+                if isinstance(sqlQuery, str)
+                else sqlQuery
+            )
+            if isinstance(expression, exp.Query):
+                for scope in traverse_scope(expression):
+                    for _, source in scope.selected_sources.values():
+                        if isinstance(source, exp.Table):
+                            self.catalog.add_table(source)
+        return super().sql(sqlQuery, dialect=dialect, qualify=qualify)
 
     def _collect(self, *args, **kwargs):
         if not self._has_connection:

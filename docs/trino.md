@@ -1,4 +1,4 @@
-# Trino (first slice)
+# Trino
 
 `TrinoSession` uses SQLFrame's standalone DataFrame planner to generate Trino SQL.
 With a supplied [Trino Python DB-API connection](https://github.com/trinodb/trino-python-client),
@@ -37,6 +37,10 @@ DataFrame and appending with `insertInto()`. `saveAsTable(mode="append")` uses t
 same insert path. Overwrite mode is rejected before sending SQL because Trino
 connectors vary in whether they can replace tables.
 
+Connected sessions can also use `session.sql()` to query existing tables without
+registering their schemas first. Live tests cover SQL queries with CTEs, joins,
+window functions, and temporary views, alongside the DataFrame read path.
+
 For code that imports PySpark, call `activate("trino", conn=conn)` before the
 PySpark imports:
 
@@ -57,7 +61,8 @@ Calling `collect()` without a connection raises a clear error.
 
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
 - This is a bundled engine rather than a third-party plugin package. The current activation registry is fixed to bundled engines.
-- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover table reads, schema discovery, catalog listing, a `VALUES` aggregation, table creation, and append. Overwrite, complex types, engine-specific functions, and broad PySpark API parity remain unsupported or unverified.
+- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover the query, catalog, and write paths described above. Complex types, engine-specific functions, and broad PySpark API parity remain unverified.
+- SQLFrame's CTE name rewriting currently fails when a CTE has the same name as a qualified source table in its body. Use a distinct CTE name for such queries.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
 that this session reuses; its method list is not a Trino compatibility guarantee.
