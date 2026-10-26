@@ -89,11 +89,14 @@ names such as `default.events` or unqualified names such as `events`. Mixing
 the two styles, even for different tables, is unsupported.
 
 This integration supports queries and DataFrame transformations. It does not
-implement `DataFrame.write.saveAsTable()` or `insertInto()` because ClickHouse
-table creation needs an engine and write modes do not map directly to Spark.
+implement `DataFrame.write.saveAsTable()`, `insertInto()`, or write statements
+passed to `spark.sql()` because ClickHouse table creation needs an engine and
+write modes do not map directly to Spark.
 Use ClickHouse Connect for table creation and inserts. File readers and writers,
 catalog listing APIs, UDF registration, and table mutation or merge APIs are
 also unsupported. `cache()` and `persist()` are unsupported for this engine.
+For left, right, and full outer joins, SQLFrame adds `join_use_nulls=1` to the
+ClickHouse query so unmatched columns contain nulls as they do in Spark.
 ClickHouse `LowCardinality` columns use their underlying value type in the
 Spark schema. Unsigned integers up to `UInt64` are widened to a Spark type
 that holds their full range; `Int128`, `Int256`, `UInt128`, and `UInt256` are

@@ -17,6 +17,17 @@ if t.TYPE_CHECKING:
 class ClickHouseCatalog(
     _BaseCatalog["ClickHouseSession", "ClickHouseDataFrame", "ClickHouseTable"]
 ):
+    def get_columns(self, table: exp.Table | str) -> t.Dict[str, exp.DataType]:
+        # A dot in a discovered name belongs to the identifier, not a table qualifier.
+        return {
+            (
+                exp.column(name, quoted=True).sql(dialect=self.session.input_dialect)
+                if "." in name
+                else name
+            ): data_type
+            for name, data_type in super().get_columns(table).items()
+        }
+
     def _column_from_describe(self, row) -> Column:
         name = row["name"]
         normalized = self.session.input_dialect.normalize_identifier(exp.to_identifier(name))

@@ -87,3 +87,62 @@ def test_unsupported_write_fails(clickhouse_session):
 
     with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
         session.table(table).write.saveAsTable(f"{table}_copy")
+
+
+def test_outer_joins_return_nulls_and_full_join_keys(clickhouse_session):
+    session, _ = clickhouse_session
+    assert _BaseSession._instance is session
+    suffix = uuid.uuid4().hex[:12]
+    left_table = f"sqlframe_left_{suffix}"
+    right_table = f"sqlframe_right_{suffix}"
+    cursor = session._conn.cursor()
+    cursor.execute(f"CREATE TABLE {left_table} (id Int64, left_value String) ENGINE = Memory")
+    cursor.execute(f"CREATE TABLE {right_table} (id Int64, right_value String) ENGINE = Memory")
+    try:
+        cursor.execute(f"INSERT INTO {left_table} VALUES (1, 'left'), (2, 'left only')")
+        cursor.execute(f"INSERT INTO {right_table} VALUES (1, 'right'), (3, 'right only')")
+        left = session.table(left_table)
+        right = session.table(right_table)
+
+        left_rows = left.join(right, on="id", how="left").collect()
+        right_rows = left.join(right, on="id", how="right").collect()
+        full_rows = left.join(right, on="id", how="full").collect()
+
+        assert sorted((row.asDict() for row in left_rows), key=lambda row: row["id"]) == [
+            {"id": 1, "left_value": "left", "right_value": "right"},
+            {"id": 2, "left_value": "left only", "right_value": None},
+        ]
+        assert sorted((row.asDict() for row in right_rows), key=lambda row: row["id"]) == [
+            {"id": 1, "left_value": "left", "right_value": "right"},
+            {"id": 3, "left_value": None, "right_value": "right only"},
+        ]
+        assert sorted((row.asDict() for row in full_rows), key=lambda row: row["id"]) == [
+            {"id": 1, "left_value": "left", "right_value": "right"},
+            {"id": 2, "left_value": "left only", "right_value": None},
+            {"id": 3, "left_value": None, "right_value": "right only"},
+        ]
+    finally:
+        cursor.execute(f"DROP TABLE IF EXISTS {left_table}")
+        cursor.execute(f"DROP TABLE IF EXISTS {right_table}")
+
+
+def test_dotted_column_name_is_read_as_one_identifier(clickhouse_session):
+    session, _ = clickhouse_session
+    assert _BaseSession._instance is session
+    table = f"sqlframe_dotted_{uuid.uuid4().hex[:12]}"
+    cursor = session._conn.cursor()
+    cursor.execute(f"CREATE TABLE {table} (`a.b` String, value Int64) ENGINE = Memory")
+    try:
+        cursor.execute(f"INSERT INTO {table} VALUES ('alpha', 2)")
+
+        columns = session.catalog.listColumns(table)
+        frame = session.table(table)
+        sql = frame.sql()
+        rows = frame.collect()
+
+        assert [column.name for column in columns] == ["a.b", "value"]
+        assert "`a.b`" in sql
+        assert frame.schema.simpleString() == "struct<a.b:string, value:bigint>"
+        assert [row.asDict() for row in rows] == [{"a.b": "alpha", "value": 2}]
+    finally:
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")

@@ -61,6 +61,22 @@ def test_table_write_fails_before_executing_sql(connection):
     connection.cursor.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "INSERT INTO events SELECT 1 AS value",
+        "CREATE TABLE events AS SELECT 1 AS value",
+    ],
+)
+def test_raw_sql_write_fails_before_executing_sql(connection, sql):
+    session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+
+    with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
+        session.sql(sql)
+
+    connection.cursor.assert_not_called()
+
+
 def test_embedded_clickhouse_query_and_values():
     chdb = pytest.importorskip("chdb")
     conn = chdb.dbapi.connect()
