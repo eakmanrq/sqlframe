@@ -4,6 +4,7 @@ import fnmatch
 import typing as t
 
 from sqlglot import exp
+from sqlglot.schema import MappingSchema
 
 from sqlframe.base.catalog import Column, Table
 from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
@@ -13,16 +14,25 @@ if t.TYPE_CHECKING:
     from sqlglot.schema import ColumnMapping
 
 
+class _TrinoMappingSchema(MappingSchema):
+    def depth(self) -> int:
+        # A local view may be registered before a three-part server table.
+        return 3
+
+
 class TrinoCatalog(StandaloneCatalog):
-    def __init__(self, sparkSession, schema=None):
+    def __init__(self, sparkSession, schema: t.Optional[MappingSchema] = None):
+        if schema is None:
+            schema = _TrinoMappingSchema()
+        elif not isinstance(schema, _TrinoMappingSchema):
+            schema = _TrinoMappingSchema(
+                schema=schema.mapping,
+                visible=schema.visible,
+                dialect=schema.dialect,
+                normalize=schema.normalize,
+                udf_mapping=schema.udf_mapping,
+            )
         super().__init__(sparkSession, schema)
-        # SQLGlot infers schema depth from the first table. Trino sessions can
-        # register a one-part temp view before a three-part server table.
-        self._schema._depth = 3
-        self._schema._supported_table_args = exp.TABLE_PARTS[:3]
-        find_cache = getattr(self._schema, "_find_cache", None)
-        if find_cache is not None:
-            find_cache.clear()
 
     def add_table(
         self,
