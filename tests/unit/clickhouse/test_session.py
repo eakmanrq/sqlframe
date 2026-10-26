@@ -49,14 +49,14 @@ def test_table_uses_clickhouse_describe_for_schema(connection):
     assert cursor.execute.call_args_list[0].args[0] == 'DESCRIBE TABLE "events"'
 
 
-def test_table_write_fails_before_executing_sql(connection):
+def test_unsupported_table_write_modes_fail_before_executing_sql(connection):
     session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
     df = session.sql("SELECT 1 AS value")
 
-    with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
-        df.write.saveAsTable("events")
-    with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
-        df.write.insertInto("events")
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        df.write.mode("overwrite").saveAsTable("events")
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        df.write.insertInto("events", overwrite=True)
 
     connection.cursor.assert_not_called()
 
