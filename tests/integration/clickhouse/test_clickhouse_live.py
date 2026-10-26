@@ -248,5 +248,9 @@ def test_uint8_schema_and_array_sort(clickhouse_session):
         assert "ARRAY_SORT" in sorted_frame.sql()
         rows = sorted_frame.collect()
         assert [row.asDict() for row in rows] == [{"value": 255, "sorted_items": [1, 2, 3]}]
+
+        nested = frame.select(F.array_sort(F.array_sort("items")).alias("sorted_items"))
+        assert "arraySort(arraySort(" in nested.sql(dialect="clickhouse")
+        assert [row.asDict() for row in nested.collect()] == [{"sorted_items": [1, 2, 3]}]
     finally:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")
