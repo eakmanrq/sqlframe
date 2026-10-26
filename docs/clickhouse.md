@@ -38,6 +38,22 @@ before importing `pyspark.sql`, and call `deactivate()` when finished.
 
 ## Current limits
 
+`spark.table()` and `spark.read.table()` require table and database names whose
+case survives Spark identifier normalization (normally lowercase). Names such
+as `Events`, including backtick-quoted names, raise `UnsupportedOperationError`
+before any query is executed. Use lowercase names, or preserve the original
+case through raw SQL with SQLGlot's case-sensitive marker:
+
+```python
+spark.sql(
+    'SELECT * FROM `Events` /* sqlglot.meta case_sensitive */',
+    qualify=False,
+).collect()
+```
+
+`qualify=False` alone does not disable Spark identifier normalization; the
+marker preserves the table's case.
+
 `spark.table()` requires column names whose case survives Spark identifier
 normalization (normally lowercase). ClickHouse names such as `userId` or `USERID`
 raise `UnsupportedOperationError` during schema discovery, before a SELECT is

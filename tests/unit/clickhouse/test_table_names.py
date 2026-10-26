@@ -6,7 +6,9 @@ from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.clickhouse import ClickHouseSession
 
 
-@pytest.mark.parametrize("table_name", ["Events", "`Events`", "default.Events", "`Analytics`.events"])
+@pytest.mark.parametrize(
+    "table_name", ["Events", "`Events`", "default.Events", "`Analytics`.events"]
+)
 @pytest.mark.parametrize("reader", [False, True])
 def test_table_rejects_names_that_lose_case_before_querying(table_name, reader):
     cursor = Mock()
@@ -33,7 +35,9 @@ def test_mixed_case_table_raw_sql_workaround():
 
         with pytest.raises(UnsupportedOperationError, match="Case-sensitive table names"):
             session.table("`Events`")
-        rows = session.sql('SELECT value FROM "Events"', qualify=False).collect()
+        rows = session.sql(
+            "SELECT value FROM `Events` /* sqlglot.meta case_sensitive */", qualify=False
+        ).collect()
 
         assert [row.asDict() for row in rows] == [{"value": 42}]
     finally:

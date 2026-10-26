@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import typing as t
 
+from sqlglot import exp
+
 from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
 
@@ -14,7 +16,17 @@ if t.TYPE_CHECKING:
 class ClickHouseDataFrameReader(
     _BaseDataFrameReader["ClickHouseSession", "ClickHouseDataFrame", "ClickHouseTable"]
 ):
-    pass
+    def table(self, tableName: str) -> ClickHouseTable:
+        table = exp.to_table(tableName, dialect=self.session.input_dialect)
+        for identifier in table.find_all(exp.Identifier):
+            normalized = self.session.input_dialect.normalize_identifier(identifier.copy())
+            if normalized.name != identifier.name:
+                raise UnsupportedOperationError(
+                    f"ClickHouse table {tableName!r} loses case during Spark identifier "
+                    "normalization. Case-sensitive table names are unsupported; use "
+                    "lowercase table and database names or spark.sql(..., qualify=False)."
+                )
+        return super().table(tableName)
 
 
 class ClickHouseDataFrameWriter(_BaseDataFrameWriter["ClickHouseSession", "ClickHouseDataFrame"]):
