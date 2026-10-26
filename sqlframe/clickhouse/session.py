@@ -57,7 +57,7 @@ class ClickHouseSession(
         target = Dialect.get_or_raise(dialect or self.execution_dialect)
         if target.__class__ is self.execution_dialect.__class__ and isinstance(sql, exp.Query):
             sql = sql.copy()
-            # Spark aggregates return null on empty input, except count which returns zero.
+            # Match Spark's null results for empty sum, avg, min, and max aggregates.
             required_settings = ["aggregate_functions_null_for_empty"]
             if any(
                 join.args.get("side") in {"LEFT", "RIGHT", "FULL"}

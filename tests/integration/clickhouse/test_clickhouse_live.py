@@ -163,13 +163,29 @@ def test_empty_aggregates_follow_spark_null_semantics(clickhouse_session):
             F.min("value").alias("minimum"),
             F.max("value").alias("maximum"),
             F.count("value").alias("number"),
+            F.approx_count_distinct("value").alias("approximate_number"),
         )
         .collect()
     )
 
     assert [row.asDict() for row in rows] == [
-        {"total": None, "average": None, "minimum": None, "maximum": None, "number": 0}
+        {
+            "total": None,
+            "average": None,
+            "minimum": None,
+            "maximum": None,
+            "number": 0,
+            "approximate_number": 0,
+        }
     ]
+    approximate_rows = (
+        session.table(table)
+        .filter(F.col("value") > 100)
+        .groupBy()
+        .agg(F.approx_count_distinct("value").alias("number"))
+        .collect()
+    )
+    assert [row.asDict() for row in approximate_rows] == [{"number": 0}]
 
 
 def test_cast_preserves_null_values(clickhouse_session):
