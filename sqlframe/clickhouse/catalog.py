@@ -42,9 +42,10 @@ class ClickHouseCatalog(
         def spark_type(node):
             if not isinstance(node, exp.DataType):
                 return node
-            # LowCardinality changes storage, not the value's Spark type.
+            # LowCardinality changes storage, not the value's Spark type. transform skips
+            # a replacement's children, so map the wrapped type here.
             if node.this == exp.DataType.Type.LOWCARDINALITY:
-                return node.expressions[0].copy()
+                return node.expressions[0].transform(spark_type)
             # Map ClickHouse value types to types Spark can represent.
             mapping = {
                 exp.DataType.Type.DATETIME64: "TIMESTAMP",
