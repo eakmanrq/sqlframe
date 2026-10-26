@@ -32,8 +32,8 @@ nav:
 theme:
   name: material
   custom_dir: docs/overrides
-  logo: images/mark.svg
-  favicon: images/mark.svg
+  logo: images/frame.svg
+  favicon: images/frame.svg
   font: false
   palette:
     - media: "(prefers-color-scheme: light)"
