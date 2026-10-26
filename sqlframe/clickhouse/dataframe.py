@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.dataframe import (
     BaseDataFrame,
     _BaseDataFrameNaFunctions,
@@ -36,3 +37,11 @@ class ClickHouseDataFrame(
     _na = ClickHouseDataFrameNaFunctions
     _stat = ClickHouseDataFrameStatFunctions
     _group_data = ClickHouseGroupedData
+
+    @property
+    def _typed_columns(self) -> t.List[CatalogColumn]:
+        sql = self.session._to_sql(self.expression)
+        return [
+            self.session.catalog._column_from_describe(row)
+            for row in self.session._collect(f"DESCRIBE ({sql})")
+        ]

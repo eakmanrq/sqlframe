@@ -22,10 +22,30 @@ def test_schema_and_print_schema_describe_query(capsys):
     df.printSchema()
 
     assert capsys.readouterr().out == (
-        "root\n"
-        " |-- name: string (nullable = false)\n"
-        " |-- value: bigint (nullable = true)\n"
+        "root\n |-- name: string (nullable = false)\n |-- value: bigint (nullable = true)\n"
     )
     assert cursor.execute.call_count == 2
     for call in cursor.execute.call_args_list:
         assert call.args[0] == f"DESCRIBE ({session._to_sql(df.expression)})"
+
+
+def test_embedded_clickhouse_schema(capsys):
+    import pytest
+
+    chdb = pytest.importorskip("chdb")
+    connection = chdb.dbapi.connect()
+    try:
+        session = ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+        df = session.sql(
+            "SELECT 'alpha' AS name, CAST(2 AS Nullable(UInt32)) AS value",
+            dialect="clickhouse",
+            qualify=False,
+        )
+
+        assert df.schema.simpleString() == "struct<name:string, value:bigint>"
+        df.printSchema()
+        assert capsys.readouterr().out == (
+            "root\n |-- name: string (nullable = false)\n |-- value: bigint (nullable = true)\n"
+        )
+    finally:
+        connection.close()
