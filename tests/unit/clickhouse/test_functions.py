@@ -1,0 +1,50 @@
+from unittest.mock import Mock
+
+import pytest
+
+from sqlframe.base import functions as base_functions
+from sqlframe.base.exceptions import UnsupportedOperationError
+from sqlframe.clickhouse import ClickHouseSession
+from sqlframe.clickhouse import functions as F
+
+
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("translate", ("value", "a", "b")),
+        ("dayofweek", ("value",)),
+        ("datediff", ("value", "value")),
+        ("to_timestamp", ("value",)),
+        ("unix_timestamp", ("value",)),
+        ("from_unixtime", ("value",)),
+        ("sort_array", ("value",)),
+        ("hash", ("value",)),
+        ("format_number", ("value", 2)),
+        ("monotonically_increasing_id", ()),
+        ("struct", ("value",)),
+        ("to_json", ("value",)),
+        ("sha2", ("value", 256)),
+    ],
+)
+def test_known_unsupported_functions_fail_before_query(name, args):
+    connection = Mock()
+    ClickHouseSession.builder.config("sqlframe.conn", connection).getOrCreate()
+    original_metadata = list(getattr(base_functions, name).unsupported_engines)
+
+    with pytest.raises(UnsupportedOperationError, match=rf"{name}.*ClickHouse"):
+        getattr(F, name)(*args)
+
+    connection.cursor.assert_not_called()
+    assert getattr(base_functions, name).unsupported_engines == original_metadata
+    assert name not in vars(F)
+
+
+def test_supported_functions_remain_available():
+    ClickHouseSession.builder.getOrCreate()
+    assert F.upper is base_functions.upper
+    assert F.upper("value").sql(dialect="clickhouse")
+
+
+def test_unknown_function_is_an_attribute_error():
+    with pytest.raises(AttributeError):
+        getattr(F, "not_a_sqlframe_function")
