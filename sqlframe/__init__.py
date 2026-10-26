@@ -16,6 +16,7 @@ if t.TYPE_CHECKING:
 
 ENGINE_TO_PREFIX = {
     "bigquery": "BigQuery",
+    "clickhouse": "ClickHouse",
     "duckdb": "DuckDB",
     "postgres": "Postgres",
     "redshift": "Redshift",

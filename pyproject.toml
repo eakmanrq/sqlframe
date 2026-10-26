@@ -34,6 +34,9 @@ bigquery = [
     "google-cloud-bigquery[pandas]>=3,<4",
     "google-cloud-bigquery-storage>=2,<3",
 ]
+clickhouse = [
+    "clickhouse-connect>=0.13,<2",
+]
 databricks = [
     "databricks-sql-connector[pyarrow]>=3.6,<5",
 ]

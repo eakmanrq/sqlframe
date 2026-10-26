@@ -37,6 +37,14 @@ Run DataFrame pipelines directly on your Postgres database.
 </div>
 <div class="sf-engine-card" markdown="1">
 
+## [ClickHouse →](clickhouse.md)
+
+Run DataFrame queries on a ClickHouse server.
+
+`pip install "sqlframe[clickhouse]"`
+</div>
+<div class="sf-engine-card" markdown="1">
+
 ## [Databricks →](databricks.md)
 
 Connect to a Databricks SQL warehouse.
