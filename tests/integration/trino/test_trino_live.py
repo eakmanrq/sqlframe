@@ -163,6 +163,21 @@ def test_create_and_append_table(trino_session):
     ]
 
 
+def test_explicit_append_overrides_writer_mode(trino_session):
+    session, orders = trino_session
+    table = orders.rsplit(".", 1)[0] + ".written"
+    session.createDataFrame([(1, "a")], ["id", "label"]).write.saveAsTable(table)
+
+    session.createDataFrame([(2, "b")], ["id", "label"]).write.mode("overwrite").saveAsTable(
+        table, mode="append"
+    )
+
+    assert session.read.table(table).orderBy("id").collect() == [
+        Row(id=1, label="a"),
+        Row(id=2, label="b"),
+    ]
+
+
 def test_overwrite_is_rejected_without_changing_table(trino_session):
     session, orders = trino_session
     table = orders.rsplit(".", 1)[0] + ".written"

@@ -7,7 +7,7 @@ from sqlframe.standalone.readwriter import StandaloneDataFrameWriter
 
 class TrinoDataFrameWriter(StandaloneDataFrameWriter):
     def insertInto(self, tableName: str, overwrite: bool | None = None):
-        if overwrite or (self._mode or "").lower() == "overwrite":
+        if overwrite:
             raise UnsupportedOperationError("Trino insertInto overwrite is not supported")
         return super().insertInto(tableName, overwrite=overwrite)
 
