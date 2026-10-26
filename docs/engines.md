@@ -73,7 +73,7 @@ Community-maintained integration for Amazon Redshift.
 
 Generate Trino SQL and collect queries through a supplied DB-API connection, with explicit table schemas.
 
-`pip install sqlframe trino`
+`pip install "sqlframe[trino]"`
 </div>
 </div>
 

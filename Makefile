@@ -16,6 +16,9 @@ fast-test:
 local-test:
 	pytest -n auto -m "fast or local" --reruns 5
 
+trino-test:
+	bash scripts/test-trino.sh
+
 %-test:
 	pytest -n auto -m "${*}"
 
