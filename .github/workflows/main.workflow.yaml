@@ -8,6 +8,7 @@ on:
       - 'tests/**'
       - 'Makefile'
       - 'pyproject.toml'
+      - 'scripts/test-trino.sh'
   pull_request:
     types:
     - synchronize
@@ -18,6 +19,7 @@ on:
     - 'tests/**'
     - 'Makefile'
     - 'pyproject.toml'
+    - 'scripts/test-trino.sh'
     - 'uv.lock'
 jobs:
   run-tests:
