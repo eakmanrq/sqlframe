@@ -216,6 +216,28 @@ def test_type_compatibility_at_insert_boundary(writer, source, target, allowed):
         assert writes(cursor) == []
 
 
+@pytest.mark.parametrize("method", ["insertInto", "saveAsTable"])
+@pytest.mark.parametrize("dtype", ['row("unknown" integer)', 'row("a""unknown" integer)'])
+def test_quoted_unknown_field_names_allow_writes(writer, method, dtype):
+    df_writer, cursor = writer
+    cursor.source = cursor.target = [("value", dtype)]
+    cursor.exists = method == "insertInto"
+    getattr(df_writer, method)("target")
+    assert len(writes(cursor)) == 1
+
+
+@pytest.mark.parametrize("metadata", ["source", "target"])
+@pytest.mark.parametrize(
+    "dtype", ["unknown", "array(unknown)", 'row("unknown" unknown)', 'row("a" array(UNKNOWN))']
+)
+def test_unknown_types_still_reject_writes(writer, metadata, dtype):
+    df_writer, cursor = writer
+    setattr(cursor, metadata, [("value", dtype)])
+    with pytest.raises(UnsupportedOperationError, match="unknown column types"):
+        df_writer.insertInto("target")
+    assert writes(cursor) == []
+
+
 @pytest.mark.parametrize("target", [[], [("id", "integer"), ("ID", "integer")]])
 def test_invalid_target_metadata_does_not_write(writer, target):
     df_writer, cursor = writer
