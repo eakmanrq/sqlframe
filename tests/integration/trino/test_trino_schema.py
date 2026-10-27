@@ -211,7 +211,7 @@ def test_native_source_casts_survive_public_sql_optimization(native_session):
         "UUID '123e4567-e89b-12d3-a456-426614174000' AS u, CAST('abc' AS char(5)) AS c"
     )
     query = session.read.table(table).select(
-        *(F.col(column).cast("varchar").alias(column) for column in ["j", "u", "c"])
+        *(F.col(column).cast("string").alias(column) for column in ["j", "u", "c"])
     )
 
     for optimize in [False, True]:
