@@ -130,6 +130,15 @@ def test_conf_get_uses_duckdb_connection_default():
     assert session.conf.get("spark.sql.session.timeZone") == result[0]
 
 
+def test_conf_get_does_not_leave_unfinished_result():
+    session = DuckDBSession()
+    df = session.createDataFrame([(1,)], schema=["a"])
+
+    session.conf.get("spark.sql.session.timeZone")
+
+    assert df.toArrow().to_pylist() == [{"a": 1}]
+
+
 def test_conf_set_changes_duckdb_session_timezone():
     import duckdb
 
