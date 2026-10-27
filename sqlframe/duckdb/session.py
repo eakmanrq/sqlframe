@@ -41,7 +41,7 @@ class _DuckDBRuntimeConfig:
     def get(self, key: str) -> str:
         if key != _SPARK_TIMEZONE_KEY:
             raise NotImplementedError(f"Unsupported Spark session config: {key}")
-        return self._session._conn.execute("SELECT current_setting('TimeZone')").fetchone()[0]
+        return self._session._conn.execute("SELECT current_setting('TimeZone')").fetchall()[0][0]
 
     def set(self, key: str, value: str) -> None:
         if key != _SPARK_TIMEZONE_KEY:
