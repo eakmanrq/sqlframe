@@ -76,10 +76,17 @@ Connectors requiring explicit creation properties need tables provisioned outsid
 this writer. In particular, Trino's
 [`CREATE TABLE AS`](https://trino.io/docs/current/sql/create-table-as.html)
 replacement support varies across connectors, so this writer does not replace
-tables. Preflight does not establish a transaction, validate row values or
+tables. Append uses plain `INSERT`, so connector session or catalog settings such
+as Hive's
+[`insert_existing_partitions_behavior=OVERWRITE`](https://trino.io/docs/current/connector/hive.html#hive-general-configuration-properties)
+can still overwrite existing partitions; the writer does not inspect these settings.
+Preflight does not establish a transaction, validate row values or
 nullability constraints, or prevent concurrent schema changes. Runtime failures
 can still occur; inspect connector-specific table and data state before retrying
-a failed write, since retries may duplicate rows. Memory tables are volatile.
+a failed write, since retries may duplicate rows. After a failed write to a memory
+table, drop and recreate the table manually, as the
+[memory connector limitations](https://trino.io/docs/current/connector/memory.html#limitations)
+require because the table is left in an undefined state. Memory tables are volatile.
 
 Connected sessions can also use `session.sql()` to query existing tables without
 registering their schemas first. Live tests cover SQL queries with CTEs, joins,
