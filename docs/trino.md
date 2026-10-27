@@ -157,9 +157,13 @@ Trino type, including when nested in a supported container. These include `TIME`
 (with or without time zone), timestamps with precision above six, intervals,
 anonymous `ROW` fields, `IPADDRESS`, sketches and other plugin types, and `unknown`
 (for example, an untyped `NULL`). Cast to a supported type or give ROW fields names
-explicitly before requesting a schema. These mappings describe metadata only;
-`collect()` still returns the Trino Python client's native values, without added
-coercion (for example, a UUID value can remain a Python `UUID`).
+explicitly before requesting a schema. These mappings affect metadata only and
+add no new conversions to `collect()`. Existing shared collection conversions
+still apply: datetime timezone information is removed without converting the
+wall-clock value to UTC, and top-level `Decimal` values become Python floats.
+Other client values, such as Python `UUID` objects, can remain unchanged. Schema
+types therefore do not guarantee identical Python value types or lossless
+collection of decimal precision and timestamp instants.
 
 Tables containing types unsupported by Spark schema reporting still register, so
 DataFrame queries can select supported columns or cast other columns to supported
