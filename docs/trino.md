@@ -108,11 +108,75 @@ For SQL generation alone, construct `TrinoSession()` without a connection and
 register each table schema with `session.catalog.add_table()` before reading it.
 Calling `collect()` without a connection raises a clear error.
 
+## Schema and type discovery
+
+With a connection to Trino 484, `df.schema` returns a Spark-compatible `StructType`
+and `df.printSchema()` prints the schema. Both use
+[`DESCRIBE OUTPUT (query)`](https://github.com/trinodb/trino/blob/484/docs/src/main/sphinx/sql/describe-output.md)
+on the finalized Trino query, including projections, aggregates, CTEs, and local
+temporary views. This analyzes the query without executing its SELECT, fetching
+its result rows, or creating a server-side table/view. Empty results still have a
+schema. Each call requests metadata from the server; normal analysis and permission
+errors propagate. Older Trino versions without the inline syntax are not covered.
+
+The schema describes the generated SQL. The default Spark input dialect can
+translate native Trino casts before execution. When using native Trino type
+literals, configure `TrinoSession.builder.config("sqlframe.input.dialect", "trino")`
+before `getOrCreate()` so parsing and planning also use Trino syntax.
+
+Schema discovery requires a connection even when table types were registered
+explicitly for offline SQL generation. `SHOW COLUMNS` continues to expose native
+Trino type strings through `catalog.listColumns()`; table registration parses
+those types as Trino before mapping them into the planner.
+
+The supported mappings apply recursively inside `ARRAY`, `MAP`, and named `ROW`
+fields:
+
+| Trino type | Spark schema type |
+| --- | --- |
+| `BOOLEAN` | `BooleanType` |
+| `TINYINT`, `SMALLINT`, `INTEGER`, `BIGINT` | `ByteType`, `ShortType`, `IntegerType`, `LongType` |
+| `REAL`, `DOUBLE` | `FloatType`, `DoubleType` |
+| `DECIMAL(p, s)` | `DecimalType(p, s)` |
+| `VARCHAR`, `VARCHAR(n)`, `CHAR(n)` | `StringType` (length constraints are not retained) |
+| `VARBINARY` | `BinaryType` |
+| `DATE` | `DateType` |
+| `TIMESTAMP(p)`, with `p <= 6` | `TimestampNTZType` |
+| `TIMESTAMP(p) WITH TIME ZONE`, with `p <= 6` | `TimestampType` (instant; zone identifier is not retained) |
+| `JSON`, `UUID` | `StringType` (textual schema representation) |
+| `ARRAY`, `MAP`, named `ROW` | `ArrayType`, `MapType`, `StructType` |
+
+Trino's metadata does not report nullability here. All fields and nested values
+are conservatively nullable; this is not a claim about source constraints. ROW
+field names are preserved in `schema`. The shared `printSchema()` formatter
+lowercases type text, including nested field names.
+
+Unsupported types raise `UnsupportedOperationError` naming the column and native
+Trino type, including when nested in a supported container. These include `TIME`
+(with or without time zone), timestamps with precision above six, intervals,
+anonymous `ROW` fields, `IPADDRESS`, sketches and other plugin types, and `unknown`
+(for example, an untyped `NULL`). Cast to a supported type or give ROW fields names
+explicitly before requesting a schema. These mappings describe metadata only;
+`collect()` still returns the Trino Python client's native values, without added
+coercion (for example, a UUID value can remain a Python `UUID`).
+
+Unsupported types also fail during automatic table registration. To query only
+supported columns or cast an unsupported column, use `session.sql(..., qualify=False)`
+to bypass automatic source-table registration.
+
+## Caching
+
+Trino has no compatible backing operation for Spark DataFrame caching.
+`df.cache()` and `df.persist()` raise `UnsupportedOperationError` immediately,
+for connected and offline sessions, without changing the query or emitting
+`CACHE LAZY TABLE` SQL. Materializing data through a connector is a separate
+operation with connector-specific semantics.
+
 ## Current limits
 
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
 - This is a bundled engine rather than a third-party plugin package. The current activation registry is fixed to bundled engines.
-- Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover the query, catalog, and write paths described above. Complex types, engine-specific functions, and broad PySpark API parity remain unverified.
+- Unit tests cover SQL generation, DB-API query collection, schema mappings and rejection cases, and the cache boundary. Live Trino 484 tests cover the query, catalog, write, and schema paths described above, including nested type metadata. General complex-value operations, engine-specific functions, and broad PySpark API parity remain unverified.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
 that this session reuses; its method list is not a Trino compatibility guarantee.
