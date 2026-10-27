@@ -155,3 +155,10 @@ def test_collection_functions_have_distinct_default_names(session):
         "collect_list__v__",
         "collect_set__v__",
     ]
+
+
+def test_regexp_extract_keeps_public_default_name(session):
+    frame = session.createDataFrame([("ab",)], ["value"])
+    query = frame.select(F.regexp_extract("value", "(a)", 1))
+    assert query.columns == ["regexp_extract__value__"]
+    assert 'AS "regexp_extract__value__"' in query.select("regexp_extract__value__").sql()

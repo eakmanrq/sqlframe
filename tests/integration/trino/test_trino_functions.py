@@ -254,3 +254,26 @@ def test_unaliased_function_outputs_remain_distinct(trino_session):
         {"greatest__a__": 1, "greatest__b__": 0, "least__a__": 1, "least__b__": 3},
         {"greatest__a__": 1, "greatest__b__": 2, "least__a__": 1, "least__b__": 2},
     ]
+
+
+def test_unaliased_regexp_extract_remains_selectable(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, "ab"), (2, "zzz"), (3, None)], ["id", "value"])
+    query = frame.select(
+        "id",
+        F.regexp_extract("value", "(a)", 1),
+        F.when(F.col("value").isNull(), "null").otherwise("text"),
+    )
+    assert [row.asDict() for row in query.orderBy("id").collect()] == [
+        {"id": 1, "regexp_extract__value__": "a", "when__value__": "text"},
+        {"id": 2, "regexp_extract__value__": "", "when__value__": "text"},
+        {"id": 3, "regexp_extract__value__": None, "when__value__": "null"},
+    ]
+    selected = query.select("id", "regexp_extract__value__").orderBy("id")
+    assert selected.collect() == [
+        Row(id=1, regexp_extract__value__="a"),
+        Row(id=2, regexp_extract__value__=""),
+        Row(id=3, regexp_extract__value__=None),
+    ]
+    session._cur.execute(selected.sql())
+    assert session._cur.fetchall() == [[1, "a"], [2, ""], [3, None]]

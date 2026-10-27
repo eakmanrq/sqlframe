@@ -121,7 +121,11 @@ def least(*cols: _ColumnOrName) -> _Column:
 def regexp_extract(str: _ColumnOrName, pattern: str, idx: _t.Optional[int] = None) -> _Column:
     source = _Column.ensure_col(str)
     result = _base.regexp_extract(source, pattern, 1 if idx is None else idx)
-    return _base.when(source.isNull(), None).otherwise(_base.coalesce(result, _base.lit("")))
+    return (
+        _base.when(source.isNull(), None)
+        .otherwise(_base.coalesce(result, _base.lit("")))
+        .alias(result.expression.alias)
+    )
 
 
 @_meta()
