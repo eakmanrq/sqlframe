@@ -1,5 +1,0 @@
-{
-  "setup": ["make install-dev"],
-  "teardown": [],
-  "run": ["make docs-serve"]
-}

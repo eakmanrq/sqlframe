@@ -16,9 +16,9 @@ SQLFrame wraps Spark's DataFrame API and uses sqlglot to transpile SQL across di
 
 ### 1. Update the Dependency
 
-Update the sqlglot version constraint in `setup.py` and install:
+Update the sqlglot version constraint in `pyproject.toml` and sync the lockfile and dependencies:
 ```bash
-uv pip install -e ".[dev]"
+uv sync --all-extras
 ```
 
 ### 2. Check for API Removals
@@ -32,7 +32,7 @@ sqlglot occasionally removes helpers from `sqlglot.helper`. Common removals:
 Check what `Func` subclasses were added in the new sqlglot version:
 ```bash
 # Compare expression classes between versions
-python -c "import sqlglot.expressions as e; print([x for x in dir(e) if not x.startswith('_')])"
+uv run python -c "import sqlglot.expressions as e; print([x for x in dir(e) if not x.startswith('_')])"
 ```
 
 Also check the sqlglot CHANGELOG or git log for the release.
@@ -72,7 +72,7 @@ Key rules:
 - A second positional column argument typically uses `expression=col`
 - Remove engines from `unsupported_engines` that sqlglot now handles natively — **verify by transpiling test SQL** before assuming it works:
   ```bash
-  python -c "from sqlglot import transpile; print(transpile('SELECT GETBIT(x, 1)', read='spark', write='duckdb'))"
+  uv run python -c "from sqlglot import transpile; print(transpile('SELECT GETBIT(x, 1)', read='spark', write='duckdb'))"
   ```
 - **Do not assume an engine is supported just because sqlglot has an expression class for it.** The dialect's transpiler may generate incorrect or unsupported SQL (e.g., `get_bit` on DuckDB only works on `BIT` type, not `BIGINT`). Always run integration tests to confirm.
 
@@ -137,7 +137,7 @@ If a function was marked `@meta(unsupported_engines="*")` (unsupported everywher
 
 **Verify transpilation for every dialect before marking as supported.** Some functions have optional arguments (e.g., `timezone` in `make_timestamp`) that sqlglot may transpile incorrectly for certain dialects. Use:
 ```bash
-python -c "
+uv run python -c "
 from sqlglot import transpile
 # Test both with and without optional args
 print(transpile('SELECT MAKE_TIMESTAMP(y, m, d, h, mi, s)', read='spark', write='duckdb'))
@@ -161,7 +161,7 @@ uv run pytest tests/unit/standalone/test_functions.py::test_bit_get -xvs
 ### 7. Verify Integration Tests Still Pass
 
 ```bash
-uv run pytest tests/integration/test_functions.py -x
+uv run pytest tests/integration/engines/test_int_functions.py -x
 ```
 
 Integration tests catch behavioral mismatches that unit tests miss (unit tests only check SQL output, not execution results). Common integration failures to watch for:
@@ -173,9 +173,9 @@ Integration tests catch behavioral mismatches that unit tests miss (unit tests o
 
 ### 8. Update Dialect Documentation
 
-Update `docs/<dialect>.md` for each dialect that gained support for a function. The docs use alphabetically-sorted bullet lists — omitted functions are unsupported, so only add entries for functions that are now supported.
+Update `docs/reference/<dialect>.md` for each dialect that gained support for a function. The docs use alphabetically-sorted bullet lists — omitted functions are unsupported, so only add entries for functions that are now supported.
 
-**Which files to update:** `bigquery.md`, `duckdb.md`, `postgres.md`, `snowflake.md` (Spark and Standalone use a blanket statement; Databricks and Redshift have no function lists).
+**Which files to update:** `docs/reference/bigquery.md`, `docs/reference/duckdb.md`, `docs/reference/postgres.md`, `docs/reference/snowflake.md` (Spark and Standalone use a blanket statement; Databricks and Redshift have no function lists).
 
 **How to determine which dialects to add a function to:** Check the function's `@meta(unsupported_engines=...)` decorator. If a dialect is not in that list, it's supported and should appear in the docs.
 
@@ -207,9 +207,9 @@ Add dialect-specific caveats as indented sub-bullets when behavior differs from 
 
 To find the correct expression class and its field names:
 ```bash
-python -c "import sqlglot.expressions as e; help(e.ArrayExcept)"
+uv run python -c "import sqlglot.expressions as e; help(e.ArrayExcept)"
 # or
-python -c "from sqlglot import exp; import inspect; print(inspect.getsource(exp.TimestampFromParts))"
+uv run python -c "from sqlglot import exp; import inspect; print(inspect.getsource(exp.TimestampFromParts))"
 ```
 
 The `arg_types` dict on each expression class lists all valid keyword arguments.
