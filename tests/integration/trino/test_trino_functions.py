@@ -1,0 +1,188 @@
+"""Spark function results against the pinned Trino server."""
+
+import datetime
+
+import pytest
+
+from sqlframe.base.types import Row
+from sqlframe.trino import Window
+from sqlframe.trino import functions as F
+from tests.integration.trino.test_trino_live import trino_session as trino_session
+
+pytestmark = pytest.mark.trino
+
+
+def test_array_sort_and_sort_array_null_placement(trino_session):
+    session, _ = trino_session
+    frame = session.sql(
+        "SELECT * FROM (VALUES (1, ARRAY[3, NULL, 1, 3, NULL]), "
+        "(2, CAST(NULL AS ARRAY(INTEGER))), (3, CAST(ARRAY[] AS ARRAY(INTEGER)))) t(id, items)",
+        dialect="trino",
+        qualify=False,
+    )
+    assert frame.select(
+        "id",
+        F.array_sort("items").alias("native"),
+        F.sort_array("items").alias("ascending"),
+        F.sort_array("items", False).alias("descending"),
+        F.array_sort(F.sort_array("items")).alias("nested"),
+    ).orderBy("id").collect() == [
+        Row(
+            id=1,
+            native=[1, 3, 3, None, None],
+            ascending=[None, None, 1, 3, 3],
+            descending=[3, 3, 1, None, None],
+            nested=[1, 3, 3, None, None],
+        ),
+        Row(id=2, native=None, ascending=None, descending=None, nested=None),
+        Row(id=3, native=[], ascending=[], descending=[], nested=[]),
+    ]
+
+
+def test_array_sort_comparator_and_strings(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(["z", None, "a", "a"],)], ["items"])
+    comparator = lambda left, right: (
+        F.when(left.isNull(), 1)
+        .when(right.isNull(), -1)
+        .when(left < right, 1)
+        .when(left > right, -1)
+        .otherwise(0)
+    )
+    assert frame.select(
+        F.array_sort("items", comparator).alias("custom"), F.sort_array("items").alias("ascending")
+    ).collect() == [Row(custom=["z", "a", "a", None], ascending=[None, "a", "a", "z"])]
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_collection_aggregates_nulls_duplicates_and_empty_input(trino_session, empty):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, 3), (1, None), (1, 1), (1, 3), (2, None)], ["g", "v"])
+    if empty:
+        frame = frame.where(F.col("g") < 0)
+        result = frame.agg(
+            F.collect_list("v").alias("items"), F.collect_set("v").alias("unique_items")
+        ).collect()
+        assert result == [Row(items=[], unique_items=[])]
+    else:
+        assert frame.groupBy("g").agg(
+            F.array_sort(F.collect_list("v")).alias("items"),
+            F.array_sort(F.collect_set("v")).alias("unique_items"),
+        ).orderBy("g").collect() == [
+            Row(g=1, items=[1, 3, 3], unique_items=[1, 3]),
+            Row(g=2, items=[], unique_items=[]),
+        ]
+
+
+def test_collection_windows_include_empty_frames(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, 3), (2, None), (3, 1)], ["id", "v"])
+    window = Window.orderBy("id").rowsBetween(1, 1)
+    assert frame.select(
+        "id",
+        F.collect_list("v").over(window).alias("items"),
+        F.collect_set("v").over(window).alias("unique_items"),
+    ).orderBy("id").collect() == [
+        Row(id=1, items=[], unique_items=[]),
+        Row(id=2, items=[1], unique_items=[1]),
+        Row(id=3, items=[], unique_items=[]),
+    ]
+
+
+def test_greatest_least_skip_nulls(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, None, 3), (2, 4, None), (3, None, None)], ["id", "a", "b"])
+    assert frame.select(
+        "id", F.greatest("a", "b").alias("hi"), F.least("a", "b").alias("lo")
+    ).orderBy("id").collect() == [
+        Row(id=1, hi=3, lo=3),
+        Row(id=2, hi=4, lo=4),
+        Row(id=3, hi=None, lo=None),
+    ]
+
+
+def test_regexp_extract_groups_missing_matches_and_null(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, "ab"), (2, "zzz"), (3, "b"), (4, None)], ["id", "value"])
+    assert frame.select(
+        "id",
+        F.regexp_extract("value", "(a)?(b)", 0).alias("whole"),
+        F.regexp_extract("value", "(a)?(b)", 1).alias("first"),
+        F.regexp_extract("value", "(a)?(b)", 2).alias("second"),
+        F.regexp_extract("value", "(a)?(b)").alias("default_group"),
+    ).orderBy("id").collect() == [
+        Row(id=1, whole="ab", first="a", second="b", default_group="a"),
+        Row(id=2, whole="", first="", second="", default_group=""),
+        Row(id=3, whole="b", first="", second="b", default_group=""),
+        Row(id=4, whole=None, first=None, second=None, default_group=None),
+    ]
+
+
+@pytest.mark.parametrize("limit", [None, 0, -1])
+def test_regex_split_preserves_trailing_empty_fields(trino_session, limit):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, "a,b;"), (2, ""), (3, None)], ["id", "value"])
+    assert frame.select("id", F.split("value", "[,;]", limit).alias("parts")).orderBy(
+        "id"
+    ).collect() == [Row(id=1, parts=["a", "b", ""]), Row(id=2, parts=[""]), Row(id=3, parts=None)]
+
+
+def test_existing_date_string_null_order_and_join_contracts(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame(
+        [(1, "2024-02-29", "AbC"), (None, "2024-03-01", None)], ["id", "day", "text"]
+    )
+    assert frame.select(
+        "id",
+        F.to_date("day").alias("date"),
+        F.date_format("day", "yyyy-MM-dd").alias("formatted"),
+        F.lower("text").alias("lowered"),
+        F.to_timestamp("day", "yyyy-MM-dd").alias("timestamp"),
+    ).orderBy("id").collect() == [
+        Row(
+            id=None,
+            date=datetime.date(2024, 3, 1),
+            formatted="2024-03-01",
+            lowered=None,
+            timestamp=datetime.datetime(2024, 3, 1),
+        ),
+        Row(
+            id=1,
+            date=datetime.date(2024, 2, 29),
+            formatted="2024-02-29",
+            lowered="abc",
+            timestamp=datetime.datetime(2024, 2, 29),
+        ),
+    ]
+    other = session.createDataFrame([(1, "matched"), (2, "other")], ["id", "label"])
+    assert frame.join(other, "id", "left").select("id", "label").orderBy("id").collect() == [
+        Row(id=None, label=None),
+        Row(id=1, label="matched"),
+    ]
+    assert frame.where(F.lit(False)).agg(
+        F.sum("id").alias("total"), F.count("id").alias("count")
+    ).collect() == [Row(total=None, count=0)]
+
+
+def test_optimized_sql_preserves_function_mappings(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(3,), (None,), (1,), (3,)], ["v"])
+    query = frame.agg(
+        F.sort_array(F.collect_list("v")).alias("items"),
+        F.sort_array(F.collect_set("v"), False).alias("unique_items"),
+    )
+    session._cur.execute(query.sql())
+    assert session._cur.fetchall() == [[[1, 3, 3], [3, 1]]]
+
+    scalar_query = frame.select(
+        F.greatest("v", F.lit(2)).alias("hi"),
+        F.regexp_extract(F.lit("ab"), "(a)(b)", 1).alias("match"),
+        F.split(F.lit("a,b,"), ",", -1).alias("parts"),
+    ).orderBy("hi")
+    session._cur.execute(scalar_query.sql())
+    assert session._cur.fetchall() == [
+        [2, "a", ["a", "b", ""]],
+        [2, "a", ["a", "b", ""]],
+        [3, "a", ["a", "b", ""]],
+        [3, "a", ["a", "b", ""]],
+    ]

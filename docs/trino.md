@@ -178,6 +178,47 @@ for connected and offline sessions, without changing the query or emitting
 `CACHE LAZY TABLE` SQL. Materializing data through a connector is a separate
 operation with connector-specific semantics.
 
+## Function compatibility
+
+The Trino function module has a bounded set of Spark compatibility mappings,
+verified with Trino 484. Availability of other imported Spark functions is not
+an assertion of parity.
+
+| API | Verified behavior |
+| --- | --- |
+| `array_sort` | Ascending with null elements last; custom two-argument comparators are passed to Trino. |
+| `sort_array` | Ascending with nulls first (default), descending with nulls last; preserves duplicates, empty arrays, and null arrays. Numeric and string elements are tested. |
+| `collect_list`, `collect_set` | Omit null inputs and return an empty array for empty/all-null input, including window frames. List duplicates are retained; set duplicates are removed. Result order is unspecified. |
+| `greatest`, `least` | Skip null arguments and return null when all arguments are null, using array extrema over the non-null values. Arguments must share a Trino-compatible orderable type. |
+| `regexp_extract` | Group zero returns the whole match; explicit capture groups are supported. SQLFrame's optional omitted index selects group one. Missing matches and unmatched optional groups return an empty string; null input stays null. |
+| `split` | Regex splitting with omitted or nonpositive limits, including trailing empty fields and null input. A positive limit raises `UnsupportedOperationError`. |
+
+Live tests also cover `lower`, ISO date parsing with `to_date`, and
+`date_format`/formatted `to_timestamp` with `yyyy-MM-dd`. These are narrow
+examples, not complete Spark datetime pattern, invalid-input, timezone, or ANSI
+mode compatibility. Unformatted `to_timestamp` raises
+`UnsupportedOperationError` because its shared mapping emits `TIMESTAMPLTZ`,
+which is not a Trino type. Use an explicit format for the tested parsing path,
+or a native Trino timestamp cast when that is the desired contract.
+
+`get_json_object`, `from_json`, `to_json`, and `json_tuple` raise
+`UnsupportedOperationError` before query execution. The shared JSON extraction
+mapping returns JSON rather than Spark's unquoted string and permissive parsing
+results; Spark's `FROM_JSON` and `JSON_TUPLE` functions are absent in Trino.
+Trino JSON casts/formatting also do not implement Spark's default null-field
+omission and JSON options. Use native Trino JSON SQL explicitly when appropriate;
+these guards do not claim a replacement with Spark semantics.
+
+These mappings and guards apply to Python calls through
+`sqlframe.trino.functions` (also through PySpark imports after activation).
+Raw `expr()`/`session.sql()` expressions use SQLGlot translation and do not pass
+through these Python wrappers. Complex element ordering/equality, regex
+zero-width/empty patterns and dialect differences, other timestamp helpers, and
+the remaining function surface have not been validated for Spark parity.
+Existing SQL generation handles Spark's default ascending nulls-first row order,
+null extension in left joins, and empty `sum`/`count` results in the live cases;
+this does not establish general join or aggregate parity.
+
 ## Current limits
 
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
