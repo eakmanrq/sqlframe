@@ -58,12 +58,15 @@ To inspect a transformation's SQL, call `df.sql(optimize=True)`. Follow the [qui
 | [BigQuery](https://sqlframe.readthedocs.io/en/latest/bigquery/) | `pip install "sqlframe[bigquery]"` |
 | [Snowflake](https://sqlframe.readthedocs.io/en/latest/snowflake/) | `pip install "sqlframe[snowflake]"` |
 | [Postgres](https://sqlframe.readthedocs.io/en/latest/postgres/) | `pip install "sqlframe[postgres]"` |
-| [ClickHouse](https://sqlframe.readthedocs.io/en/latest/clickhouse/) | `pip install "sqlframe[clickhouse]"` |
+| [ClickHouse (preview)](https://sqlframe.readthedocs.io/en/latest/clickhouse/) | `pip install "sqlframe[clickhouse]"` |
 | [Databricks](https://sqlframe.readthedocs.io/en/latest/databricks/) | `pip install "sqlframe[databricks]"` |
 | [Spark](https://sqlframe.readthedocs.io/en/latest/spark/) | `pip install "sqlframe[spark]"` |
 | [Standalone](https://sqlframe.readthedocs.io/en/latest/standalone/) | `pip install sqlframe` |
+| [Trino (preview)](https://sqlframe.readthedocs.io/en/latest/trino/) | `pip install "sqlframe[trino]"` |
 
 Standalone sessions generate SQL without a database connection. For local Parquet support, install `sqlframe[standalone]`.
+
+ClickHouse and Trino are preview integrations; see their guides for supported workflows and limits.
 
 Community integrations: [GizmoSQL](https://github.com/gizmodata/sqlframe-gizmosql) · [Redshift](https://sqlframe.readthedocs.io/en/latest/redshift/) (`pip install "sqlframe[redshift]"`).
 

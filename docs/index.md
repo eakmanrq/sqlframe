@@ -53,8 +53,10 @@ GROUP BY
 [BigQuery](bigquery.md)
 [Snowflake](snowflake.md)
 [Postgres](postgres.md)
+[ClickHouse (preview)](clickhouse.md)
 [Databricks](databricks.md)
 [Spark](spark.md)
+[Trino (preview)](trino.md)
 </div>
 
 <section class="sf-benefits" markdown="1">
