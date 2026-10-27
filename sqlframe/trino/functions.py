@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect as _inspect
 import typing as _t
 
 from sqlglot import exp as _exp
@@ -18,20 +19,34 @@ if _t.TYPE_CHECKING:
 
 
 def _lambda_from_func(func: _t.Callable) -> _exp.Lambda:
-    result = _base._get_lambda_from_func(func)
-    names = {variable.name for variable in result.expressions}
-    # SQLGlot models bound lambda references as identifiers, not table columns.
-    result.set(
-        "this",
-        result.this.transform(
-            lambda node: (
-                node.this.copy()
-                if isinstance(node, _exp.Column) and not node.table and node.name in names
-                else node
-            )
-        ),
-    )
-    return result
+    # Mark the actual parameter identifiers before invoking the callable, so
+    # captured columns and nested lambda scopes cannot be mistaken for them.
+    parameters = [
+        _Column(_exp.to_identifier(name, quoted=False))
+        for name in _inspect.signature(func).parameters
+    ]
+    marker = "trino_lambda_parameter"
+    for parameter in parameters:
+        parameter.column_expression.meta[marker] = id(parameter)
+    body = func(*parameters).column_expression
+    captured_names = {column.name for column in body.find_all(_exp.Column)}
+    used_names = captured_names | {parameter.column_expression.name for parameter in parameters}
+    names = {}
+    variables = []
+    for parameter in parameters:
+        name = parameter.column_expression.name
+        if name in captured_names:
+            suffix = 1
+            while f"{name}_{suffix}" in used_names:
+                suffix += 1
+            name = f"{name}_{suffix}"
+        used_names.add(name)
+        names[id(parameter)] = name
+        variables.append(_exp.to_identifier(name, quoted=False))
+    for identifier in body.find_all(_exp.Identifier):
+        if identifier.meta.get(marker) in names:
+            identifier.set("this", names[identifier.meta.pop(marker)])
+    return _exp.Lambda(this=body, expressions=variables)
 
 
 def _without_nulls(col: _Column) -> _Column:
@@ -70,28 +85,36 @@ def sort_array(col: _ColumnOrName, asc: _t.Optional[bool] = None) -> _Column:
             .otherwise(0)
         )
 
-    return array_sort(col, compare)
+    return _Column(array_sort(col, compare).column_expression)
 
 
 @_meta()
 def collect_list(col: _ColumnOrName) -> _Column:
     # Filter the resulting array so the same expression also supports windows.
-    return _base.coalesce(_without_nulls(_base.collect_list(col)), _base.array([]))
+    aggregate = _base.collect_list(col)
+    return _base.coalesce(_without_nulls(aggregate), _base.array([])).alias(
+        aggregate.expression.alias
+    )
 
 
 @_meta()
 def collect_set(col: _ColumnOrName) -> _Column:
-    return _base.coalesce(_without_nulls(_base.collect_set(col)), _base.array([]))
+    aggregate = _base.collect_set(col)
+    return _base.coalesce(_without_nulls(aggregate), _base.array([])).alias(
+        aggregate.expression.alias
+    )
 
 
 @_meta()
 def greatest(*cols: _ColumnOrName) -> _Column:
-    return _base.array_max(_without_nulls(_base.array(*cols)))
+    result = _base.array_max(_without_nulls(_base.array(*cols)))
+    return result.alias(_base.greatest(*cols).expression.alias)
 
 
 @_meta()
 def least(*cols: _ColumnOrName) -> _Column:
-    return _base.array_min(_without_nulls(_base.array(*cols)))
+    result = _base.array_min(_without_nulls(_base.array(*cols)))
+    return result.alias(_base.least(*cols).expression.alias)
 
 
 @_meta()

@@ -110,3 +110,48 @@ def test_array_sort_comparator_keeps_captured_columns_qualified(session):
     assert '."threshold"' in sql
     assert '."left"' not in sql
     assert '."right"' not in sql
+
+
+def test_array_sort_mixed_case_comparator_names_are_bound(session):
+    frame = session.createDataFrame([([3, 1],)], ["items"])
+    comparator = lambda leftValue, rightValue: (
+        F.when(leftValue < rightValue, -1).when(leftValue > rightValue, 1).otherwise(0)
+    )
+    query = frame.select(F.array_sort("items", comparator).alias("sorted"))
+    assert 'AS "sorted"' in query.sql()
+
+
+def test_array_sort_captured_column_can_share_parameter_name(session):
+    from sqlglot import exp
+
+    comparator = lambda left, right: F.when(left > F.col("left"), 1).otherwise(0)
+    expression = F.array_sort("items", comparator).column_expression
+    captured = list(expression.args["expression"].find_all(exp.Column))
+    assert len(captured) == 1
+    assert captured[0].name == "left"
+    frame = session.createDataFrame([([3, 1], 2)], ["items", "left"])
+    assert '."left"' in frame.select(F.array_sort("items", comparator)).sql()
+
+
+def test_sort_array_default_name_differs_from_array_sort(session):
+    frame = session.createDataFrame([([3, None, 1],)], ["items"])
+    query = frame.select(F.array_sort("items"), F.sort_array("items"))
+    assert query.columns == ["array_sort__items__", "sort_array__items__"]
+    assert 'AS "sort_array__items__"' in query.select("sort_array__items__").sql()
+
+
+@pytest.mark.parametrize("name", ["collect_list", "collect_set", "greatest", "least"])
+def test_wrapped_functions_keep_public_source_based_names(session, name):
+    frame = session.createDataFrame([(1, 2)], ["a", "b"])
+    columns = [getattr(F, name)(col) for col in ("a", "b")]
+    query = frame.select(*columns)
+    assert query.columns == [f"{name}__a__", f"{name}__b__"]
+    assert f'AS "{name}__a__"' in query.select(f"{name}__a__").sql()
+
+
+def test_collection_functions_have_distinct_default_names(session):
+    frame = session.createDataFrame([(1,), (None,)], ["v"])
+    assert frame.agg(F.collect_list("v"), F.collect_set("v")).columns == [
+        "collect_list__v__",
+        "collect_set__v__",
+    ]

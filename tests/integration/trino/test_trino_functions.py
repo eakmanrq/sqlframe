@@ -186,3 +186,71 @@ def test_optimized_sql_preserves_function_mappings(trino_session):
         [3, "a", ["a", "b", ""]],
         [3, "a", ["a", "b", ""]],
     ]
+
+
+def test_comparator_binding_preserves_case_and_same_named_capture(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([(1, [4, 1, 3], 4), (2, [4, 1, 3], 2)], ["id", "items", "left"])
+
+    def mixed_case(leftValue, rightValue):
+        return F.when(leftValue < rightValue, -1).when(leftValue > rightValue, 1).otherwise(0)
+
+    def proximity(left, right):
+        left_distance = F.abs(left - F.col("left"))
+        right_distance = F.abs(right - F.col("left"))
+        return (
+            F.when(left_distance < right_distance, -1)
+            .when(left_distance > right_distance, 1)
+            .when(left < right, -1)
+            .when(left > right, 1)
+            .otherwise(0)
+        )
+
+    query = frame.select(
+        "id",
+        F.array_sort("items", mixed_case).alias("mixed"),
+        F.array_sort("items", proximity).alias("captured"),
+    ).orderBy("id")
+    assert query.collect() == [
+        Row(id=1, mixed=[1, 3, 4], captured=[4, 3, 1]),
+        Row(id=2, mixed=[1, 3, 4], captured=[1, 3, 4]),
+    ]
+    session._cur.execute(query.sql())
+    assert session._cur.fetchall() == [[1, [1, 3, 4], [4, 3, 1]], [2, [1, 3, 4], [1, 3, 4]]]
+
+
+def test_unaliased_function_outputs_remain_distinct(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([([3, None, 1], 1, 2), ([2], 1, None)], ["items", "a", "b"])
+    sorted_frame = frame.where(F.col("b").isNotNull()).select(
+        F.array_sort("items"), F.sort_array("items")
+    )
+    assert sorted_frame.select("sort_array__items__").collect() == [
+        Row(sort_array__items__=[None, 1, 3])
+    ]
+    assert sorted_frame.collect()[0].asDict() == {
+        "array_sort__items__": [1, 3, None],
+        "sort_array__items__": [None, 1, 3],
+    }
+    collections = frame.agg(
+        F.collect_list("a"), F.collect_set("a"), F.collect_list("b"), F.collect_set("b")
+    )
+    assert collections.collect()[0].asDict() == {
+        "collect_list__a__": [1, 1],
+        "collect_set__a__": [1],
+        "collect_list__b__": [2],
+        "collect_set__b__": [2],
+    }
+    assert collections.select("collect_list__a__", "collect_set__a__").collect() == [
+        Row(collect_list__a__=[1, 1], collect_set__a__=[1])
+    ]
+    extrema = frame.select(
+        F.greatest("a", F.lit(0)),
+        F.greatest("b", F.lit(0)),
+        F.least("a", F.lit(3)),
+        F.least("b", F.lit(3)),
+    )
+    assert [row.asDict() for row in extrema.orderBy("greatest__b__").collect()] == [
+        {"greatest__a__": 1, "greatest__b__": 0, "least__a__": 1, "least__b__": 3},
+        {"greatest__a__": 1, "greatest__b__": 2, "least__a__": 1, "least__b__": 2},
+    ]
