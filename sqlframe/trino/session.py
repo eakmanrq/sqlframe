@@ -10,7 +10,9 @@ from sqlglot.optimizer.scope import traverse_scope
 
 from sqlframe.standalone.session import StandaloneSession
 from sqlframe.trino.catalog import TrinoCatalog
+from sqlframe.trino.dataframe import TrinoDataFrame
 from sqlframe.trino.readwriter import TrinoDataFrameWriter
+from sqlframe.trino.table import TrinoTable
 
 
 class TrinoSession(StandaloneSession):
@@ -21,6 +23,8 @@ class TrinoSession(StandaloneSession):
     """
 
     _catalog = TrinoCatalog
+    _df = TrinoDataFrame
+    _table = TrinoTable
     _writer = TrinoDataFrameWriter
 
     def sql(

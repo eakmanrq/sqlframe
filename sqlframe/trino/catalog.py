@@ -4,9 +4,11 @@ import fnmatch
 import typing as t
 
 from sqlglot import exp
+from sqlglot.errors import ParseError
 from sqlglot.schema import MappingSchema, flatten_schema
 
 from sqlframe.base.catalog import Column, Table
+from sqlframe.base.exceptions import UnsupportedOperationError
 from sqlframe.base.util import normalize_string, safe_parse_identifier, to_schema
 from sqlframe.standalone.catalog import StandaloneCatalog
 
@@ -21,6 +23,70 @@ class _TrinoMappingSchema(MappingSchema):
 
 
 class TrinoCatalog(StandaloneCatalog):
+    def _to_spark_type(self, trino_type: str, column_name: str) -> exp.DataType:
+        error = f"Unsupported Trino type {trino_type} for column {column_name!r}"
+
+        def spark_type(node):
+            if not isinstance(node, exp.DataType):
+                return node
+            mapping = {
+                exp.DataType.Type.VARCHAR: "STRING",
+                exp.DataType.Type.CHAR: "STRING",
+                exp.DataType.Type.JSON: "STRING",
+                exp.DataType.Type.UUID: "STRING",
+                exp.DataType.Type.VARBINARY: "BINARY",
+                exp.DataType.Type.TIMESTAMP: "TIMESTAMP_NTZ",
+                exp.DataType.Type.TIMESTAMPTZ: "TIMESTAMP",
+            }
+            if node.this in {exp.DataType.Type.TIMESTAMP, exp.DataType.Type.TIMESTAMPTZ}:
+                # Spark timestamps have microsecond precision; Trino allows up to 12 digits.
+                if node.expressions and int(node.expressions[0].this.this) > 6:
+                    raise UnsupportedOperationError(error)
+            if node.this in mapping:
+                return exp.DataType.build(mapping[node.this], dialect="spark")
+            if node.this == exp.DataType.Type.STRUCT and any(
+                not isinstance(field, exp.ColumnDef) for field in node.expressions
+            ):
+                # Spark StructFields require names; do not invent names for anonymous ROW fields.
+                raise UnsupportedOperationError(error)
+            if node.this not in {
+                exp.DataType.Type.BOOLEAN,
+                exp.DataType.Type.TINYINT,
+                exp.DataType.Type.SMALLINT,
+                exp.DataType.Type.INT,
+                exp.DataType.Type.BIGINT,
+                exp.DataType.Type.FLOAT,
+                exp.DataType.Type.DOUBLE,
+                exp.DataType.Type.DECIMAL,
+                exp.DataType.Type.DATE,
+                exp.DataType.Type.ARRAY,
+                exp.DataType.Type.MAP,
+                exp.DataType.Type.STRUCT,
+            }:
+                raise UnsupportedOperationError(error)
+            return node
+
+        try:
+            data_type = exp.DataType.build(trino_type, dialect=self.session.execution_dialect)
+        except ParseError as exc:
+            raise UnsupportedOperationError(error) from exc
+        return data_type.transform(spark_type)
+
+    def _parse_native_type(self, trino_type: str, column_name: str) -> exp.DataType:
+        try:
+            return exp.DataType.build(trino_type, dialect=self.session.execution_dialect)
+        except ParseError as exc:
+            raise UnsupportedOperationError(
+                f"Unsupported Trino type {trino_type} for column {column_name!r}"
+            ) from exc
+
+    def get_columns(self, table: exp.Table | str) -> t.Dict[str, exp.DataType]:
+        table = self.ensure_table(table)
+        return {
+            column.name: self._parse_native_type(column.dataType, column.name)
+            for column in self.listColumns(table.sql(dialect=self.session.input_dialect))
+        }
+
     def __init__(self, sparkSession, schema: t.Optional[MappingSchema] = None):
         if schema is None:
             schema = _TrinoMappingSchema()
@@ -55,6 +121,17 @@ class TrinoCatalog(StandaloneCatalog):
     ) -> None:
         # Trino queries can mix fully-qualified server tables with local temp views.
         kwargs.setdefault("match_depth", False)
+        if column_mapping is None and self.session._has_connection:
+            table = self.ensure_table(table)
+            if not self._schema.find(table):
+                # Keep native AST types for optimizer inference, including timestamp
+                # precision and quoted ROW names. Spark mappings are report-only.
+                column_mapping = {
+                    normalize_string(
+                        name, from_dialect="output", to_dialect="input", is_column=True
+                    ): data_type
+                    for name, data_type in self.get_columns(table).items()
+                }
         return super().add_table(table, column_mapping=column_mapping, **kwargs)
 
     def currentCatalog(self) -> str:

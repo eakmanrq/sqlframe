@@ -274,6 +274,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         raise NotImplementedError
 
     @property
+    def _schema_dialect(self) -> DialectType:
+        return self.session.output_dialect
+
+    @property
     def write(self) -> WRITER:
         return self.session._writer(self)
 
@@ -349,7 +353,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     types.StructField(
                         self.display_name_mapping.get(c.name, c.name),
                         sqlglot_to_spark(
-                            exp.DataType.build(c.dataType, dialect=self.session.output_dialect)
+                            exp.DataType.build(c.dataType, dialect=self._schema_dialect)
                         ),
                     )
                     for c in self._typed_columns
@@ -2211,7 +2215,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             if current_level > 0:
                 print(" |   " * current_level, end="")
             print(
-                f" |-- {column_name}: {column_type.sql(self.session.output_dialect).lower()} (nullable = {str(nullable).lower()})"
+                f" |-- {column_name}: {column_type.sql(self._schema_dialect).lower()} (nullable = {str(nullable).lower()})"
             )
             if column_type.this in (exp.DataType.Type.STRUCT, exp.DataType.Type.OBJECT):
                 for column_def in column_type.expressions:
@@ -2227,7 +2231,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         for column in self._typed_columns:
             print_schema(
                 self.display_name_mapping.get(column.name, column.name),
-                exp.DataType.build(column.dataType, dialect=self.session.output_dialect),
+                exp.DataType.build(column.dataType, dialect=self._schema_dialect),
                 column.nullable,
                 0,
             )
