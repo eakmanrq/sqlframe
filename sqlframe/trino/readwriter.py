@@ -80,7 +80,9 @@ class TrinoDataFrameWriter(StandaloneDataFrameWriter):
     def _validate_columns(self, columns: list[tuple[str, str]]) -> None:
         self._validate_names([name for name, _ in columns])
         if any(
-            not dtype or re.search(r"\bunknown\b", dtype, re.IGNORECASE) for _, dtype in columns
+            not dtype
+            or re.search(r"\bunknown\b", re.sub(r'"(?:[^"]|"")*"', "", dtype), re.IGNORECASE)
+            for _, dtype in columns
         ):
             raise UnsupportedOperationError(
                 "Trino writes do not support unknown column types; cast nulls to explicit types"
