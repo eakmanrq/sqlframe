@@ -395,10 +395,10 @@ name = "chdb"
 version = "4.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "chdb-core", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
-    { name = "pandas", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
+    { name = "chdb-core" },
+    { name = "pandas" },
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version >= '3.11' and sys_platform != 'win32')" },
+    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/41/45159ab43d461ff3eff32611c5c9b8396ff5b89d71c5acfa7749b82f66aa/chdb-4.4.0-py3-none-any.whl", hash = "sha256:b9d1159b19a101a650e72e085631dcc3a0879c31faf7c098bff3ea51dbba2daf", size = 1689158, upload-time = "2026-09-11T09:48:18.87Z" },
@@ -409,9 +409,9 @@ name = "chdb-core"
 version = "26.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pandas", marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
+    { name = "pandas" },
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version >= '3.11' and sys_platform != 'win32')" },
+    { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/1d/66071789c0b550ec32ba493f28ef43398ecb52931874d92c040d4ab70788/chdb_core-26.9.0-cp39-abi3-macosx_10_15_x86_64.whl", hash = "sha256:0d24d78969f7ab41d5303c148b7cf64880fa017507bbed9c9b8799b29c26723f", size = 133441224, upload-time = "2026-09-28T14:49:56.5Z" },
@@ -2676,7 +2676,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/c3/33/c987434f5d50aa802
 
 [[package]]
 name = "pytest"
-version = "9.1.1"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -2687,9 +2687,9 @@ dependencies = [
     { name = "pygments" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/42/bb4641652e58dedeac2ec51abc1f8cae4fee4ec63899a0999016229a0f2a/pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b", size = 1797555, upload-time = "2026-10-27T21:30:20.728Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+    { url = "https://files.pythonhosted.org/packages/51/39/1f5d8c8877a0fa327db959c19341d4be61660de1ab6b7391f9eb805bcd67/pytest-9.2.0-py3-none-any.whl", hash = "sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588", size = 411776, upload-time = "2026-10-27T21:30:19.131Z" },
 ]
 
 [[package]]
@@ -3369,7 +3369,7 @@ requires-dist = [
     { name = "pymdown-extensions", marker = "extra == 'docs'" },
     { name = "pyspark", marker = "extra == 'dev'", specifier = ">=4,<4.3" },
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.3" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.3" },
     { name = "pytest-forked", marker = "extra == 'dev'" },
     { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'" },
