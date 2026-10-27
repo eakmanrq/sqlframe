@@ -32,10 +32,54 @@ print(df.sql())  # Inspect the Trino SQL before running it.
 rows = df.collect()
 ```
 
-Trino's memory connector is covered by live tests for creating a table from a
-DataFrame and appending with `insertInto()`. `saveAsTable(mode="append")` uses the
-same insert path. Overwrite mode is rejected before sending SQL because Trino
-connectors vary in whether they can replace tables.
+Table writes require a connection. `saveAsTable(table)` creates a missing table
+using `CREATE TABLE AS SELECT`. With no mode, `error`, or `errorifexists`, an
+existing table raises `FileExistsError`. `saveAsTable(table, mode="append")`
+creates a missing table or appends to an existing table by column name; source
+columns may be reordered. `insertInto(table)` requires an existing table and
+maps columns by position. Use `df.write.byName.insertInto(table)` for name mapping.
+
+```python
+df.write.saveAsTable("memory.default.copied_orders")
+df.select("total", "order_id").write.saveAsTable(
+    "memory.default.copied_orders", mode="append"
+)
+```
+
+Writers accept a table, schema.table, or catalog.schema.table identifier in the
+session's input dialect (Spark by default, with backticks for quoted names).
+Unqualified parts use the connection's current catalog and schema. Identifiers
+are normalized and quoted before use; SQL fragments and views are rejected.
+Writer options and formats are unsupported. `overwrite`, `ignore`, and other
+modes are rejected, including `.mode("overwrite").insertInto(...)`. An explicit
+`saveAsTable(mode=...)` overrides `.mode(...)`.
+
+Before any `CREATE` or `INSERT`, the writer uses Trino metadata to check table
+existence and source columns. Append also checks target columns: column counts
+must match, names must match for name mapping, and names must be unique ignoring
+case. Native types must match exactly, except for widening between integer types
+and widening `varchar(n)` to a longer or unbounded `varchar`. An unbounded
+`varchar` cannot append to `varchar(n)`, even when its current values would fit.
+In-memory DataFrames commonly generate unbounded `varchar`; select from a server
+table with compatible native types when needed. Other conversions, including
+decimal or timestamp precision changes, require explicit source casts.
+Unknown types (such as untyped nulls) are rejected; cast them first. Metadata or
+query analysis failures stop the write. This path requires Trino's
+[`DESCRIBE OUTPUT (query)`](https://trino.io/docs/current/sql/describe-output.html)
+support, tested with Trino 484.
+
+Live tests cover creation, positional and name-based append, safe widening, and
+rejections against the [memory connector](https://trino.io/docs/current/connector/memory.html).
+This is not a guarantee for every connector: write operations, native type
+mapping, constraints, permissions, and table properties remain connector-specific.
+Connectors requiring explicit creation properties need tables provisioned outside
+this writer. In particular, Trino's
+[`CREATE TABLE AS`](https://trino.io/docs/current/sql/create-table-as.html)
+replacement support varies across connectors, so this writer does not replace
+tables. Preflight does not establish a transaction, validate row values or
+nullability constraints, or prevent concurrent schema changes. Runtime failures
+can still occur; inspect connector-specific table and data state before retrying
+a failed write, since retries may duplicate rows. Memory tables are volatile.
 
 Connected sessions can also use `session.sql()` to query existing tables without
 registering their schemas first. Live tests cover SQL queries with CTEs, joins,
