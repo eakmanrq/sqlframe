@@ -297,3 +297,27 @@ def test_duplicate_dataframe_columns_are_rejected_before_analysis(writer):
         df_writer._df.select("id", "id").write.insertInto("target")
     assert not any(sql.startswith("DESCRIBE OUTPUT") for sql in cursor.statements)
     assert writes(cursor) == []
+
+
+@pytest.mark.parametrize("method", ["insertInto", "saveAsTable"])
+@pytest.mark.parametrize(
+    "name", ["target", "default.target", "memory.default.target", '"Memory"."Default"."Target"']
+)
+def test_snowflake_input_normalizes_metadata_and_insert_targets(method, name):
+    conn = Connection()
+    session = (
+        TrinoSession.builder.config("sqlframe.conn", conn)
+        .config("sqlframe.input.dialect", "snowflake")
+        .getOrCreate()
+    )
+    writer = session.createDataFrame([(1, "a")], ["id", "label"]).write
+    if method == "saveAsTable":
+        writer.saveAsTable(name, mode="append")
+    else:
+        writer.insertInto(name)
+
+    assert [sql for sql in conn.cur.statements if ".information_schema.tables" in sql] == [
+        'SELECT table_type FROM "memory".information_schema.tables '
+        "WHERE table_schema = 'default' AND table_name = 'target'"
+    ]
+    assert writes(conn.cur)[0].startswith('INSERT INTO "memory"."default"."target" ')

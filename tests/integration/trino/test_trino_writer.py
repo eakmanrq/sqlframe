@@ -147,3 +147,23 @@ def test_quoted_identifiers_and_column_names(writer_session):
         ]
         == 2
     )
+
+
+@pytest.mark.parametrize("method", ["insertInto", "saveAsTable"])
+@pytest.mark.parametrize("name_parts", [1, 2, 3])
+def test_snowflake_input_appends_to_existing_trino_table(writer_session, method, name_parts):
+    session, table = writer_session
+    session.createDataFrame([(1, "a")], ["id", "label"]).write.saveAsTable(table)
+    session = TrinoSession.builder.config("sqlframe.input.dialect", "snowflake").getOrCreate()
+    name = ".".join(table.split(".")[-name_parts:])
+    writer = session.createDataFrame([(2, "b")], ["id", "label"]).write
+
+    if method == "saveAsTable":
+        writer.saveAsTable(name, mode="append")
+    else:
+        writer.insertInto(name)
+
+    assert session._collect(f"SELECT id, label FROM {table} ORDER BY id") == [
+        Row(id=1, label="a"),
+        Row(id=2, label="b"),
+    ]

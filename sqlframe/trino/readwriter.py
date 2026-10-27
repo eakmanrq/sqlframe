@@ -33,7 +33,8 @@ class TrinoDataFrameWriter(StandaloneDataFrameWriter):
             or any(not isinstance(part, exp.Identifier) or not part.name for part in table.parts)
         ):
             raise UnsupportedOperationError(message)
-        return normalize_identifiers(table, dialect=self._session.input_dialect)
+        normalize_identifiers(table, dialect=self._session.input_dialect)
+        return normalize_identifiers(table, dialect=self._session.execution_dialect)
 
     def _options(self, format: str | None = None) -> None:
         if format is not None or self._state_format_to_write is not None or self.state_options:
