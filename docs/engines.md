@@ -37,7 +37,7 @@ Run DataFrame pipelines directly on your Postgres database.
 </div>
 <div class="sf-engine-card" markdown="1">
 
-## [ClickHouse →](clickhouse.md)
+## [ClickHouse (preview) →](clickhouse.md)
 
 Run DataFrame queries on a ClickHouse server.
 
@@ -77,7 +77,7 @@ Community-maintained integration for Amazon Redshift.
 </div>
 <div class="sf-engine-card" markdown="1">
 
-## [Trino →](trino.md)
+## [Trino (preview) →](trino.md)
 
 Generate Trino SQL and collect queries through a supplied DB-API connection, with live column discovery and Docker integration tests.
 

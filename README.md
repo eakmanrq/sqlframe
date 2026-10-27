@@ -58,15 +58,22 @@ To inspect a transformation's SQL, call `df.sql(optimize=True)`. Follow the [qui
 | [BigQuery](https://sqlframe.readthedocs.io/en/latest/bigquery/) | `pip install "sqlframe[bigquery]"` |
 | [Snowflake](https://sqlframe.readthedocs.io/en/latest/snowflake/) | `pip install "sqlframe[snowflake]"` |
 | [Postgres](https://sqlframe.readthedocs.io/en/latest/postgres/) | `pip install "sqlframe[postgres]"` |
-| [ClickHouse](https://sqlframe.readthedocs.io/en/latest/clickhouse/) | `pip install "sqlframe[clickhouse]"` |
+| [ClickHouse (preview)](https://sqlframe.readthedocs.io/en/latest/clickhouse/) | `pip install "sqlframe[clickhouse]"` |
 | [Databricks](https://sqlframe.readthedocs.io/en/latest/databricks/) | `pip install "sqlframe[databricks]"` |
 | [Spark](https://sqlframe.readthedocs.io/en/latest/spark/) | `pip install "sqlframe[spark]"` |
 | [Standalone](https://sqlframe.readthedocs.io/en/latest/standalone/) | `pip install sqlframe` |
-| [Trino (first slice)](https://sqlframe.readthedocs.io/en/latest/trino/) | `pip install "sqlframe[trino]"` |
+| [Trino (preview)](https://sqlframe.readthedocs.io/en/latest/trino/) | `pip install "sqlframe[trino]"` |
 
 Standalone sessions generate SQL without a database connection. For local Parquet support, install `sqlframe[standalone]`.
 
-Trino generates SQL and can run `collect()` through a supplied DB-API connection; see its guide for current limits. Trino merged after v4.8.0, so install the unreleased version with `pip install "sqlframe[trino] @ git+https://github.com/eakmanrq/sqlframe.git"` until a release includes it.
+ClickHouse and Trino are preview integrations; see their guides for supported workflows and limits.
+Both merged after v4.8.0. Until a release includes them, install the preview engine you want from GitHub:
+
+```bash
+pip install "sqlframe[clickhouse] @ git+https://github.com/eakmanrq/sqlframe.git"
+# or
+pip install "sqlframe[trino] @ git+https://github.com/eakmanrq/sqlframe.git"
+```
 
 Community integrations: [GizmoSQL](https://github.com/gizmodata/sqlframe-gizmosql) · [Redshift](https://sqlframe.readthedocs.io/en/latest/redshift/) (`pip install "sqlframe[redshift]"`).
 
