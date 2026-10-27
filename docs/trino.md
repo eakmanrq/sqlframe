@@ -62,7 +62,6 @@ Calling `collect()` without a connection raises a clear error.
 - Connected sessions discover columns using Trino's `SHOW COLUMNS`. Offline sessions require explicit schemas. Nullability is currently treated as nullable in catalog metadata.
 - This is a bundled engine rather than a third-party plugin package. The current activation registry is fixed to bundled engines.
 - Unit tests cover SQL generation and DB-API query collection with a fake connection. Live Docker tests cover the query, catalog, and write paths described above. Complex types, engine-specific functions, and broad PySpark API parity remain unverified.
-- SQLFrame's CTE name rewriting currently fails when a CTE has the same name as a qualified source table in its body. Use a distinct CTE name for such queries.
 
 The [Standalone API reference](reference/standalone.md) describes the planner
 that this session reuses; its method list is not a Trino compatibility guarantee.
@@ -76,7 +75,8 @@ catalog. Run the live integration tests with Docker Desktop or another Docker da
 make trino-test
 ```
 
-The command starts Trino on `127.0.0.1:18080`, waits for it to become healthy,
-runs `tests/integration/trino`, and removes the container afterward. The same
-command runs in CI. For an existing server, set `SQLFRAME_TRINO_HOST` and
+The command starts Trino on an ephemeral port on `127.0.0.1` in a unique Compose
+project, waits for it to become healthy, runs `tests/integration/trino`, and removes
+that project's container afterward. The same command runs in CI. For an existing
+server, set `SQLFRAME_TRINO_HOST` and
 `SQLFRAME_TRINO_PORT` and run the test file directly.
