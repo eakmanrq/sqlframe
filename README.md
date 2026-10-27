@@ -67,13 +67,6 @@ To inspect a transformation's SQL, call `df.sql(optimize=True)`. Follow the [qui
 Standalone sessions generate SQL without a database connection. For local Parquet support, install `sqlframe[standalone]`.
 
 ClickHouse and Trino are preview integrations; see their guides for supported workflows and limits.
-Both merged after v4.8.0. Until a release includes them, install the preview engine you want from GitHub:
-
-```bash
-pip install "sqlframe[clickhouse] @ git+https://github.com/eakmanrq/sqlframe.git"
-# or
-pip install "sqlframe[trino] @ git+https://github.com/eakmanrq/sqlframe.git"
-```
 
 Community integrations: [GizmoSQL](https://github.com/gizmodata/sqlframe-gizmosql) · [Redshift](https://sqlframe.readthedocs.io/en/latest/redshift/) (`pip install "sqlframe[redshift]"`).
 
