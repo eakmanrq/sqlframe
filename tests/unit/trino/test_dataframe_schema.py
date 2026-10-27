@@ -224,3 +224,40 @@ def test_schema_preserves_result_names_and_prints_nested_types(connection, capsy
         " |-- A.b: array<struct<`mixed.case`: binary, t: timestamp_ntz>> (nullable = true)\n"
         " |    |-- element: struct<`mixed.case`: binary, t: timestamp_ntz> (nullable = true)\n"
     )
+
+
+@pytest.mark.parametrize("native_type", ["json", "uuid", "char(5)"])
+def test_native_source_type_preserves_explicit_string_cast(connection, native_type):
+    connection.cursor.return_value.fetchall.return_value = [("payload", native_type, "", "")]
+    session = TrinoSession(conn=connection)
+    query = session.read.table("items").select(F.col("payload").cast("string"))
+
+    assert "CAST(" in query.sql(optimize=False)
+    assert "CAST(" in query.sql()
+
+
+@pytest.mark.parametrize(
+    "native_type",
+    [
+        "time(3)",
+        "timestamp(9)",
+        'row("A.b" timestamp(12))',
+        "row(integer, varchar)",
+        "interval day to second",
+    ],
+)
+def test_mixed_table_registers_native_types_before_schema_reporting(connection, native_type):
+    cursor = connection.cursor.return_value
+    cursor.fetchall.return_value = [("id", "integer", "", ""), ("payload", native_type, "", "")]
+    session = TrinoSession(conn=connection)
+    frame = session.read.table("items")
+    registered = session.catalog.get_columns_from_schema("items")
+    from sqlglot import exp
+
+    assert registered["payload"] == exp.DataType.build(native_type, dialect="trino")
+    assert "id" in frame.select("id").sql()
+    cursor.fetchall.return_value = [describe_row("id", "integer")]
+    assert frame.select("id").schema.simpleString() == "struct<id:int>"
+    cursor.fetchall.return_value = [describe_row("payload", native_type)]
+    with pytest.raises(UnsupportedOperationError, match="Unsupported Trino type .*payload"):
+        _ = frame.select("payload").schema
