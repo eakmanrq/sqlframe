@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect as _inspect
+import re as _re
 import typing as _t
 
 from sqlglot import exp as _exp
@@ -23,30 +24,52 @@ def _lambda_from_func(func: _t.Callable) -> _exp.Lambda:
     # captured columns and nested lambda scopes cannot be mistaken for them.
     parameters = [
         _Column(_exp.to_identifier(name, quoted=False))
-        for name in _inspect.signature(func).parameters
+        for name, parameter in _inspect.signature(func).parameters.items()
+        if parameter.kind
+        in (_inspect.Parameter.POSITIONAL_ONLY, _inspect.Parameter.POSITIONAL_OR_KEYWORD)
     ]
     marker = "trino_lambda_parameter"
     for parameter in parameters:
         parameter.column_expression.meta[marker] = id(parameter)
     body = func(*parameters).column_expression
+    parameter_ids = {id(parameter) for parameter in parameters}
     captured_names = {column.name for column in body.find_all(_exp.Column)}
-    used_names = captured_names | {parameter.column_expression.name for parameter in parameters}
+    captured_names.update(
+        identifier.name
+        for identifier in body.find_all(_exp.Identifier)
+        if marker in identifier.meta and identifier.meta[marker] not in parameter_ids
+    )
+    nested_names = {
+        variable.name for nested in body.find_all(_exp.Lambda) for variable in nested.expressions
+    }
+    reserved_names = captured_names | nested_names
+    used_names = reserved_names | {parameter.column_expression.name for parameter in parameters}
     names = {}
+    assigned_names = set()
     variables = []
     for parameter in parameters:
         name = parameter.column_expression.name
-        if name in captured_names:
+        if name in reserved_names or name in assigned_names:
             suffix = 1
             while f"{name}_{suffix}" in used_names:
                 suffix += 1
             name = f"{name}_{suffix}"
         used_names.add(name)
+        assigned_names.add(name)
         names[id(parameter)] = name
         variables.append(_exp.to_identifier(name, quoted=False))
     for identifier in body.find_all(_exp.Identifier):
         if identifier.meta.get(marker) in names:
             identifier.set("this", names[identifier.meta.pop(marker)])
     return _exp.Lambda(this=body, expressions=variables)
+
+
+def _source_alias(name: str, source: _ColumnOrName) -> str:
+    expression = _Column.ensure_col(source).column_expression
+    column = expression.find(_exp.Column)
+    literal = expression.find(_exp.Literal)
+    source_name = column.name if column is not None else literal.this if literal is not None else ""
+    return _re.sub(r"\W", "_", f"{name}__{source_name}__")
 
 
 def _without_nulls(col: _Column) -> _Column:
@@ -68,7 +91,7 @@ def array_sort(
             this=_Column.ensure_col(col).column_expression,
             expression=_lambda_from_func(comparator) if comparator is not None else None,
         )
-    )
+    ).alias(_source_alias("array_sort", col))
 
 
 @_meta()
@@ -85,7 +108,7 @@ def sort_array(col: _ColumnOrName, asc: _t.Optional[bool] = None) -> _Column:
             .otherwise(0)
         )
 
-    return _Column(array_sort(col, compare).column_expression)
+    return array_sort(col, compare).alias(_source_alias("sort_array", col))
 
 
 @_meta()
@@ -93,7 +116,7 @@ def collect_list(col: _ColumnOrName) -> _Column:
     # Filter the resulting array so the same expression also supports windows.
     aggregate = _base.collect_list(col)
     return _base.coalesce(_without_nulls(aggregate), _base.array([])).alias(
-        aggregate.expression.alias
+        _source_alias("collect_list", col)
     )
 
 
@@ -101,20 +124,20 @@ def collect_list(col: _ColumnOrName) -> _Column:
 def collect_set(col: _ColumnOrName) -> _Column:
     aggregate = _base.collect_set(col)
     return _base.coalesce(_without_nulls(aggregate), _base.array([])).alias(
-        aggregate.expression.alias
+        _source_alias("collect_set", col)
     )
 
 
 @_meta()
 def greatest(*cols: _ColumnOrName) -> _Column:
     result = _base.array_max(_without_nulls(_base.array(*cols)))
-    return result.alias(_base.greatest(*cols).expression.alias)
+    return result.alias(_source_alias("greatest", _base.array(*cols)))
 
 
 @_meta()
 def least(*cols: _ColumnOrName) -> _Column:
     result = _base.array_min(_without_nulls(_base.array(*cols)))
-    return result.alias(_base.least(*cols).expression.alias)
+    return result.alias(_source_alias("least", _base.array(*cols)))
 
 
 @_meta()
@@ -124,7 +147,7 @@ def regexp_extract(str: _ColumnOrName, pattern: str, idx: _t.Optional[int] = Non
     return (
         _base.when(source.isNull(), None)
         .otherwise(_base.coalesce(result, _base.lit("")))
-        .alias(result.expression.alias)
+        .alias(_source_alias("regexp_extract", source))
     )
 
 

@@ -162,3 +162,59 @@ def test_regexp_extract_keeps_public_default_name(session):
     query = frame.select(F.regexp_extract("value", "(a)", 1))
     assert query.columns == ["regexp_extract__value__"]
     assert 'AS "regexp_extract__value__"' in query.select("regexp_extract__value__").sql()
+
+
+def test_comparator_keyword_only_defaults_are_not_lambda_arguments(session):
+    def compare(left, right, *, descending=False):
+        direction = 1 if descending else -1
+        return F.when(left < right, direction).when(left > right, -direction).otherwise(0)
+
+    frame = session.createDataFrame([([3, 1],)], ["items"])
+    query = frame.select(F.array_sort("items", compare))
+    assert 'AS "array_sort__items__"' in query.sql()
+
+
+def test_comparator_case_distinct_parameters_get_distinct_sql_names(session):
+    from sqlglot import exp
+
+    result = F.array_sort("items", lambda x, X: F.when(x < X, -1).when(x > X, 1).otherwise(0))
+    comparator = result.column_expression.args["expression"]
+    assert len({variable.name for variable in comparator.expressions}) == 2
+    frame = session.createDataFrame([([3, 1],)], ["items"])
+    assert list(result.column_expression.find_all(exp.Lambda))
+    assert 'AS "array_sort__items__"' in frame.select(result).sql()
+
+
+def test_nested_comparator_does_not_shadow_captured_outer_parameter(session):
+    from sqlglot import exp
+
+    def outer(left, right):
+        saved_left = left
+        nested = F.array_sort(
+            F.array(F.lit(1), F.lit(2)),
+            lambda left, right: F.when(saved_left < left, -1).otherwise(0),
+        )
+        return F.when(F.size(nested) > 0, 0).otherwise(1)
+
+    expression = F.array_sort("items", outer).column_expression
+    lambdas = list(expression.find_all(exp.Lambda))
+    assert len(lambdas) == 2
+    outer_names = {variable.name for variable in lambdas[0].expressions}
+    inner_names = {variable.name for variable in lambdas[1].expressions}
+    assert outer_names.isdisjoint(inner_names)
+    frame = session.createDataFrame([([3, 1],)], ["items"])
+    assert 'AS "array_sort__items__"' in frame.select(F.array_sort("items", outer)).sql()
+
+
+@pytest.mark.parametrize("name", ["array_sort", "sort_array"])
+def test_compound_array_inputs_keep_source_column_names(session, name):
+    frame = session.createDataFrame([(1, 2, 3, 4)], ["a", "b", "c", "d"])
+    sort = getattr(F, name)
+    assert frame.select(sort(F.array("a", "b")), sort(F.array("c", "d"))).columns == [
+        f"{name}__a__",
+        f"{name}__c__",
+    ]
+    assert frame.agg(sort(F.collect_list("a")), sort(F.collect_list("b"))).columns == [
+        f"{name}__a__",
+        f"{name}__b__",
+    ]

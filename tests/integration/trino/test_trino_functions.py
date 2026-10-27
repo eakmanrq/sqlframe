@@ -277,3 +277,68 @@ def test_unaliased_regexp_extract_remains_selectable(trino_session):
     ]
     session._cur.execute(selected.sql())
     assert session._cur.fetchall() == [[1, "a"], [2, ""], [3, None]]
+
+
+def test_comparator_defaults_and_case_distinct_parameters(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([([3, 1, 2],)], ["items"])
+
+    def keyword_default(left, right, *, descending=True):
+        direction = -1 if descending else 1
+        return F.when(left > right, direction).when(left < right, -direction).otherwise(0)
+
+    def case_distinct(x, X):
+        return F.when(x < X, -1).when(x > X, 1).otherwise(0)
+
+    query = frame.select(
+        F.array_sort("items", keyword_default).alias("descending"),
+        F.array_sort("items", case_distinct).alias("ascending"),
+    )
+    assert query.collect() == [Row(descending=[3, 2, 1], ascending=[1, 2, 3])]
+    session._cur.execute(query.sql())
+    assert session._cur.fetchall() == [[[3, 2, 1], [1, 2, 3]]]
+
+
+def test_nested_comparators_capture_outer_arguments(trino_session):
+    session, _ = trino_session
+    frame = session.createDataFrame([([9, 1, 6, 2],)], ["items"])
+
+    def outer(left, right):
+        def score(pivot):
+            def inner(left, right):
+                left_distance = F.abs(left - pivot)
+                right_distance = F.abs(right - pivot)
+                return (
+                    F.when(left_distance < right_distance, -1)
+                    .when(left_distance > right_distance, 1)
+                    .otherwise(0)
+                )
+
+            return F.array_sort(F.array(F.lit(0), F.lit(10)), inner).getItem(0)
+
+        left_score, right_score = score(left), score(right)
+        return (
+            F.when(left_score > right_score, -1)
+            .when(left_score < right_score, 1)
+            .when(left < right, -1)
+            .when(left > right, 1)
+            .otherwise(0)
+        )
+
+    query = frame.select(F.array_sort("items", outer).alias("bucketed"))
+    assert query.collect() == [Row(bucketed=[6, 9, 1, 2])]
+    session._cur.execute(query.sql())
+    assert session._cur.fetchall() == [[[6, 9, 1, 2]]]
+
+
+@pytest.mark.parametrize("name", ["array_sort", "sort_array"])
+def test_compound_sort_outputs_remain_selectable(trino_session, name):
+    session, _ = trino_session
+    frame = session.createDataFrame([(3, 1, 4, 2)], ["a", "b", "c", "d"])
+    sort = getattr(F, name)
+    arrays = frame.select(sort(F.array("a", "b")), sort(F.array("c", "d")))
+    assert arrays.collect()[0].asDict() == {f"{name}__a__": [1, 3], f"{name}__c__": [2, 4]}
+    assert arrays.select(f"{name}__c__").collect()[0][0] == [2, 4]
+    aggregates = frame.agg(sort(F.collect_list("a")), sort(F.collect_list("b")))
+    assert aggregates.collect()[0].asDict() == {f"{name}__a__": [3], f"{name}__b__": [1]}
+    assert aggregates.select(f"{name}__b__").collect()[0][0] == [1]
