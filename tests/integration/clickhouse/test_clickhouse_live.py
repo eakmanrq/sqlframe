@@ -81,12 +81,140 @@ def test_values_and_aggregation(clickhouse_session):
     ]
 
 
-def test_unsupported_write_fails(clickhouse_session):
+def test_create_table_requires_engine(clickhouse_session):
     session, table = clickhouse_session
-    assert _BaseSession._instance is session
+    target = f"{table}_copy"
+    frame = session.createDataFrame([(1, "alpha")], ["id", "label"])
 
-    with pytest.raises(UnsupportedOperationError, match="ClickHouse table writes"):
-        session.table(table).write.saveAsTable(f"{table}_copy")
+    try:
+        with pytest.raises(UnsupportedOperationError, match="clickhouse.engine"):
+            frame.write.saveAsTable(target)
+        assert session._collect(f"EXISTS TABLE {target}")[0][0] == 0
+
+        frame.write.option("clickhouse.engine", "Memory").saveAsTable(target)
+        assert [(c.name, c.dataType) for c in session.catalog.listColumns(target)] == [
+            ("id", "BIGINT"),
+            ("label", "STRING"),
+        ]
+        assert [r.asDict() for r in session.table(target).collect()] == [
+            {"id": 1, "label": "alpha"}
+        ]
+    finally:
+        session._execute(f"DROP TABLE IF EXISTS {target}")
+
+
+def test_create_mergetree_with_explicit_order_by(clickhouse_session):
+    session, table = clickhouse_session
+    target = f"{table}_tree"
+    frame = session.table(table).select("value", "name", "u64")
+    try:
+        frame.write.option("clickhouse.engine", "MergeTree").option(
+            "clickhouse.order_by", "value"
+        ).saveAsTable(target)
+        assert sorted(r["value"] for r in session.table(target).collect()) == [1, 2]
+    finally:
+        session._execute(f"DROP TABLE IF EXISTS {target}")
+
+
+def test_append_column_mapping(clickhouse_session):
+    session, table = clickhouse_session
+    target = f"{table}_mapping"
+    session._execute(
+        f"CREATE TABLE {target} (left_value Nullable(String), right_value Nullable(String)) "
+        "ENGINE = Memory"
+    )
+    frame = session.createDataFrame([("left", "right")], ["left_value", "right_value"]).select(
+        "right_value", "left_value"
+    )
+    try:
+        frame.write.insertInto(target)
+        frame.write.saveAsTable(target, mode="append")
+        frame.write.mode("append").saveAsTable(target)
+        rows = [r.asDict() for r in session.table(target).collect()]
+        assert sorted(rows, key=lambda row: (row["left_value"], row["right_value"])) == [
+            {"left_value": "left", "right_value": "right"},
+            {"left_value": "left", "right_value": "right"},
+            {"left_value": "right", "right_value": "left"},
+        ]
+    finally:
+        session._execute(f"DROP TABLE IF EXISTS {target}")
+
+
+@pytest.mark.parametrize(
+    "mode, use_writer_state",
+    [
+        (None, False),
+        ("error", False),
+        ("errorifexists", False),
+        ("error", True),
+        ("errorifexists", True),
+    ],
+)
+def test_existing_table_error_modes_leave_rows_unchanged(
+    clickhouse_session, mode, use_writer_state
+):
+    session, table = clickhouse_session
+    frame = session.table(table).filter(F.col("value") > 1)
+    before = [r.asDict() for r in session.table(table).orderBy("value").collect()]
+
+    with pytest.raises(FileExistsError, match="ClickHouse table already exists"):
+        if use_writer_state:
+            frame.write.mode(mode).saveAsTable(table)
+        elif mode is None:
+            frame.write.saveAsTable(table)
+        else:
+            frame.write.saveAsTable(table, mode=mode)
+
+    assert [r.asDict() for r in session.table(table).orderBy("value").collect()] == before
+
+
+def test_unsupported_writes_leave_table_unchanged(clickhouse_session):
+    session, table = clickhouse_session
+    frame = session.createDataFrame([("gamma", 3, 4)], ["name", "value", "u64"])
+    before = [r.asDict() for r in session.table(table).collect()]
+
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        frame.write.insertInto(table, overwrite=True)
+    with pytest.raises(UnsupportedOperationError, match="overwrite"):
+        frame.write.mode("overwrite").saveAsTable(table)
+    with pytest.raises(UnsupportedOperationError, match="type"):
+        frame.write.saveAsTable(table, mode="append")
+    with pytest.raises(UnsupportedOperationError, match="type"):
+        frame.write.insertInto(table)
+    with pytest.raises(UnsupportedOperationError, match="ignore"):
+        frame.write.mode("ignore").saveAsTable(table)
+    with pytest.raises(UnsupportedOperationError, match="mode"):
+        frame.write.saveAsTable(table, mode="")
+    with pytest.raises(UnsupportedOperationError, match="clickhouse.engine"):
+        frame.write.saveAsTable(f"{table}_absent", mode="append")
+
+    assert [r.asDict() for r in session.table(table).collect()] == before
+
+
+def test_unsupported_create_schema_and_engine_do_not_create_table(clickhouse_session):
+    session, table = clickhouse_session
+    target = f"{table}_unsupported"
+    array_frame = session.sql("SELECT [1, 2] AS items", qualify=False)
+    scalar_frame = session.createDataFrame([(1,)], ["id"])
+
+    with pytest.raises(UnsupportedOperationError, match="type"):
+        array_frame.write.option("clickhouse.engine", "Memory").saveAsTable(target)
+    with pytest.raises(UnsupportedOperationError, match="clickhouse.engine"):
+        scalar_frame.write.option("clickhouse.engine", "Memory; DROP TABLE events").saveAsTable(
+            target
+        )
+    with pytest.raises(UnsupportedOperationError, match="clickhouse.order_by"):
+        scalar_frame.write.option("clickhouse.engine", "MergeTree").saveAsTable(target)
+    with pytest.raises(UnsupportedOperationError, match="nullable"):
+        scalar_frame.write.option("clickhouse.engine", "MergeTree").option(
+            "clickhouse.order_by", "id"
+        ).saveAsTable(target)
+    with pytest.raises(UnsupportedOperationError, match="clickhouse.order_by"):
+        scalar_frame.write.option("clickhouse.engine", "Memory").option(
+            "clickhouse.order_by", ""
+        ).saveAsTable(target)
+
+    assert session._collect(f"EXISTS TABLE {target}")[0][0] == 0
 
 
 def test_outer_joins_return_nulls_and_full_join_keys(clickhouse_session):

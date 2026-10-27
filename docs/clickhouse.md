@@ -36,6 +36,51 @@ use `spark.sql("SELECT ...", qualify=False)`.
 To redirect existing PySpark imports, call `activate("clickhouse", conn=conn)`
 before importing `pyspark.sql`, and call `deactivate()` when finished.
 
+## Table writes
+
+`insertInto(table)` appends to an existing table by position. The first DataFrame
+column goes to the first table column, and so on. `saveAsTable(table,
+mode="append")` appends by column name, so DataFrame columns may be in a different
+order. Both methods require the same number of columns and exactly matching
+ClickHouse types; they reject missing columns, unsupported types, and type or
+nullability differences before the `INSERT`. Table and database names must be
+lowercase. Use `df.write.byName.insertInto(table)` for name-based `insertInto`.
+
+`saveAsTable()` creates a missing table only when its writer has an explicit
+`clickhouse.engine` option. The first slice accepts `Memory` and `MergeTree`.
+`MergeTree` also requires `clickhouse.order_by`, a comma-separated list of
+DataFrame column names. The sort columns must have non-nullable types. For
+example:
+
+```python
+spark.table("source_events").select("id", "name").write \
+    .option("clickhouse.engine", "MergeTree") \
+    .option("clickhouse.order_by", "id") \
+    .saveAsTable("copied_events")
+
+spark.table("source_events").select("id", "name").write.saveAsTable(
+    "copied_events", mode="append"
+)
+```
+
+`Memory` needs only `.option("clickhouse.engine", "Memory")`. Creation copies
+the source query's ClickHouse column names and types, including nullability;
+it supports scalar string, Boolean, 8- to 64-bit integer, float, date, time,
+and decimal types. Nested and other types are rejected for creation. Existing
+tables may use other types when both source and destination types match exactly
+and SQLFrame can represent them. In-memory DataFrames commonly infer nullable
+columns, so they cannot append to non-nullable columns through this strict
+path. Select from a compatible ClickHouse table when exact types are needed.
+
+With no mode, `saveAsTable()` errors if the table exists. `append` inserts into
+an existing table or creates one if an engine is provided. `errorifexists`
+also errors when a table exists. `overwrite`, `ignore`, and other modes are
+unsupported. Format options and other writer options are unsupported.
+ClickHouse DDL and inserts are not a transaction here: a failed insert can
+leave a newly created empty table, and a failed insert can leave partial data.
+Preflight schema checks reduce this risk but cannot eliminate runtime failures
+or concurrent table changes. Inspect or clean up a failed write before retrying.
+
 ## Current limits
 
 The following functions are unsupported because their generated SQL is not
@@ -88,11 +133,7 @@ Within one session, use one style for all table references: either qualified
 names such as `default.events` or unqualified names such as `events`. Mixing
 the two styles, even for different tables, is unsupported.
 
-This integration supports queries and DataFrame transformations. It does not
-implement `DataFrame.write.saveAsTable()`, `insertInto()`, or write statements
-passed to `spark.sql()` because ClickHouse table creation needs an engine and
-write modes do not map directly to Spark.
-Use ClickHouse Connect for table creation and inserts. File readers and writers,
+Write statements passed to `spark.sql()` remain unsupported. File readers and writers,
 catalog listing APIs, UDF registration, and table mutation or merge APIs are
 also unsupported. `cache()` and `persist()` are unsupported for this engine.
 `array_sort()` supports its default ascending order; a custom comparator is
