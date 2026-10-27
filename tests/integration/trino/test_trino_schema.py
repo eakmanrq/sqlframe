@@ -184,3 +184,39 @@ def test_cache_boundary_leaves_table_query_usable(trino_session, operation):
         getattr(query, operation)()
 
     assert query.count() == 3
+
+
+def test_mixed_native_table_allows_supported_projection(native_session):
+    session, orders = native_session
+    table = orders.rsplit(".", 1)[0] + ".mixed_types"
+    session._cur.execute(
+        f"CREATE TABLE {table} AS SELECT 1 AS id, "
+        "CAST(NULL AS time(3)) AS clock, CAST(NULL AS timestamp(9)) AS precise, "
+        "ROW(1, 'a') AS anonymous, INTERVAL '1' DAY AS duration"
+    )
+    frame = session.read.table(table)
+
+    assert frame.select("id").collect()[0][0] == 1
+    assert frame.select("id").schema.simpleString() == "struct<id:int>"
+    for column in ["clock", "precise", "anonymous", "duration"]:
+        with pytest.raises(UnsupportedOperationError, match=f"Unsupported Trino type .*{column}"):
+            _ = frame.select(column).schema
+
+
+def test_native_source_casts_survive_public_sql_optimization(native_session):
+    session, orders = native_session
+    table = orders.rsplit(".", 1)[0] + ".native_casts"
+    session._cur.execute(
+        f"CREATE TABLE {table} AS SELECT JSON '1' AS j, "
+        "UUID '123e4567-e89b-12d3-a456-426614174000' AS u, CAST('abc' AS char(5)) AS c"
+    )
+    query = session.read.table(table).select(
+        *(F.col(column).cast("varchar").alias(column) for column in ["j", "u", "c"])
+    )
+
+    for optimize in [False, True]:
+        sql = query.sql(dialect="trino", optimize=optimize)
+        assert sql.count("CAST(") == 3
+        rows = session._collect(f"DESCRIBE OUTPUT ({sql})")
+        assert [row[4] for row in rows] == ["varchar"] * 3
+    assert query.collect()[0][0] == "1"

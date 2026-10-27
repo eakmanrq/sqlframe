@@ -127,7 +127,8 @@ before `getOrCreate()` so parsing and planning also use Trino syntax.
 Schema discovery requires a connection even when table types were registered
 explicitly for offline SQL generation. `SHOW COLUMNS` continues to expose native
 Trino type strings through `catalog.listColumns()`; table registration parses
-those types as Trino before mapping them into the planner.
+those types as native Trino AST types in the planner, preserving casts, timestamp
+precision, and ROW field names. Spark mappings apply only to schema reporting.
 
 The supported mappings apply recursively inside `ARRAY`, `MAP`, and named `ROW`
 fields:
@@ -160,9 +161,10 @@ explicitly before requesting a schema. These mappings describe metadata only;
 `collect()` still returns the Trino Python client's native values, without added
 coercion (for example, a UUID value can remain a Python `UUID`).
 
-Unsupported types also fail during automatic table registration. To query only
-supported columns or cast an unsupported column, use `session.sql(..., qualify=False)`
-to bypass automatic source-table registration.
+Tables containing types unsupported by Spark schema reporting still register, so
+DataFrame queries can select supported columns or cast other columns to supported
+types. Requesting a schema rejects unsupported result types; native type parse
+errors during table registration remain explicit.
 
 ## Caching
 

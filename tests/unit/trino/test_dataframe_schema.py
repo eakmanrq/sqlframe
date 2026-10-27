@@ -156,7 +156,7 @@ def test_catalog_parses_trino_types_before_registering_table(connection):
     registered = session.catalog.get_columns_from_schema("events")
     assert frame.columns == ["amounts", "record", "a.b"]
     assert registered["amounts"].sql("spark") == "ARRAY<DECIMAL(12, 2)>"
-    assert registered["record"].sql("spark") == "STRUCT<`A.b`: INT, event_time: TIMESTAMP_NTZ>"
+    assert registered["record"].sql("trino") == 'ROW("A.b" INTEGER, event_time TIMESTAMP(6))'
     assert registered["`a.b`"].sql("spark") == "BINARY"
 
 
@@ -261,3 +261,11 @@ def test_mixed_table_registers_native_types_before_schema_reporting(connection, 
     cursor.fetchall.return_value = [describe_row("payload", native_type)]
     with pytest.raises(UnsupportedOperationError, match="Unsupported Trino type .*payload"):
         _ = frame.select("payload").schema
+
+
+def test_table_registration_reports_native_type_parse_error(connection):
+    connection.cursor.return_value.fetchall.return_value = [("payload", "row(", "", "")]
+    session = TrinoSession(conn=connection)
+
+    with pytest.raises(UnsupportedOperationError, match="Unsupported Trino type .*payload"):
+        session.read.table("items")

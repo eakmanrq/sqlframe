@@ -72,10 +72,18 @@ class TrinoCatalog(StandaloneCatalog):
             raise UnsupportedOperationError(error) from exc
         return data_type.transform(spark_type)
 
+    def _parse_native_type(self, trino_type: str, column_name: str) -> exp.DataType:
+        try:
+            return exp.DataType.build(trino_type, dialect=self.session.execution_dialect)
+        except ParseError as exc:
+            raise UnsupportedOperationError(
+                f"Unsupported Trino type {trino_type} for column {column_name!r}"
+            ) from exc
+
     def get_columns(self, table: exp.Table | str) -> t.Dict[str, exp.DataType]:
         table = self.ensure_table(table)
         return {
-            column.name: self._to_spark_type(column.dataType, column.name)
+            column.name: self._parse_native_type(column.dataType, column.name)
             for column in self.listColumns(table.sql(dialect=self.session.input_dialect))
         }
 
@@ -116,8 +124,8 @@ class TrinoCatalog(StandaloneCatalog):
         if column_mapping is None and self.session._has_connection:
             table = self.ensure_table(table)
             if not self._schema.find(table):
-                # Keep the mapped AST: a round trip through Trino SQL would lose
-                # TIMESTAMP_NTZ and normalize quoted ROW field names as Spark names.
+                # Keep native AST types for optimizer inference, including timestamp
+                # precision and quoted ROW names. Spark mappings are report-only.
                 column_mapping = {
                     normalize_string(
                         name, from_dialect="output", to_dialect="input", is_column=True
