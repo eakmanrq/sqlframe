@@ -42,7 +42,7 @@ jobs:
         echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
         "$JAVA_HOME_21_X64/bin/java" -version
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         python-version: ${{ matrix.python-version }}
         enable-cache: true
@@ -64,7 +64,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         python-version: '3.12'
         enable-cache: true
@@ -115,7 +115,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         python-version: '3.12'
         enable-cache: true
@@ -127,7 +127,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         python-version: '3.12'
         enable-cache: true
@@ -143,7 +143,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.2
+      uses: astral-sh/setup-uv@v10.3.3
       with:
         python-version: '3.12'
         enable-cache: true
