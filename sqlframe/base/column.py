@@ -159,6 +159,12 @@ class Column:
         |            abc| value|
         +---------------+------+
         """
+        if isinstance(key, slice):
+            if key.step is not None:
+                raise ValueError("Slice with step is not supported.")
+            if key.start is None or key.stop is None:
+                raise TypeError("Slice must have both a start and a stop.")
+            return self.substr(key.start, key.stop)
         return self.getItem(key)
 
     def __getattr__(self, name: str) -> Column:
