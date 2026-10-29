@@ -118,10 +118,10 @@ class Column:
         return self.unary_op(exp.Not)
 
     def __rand__(self, other: ColumnOrLiteral) -> Column:
-        return self.inverse_binary_op(exp.And, other)
+        return self.inverse_binary_op(exp.And, other, paren=True)
 
     def __ror__(self, other: ColumnOrLiteral) -> Column:
-        return self.inverse_binary_op(exp.Or, other)
+        return self.inverse_binary_op(exp.Or, other, paren=True)
 
     def __call__(self, *args, **kwargs):
         raise UnsupportedOperationError(
