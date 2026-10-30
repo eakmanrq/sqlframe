@@ -2667,12 +2667,32 @@ wheels = [
 
 [[package]]
 name = "pyspark"
-version = "4.2.0"
+version = "4.2.1"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+]
 dependencies = [
     { name = "py4j" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/33/c987434f5d50aa802779a004ca0fd45ee4350caab50554ad7283d5a22b50/pyspark-4.2.0.tar.gz", hash = "sha256:5ad689d53570ee1674193fd4f9bda065f0db3be9363a27d2a3406cc457b70b61", size = 450129423, upload-time = "2026-07-14T22:16:46Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/ed/3ef0c795c50d29d6f9778da51f3bbc6695b96237f0234e96077b99c5e980/pyspark-4.2.1.tar.gz", hash = "sha256:d79b7c8ee41e66a9202fe6f600ca90b931ca571ae9dbdf31c58d2672e5102da0", size = 449997486, upload-time = "2026-10-27T17:32:45.778Z" }
+
+[[package]]
+name = "pyspark"
+version = "4.3.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*'",
+    "python_full_version == '3.12.*'",
+    "python_full_version == '3.11.*'",
+]
+dependencies = [
+    { name = "py4j" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/46/b2/4e28aaffe28db4745ac5df3ee9115719c1b5da5cce4106bee99c82d1eb2c/pyspark-4.3.0.tar.gz", hash = "sha256:e8c517948eff7088a7aa07449aa8eafa4a15a8d50319de2525a6fd26622476c6", size = 455910862, upload-time = "2026-10-30T15:30:57.079Z" }
 
 [[package]]
 name = "pytest"
@@ -3289,7 +3309,8 @@ dev = [
     { name = "psycopg" },
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pyarrow", version = "26.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pyspark" },
+    { name = "pyspark", version = "4.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyspark", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pytest" },
     { name = "pytest-forked" },
     { name = "pytest-postgresql" },
@@ -3328,7 +3349,8 @@ snowflake = [
     { name = "snowflake-connector-python", version = "5.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 spark = [
-    { name = "pyspark" },
+    { name = "pyspark", version = "4.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyspark", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 standalone = [
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -3367,8 +3389,8 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=10,<27" },
     { name = "pyarrow", marker = "extra == 'standalone'", specifier = ">=10,<27" },
     { name = "pymdown-extensions", marker = "extra == 'docs'" },
-    { name = "pyspark", marker = "extra == 'dev'", specifier = ">=4,<4.3" },
-    { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.3" },
+    { name = "pyspark", marker = "extra == 'dev'", specifier = ">=4,<4.4" },
+    { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.3" },
     { name = "pytest-forked", marker = "extra == 'dev'" },
     { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
