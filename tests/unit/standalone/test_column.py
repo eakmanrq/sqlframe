@@ -139,6 +139,15 @@ def test_substring():
     assert (F.col("cola").substr(2, 3)).sql() == "SUBSTRING(cola, 2, 3)"
 
 
+def test_getitem_slice():
+    assert F.col("cola")[1:3].sql() == "SUBSTRING(cola, 1, 3)"
+    with pytest.raises(ValueError):
+        F.col("cola")[1:3:2]
+    for open_ended in (slice(None, 3), slice(1, None), slice(None, None)):
+        with pytest.raises(TypeError):
+            F.col("cola")[open_ended]
+
+
 def test_isin():
     assert (F.col("cola").isin([1, 2, 3])).sql() == "cola IN (1, 2, 3)"
     assert (F.col("cola").isin(1, 2, 3)).sql() == "cola IN (1, 2, 3)"
