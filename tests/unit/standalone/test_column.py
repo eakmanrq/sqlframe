@@ -144,6 +144,11 @@ def test_isin():
     assert (F.col("cola").isin(1, 2, 3)).sql() == "cola IN (1, 2, 3)"
 
 
+def test_isin_columns():
+    assert (F.col("cola").isin(F.col("colb"), 1)).sql() == "cola IN (colb, 1)"
+    assert (F.col("cola").isin([F.col("colb"), F.col("colc")])).sql() == "cola IN (colb, colc)"
+
+
 @pytest.mark.parametrize("value", [float("inf"), float("-inf")])
 def test_isin_infinity(value):
     assert F.col("cola").isin([value, 2.0]).sql() == f"cola IN (CAST('{value}' AS FLOAT), 2.0)"
