@@ -1182,11 +1182,15 @@ def date_add(
 
     session = _get_session()
     date_sub_func = get_func_from_session("date_sub")
-    original_days = None
 
     if session._is_postgres and not isinstance(days, int):
-        original_days = days
-        days = 1
+        interval = Column(
+            expression.Interval(
+                this=expression.Literal.string("1"), unit=expression.Var(this="DAY")
+            )
+        )
+        result = Column.ensure_col(col).cast("date") + interval * Column.ensure_col(days)
+        return result.cast("date") if cast_as_date else result
 
     if session._is_snowflake:
         return date_add_no_date_sub(col, days, cast_as_date)
@@ -1201,9 +1205,6 @@ def date_add(
         expression=days,
         unit=expression.Var(this="DAY"),
     )
-
-    if session._is_postgres and original_days is not None:
-        result = result * Column.ensure_col(original_days)
 
     if cast_as_date:
         return result.cast("date")
@@ -1221,11 +1222,15 @@ def date_sub(
 
     session = _get_session()
     date_add_func = get_func_from_session("date_add")
-    original_days = None
 
     if session._is_postgres and not isinstance(days, int):
-        original_days = days
-        days = 1
+        interval = Column(
+            expression.Interval(
+                this=expression.Literal.string("1"), unit=expression.Var(this="DAY")
+            )
+        )
+        result = Column.ensure_col(col).cast("date") - interval * Column.ensure_col(days)
+        return result.cast("date") if cast_as_date else result
 
     if session._is_snowflake:
         return date_sub_by_date_add(col, days, cast_as_date)
@@ -1240,9 +1245,6 @@ def date_sub(
         expression=days,
         unit=expression.Var(this="DAY"),
     )
-
-    if session._is_postgres and original_days is not None:
-        result = result * Column.ensure_col(original_days)
 
     if cast_as_date:
         return result.cast("date")
