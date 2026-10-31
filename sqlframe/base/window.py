@@ -58,7 +58,7 @@ class WindowSpec:
     def partitionBy(self, *cols: t.Union[ColumnOrName, t.Collection[ColumnOrName]]) -> WindowSpec:
         from sqlframe.base.column import Column
 
-        cols = flatten(cols) if isinstance(cols[0], t.Collection) else cols  # type: ignore
+        cols = flatten(cols) if cols and isinstance(cols[0], t.Collection) else cols  # type: ignore
         expressions = [Column.ensure_col(x).expression for x in cols]  # type: ignore
         window_spec = self.copy()
         partition_by_expressions = window_spec.expression.args.get("partition_by", [])
@@ -69,9 +69,11 @@ class WindowSpec:
     def orderBy(self, *cols: t.Union[ColumnOrName, t.Collection[ColumnOrName]]) -> WindowSpec:
         from sqlframe.base.column import Column
 
-        cols = flatten(cols) if isinstance(cols[0], t.Collection) else cols  # type: ignore
+        cols = flatten(cols) if cols and isinstance(cols[0], t.Collection) else cols  # type: ignore
         expressions = [Column.ensure_col(x).expression for x in cols]  # type: ignore
         window_spec = self.copy()
+        if not expressions:
+            return window_spec
         if window_spec.expression.args.get("order") is None:
             window_spec.expression.set("order", exp.Order(expressions=[]))
         order_by = window_spec.expression.args["order"].expressions
