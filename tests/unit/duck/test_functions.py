@@ -12,6 +12,17 @@ def session():
     return DuckDBSession()
 
 
+@pytest.mark.parametrize("method", ["partitionBy", "orderBy"])
+@pytest.mark.parametrize("cols", [(), ([],), ((),)])
+def test_max_over_whole_dataframe_window(session, method, cols):
+    df = session.createDataFrame([(1, 10.0), (2, 20.0)], ["year", "mpg"])
+    window = getattr(Window, method)(*cols)
+
+    result = df.withColumn("max_mpg", F.max("mpg").over(window)).orderBy("year").collect()
+
+    assert [tuple(row) for row in result] == [(1, 10.0, 20.0), (2, 20.0, 20.0)]
+
+
 def test_skewness_over_window(session):
     """skewness().over() should wrap each aggregate in the CASE expression with OVER."""
     expr = F.skewness("cola").over(Window.partitionBy("colb"))

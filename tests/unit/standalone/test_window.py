@@ -55,3 +55,23 @@ from sqlframe.standalone.window import Window, WindowSpec
 )
 def test_window_spec_partition_by(func, expected):
     assert func.sql() == expected
+
+
+@pytest.mark.parametrize("window", [Window, WindowSpec])
+@pytest.mark.parametrize("method", ["partitionBy", "orderBy"])
+@pytest.mark.parametrize("cols", [(), ([],), ((),)])
+def test_window_empty_columns(window, method, cols):
+    assert getattr(window(), method)(*cols).sql() == "OVER ()"
+
+
+@pytest.mark.parametrize("method", ["partitionBy", "orderBy"])
+@pytest.mark.parametrize("cols", [(), ([],), ((),)])
+def test_window_empty_columns_preserve_existing_spec(method, cols):
+    original = Window.partitionBy("cola").orderBy("colb").rowsBetween(-1, 1)
+    expected = original.sql()
+
+    result = getattr(original, method)(*cols)
+
+    assert result is not original
+    assert result.sql() == expected
+    assert original.sql() == expected
