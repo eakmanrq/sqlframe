@@ -47,6 +47,14 @@ def test_or():
     ).sql() == "(cola = colb OR colc = cold)"
 
 
+def test_rand():
+    assert (F.col("cola") | (True & F.col("colb"))).sql() == "(cola OR (TRUE AND colb))"
+
+
+def test_ror():
+    assert (F.col("cola") & (True | F.col("colb"))).sql() == "(cola AND (TRUE OR colb))"
+
+
 def test_mod():
     assert (F.col("cola") % 2).sql() == "(cola % 2)"
 
