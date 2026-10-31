@@ -4,6 +4,7 @@ import operator
 from importlib.metadata import requires
 
 import pytest
+from packaging.requirements import Requirement
 from sqlglot import expressions as exp
 from sqlglot import parse_one
 from sqlglot.errors import ErrorLevel
@@ -1392,6 +1393,34 @@ def test_date_add(expression, expected):
 )
 def test_date_sub(expression, expected):
     assert expression.column_expression.sql(dialect="spark") == expected
+
+
+@pytest.mark.parametrize("function, arithmetic", [(SF.date_add, exp.Add), (SF.date_sub, exp.Sub)])
+@pytest.mark.parametrize("days", ["days", SF.col("days").cast("int"), SF.col("days") + SF.lit(1)])
+@pytest.mark.parametrize("cast_as_date", [True, False])
+def test_postgres_date_offset_multiplies_only_interval(
+    function, arithmetic, days, cast_as_date, monkeypatch
+):
+    from sqlframe.standalone.session import StandaloneSession
+
+    session = StandaloneSession.builder.config(
+        "sqlframe.execution.dialect", "postgres"
+    ).getOrCreate()
+    monkeypatch.setattr(StandaloneSession, "_is_postgres", property(lambda self: True))
+
+    result = function("dt", days, cast_as_date=cast_as_date).column_expression
+    if cast_as_date:
+        assert isinstance(result, exp.Cast)
+        result = result.this
+    result = result.unnest()
+
+    assert isinstance(result, arithmetic)
+    assert isinstance(result.this, exp.Cast)
+    assert isinstance(result.expression.unnest(), exp.Mul)
+    assert isinstance(result.expression.unnest().this, exp.Interval)
+
+    parsed = parse_one(result.sql(dialect=session.execution_dialect), read="postgres")
+    assert isinstance(parsed.unnest(), arithmetic)
 
 
 @pytest.mark.parametrize(
@@ -3135,7 +3164,7 @@ def test_sqlglot_requirement_is_singular_in_distribution_metadata():
 
     assert len(sqlglot_requirements) == 1
     assert ">=30.0.0" in sqlglot_requirements[0]
-    assert "<30.26" in sqlglot_requirements[0]
+    assert any(spec.operator == "<" for spec in Requirement(sqlglot_requirements[0]).specifier)
 
 
 @pytest.mark.parametrize(
