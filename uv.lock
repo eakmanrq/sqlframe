@@ -3399,7 +3399,7 @@ requires-dist = [
     { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.14,<2.3.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.4,<0.18" },
     { name = "snowflake-connector-python", extras = ["secure-local-storage"], marker = "extra == 'snowflake'", specifier = ">=4.7.3,<6" },
-    { name = "sqlglot", specifier = ">=30.0.0,<30.28" },
+    { name = "sqlglot", specifier = ">=30.0.0,<30.30" },
     { name = "trino", marker = "extra == 'trino'", specifier = ">=0.330,<1" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.18" },
     { name = "types-psycopg2", marker = "extra == 'dev'", specifier = ">=2.9,<3" },
@@ -3409,11 +3409,11 @@ provides-extras = ["bigquery", "clickhouse", "databricks", "dev", "docs", "duckd
 
 [[package]]
 name = "sqlglot"
-version = "30.27.0"
+version = "30.29.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5b/d8/322dee46e3fd283a3b249a22e4f369693f9aad9fdc714df66b815882e99e/sqlglot-30.27.0.tar.gz", hash = "sha256:10617b2beee196e88a310c6a5348482248bf10ac01c6ade22128bf4a690ec0ee", size = 6172431, upload-time = "2026-10-30T18:18:59.13Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/26/ede384f80617864ff6a87701b921f887c5b156976e10594cfb72d12f7545/sqlglot-30.29.0.tar.gz", hash = "sha256:67bef76a4cbd29607b8859c65c213f39c086246c35c96cb96140ca7f8e7515d1", size = 6177381, upload-time = "2026-11-03T11:49:51.324Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/88/fb7ce53c23e171ad059fd3a5ff6889399da2804cf0cfda2a10c64f32fdf7/sqlglot-30.27.0-py3-none-any.whl", hash = "sha256:b630686fc167762e20960ad3d007ad03d81af0a804c9f7d117f1fe06433c839e", size = 801972, upload-time = "2026-10-30T18:18:57.65Z" },
+    { url = "https://files.pythonhosted.org/packages/10/b0/d7f3f0169fdf0261e924bfd37149aa5cb98798aec330fe0e94721a68a2a1/sqlglot-30.29.0-py3-none-any.whl", hash = "sha256:16e47cc30c48bbf66bd24a680cb6edc2203d4ed4644acf84dd377109ecbe70fc", size = 804206, upload-time = "2026-11-03T11:49:49.284Z" },
 ]
 
 [[package]]
