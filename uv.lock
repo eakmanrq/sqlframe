@@ -1685,12 +1685,35 @@ wheels = [
 name = "mirakuru"
 version = "3.0.4"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+]
 dependencies = [
     { name = "psutil", marker = "sys_platform != 'cygwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/89/d2/d6a4299c4d1b2bdfc4123f489490f1bddaf3f93411cc153e89b1cb496937/mirakuru-3.0.4.tar.gz", hash = "sha256:3bed186bf5df9dff100252d76465262d039c84bc6997b066b3fb8b0c8cea813c", size = 29127, upload-time = "2026-10-03T12:50:10.157Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/40/e5cbeab872b8ed81ccc9d792458fcd05b602157f715545665ae3ebe0f4de/mirakuru-3.0.4-py3-none-any.whl", hash = "sha256:9a490afcd3f6c7f354655bcb15604f4952488ced3605217cf4ad61efa88b4684", size = 28993, upload-time = "2026-10-03T12:50:08.632Z" },
+]
+
+[[package]]
+name = "mirakuru"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*'",
+    "python_full_version == '3.12.*'",
+    "python_full_version == '3.11.*'",
+]
+dependencies = [
+    { name = "psutil", marker = "sys_platform != 'cygwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/82/72/a5822a4f478c3516d7f495b6bd789433e7fadc2c3c010c7de11be98e6b7b/mirakuru-3.1.0.tar.gz", hash = "sha256:e6d6a9a4072aa6256615a15bf75270e49d8739d8d7903f50153fe6e516d0dd55", size = 30204, upload-time = "2026-11-03T15:23:57.883Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/6f/2d82a2b48ac5f580ffa5c656b35095fd96566b2afb7c013042ed5822d936/mirakuru-3.1.0-py3-none-any.whl", hash = "sha256:fc4feb871d08dcf7dd392baa6ab99de9e44393c2cb8c51d317ea1a9c9639e7f7", size = 28978, upload-time = "2026-11-03T15:23:56.7Z" },
 ]
 
 [[package]]
@@ -2730,7 +2753,8 @@ name = "pytest-postgresql"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mirakuru" },
+    { name = "mirakuru", version = "3.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "mirakuru", version = "3.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "port-for" },
     { name = "psycopg" },
@@ -3300,7 +3324,8 @@ dev = [
     { name = "duckdb", version = "1.5.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "duckdb", version = "2.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "findspark" },
-    { name = "mirakuru" },
+    { name = "mirakuru", version = "3.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "mirakuru", version = "3.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "openai" },
     { name = "pandas" },
     { name = "pandas-stubs", version = "2.3.3.260113", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -3370,7 +3395,7 @@ requires-dist = [
     { name = "findspark", marker = "extra == 'dev'", specifier = ">=2,<3" },
     { name = "google-cloud-bigquery", extras = ["pandas"], marker = "extra == 'bigquery'", specifier = ">=3,<4" },
     { name = "google-cloud-bigquery-storage", marker = "extra == 'bigquery'", specifier = ">=2,<3" },
-    { name = "mirakuru", marker = "extra == 'dev'", specifier = "<3.0.5" },
+    { name = "mirakuru", marker = "extra == 'dev'", specifier = "<3.1.1" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = "==1.4.2" },
     { name = "mkdocs-include-markdown-plugin", marker = "extra == 'docs'", specifier = "==6.0.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = "==9.0.5" },
