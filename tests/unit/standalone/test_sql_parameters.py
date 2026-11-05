@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 from sqlglot import exp, parse_one
 from sqlglot.errors import ParseError
@@ -104,3 +106,20 @@ def test_sql_second_positional_args(standalone_session):
 def test_sql_preserves_positional_dialect(standalone_session):
     df = standalone_session.sql('SELECT 7 AS "value"', "duckdb", False)
     assert df.expression.ctes[-1].this.expressions[0].this == exp.Literal.number(7)
+
+
+@pytest.mark.parametrize("parse_failure", [False, True])
+def test_sql_keyword_dataframe_cleanup_with_uppercase_input(sqlf_sf, parse_failure):
+    people = sqlf_sf.createDataFrame([(34,)], ["age"])
+    people.createOrReplaceTempView("existing")
+    views = dict(sqlf_sf.temp_views)
+    schema = sqlf_sf.catalog._schema
+    tables = deepcopy(schema.mapping)
+    if parse_failure:
+        with pytest.raises(ParseError):
+            sqlf_sf.sql("SELECT * FROM {people} WHERE (", people=people)
+    else:
+        sqlf_sf.sql("SELECT * FROM {people}", people=people)
+    assert sqlf_sf.catalog._schema is schema
+    assert sqlf_sf.catalog._schema.mapping == tables
+    assert sqlf_sf.temp_views == views
