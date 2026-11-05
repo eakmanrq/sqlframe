@@ -37,3 +37,30 @@ def test_array_indexing_preserves_api_offsets():
     assert df.select(
         F.col("a")[0], F.col("a").getItem(1), F.element_at("a", 1), F.element_at("a", -1)
     ).collect() == [(4, 5, 4, 6)]
+
+
+@pytest.mark.parametrize("alias_map", [False, True])
+def test_mixed_map_array_lookup_with_unaliased_projection(alias_map):
+    session = DuckDBSession()
+    session._conn.execute("CREATE TABLE containers AS SELECT MAP {10: 1, 11: 2} AS m, [4, 5] AS a")
+    df = session.table("containers")
+    map_value = F.col("m")[10]
+    array_value = F.col("a")[0]
+    if alias_map:
+        map_value = map_value.alias("value")
+    else:
+        array_value = array_value.alias("value")
+
+    assert df.select(map_value, array_value).collect() == [(1, 4)]
+
+
+@pytest.mark.parametrize("optimize", [False, True])
+def test_map_from_array_columns_lookup(optimize):
+    session = DuckDBSession()
+    df = session.range(1).select(F.lit([10, 0]).alias("k"), F.lit([1, 7]).alias("v"))
+    result = df.select(F.map_from_arrays("k", "v").getItem(10).alias("value"))
+
+    assert session._conn.execute(result.sql(dialect="duckdb", optimize=optimize)).fetchall() == [
+        (1,)
+    ]
+    assert result.collect() == [(1,)]

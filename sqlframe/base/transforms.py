@@ -3,6 +3,7 @@
 import typing as t
 
 from sqlglot import expressions as exp
+from sqlglot.helper import seq_get
 from sqlglot.optimizer.annotate_types import TypeAnnotator
 
 
@@ -12,7 +13,7 @@ class ContainerTypeAnnotator(TypeAnnotator):
         # Propagate the value type so chained lookups retain their container types.
         container_type = expression.this.type
         if container_type and container_type.is_type(exp.DataType.Type.MAP):
-            self._set_type(expression, container_type.expressions[1])
+            self._set_type(expression, seq_get(container_type.expressions, 1))
             return expression
         return super()._annotate_bracket(expression)
 

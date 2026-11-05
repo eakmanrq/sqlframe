@@ -819,6 +819,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 # Bracket generation needs container types to distinguish map keys
                 # from array positions, even when query optimization is disabled.
                 typed_expression = select_expression.copy()
+                # Adding projection aliases can change the bracket traversal order.
+                bracket_pairs = list(
+                    zip(
+                        select_expression.find_all(exp.Bracket),
+                        typed_expression.find_all(exp.Bracket),
+                    )
+                )
                 if not optimize:
                     qualify(
                         typed_expression,
@@ -834,9 +841,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     typed_expression
                 )
                 # Keep index expressions and the original query structure unchanged.
-                for bracket, typed_bracket in zip(
-                    select_expression.find_all(exp.Bracket), typed_expression.find_all(exp.Bracket)
-                ):
+                for bracket, typed_bracket in bracket_pairs:
                     bracket.this.type = typed_bracket.this.type
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
