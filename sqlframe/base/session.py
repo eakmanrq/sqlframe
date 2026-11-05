@@ -549,15 +549,17 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
             )
         if self.temp_views:
             replacement_mapping = {}
+            expression_ctes = {cte.alias_or_name: cte for cte in expression.ctes}  # type: ignore
+            ctes_to_add = []
             for table in expression.find_all(exp.Table):
                 if not (df := self.temp_views.get(table.name)):
                     continue
-                expression_ctes = {cte.alias_or_name: cte for cte in expression.ctes}  # type: ignore
                 replacement_mapping[table] = df.expression.ctes[-1].alias_or_name
-                ctes_to_add = []
                 for cte in df.expression.ctes:
                     if cte.alias_or_name not in expression_ctes:
                         ctes_to_add.append(cte)
+                        expression_ctes[cte.alias_or_name] = cte
+            if ctes_to_add:
                 expression.set("with_", exp.With(expressions=ctes_to_add + expression.ctes))  # type: ignore
 
             def replace_temp_view_name_with_cte(node: exp.Expression) -> exp.Expression:

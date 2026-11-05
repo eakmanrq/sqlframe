@@ -154,3 +154,44 @@ def test_sql_keyword_formatting_preserves_nested_positional_order(use_dataframe)
             zero=0,
         )
     assert result.collect() == [Row(value=10)]
+
+
+@pytest.mark.parametrize("derived", ["copy", "filter", "alias"])
+@pytest.mark.parametrize("aliases", [False, True])
+def test_sql_keyword_related_dataframe_sources_execute(derived, aliases):
+    session = DuckDBSession()
+    left = session.createDataFrame([(1,), (2,)], ["id"])
+    if derived == "filter":
+        right = left.filter(left.id == 2)
+        expected = [Row(left_id=2, right_id=2)]
+    else:
+        right = left.copy() if derived == "copy" else left.alias("right")
+        expected = [Row(left_id=1, right_id=1), Row(left_id=2, right_id=2)]
+    sources = "FROM {left} l JOIN {right} r" if aliases else "FROM {left} JOIN {right}"
+    result = session.sql(
+        "SELECT {left.id} AS left_id, {right.id} AS right_id "
+        + sources
+        + " ON {left_col} = {right_col} ORDER BY left_id, right_id",
+        left=left,
+        right=right,
+        left_col=left.id,
+        right_col=right.id,
+    )
+    assert result.collect() == expected
+
+
+@pytest.mark.parametrize(
+    "expression,query,expected",
+    [
+        ("1 + 2", "SELECT {value} * 3 AS result", 9),
+        ("1 + 2", "SELECT 12 / {value} AS result", 4),
+        ("TRUE OR FALSE", "SELECT {value} AND FALSE AS result", False),
+    ],
+)
+def test_sql_keyword_compound_column_precedence_executes(expression, query, expected):
+    session = DuckDBSession()
+    value = F.expr(expression)
+    original = value.expression.copy()
+    result = session.sql(query, value=value)
+    assert result.collect() == [Row(result=expected)]
+    assert value.expression == original

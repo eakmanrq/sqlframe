@@ -123,3 +123,24 @@ def test_sql_keyword_dataframe_cleanup_with_uppercase_input(sqlf_sf, parse_failu
     assert sqlf_sf.catalog._schema is schema
     assert sqlf_sf.catalog._schema.mapping == tables
     assert sqlf_sf.temp_views == views
+
+
+@pytest.mark.parametrize("parse_failure", [False, True])
+def test_sql_keyword_dataframe_cleanup_preserves_quoted_metadata(standalone_session, parse_failure):
+    people = standalone_session.createDataFrame([(34,)], ["`Quoted Age`"])
+    people.createOrReplaceTempView("existing")
+    quoted_columns = standalone_session.catalog._quoted_columns
+    expected = deepcopy(dict(quoted_columns))
+    assert expected
+    views = dict(standalone_session.temp_views)
+    schema = standalone_session.catalog._schema
+    for _ in range(3):
+        if parse_failure:
+            with pytest.raises(ParseError):
+                standalone_session.sql("SELECT * FROM {people} WHERE (", people=people)
+        else:
+            standalone_session.sql("SELECT * FROM {people}", people=people)
+        assert standalone_session.catalog._quoted_columns is quoted_columns
+        assert dict(quoted_columns) == expected
+        assert standalone_session.temp_views == views
+        assert standalone_session.catalog._schema is schema

@@ -38,6 +38,7 @@ class SQLStringFormatter(string.Formatter):
     def __exit__(self, *exc):
         for _, name in self.views:
             self.session.temp_views.pop(name, None)
+            self.session.catalog._quoted_columns.pop(self.session.catalog.ensure_table(name), None)
         self.session.catalog._schema = self.schema
 
     def vformat(self, format_string, args, kwargs):
@@ -80,12 +81,15 @@ class SQLStringFormatter(string.Formatter):
             return name, first
         if isinstance(value, Column):
             expression = value.column_expression.copy()
-            sources = {df.branch_id: name for df, name in self.views}
+            sources = {df.join_on_uuid: name for df, name in self.views}
             for column in expression.find_all(exp.Column):
-                if column.table in sources:
-                    column.set("table", exp.to_identifier(sources[column.table]))
+                source = sources.get(column.meta.get("join_on_uuid"))
+                if source is not None:
+                    column.set("table", exp.to_identifier(source))
                 elif column.table in self.session.known_branch_ids:
                     column.set("table", None)
+            if isinstance(expression, (exp.Binary, exp.Unary, exp.Predicate)):
+                expression = exp.Paren(this=expression)
             return f" {expression.sql(dialect=self.dialect)} ", first
         # Separate inserted tokens so a preceding minus cannot form a SQL comment.
         return f" {_literal_expression(value).sql(dialect=self.dialect)} ", first
