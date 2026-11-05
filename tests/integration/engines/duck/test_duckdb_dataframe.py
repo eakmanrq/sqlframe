@@ -372,6 +372,19 @@ def test_select_columns_from_joined_aggregations(
     ]
 
 
+@pytest.mark.parametrize("projection", ["*", "source.*"])
+def test_select_left_column_after_join_with_wildcard_projection(
+    duckdb_session: DuckDBSession, projection: str
+):
+    duckdb_session._conn.execute("CREATE TABLE wildcard_source AS SELECT 1 AS id, 10 AS value")
+    left = duckdb_session.sql(f"SELECT {projection} FROM wildcard_source AS source", qualify=False)
+    right = left.select("id", (F.col("value") + 100).alias("value"))
+
+    result = left.join(right, left["id"] == right["id"]).select(left["value"])
+
+    assert result.collect() == [types.Row(value=10)]
+
+
 # https://github.com/eakmanrq/sqlframe/issues/512
 def test_select_star_join_with_external_tables(duckdb_session: DuckDBSession):
     con = duckdb_session._conn

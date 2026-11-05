@@ -134,7 +134,12 @@ def replace_branch_and_sequence_ids_with_cte_name(
                 matching_cte = ctes_in_join[0]
                 if isinstance(id.parent, exp.Column):
                     matching_cte = next(
-                        (cte for cte in ctes_in_join if id.parent.name in cte.this.named_selects),
+                        (
+                            cte
+                            for cte in ctes_in_join
+                            if id.parent.name in cte.this.named_selects
+                            or any(sel.is_star for sel in cte.this.expressions)
+                        ),
                         matching_cte,
                     )
                 _set_alias_name(id, matching_cte.alias_or_name)
