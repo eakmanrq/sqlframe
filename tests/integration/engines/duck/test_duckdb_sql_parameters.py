@@ -119,3 +119,17 @@ def test_sql_negative_parameter_arithmetic_executes(value, prefix, style):
         )
     expected = 1 - value if prefix == "1-" else -value
     assert result.collect() == [Row(value=expected)]
+
+
+def test_sql_keyword_joined_dataframe_columns_execute():
+    session = DuckDBSession()
+    left = session.createDataFrame([(1, "Alice"), (2, "Bob")], ["id", "name"])
+    right = session.createDataFrame([(2, 45), (3, 29)], ["id", "age"])
+    result = session.sql(
+        "SELECT {left.id}, {left.name}, {right.age} FROM {left} "
+        "JOIN {right} ON {left.id} = {right.id}",
+        left=left,
+        right=right,
+    )
+    assert not session.temp_views
+    assert result.collect() == [Row(id=2, name="Bob", age=45)]
