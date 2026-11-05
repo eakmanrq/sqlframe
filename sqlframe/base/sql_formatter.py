@@ -53,8 +53,9 @@ class SQLStringFormatter(string.Formatter):
             for column in expression.find_all(exp.Column):
                 if column.table in self.session.known_branch_ids:
                     column.set("table", None)
-            return expression.sql(dialect=self.dialect), first
-        return _literal_expression(value).sql(dialect=self.dialect), first
+            return f" {expression.sql(dialect=self.dialect)} ", first
+        # Separate inserted tokens so a preceding minus cannot form a SQL comment.
+        return f" {_literal_expression(value).sql(dialect=self.dialect)} ", first
 
 
 def bind_parameters(query: t.Union[str, exp.Expr], args: SQLArgs, dialect: Dialect) -> exp.Expr:
@@ -85,5 +86,6 @@ def bind_parameters(query: t.Union[str, exp.Expr], args: SQLArgs, dialect: Diale
     # Token offsets preserve SQL text order, including parameters inside CTEs and subqueries.
     for token, value in reversed(list(zip(tokens, args))):
         literal = _literal_expression(value).sql(dialect=dialect)
-        sql = sql[: token.start] + literal + sql[token.end + 1 :]
+        # Preserve token boundaries, notably subtraction followed by a negative value.
+        sql = sql[: token.start] + f" {literal} " + sql[token.end + 1 :]
     return sqlglot.parse_one(sql, read=dialect)
