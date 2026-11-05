@@ -6,6 +6,7 @@ import uuid
 
 import sqlglot
 from sqlglot import Dialect, exp
+from sqlglot.optimizer.scope import traverse_scope
 from sqlglot.tokens import TokenType
 
 from sqlframe.base.column import Column
@@ -38,6 +39,27 @@ class SQLStringFormatter(string.Formatter):
             self.session.temp_views.pop(name, None)
         self.session.catalog._schema = self.schema
 
+    def vformat(self, format_string, args, kwargs):
+        # Register sources before rendering SELECT columns that precede FROM fields.
+        for _, field_name, _, _ in self.parse(format_string):
+            if field_name is not None:
+                value, _ = super().get_field(field_name, args, kwargs)
+                if isinstance(value, BaseDataFrame):
+                    self.get_field(field_name, args, kwargs)
+        query = super().vformat(format_string, args, kwargs)
+        expression = sqlglot.parse_one(query, read=self.dialect)
+        sources = {name for _, name in self.views}
+        for scope in traverse_scope(expression):
+            aliases = {
+                table.name: table.alias
+                for table in scope.tables
+                if table.name in sources and table.alias
+            }
+            for column in scope.columns:
+                if column.table in aliases:
+                    column.set("table", exp.to_identifier(aliases[column.table]))
+        return expression.sql(dialect=self.dialect)
+
     def get_field(self, field_name, args, kwargs):
         value, first = super().get_field(field_name, args, kwargs)
         if isinstance(value, BaseDataFrame):
@@ -50,8 +72,11 @@ class SQLStringFormatter(string.Formatter):
             return name, first
         if isinstance(value, Column):
             expression = value.column_expression.copy()
+            sources = {df.branch_id: name for df, name in self.views}
             for column in expression.find_all(exp.Column):
-                if column.table in self.session.known_branch_ids:
+                if column.table in sources:
+                    column.set("table", exp.to_identifier(sources[column.table]))
+                elif column.table in self.session.known_branch_ids:
                     column.set("table", None)
             return f" {expression.sql(dialect=self.dialect)} ", first
         # Separate inserted tokens so a preceding minus cannot form a SQL comment.

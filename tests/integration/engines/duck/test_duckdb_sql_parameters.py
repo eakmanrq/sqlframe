@@ -121,13 +121,14 @@ def test_sql_negative_parameter_arithmetic_executes(value, prefix, style):
     assert result.collect() == [Row(value=expected)]
 
 
-def test_sql_keyword_joined_dataframe_columns_execute():
+@pytest.mark.parametrize("aliases", [False, True])
+def test_sql_keyword_joined_dataframe_columns_execute(aliases):
     session = DuckDBSession()
     left = session.createDataFrame([(1, "Alice"), (2, "Bob")], ["id", "name"])
     right = session.createDataFrame([(2, 45), (3, 29)], ["id", "age"])
+    sources = "FROM {left} l JOIN {right} r" if aliases else "FROM {left} JOIN {right}"
     result = session.sql(
-        "SELECT {left.id}, {left.name}, {right.age} FROM {left} "
-        "JOIN {right} ON {left.id} = {right.id}",
+        "SELECT {left.id}, {left.name}, {right.age} " + sources + " ON {left.id} = {right.id}",
         left=left,
         right=right,
     )
