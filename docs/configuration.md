@@ -26,6 +26,51 @@ In this configuration, you can use BigQuery syntax for elements such as date for
 
 SQLFrame supports multiple dialects, all of which can be specific as the `input_dialect` and `output_dialect`.
 
+## SQL parameters
+
+`session.sql()` supports PySpark-style keyword format fields, named parameters,
+and positional parameters across engines.
+
+Pass a DataFrame through a format field to query it without registering a view:
+
+```python
+people = session.createDataFrame(
+    [("Alice", 34, "NY"), ("Bob", 45, "CA")], ["name", "age", "state"]
+)
+result = session.sql(
+    "SELECT {people.name} FROM {people} WHERE age > {min_age} AND state = {state}",
+    people=people,
+    min_age=30,
+    state="NY",
+)
+```
+
+Format fields also accept Columns and Python literals, including tuples for
+`IN` expressions. String values are quoted as SQL literals, so do not add quotes
+around their format fields. DataFrame views used during formatting are temporary;
+the returned DataFrame can still be collected after they are removed.
+
+Bind named `:name` parameters with a dictionary, or positional `?` parameters
+with a list. The two marker styles cannot be mixed in one query. Parameters bind
+literal values, including literal Columns; use keyword format fields for
+DataFrames and column references.
+
+```python
+session.sql(
+    "SELECT * FROM {people} WHERE age > :min_age AND state = :state",
+    args={"min_age": 30, "state": "NY"},
+    people=people,
+)
+session.sql(
+    "SELECT * FROM {people} WHERE age > ? AND state = ?",
+    args=[30, "NY"],
+    people=people,
+)
+```
+
+A dictionary or list can also be passed as the second positional argument.
+The existing `dialect` and `qualify` options remain available.
+
 ## DuckDB eager plan validation
 
 DuckDB sessions can validate each new DataFrame query plan as it is built. If DuckDB cannot resolve a column or an expression's types, the DataFrame operation raises at that call instead of waiting for `collect()` or another action. Validation runs `EXPLAIN` on the generated query; it plans the query without reading its rows. Errors that depend on row values can still occur during an action.
