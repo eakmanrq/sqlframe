@@ -26,7 +26,10 @@ def test_integer_map_keys_preserved_across_dialects(dialect, optimize, accessor,
 
     # Parse with a zero-based dialect to inspect the emitted keys without rebasing them.
     statement = sqlglot.parse_one(
-        df.select(value.alias("v")).sql(dialect=dialect, optimize=optimize), read="spark"
+        df.select(value.alias("v")).sql(
+            dialect=dialect, optimize=optimize, quote_identifiers=False
+        ),
+        read="spark",
     )
     lookup = statement.find(exp.Bracket)
     assert lookup is not None

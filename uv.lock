@@ -2781,7 +2781,7 @@ resolution-markers = [
     "python_full_version == '3.11.*'",
 ]
 dependencies = [
-    { name = "mirakuru" },
+    { name = "mirakuru", version = "3.1.0", source = { registry = "https://pypi.org/simple" } },
     { name = "packaging" },
     { name = "port-for" },
     { name = "psycopg" },
