@@ -29,6 +29,7 @@ from sqlframe.base.catalog import _BaseCatalog
 from sqlframe.base.dataframe import BaseDataFrame
 from sqlframe.base.normalize import normalize_dict
 from sqlframe.base.readerwriter import _BaseDataFrameReader, _BaseDataFrameWriter
+from sqlframe.base.sql_formatter import SQLArgs, SQLStringFormatter, bind_parameters
 from sqlframe.base.table import _BaseTable
 from sqlframe.base.udf import _BaseUDFRegistration
 from sqlframe.base.util import (
@@ -451,7 +452,40 @@ class _BaseSession(t.Generic[CATALOG, READER, WRITER, DF, TABLE, CONN, UDF_REGIS
 
     def sql(
         self,
-        sqlQuery: t.Union[str, exp.Expression],
+        sqlQuery: t.Union[str, exp.Expr],
+        dialect: t.Union[DialectType, SQLArgs] = None,
+        qualify: bool = True,
+        args: t.Optional[SQLArgs] = None,
+        **kwargs: t.Any,
+    ) -> DF:
+        """Build a DataFrame from SQL with literal parameters and Python format fields.
+
+        ``args`` binds named ``:name`` parameters from a dict or positional ``?``
+        parameters from a list. It can also be passed as the second argument.
+        Keyword format fields support DataFrames, Columns, and Python literals.
+        Existing positional ``dialect`` and ``qualify`` arguments remain supported.
+        """
+        if isinstance(dialect, (dict, list)):
+            if args is not None:
+                raise TypeError("SQL args were provided twice")
+            args = dict(dialect) if isinstance(dialect, dict) else list(dialect)
+            dialect = None
+        dialect = Dialect.get_or_raise(dialect or self.input_dialect)
+        if kwargs:
+            if not isinstance(sqlQuery, str):
+                raise TypeError("SQL keyword formatting requires a string query")
+            with SQLStringFormatter(self, dialect) as formatter:
+                sqlQuery = formatter.format(sqlQuery, **kwargs)
+                if args is not None:
+                    sqlQuery = bind_parameters(sqlQuery, args, dialect)
+                return self._sql(sqlQuery, dialect=dialect, qualify=qualify)
+        if args is not None:
+            sqlQuery = bind_parameters(sqlQuery, args, dialect)
+        return self._sql(sqlQuery, dialect=dialect, qualify=qualify)
+
+    def _sql(
+        self,
+        sqlQuery: t.Union[str, exp.Expr],
         dialect: DialectType = None,
         qualify: bool = True,
     ) -> DF:

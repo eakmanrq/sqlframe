@@ -27,9 +27,9 @@ class TrinoSession(StandaloneSession):
     _table = TrinoTable
     _writer = TrinoDataFrameWriter
 
-    def sql(
+    def _sql(
         self,
-        sqlQuery: t.Union[str, exp.Expression],
+        sqlQuery: t.Union[str, exp.Expr],
         dialect: DialectType = None,
         qualify: bool = True,
     ):
@@ -49,7 +49,7 @@ class TrinoSession(StandaloneSession):
                             source_table = source.copy()
                             source_table.set("alias", None)
                             self.catalog.add_table(source_table)
-        return super().sql(sqlQuery, dialect=dialect, qualify=qualify)
+        return super()._sql(sqlQuery, dialect=dialect, qualify=qualify)
 
     def _collect(self, *args, **kwargs):
         if not self._has_connection:

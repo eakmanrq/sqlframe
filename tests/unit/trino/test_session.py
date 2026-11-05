@@ -1,4 +1,5 @@
 import pytest
+from sqlglot import exp
 from sqlglot.schema import MappingSchema
 
 from sqlframe.base.exceptions import TableSchemaError
@@ -108,3 +109,17 @@ def test_trino_catalog_reads_supplied_populated_schema_offline(mapping, table_na
     assert session.read.table(table_name).columns == ["order_id"]
     session.catalog.add_table("memory.sales.shipments", {"shipment_id": "int"})
     assert session.read.table("memory.sales.shipments").columns == ["shipment_id"]
+
+
+def test_trino_sql_parameters():
+    session = TrinoSession()
+    df = session.sql("SELECT :value AS value", args={"value": 7})
+    assert df.expression.ctes[-1].this.expressions[0].this == exp.Literal.number(7)
+
+
+def test_trino_sql_keyword_dataframe():
+    session = TrinoSession()
+    people = session.createDataFrame([(34,)], ["age"])
+    df = session.sql("SELECT * FROM {people} WHERE age > ?", args=[30], people=people)
+    assert df.columns == ["age"]
+    assert not session.temp_views
