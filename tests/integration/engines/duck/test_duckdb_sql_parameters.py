@@ -134,3 +134,23 @@ def test_sql_keyword_joined_dataframe_columns_execute(aliases):
     )
     assert not session.temp_views
     assert result.collect() == [Row(id=2, name="Bob", age=45)]
+
+
+@pytest.mark.parametrize("use_dataframe", [False, True])
+def test_sql_keyword_formatting_preserves_nested_positional_order(use_dataframe):
+    session = DuckDBSession()
+    if use_dataframe:
+        people = session.createDataFrame([(20,)], ["id"])
+        result = session.sql(
+            "SELECT ? AS value FROM (WITH x AS (SELECT ? AS a) SELECT a FROM x) q "
+            "JOIN {people} p ON {people.id} = q.a",
+            args=[10, 20],
+            people=people,
+        )
+    else:
+        result = session.sql(
+            "SELECT ? + {zero} AS value FROM (WITH x AS (SELECT ? AS a) SELECT a FROM x) q",
+            args=[10, 20],
+            zero=0,
+        )
+    assert result.collect() == [Row(value=10)]

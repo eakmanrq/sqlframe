@@ -50,16 +50,23 @@ class SQLStringFormatter(string.Formatter):
         query = super().vformat(format_string, args, kwargs)
         expression = sqlglot.parse_one(query, read=self.dialect)
         sources = {name for _, name in self.views}
+        replacements = {}
         for scope in traverse_scope(expression):
             aliases = {
-                table.name: table.alias
+                table.name: table.args["alias"].this
                 for table in scope.tables
                 if table.name in sources and table.alias
             }
             for column in scope.columns:
                 if column.table in aliases:
-                    column.set("table", exp.to_identifier(aliases[column.table]))
-        return expression.sql(dialect=self.dialect)
+                    qualifier = column.args["table"]
+                    replacements[qualifier.meta["start"], qualifier.meta["end"]] = aliases[
+                        column.table
+                    ].sql(dialect=self.dialect)
+        # Rendering the AST here can hoist nested CTEs and reorder positional parameters.
+        for (start, end), alias in sorted(replacements.items(), reverse=True):
+            query = query[:start] + alias + query[end + 1 :]
+        return query
 
     def get_field(self, field_name, args, kwargs):
         value, first = super().get_field(field_name, args, kwargs)
