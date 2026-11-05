@@ -345,6 +345,46 @@ def test_duplicate_cte(duckdb_session: DuckDBSession):
     ]
 
 
+# https://github.com/eakmanrq/sqlframe/issues/711
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("join_on_expression", [False, True])
+def test_select_columns_from_joined_aggregations(
+    duckdb_session: DuckDBSession, reverse: bool, join_on_expression: bool
+):
+    df = duckdb_session.createDataFrame(
+        [("US", 18.0), ("US", 15.0), ("Japan", 24.0)], ["Origin", "MPG"]
+    )
+    averages = df.groupBy("Origin").agg(F.avg("MPG").alias("Avg MPG"))
+    counts = df.groupBy("Origin").agg(F.count("*").alias("Count"))
+    left, right = (counts, averages) if reverse else (averages, counts)
+    on = left["Origin"] == right["Origin"] if join_on_expression else "Origin"
+
+    result = (
+        left.join(right, on=on, how="inner")
+        .select(counts["Origin"], counts["Count"], averages["Avg MPG"])
+        .orderBy("Origin")
+    )
+
+    assert result.columns == ["Origin", "Count", "Avg MPG"]
+    assert result.collect() == [
+        types.Row(Origin="Japan", Count=1, **{"Avg MPG": 24.0}),
+        types.Row(Origin="US", Count=2, **{"Avg MPG": 16.5}),
+    ]
+
+
+@pytest.mark.parametrize("projection", ["*", "source.*"])
+def test_select_left_column_after_join_with_wildcard_projection(
+    duckdb_session: DuckDBSession, projection: str
+):
+    duckdb_session._conn.execute("CREATE TABLE wildcard_source AS SELECT 1 AS id, 10 AS value")
+    left = duckdb_session.sql(f"SELECT {projection} FROM wildcard_source AS source", qualify=False)
+    right = left.select("id", (F.col("value") + 100).alias("value"))
+
+    result = left.join(right, left["id"] == right["id"]).select(left["value"])
+
+    assert result.collect() == [types.Row(value=10)]
+
+
 # https://github.com/eakmanrq/sqlframe/issues/512
 def test_select_star_join_with_external_tables(duckdb_session: DuckDBSession):
     con = duckdb_session._conn

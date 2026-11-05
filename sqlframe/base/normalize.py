@@ -112,9 +112,9 @@ def replace_branch_and_sequence_ids_with_cte_name(
         referenced_cte_names = get_cte_names_from_from_clause(expression_context)
 
         # Check if we have a join and if both the tables in that join share a common branch id
-        # If so we need to have this reference the left table by default unless the id is a sequence
-        # id then it keeps that reference. This handles the weird edge case in spark that shouldn't
-        # be common in practice
+        # Prefer the left table for shared columns, but use the table that projects the
+        # column when the two branches have different outputs (for example, aggregations).
+        # Sequence ids keep their explicit reference.
         if expression_context.args.get("joins") and normalized_id in session.known_branch_ids:
             join_table_aliases = [
                 x.alias_or_name for x in get_tables_from_expression_with_join(expression_context)
@@ -131,7 +131,18 @@ def replace_branch_and_sequence_ids_with_cte_name(
                 and ctes_in_join[0].args["branch_id"] == ctes_in_join[1].args["branch_id"]
             ):
                 assert len(ctes_in_join) == 2
-                _set_alias_name(id, ctes_in_join[0].alias_or_name)
+                matching_cte = ctes_in_join[0]
+                if isinstance(id.parent, exp.Column):
+                    matching_cte = next(
+                        (
+                            cte
+                            for cte in ctes_in_join
+                            if id.parent.name in cte.this.named_selects
+                            or any(sel.is_star for sel in cte.this.expressions)
+                        ),
+                        matching_cte,
+                    )
+                _set_alias_name(id, matching_cte.alias_or_name)
                 return
 
         # Filter CTEs to only include those defined and referenced by the FROM clause
