@@ -101,3 +101,21 @@ def test_sql_column_literal_parameter_executes():
     session = DuckDBSession()
     result = session.sql("SELECT :value AS value", args={"value": F.lit([1, 2])})
     assert result.collect() == [Row(value=[1, 2])]
+
+
+@pytest.mark.parametrize("value", [-2, -2.5, Decimal("-2.50")])
+@pytest.mark.parametrize("prefix", ["1-", "-"])
+@pytest.mark.parametrize("style", ["named", "positional", "keyword", "keyword_column"])
+def test_sql_negative_parameter_arithmetic_executes(value, prefix, style):
+    session = DuckDBSession()
+    if style == "named":
+        result = session.sql(f"SELECT {prefix}:value AS value", args={"value": value})
+    elif style == "positional":
+        result = session.sql(f"SELECT {prefix}? AS value", args=[value])
+    else:
+        result = session.sql(
+            f"SELECT {prefix}{{value}} AS value",
+            value=F.lit(value) if style == "keyword_column" else value,
+        )
+    expected = 1 - value if prefix == "1-" else -value
+    assert result.collect() == [Row(value=expected)]
