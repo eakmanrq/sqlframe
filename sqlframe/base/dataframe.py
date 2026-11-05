@@ -27,7 +27,7 @@ from sqlglot.optimizer.qualify import qualify
 
 from sqlframe.base.catalog import Column as CatalogColumn
 from sqlframe.base.operations import Operation, operation
-from sqlframe.base.transforms import replace_id_value
+from sqlframe.base.transforms import ContainerTypeAnnotator, replace_id_value
 from sqlframe.base.util import (
     build_drop,
     get_func_from_session,
@@ -814,6 +814,30 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                 if "schema" in inspect.signature(pushdown_projections).parameters:
                     pushdown_kwargs["schema"] = self.session.catalog._schema
                 pushdown_projections(select_expression, **pushdown_kwargs)
+
+            if select_expression.find(exp.Bracket):
+                # Bracket generation needs container types to distinguish map keys
+                # from array positions, even when query optimization is disabled.
+                typed_expression = select_expression.copy()
+                if not optimize:
+                    qualify(
+                        typed_expression,
+                        dialect=self.session.input_dialect,
+                        schema=self.session.catalog._schema,
+                        expand_alias_refs=False,
+                        expand_stars=False,
+                        validate_qualify_columns=False,
+                        quote_identifiers=False,
+                        identify=False,
+                    )
+                ContainerTypeAnnotator(schema=self.session.catalog._schema).annotate(
+                    typed_expression
+                )
+                # Keep index expressions and the original query structure unchanged.
+                for bracket, typed_bracket in zip(
+                    select_expression.find_all(exp.Bracket), typed_expression.find_all(exp.Bracket)
+                ):
+                    bracket.this.type = typed_bracket.this.type
 
             select_expression = df._replace_cte_names_with_hashes(select_expression)
 

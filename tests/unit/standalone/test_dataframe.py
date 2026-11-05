@@ -12,6 +12,27 @@ from sqlframe.standalone.session import StandaloneSession
 pytest_plugins = ["tests.common_fixtures", "tests.unit.standalone.fixtures"]
 
 
+@pytest.mark.parametrize(
+    "dialect", ["duckdb", "spark", "databricks", "trino", "clickhouse", "snowflake"]
+)
+@pytest.mark.parametrize("optimize", [False, True])
+@pytest.mark.parametrize("accessor", ["getItem", "element_at"])
+@pytest.mark.parametrize("key", [10, 0, -1])
+def test_integer_map_keys_preserved_across_dialects(dialect, optimize, accessor, key):
+    session = StandaloneSession()
+    session.catalog.add_table("maps", {"m": "MAP<INT, INT>"})
+    df = session.table("maps")
+    value = F.col("m").getItem(key) if accessor == "getItem" else F.element_at("m", key)
+
+    # Parse with a zero-based dialect to inspect the emitted keys without rebasing them.
+    statement = sqlglot.parse_one(
+        df.select(value.alias("v")).sql(dialect=dialect, optimize=optimize), read="spark"
+    )
+    lookup = statement.find(exp.Bracket)
+    assert lookup is not None
+    assert lookup.expressions == [exp.convert(key)]
+
+
 def test_hash_select_expression(standalone_employee: StandaloneDataFrame):
     expression = exp.select("cola").from_("table")
     assert standalone_employee._create_hash_from_expression(expression) == "t17051938"
