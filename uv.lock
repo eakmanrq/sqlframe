@@ -2752,6 +2752,9 @@ wheels = [
 name = "pytest-postgresql"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+]
 dependencies = [
     { name = "mirakuru", version = "3.0.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "mirakuru", version = "3.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -2763,6 +2766,30 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d9/59/550d50df3af0091c5e662d46b9f52b7ef992a8017dd40fc1994158f7a510/pytest_postgresql-9.1.1.tar.gz", hash = "sha256:9a4673870bde284ed200a7efb496ad7a90024348231f0d5be0d72946423a220f", size = 46917, upload-time = "2026-10-04T13:26:17.66Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/80/d5/2b306245e662d014a805133d2188c7802c0f43cb08a1f9c246e83c924b4a/pytest_postgresql-9.1.1-py3-none-any.whl", hash = "sha256:fcd6e100d9d5550c3192c8386afa6632c2963ca808b0617d47ed16dd037a224c", size = 41999, upload-time = "2026-10-04T13:26:16.214Z" },
+]
+
+[[package]]
+name = "pytest-postgresql"
+version = "10.0.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*'",
+    "python_full_version == '3.12.*'",
+    "python_full_version == '3.11.*'",
+]
+dependencies = [
+    { name = "mirakuru" },
+    { name = "packaging" },
+    { name = "port-for" },
+    { name = "psycopg" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e6/9e/8227abd2c91863807b3009ef23e960a677c7beaf93e236bdcb149bf80b43/pytest_postgresql-10.0.0.tar.gz", hash = "sha256:fff4ccd1edd8131ae528fc6236eb11c3502678a2870624fb0ea304e6268dee8d", size = 48441, upload-time = "2026-11-04T15:38:22.988Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/dd/886b72f6684edc14e06b8d2af0fdc3a0fe74879dbabafecae06892dff085/pytest_postgresql-10.0.0-py3-none-any.whl", hash = "sha256:447c81c7d389ba0f6209cecba37e5ee2ff14127058ed491a3c831f6744d7fe94", size = 42025, upload-time = "2026-11-04T15:38:21.677Z" },
 ]
 
 [[package]]
@@ -3338,7 +3365,8 @@ dev = [
     { name = "pyspark", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pytest" },
     { name = "pytest-forked" },
-    { name = "pytest-postgresql" },
+    { name = "pytest-postgresql", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pytest-postgresql", version = "10.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pytest-rerunfailures" },
     { name = "pytest-xdist" },
     { name = "ruff" },
@@ -3418,7 +3446,7 @@ requires-dist = [
     { name = "pyspark", marker = "extra == 'spark'", specifier = ">=4,<4.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0,<9.3" },
     { name = "pytest-forked", marker = "extra == 'dev'" },
-    { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<10" },
+    { name = "pytest-postgresql", marker = "extra == 'dev'", specifier = ">=6,<11" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6,<3.9" },
     { name = "redshift-connector", marker = "extra == 'redshift'", specifier = ">=2.1.14,<2.3.0" },
