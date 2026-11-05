@@ -11,6 +11,7 @@ from sqlglot.tokens import TokenType
 
 from sqlframe.base.column import Column
 from sqlframe.base.dataframe import BaseDataFrame
+from sqlframe.base.util import normalize_string
 
 if t.TYPE_CHECKING:
     from sqlframe.base.session import _BaseSession
@@ -66,7 +67,7 @@ class SQLStringFormatter(string.Formatter):
             for df, name in self.views:
                 if df is value:
                     return name, first
-            name = f"_sqlframe_{uuid.uuid4().hex}"
+            name = normalize_string(f"_sqlframe_{uuid.uuid4().hex}", from_dialect="input")
             self.views.append((value, name))
             value.createOrReplaceTempView(name)
             return name, first
