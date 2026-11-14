@@ -1,6 +1,6 @@
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:26.10.3.7
+    image: clickhouse/clickhouse-server:26.10.4.207
     ports:
       - "127.0.0.1::8123"
     environment:
