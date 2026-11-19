@@ -434,3 +434,15 @@ def test_dict_rows_missing_columns(duckdb_session: DuckDBSession):
     assert result[0]["name"] == "xxx"
     assert result[1]["_id"] is None
     assert result[1]["name"] == "yyy"
+
+
+def test_schema_lookup_leaves_no_temp_view(duckdb_employee: DuckDBDataFrame):
+    session = duckdb_employee.session
+
+    def temp_view_count() -> int:
+        return session._collect("SELECT COUNT(*) FROM duckdb_views() WHERE temporary")[0][0]
+
+    before = temp_view_count()
+    for _ in range(3):
+        assert duckdb_employee.schema is not None
+    assert temp_view_count() == before
