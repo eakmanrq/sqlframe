@@ -127,6 +127,42 @@ Run Delta DDL in an engine with Delta table support.
 immediately, including `CREATE TABLE` without `AS SELECT`, is not yet supported
 through this method. Use the native engine connection for supported DuckDB DDL.
 
+## Registering Python UDFs
+
+Register a Python function with `session.udf.register`, then call it in SQL or with
+`F.call_function`. The return type can be a SQLFrame type, a DuckDB type string, or
+a native DuckDB type object.
+
+```python
+from sqlframe.duckdb import DuckDBSession
+from sqlframe.duckdb import functions as F
+from sqlframe.duckdb import types as T
+
+session = DuckDBSession()
+
+def shout(s: str) -> str:
+    return s.upper() + "!"
+
+session.udf.register("shout", shout, T.StringType())
+
+df = session.createDataFrame([(1, "alice"), (2, "bob")], ["id", "name"])
+df.select("id", F.call_function("shout", F.col("name")).alias("shouted")).show()
+```
+
+Omitting `returnType` or passing `None` defaults to `StringType()`, matching
+PySpark's behavior for Python functions. Python return annotations do not override
+this default. For a non-string result, pass the return type explicitly:
+
+```python
+session.udf.register("multiply", lambda x, y: x * y, T.IntegerType())
+session.sql("SELECT multiply(2, 3)").show()
+```
+
+This changes earlier SQLFrame behavior, which inferred omitted return types from
+Python annotations. Update existing registrations that relied on inference to
+pass an explicit return type. SQLFrame scalar types and nested array, map, and
+struct types are converted to DuckDB types during registration.
+
 ## Using DuckDB Unique Functions
 
 DuckDB may have a function that isn't represented within the PySpark API. 
