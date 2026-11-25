@@ -40,6 +40,7 @@ def test_invoke_anonymous(name, func):
         "try_divide",  # Uses native SafeDivide when the active generator supports it
         # Typed expressions added after SQLGlot 30.0 (the minimum supported version), and they
         # currently generate the same SQL in every dialect, so these stay anonymous for now
+        "find_in_set",
         "from_json",
         "nanvl",
         "negative",
