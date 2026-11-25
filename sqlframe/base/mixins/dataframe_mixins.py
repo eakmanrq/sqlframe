@@ -52,6 +52,12 @@ class TypedColumnsFromTempViewMixin(
             )
         )
 
-        return self.session.catalog.listColumns(
-            table.sql(dialect=self.session.input_dialect), include_temp=True
-        )
+        try:
+            return self.session.catalog.listColumns(
+                table.sql(dialect=self.session.input_dialect), include_temp=True
+            )
+        finally:
+            self.session._collect(
+                f"DROP VIEW IF EXISTS {table.sql(dialect=self.session.execution_dialect)}",
+                skip_rows=True,
+            )
