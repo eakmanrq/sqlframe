@@ -203,7 +203,7 @@ def pandas_to_spark_schema(pandas_df: PandasDataFrame) -> types.StructType:
 
 
 def dialect_to_string(dialect: Dialect) -> str:
-    mapping = {v: k for k, v in Dialect.classes.items()}
+    mapping = {v: k for k, v in Dialect._classes.items()}
     return mapping[type(dialect)]
 
 
