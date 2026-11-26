@@ -440,3 +440,79 @@ def test_join_select_join_alias_resolution(standalone_session: StandaloneSession
     assert on_tables.issubset(from_tables), (
         f"ON clause references {on_tables - from_tables} which are not in FROM {from_tables}"
     )
+
+
+def _id_value_dataframe(session: StandaloneSession) -> StandaloneDataFrame:
+    from sqlframe.standalone import types as T
+
+    schema = T.StructType(
+        [
+            T.StructField("id", T.IntegerType(), False),
+            T.StructField("value", T.IntegerType(), False),
+        ]
+    )
+    return session.createDataFrame([(1, 2)], schema=schema).where(F.col("value") > 0)
+
+
+def _cte_texts(df: StandaloneDataFrame) -> t.List[str]:
+    return [cte.sql(dialect="spark") for cte in df.expression.ctes]
+
+
+# https://github.com/eakmanrq/sqlframe/issues/739
+def test_derived_dataframe_shares_finished_ctes(standalone_employee: StandaloneDataFrame):
+    base = standalone_employee.select("employee_id", "age").select("employee_id", "age")
+    derived = base.where(F.col("age") > 1).select("employee_id").select("employee_id")
+
+    assert len(base.expression.ctes) > 1
+    assert len(derived.expression.ctes) > len(base.expression.ctes)
+    for base_cte, derived_cte in zip(base.expression.ctes, derived.expression.ctes):
+        assert derived_cte is base_cte
+
+
+def test_join_renaming_a_shared_cte_leaves_the_other_dataframe_unchanged(
+    standalone_session: StandaloneSession,
+):
+    df = _id_value_dataframe(standalone_session)
+    left = df.alias("a")
+    right = df.alias("b")
+    right_ctes = _cte_texts(right)
+
+    # Both sides hold a CTE with the same name and body but a different sequence id, so the
+    # join adds a renamed copy of the right side's CTE.
+    joined = left.join(right, on=F.col("a.id") == F.col("b.id"))
+
+    assert _cte_texts(right) == right_ctes
+    assert len(joined.expression.ctes) > len(left.expression.ctes)
+
+
+def test_join_by_column_name_references_the_renamed_right_side(
+    standalone_session: StandaloneSession,
+):
+    right = _id_value_dataframe(standalone_session).alias("b")
+    left = right.alias("c")
+    right_ctes = _cte_texts(right)
+
+    # The right side's leaf CTE collides with one of the left side's and is renamed.
+    joined = left.join(right, on="id")
+
+    assert _cte_texts(right) == right_ctes
+    parsed = sqlglot.parse_one(joined.sql(pretty=False, optimize=False), dialect="spark")
+    from_tables = {parsed.args["from_"].this.alias_or_name}
+    from_tables.update(join.this.alias_or_name for join in parsed.args.get("joins") or [])
+    on_clause = parsed.args["joins"][-1].args["on"]
+    on_tables = {col.table for col in on_clause.find_all(exp.Column) if col.table}
+    assert len(on_tables) == 2
+    assert on_tables.issubset(from_tables)
+
+
+def test_join_hint_leaves_the_hinted_ctes_intact(standalone_session: StandaloneSession):
+    df = _id_value_dataframe(standalone_session)
+    left = df.alias("a")
+    right = df.where(F.col("id") > 0).alias("b").hint("broadcast")
+    joined = left.join(right, on=F.col("a.id") == F.col("b.id"))
+
+    assert "BROADCAST" in joined.sql(pretty=False, optimize=False)
+    for cte in joined.expression.ctes:
+        for node in cte.walk():
+            for child in node.iter_expressions():
+                assert child.parent is node

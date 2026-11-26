@@ -21,7 +21,7 @@ from prettytable import PrettyTable
 from sqlglot import Dialect, maybe_parse
 from sqlglot import expressions as exp
 from sqlglot import lineage as sqlglot_lineage
-from sqlglot.helper import ensure_list, flatten, object_to_dict, seq_get
+from sqlglot.helper import ensure_list, flatten, seq_get
 from sqlglot.optimizer.pushdown_projections import pushdown_projections
 from sqlglot.optimizer.qualify import qualify
 
@@ -97,6 +97,48 @@ JOIN_TYPE_MAPPING = {
 }
 
 DF = t.TypeVar("DF", bound="BaseDataFrame")
+EXPRESSION = t.TypeVar("EXPRESSION", bound=exp.Expression)
+
+
+def _copy_leaving_out(node: EXPRESSION, arg_key: str) -> EXPRESSION:
+    # Deep copy a shell that holds the same args minus `arg_key`. Assigning `args` directly,
+    # instead of through the constructor, leaves the parents of `node`'s children unchanged.
+    shell = node.__class__()
+    shell.args = {key: value for key, value in node.args.items() if key != arg_key}
+    shell.comments = node.comments
+    shell._type = node._type
+    shell._meta = node._meta
+    return shell.copy()
+
+
+def _copy_without_ctes(expression: EXPRESSION) -> EXPRESSION:
+    """Deep copy of `expression` without its WITH clause, made without copying the clause."""
+    return _copy_leaving_out(expression, "with_")
+
+
+def _copy_sharing_ctes(expression: EXPRESSION) -> EXPRESSION:
+    """Deep copy of `expression` whose WITH clause holds the original's CTE objects.
+
+    A CTE is not changed after it is added to a DataFrame, so DataFrames derived from each other
+    can share it. Copying every CTE on each operation makes building a chain of N operations
+    quadratic in N. Only the WITH node and its list are new here: code that changes one of
+    these CTEs in place must copy it first.
+    """
+    with_expression = expression.args.get("with_")
+    if not isinstance(with_expression, exp.With):
+        return expression.copy()
+    shared_with = _copy_leaving_out(with_expression, "expressions")
+    shared_with.args = {
+        key: list(with_expression.expressions) if key == "expressions" else shared_with.args[key]
+        for key in with_expression.args
+    }
+    copied = _copy_without_ctes(expression)
+    copied.args = {
+        key: shared_with if key == "with_" else copied.args[key] for key in expression.args
+    }
+    shared_with.parent = copied
+    shared_with.arg_key = "with_"
+    return copied
 
 
 class OpenAIMode(enum.Enum):
@@ -305,7 +347,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     @property
     def columns(self) -> t.List[str]:
-        expression_display_names = self.expression.copy()
+        expression_display_names = _copy_without_ctes(self.expression)
         self._set_display_names(expression_display_names)
         return expression_display_names.named_selects
 
@@ -461,8 +503,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         **kwargs,
     ) -> t.Tuple[exp.CTE, str]:
         name = name or self._create_hash_from_expression(expression)
-        expression_to_cte = expression.copy()
-        expression_to_cte.set("with_", None)
+        expression_to_cte = _copy_without_ctes(expression)
         cte = exp.Select().with_(name, as_=expression_to_cte, **kwargs).ctes[0]
         cte.set("branch_id", branch_id)
         cte.set("sequence_id", sequence_id)
@@ -510,7 +551,7 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
     ) -> Self:
         df = self._resolve_pending_hints()
         sequence_id = sequence_id or df.sequence_id
-        expression = df.expression.copy()
+        expression = _copy_sharing_ctes(df.expression)
         # When wrapping a join expression into a CTE, collect the sequence_ids of CTEs
         # in the FROM clause so we can propagate alias mappings to the wrapper CTE.
         has_joins = bool(expression.args.get("joins"))
@@ -533,7 +574,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         if expression.args.get("with_") and expression.args["with_"].args.get("recursive"):
             new_expression.args["with_"].set("recursive", True)
         sel_columns = df._get_outer_select_columns(cte_expression)
-        new_expression = new_expression.from_(cte_name).select(*[x.expression for x in sel_columns])
+        new_expression = new_expression.from_(cte_name, copy=False).select(
+            *[x.expression for x in sel_columns], copy=False
+        )
         # Propagate alias mappings: alias names that pointed to inner FROM-clause CTEs
         # should also point to the wrapper CTE so they resolve correctly in subsequent operations.
         # Only needed when wrapping a join expression, as that's when alias names reference
@@ -574,7 +617,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                     ]
                     for matching_cte in matching_ctes:
                         if matching_cte.alias_or_name in join_aliases:
-                            sequence_id_expression.set("this", matching_cte.args["alias"].this)
+                            sequence_id_expression.set(
+                                "this", matching_cte.args["alias"].this.copy()
+                            )
                             df.pending_hints.remove(hint)
                             break
                 hint_expression.append("expressions", hint)
@@ -615,13 +660,13 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
         return df
 
     def _add_ctes_to_expression(self, expression: exp.Select, ctes: t.List[exp.CTE]) -> exp.Select:
-        expression = expression.copy()
+        expression = _copy_sharing_ctes(expression)
         with_expression = expression.args.get("with_")
         if with_expression:
             existing_ctes = with_expression.expressions
             existing_cte_names = {x.alias_or_name for x in existing_ctes}
             replaced_cte_names = {}
-            for cte in ctes:
+            for index, cte in enumerate(ctes):
                 if replaced_cte_names:
                     cte = cte.transform(replace_id_value, replaced_cte_names)
                 if cte.alias_or_name in existing_cte_names:
@@ -636,6 +681,11 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
                         # Same content and same origin: this is a common ancestor CTE shared by
                         # both branches — reuse the existing one instead of creating a duplicate.
                         continue
+                    if cte is ctes[index]:
+                        # Other DataFrames may share this CTE, so rename a copy. The copy goes
+                        # back into `ctes` so callers that read it afterwards see the new name.
+                        cte = cte.copy()
+                        ctes[index] = cte
                     random_filter = exp.Literal.string(uuid.uuid4().hex)
                     # Add unique where filter to ensure that the hash of the CTE is unique
                     cte.set(
@@ -977,7 +1027,15 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
 
     def copy(self, **kwargs) -> Self:
         kwargs["join_on_uuid"] = str(uuid4())
-        return self.__class__(**object_to_dict(self, **kwargs))
+        attributes = {}
+        for key, value in vars(self).items():
+            if key in kwargs:
+                continue
+            if key == "expression":
+                attributes[key] = _copy_sharing_ctes(value)
+            else:
+                attributes[key] = value.copy() if hasattr(value, "copy") else copy(value)
+        return self.__class__(**attributes, **kwargs)
 
     def _resolve_ambiguous_columns(self, columns: t.Union[Column, t.List[Column]]) -> None:
         if "joins" not in self.expression.args:
@@ -1074,9 +1132,10 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             else col
             for col in columns
         ]
-        return self.copy(
-            expression=self.expression.select(*[x.expression for x in columns], **kwargs), **kwargs
+        expression = _copy_sharing_ctes(self.expression).select(
+            *[x.expression for x in columns], copy=False, **kwargs
         )
+        return self.copy(expression=expression, **kwargs)
 
     @operation(Operation.NO_OP)
     def alias(self, name: str, **kwargs) -> Self:
@@ -1101,7 +1160,8 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             col = self._ensure_and_normalize_col(column)
         if isinstance(col.expression, exp.Alias):
             col.expression = col.expression.this
-        return self.copy(expression=self.expression.where(col.expression))
+        expression = _copy_sharing_ctes(self.expression).where(col.expression.copy(), copy=False)
+        return self.copy(expression=expression)
 
     filter = where
 
@@ -1274,8 +1334,9 @@ class BaseDataFrame(t.Generic[SESSION, WRITER, NA, STAT, GROUP_DATA]):
             how = "inner"
 
         other_df = other._convert_leaf_to_cte()
-        other_leaf_cte = other_df.expression.ctes[-1]
         join_expression = self._add_ctes_to_expression(self.expression, other_df.expression.ctes)
+        # Read after the call: a renamed leaf CTE is a new object in `other_df`'s CTE list.
+        other_leaf_cte = other_df.expression.ctes[-1]
         # We will determine actual "join on" expression later so we don't provide it at first
         join_type = JOIN_TYPE_MAPPING.get(how, how).replace("_", " ")
         # Find the right table: if other's leaf CTE was reused (skipped as duplicate),
